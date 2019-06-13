@@ -14,10 +14,10 @@ message IntegrationInitReq {
 
 service Agent {
     // ExportStarted is called after starting export for a certain type
-    rpc ExportStarted(ExportStartedReq) returns (Empty);
+    //rpc ExportStarted(ExportStartedReq) returns (Empty);
 
     // ExportDone is called after export is completed for a certain type
-    rpc ExportDone(ExportDoneReq) returns (Empty);
+    //rpc ExportDone(ExportDoneReq) returns (Empty);
 
     // SendExported forwards the exported objects from intergration to agent, which then upload the data when necessary
     rpc SendExported(SendExportedReq) returns (Empty);
