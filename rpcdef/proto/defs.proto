@@ -1,0 +1,31 @@
+syntax = "proto3";
+package proto;
+
+message Empty {}
+
+service Integration {
+    rpc Init(IntegrationInitReq) returns (Empty);
+    rpc Export(Empty) returns (Empty);    
+}
+
+message IntegrationInitReq {
+    uint32 server_id = 1;
+}
+
+service Agent {
+    rpc SendExported(SendExportedReq) returns (Empty);
+}
+
+message SendExportedReq {
+    repeated ExportObj objs = 1;
+}
+
+message ExportObj {
+    enum DataType {
+        JSON = 0;
+        AVRO = 1;
+    }
+    DataType data_type = 1;
+    bytes data = 2;
+}
+
