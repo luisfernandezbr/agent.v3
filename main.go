@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
@@ -12,7 +13,9 @@ import (
 )
 
 func devIntegrationCommand(integrationName string) *exec.Cmd {
-	cmd := exec.Command("go", "build", "github.com/pinpt/agent2/integrations/"+integrationName)
+	// build to catch compile errors
+	// we don't need the resulting binary
+	cmd := exec.Command("go", "build", "-o", filepath.Join(os.TempDir(), "out"), "github.com/pinpt/agent2/integrations/"+integrationName)
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
@@ -26,8 +29,8 @@ func devIntegrationCommand(integrationName string) *exec.Cmd {
 type agentDelegate struct {
 }
 
-func (s agentDelegate) SendExported(objs []rpcdef.ExportObj) {
-	fmt.Println("agent: SendExported received event", objs)
+func (s agentDelegate) SendExported(modelType string, objs []rpcdef.ExportObj) {
+	fmt.Println("agent: SendExported received event", modelType, "len(objs)=", len(objs))
 }
 
 func main() {

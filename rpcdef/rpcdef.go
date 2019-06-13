@@ -117,7 +117,12 @@ func (s *IntegrationPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCB
 }
 
 type Agent interface {
-	SendExported(objs []ExportObj)
+	// SendExported forwards the exported objects from intergration to agent, which then upload the data when necessary
+	// modelType is the type of the object. i.e. sourcecode.commit
+	// objs is the objects to send in this batch
+	SendExported(
+		modelType string,
+		objs []ExportObj)
 }
 
 type ExportObj struct {
@@ -140,7 +145,7 @@ func (s *AgentServer) SendExported(ctx context.Context, req *proto.SendExportedR
 		obj2.Data = data
 		objs = append(objs, obj2)
 	}
-	s.Impl.SendExported(objs)
+	s.Impl.SendExported(req.ModelType, objs)
 	return &proto.Empty{}, nil
 }
 
@@ -148,8 +153,9 @@ type AgentClient struct {
 	client proto.AgentClient
 }
 
-func (s *AgentClient) SendExported(objs []ExportObj) {
+func (s *AgentClient) SendExported(modelType string, objs []ExportObj) {
 	args := &proto.SendExportedReq{}
+	args.ModelType = modelType
 	for _, obj := range objs {
 		obj2 := &proto.ExportObj{}
 		obj2.DataType = proto.ExportObj_JSON

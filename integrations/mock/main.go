@@ -21,14 +21,7 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 }
 
 func (s *Integration) Export(ctx context.Context) error {
-	s.logger.Info("mock.export called")
-
-	objs := []rpcdef.ExportObj{
-		{Data: 1},
-		{Data: "a"},
-	}
-
-	s.agent.SendExported(objs)
+	s.exportAll()
 	return nil
 }
 
@@ -43,7 +36,6 @@ func main() {
 		logger: logger,
 	}
 
-	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]plugin.Plugin{
 		"integration": &rpcdef.IntegrationPlugin{Impl: integration},
 	}
