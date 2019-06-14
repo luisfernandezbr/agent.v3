@@ -42,4 +42,6 @@ Init(connectionDetails)
 
 // Export starts the export of all data types for this integration.
 Export()
+
+}
 ```
