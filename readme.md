@@ -12,18 +12,32 @@ After that agent calls Export methods on integrations in parallel. Integration m
 
 ### Agent RPC interface
 
-Name | Desc
---- | ---
-ExportStarted | Called after starting export for a certain type.
-ExportDone | Called after export is completed for a certain type. 
-SendExported | Forwards the exported objects from intergration to agent, which then uploads the data (or queues for uploading).
-ExportGitRepo | Integration can ask agent to download and process git repo using ripsrc.
+```golang
+type Agent interface {
 
-TODO: which call should handle the last processed timestamp
+// ExportStarted should be called when starting export for each modelType. It returned session id to be used later when sending objects.
+ExportStarted(modelType string) (sessionID string)
+
+// ExportDone should be called when export of a certain modelType is complete.
+ExportDone(sessionID string)
+
+// SendExported forwards the exported objects from intergration to agent, which then uploads the data (or queues for uploading).
+SendExported(sessionID string, objs interface{}, lastProcessedToken string)
+
+// Integration can ask agent to download and process git repo using ripsrc.
+ExportGitRepo(creds Creds)
+
+}
+```
 
 ### Integration RPC interface
 
-Name | Desc
---- | ---
-Init | Provides the connection details for connecting back to agent
-Export | Starts the export of all data types for this integration
+```golang
+type Integration interface {
+
+// Init provides the connection details for connecting back to agent
+Init(connectionDetails)
+
+// Export starts the export of all data types for this integration
+Export()
+```
