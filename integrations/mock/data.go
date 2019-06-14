@@ -11,6 +11,10 @@ func (s *Integration) exportAll() {
 
 func (s *Integration) exportBlames() {
 	s.logger.Info("exporting blames")
+
+	session := s.agent.ExportStarted("sourcecode.blame")
+	defer s.agent.ExportDone(session)
+
 	for i := 0; i < 10; i++ {
 		rows := []map[string]interface{}{}
 		for j := 0; j < 10; j++ {
@@ -27,12 +31,18 @@ func (s *Integration) exportBlames() {
 			obj.Data = row
 			objs = append(objs, obj)
 		}
-		s.agent.SendExported("sourcecode.blame", objs)
+		s.agent.SendExported(
+			session,
+			"last_processed_todo",
+			objs)
 	}
 }
 
 func (s *Integration) exportCommits() {
 	s.logger.Info("exporting commits")
+	session := s.agent.ExportStarted("sourcecode.commit")
+	defer s.agent.ExportDone(session)
+
 	for i := 0; i < 10; i++ {
 		rows := []map[string]interface{}{}
 		for j := 0; j < 10; j++ {
@@ -48,6 +58,6 @@ func (s *Integration) exportCommits() {
 			obj.Data = row
 			objs = append(objs, obj)
 		}
-		s.agent.SendExported("sourcecode.commit", objs)
+		s.agent.SendExported(session, "last_processed_todo", objs)
 	}
 }

@@ -13,31 +13,31 @@ message IntegrationInitReq {
 }
 
 service Agent {
-    // ExportStarted is called after starting export for a certain type
-    //rpc ExportStarted(ExportStartedReq) returns (Empty);
+    rpc ExportStarted(ExportStartedReq) returns (ExportStartedResp);
 
-    // ExportDone is called after export is completed for a certain type
-    //rpc ExportDone(ExportDoneReq) returns (Empty);
+    rpc ExportDone(ExportDoneReq) returns (Empty);
 
-    // SendExported forwards the exported objects from intergration to agent, which then upload the data when necessary
     rpc SendExported(SendExportedReq) returns (Empty);
+
+    rpc ExportGitRepo(ExportGitRepoReq) returns (Empty);
 }
 
 message ExportStartedReq {
-    // modelType is the type of the object. i.e. sourcecode.commit
     string model_type = 1;
+}
+
+message ExportStartedResp {
+    string session_id = 1;
 }
 
 message ExportDoneReq {
-    // modelType is the type of the object. i.e. sourcecode.commit
-    string model_type = 1;
+    string session_id = 1;
 }
 
 message SendExportedReq {
-    // modelType is the type of the object. i.e. sourcecode.commit
-    string model_type = 1;
-    // objs is the objects to send in this batch
-    repeated ExportObj objs = 2; 
+    string session_id = 1;
+    string lastProcessedToken = 2;
+    repeated ExportObj objs = 3; 
 }
 
 message ExportObj {
@@ -47,5 +47,10 @@ message ExportObj {
     }
     DataType data_type = 1;
     bytes data = 2;
+}
+
+message ExportGitRepoReq {
+    string url = 1;
+    // TODO: extra headers    
 }
 

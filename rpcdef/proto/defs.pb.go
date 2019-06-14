@@ -44,7 +44,7 @@ func (x ExportObj_DataType) String() string {
 }
 
 func (ExportObj_DataType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{5, 0}
+	return fileDescriptor_bf10f51bd2cb5547, []int{6, 0}
 }
 
 type Empty struct {
@@ -118,7 +118,6 @@ func (m *IntegrationInitReq) GetServerId() uint32 {
 }
 
 type ExportStartedReq struct {
-	// modelType is the type of the object. i.e. sourcecode.commit
 	ModelType            string   `protobuf:"bytes,1,opt,name=model_type,json=modelType,proto3" json:"model_type,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -157,9 +156,47 @@ func (m *ExportStartedReq) GetModelType() string {
 	return ""
 }
 
+type ExportStartedResp struct {
+	SessionId            string   `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ExportStartedResp) Reset()         { *m = ExportStartedResp{} }
+func (m *ExportStartedResp) String() string { return proto.CompactTextString(m) }
+func (*ExportStartedResp) ProtoMessage()    {}
+func (*ExportStartedResp) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bf10f51bd2cb5547, []int{3}
+}
+
+func (m *ExportStartedResp) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExportStartedResp.Unmarshal(m, b)
+}
+func (m *ExportStartedResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExportStartedResp.Marshal(b, m, deterministic)
+}
+func (m *ExportStartedResp) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExportStartedResp.Merge(m, src)
+}
+func (m *ExportStartedResp) XXX_Size() int {
+	return xxx_messageInfo_ExportStartedResp.Size(m)
+}
+func (m *ExportStartedResp) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExportStartedResp.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExportStartedResp proto.InternalMessageInfo
+
+func (m *ExportStartedResp) GetSessionId() string {
+	if m != nil {
+		return m.SessionId
+	}
+	return ""
+}
+
 type ExportDoneReq struct {
-	// modelType is the type of the object. i.e. sourcecode.commit
-	ModelType            string   `protobuf:"bytes,1,opt,name=model_type,json=modelType,proto3" json:"model_type,omitempty"`
+	SessionId            string   `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -169,7 +206,7 @@ func (m *ExportDoneReq) Reset()         { *m = ExportDoneReq{} }
 func (m *ExportDoneReq) String() string { return proto.CompactTextString(m) }
 func (*ExportDoneReq) ProtoMessage()    {}
 func (*ExportDoneReq) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{3}
+	return fileDescriptor_bf10f51bd2cb5547, []int{4}
 }
 
 func (m *ExportDoneReq) XXX_Unmarshal(b []byte) error {
@@ -190,18 +227,17 @@ func (m *ExportDoneReq) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ExportDoneReq proto.InternalMessageInfo
 
-func (m *ExportDoneReq) GetModelType() string {
+func (m *ExportDoneReq) GetSessionId() string {
 	if m != nil {
-		return m.ModelType
+		return m.SessionId
 	}
 	return ""
 }
 
 type SendExportedReq struct {
-	// modelType is the type of the object. i.e. sourcecode.commit
-	ModelType string `protobuf:"bytes,1,opt,name=model_type,json=modelType,proto3" json:"model_type,omitempty"`
-	// objs is the objects to send in this batch
-	Objs                 []*ExportObj `protobuf:"bytes,2,rep,name=objs,proto3" json:"objs,omitempty"`
+	SessionId            string       `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	LastProcessedToken   string       `protobuf:"bytes,2,opt,name=lastProcessedToken,proto3" json:"lastProcessedToken,omitempty"`
+	Objs                 []*ExportObj `protobuf:"bytes,3,rep,name=objs,proto3" json:"objs,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
 	XXX_unrecognized     []byte       `json:"-"`
 	XXX_sizecache        int32        `json:"-"`
@@ -211,7 +247,7 @@ func (m *SendExportedReq) Reset()         { *m = SendExportedReq{} }
 func (m *SendExportedReq) String() string { return proto.CompactTextString(m) }
 func (*SendExportedReq) ProtoMessage()    {}
 func (*SendExportedReq) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{4}
+	return fileDescriptor_bf10f51bd2cb5547, []int{5}
 }
 
 func (m *SendExportedReq) XXX_Unmarshal(b []byte) error {
@@ -232,9 +268,16 @@ func (m *SendExportedReq) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_SendExportedReq proto.InternalMessageInfo
 
-func (m *SendExportedReq) GetModelType() string {
+func (m *SendExportedReq) GetSessionId() string {
 	if m != nil {
-		return m.ModelType
+		return m.SessionId
+	}
+	return ""
+}
+
+func (m *SendExportedReq) GetLastProcessedToken() string {
+	if m != nil {
+		return m.LastProcessedToken
 	}
 	return ""
 }
@@ -258,7 +301,7 @@ func (m *ExportObj) Reset()         { *m = ExportObj{} }
 func (m *ExportObj) String() string { return proto.CompactTextString(m) }
 func (*ExportObj) ProtoMessage()    {}
 func (*ExportObj) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{5}
+	return fileDescriptor_bf10f51bd2cb5547, []int{6}
 }
 
 func (m *ExportObj) XXX_Unmarshal(b []byte) error {
@@ -293,40 +336,88 @@ func (m *ExportObj) GetData() []byte {
 	return nil
 }
 
+type ExportGitRepoReq struct {
+	Url                  string   `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ExportGitRepoReq) Reset()         { *m = ExportGitRepoReq{} }
+func (m *ExportGitRepoReq) String() string { return proto.CompactTextString(m) }
+func (*ExportGitRepoReq) ProtoMessage()    {}
+func (*ExportGitRepoReq) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bf10f51bd2cb5547, []int{7}
+}
+
+func (m *ExportGitRepoReq) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExportGitRepoReq.Unmarshal(m, b)
+}
+func (m *ExportGitRepoReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExportGitRepoReq.Marshal(b, m, deterministic)
+}
+func (m *ExportGitRepoReq) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExportGitRepoReq.Merge(m, src)
+}
+func (m *ExportGitRepoReq) XXX_Size() int {
+	return xxx_messageInfo_ExportGitRepoReq.Size(m)
+}
+func (m *ExportGitRepoReq) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExportGitRepoReq.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExportGitRepoReq proto.InternalMessageInfo
+
+func (m *ExportGitRepoReq) GetUrl() string {
+	if m != nil {
+		return m.Url
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterEnum("proto.ExportObj_DataType", ExportObj_DataType_name, ExportObj_DataType_value)
 	proto.RegisterType((*Empty)(nil), "proto.Empty")
 	proto.RegisterType((*IntegrationInitReq)(nil), "proto.IntegrationInitReq")
 	proto.RegisterType((*ExportStartedReq)(nil), "proto.ExportStartedReq")
+	proto.RegisterType((*ExportStartedResp)(nil), "proto.ExportStartedResp")
 	proto.RegisterType((*ExportDoneReq)(nil), "proto.ExportDoneReq")
 	proto.RegisterType((*SendExportedReq)(nil), "proto.SendExportedReq")
 	proto.RegisterType((*ExportObj)(nil), "proto.ExportObj")
+	proto.RegisterType((*ExportGitRepoReq)(nil), "proto.ExportGitRepoReq")
 }
 
 func init() { proto.RegisterFile("defs.proto", fileDescriptor_bf10f51bd2cb5547) }
 
 var fileDescriptor_bf10f51bd2cb5547 = []byte{
-	// 312 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x51, 0x41, 0x4f, 0xf2, 0x40,
-	0x10, 0xfd, 0xca, 0x57, 0xb0, 0x1d, 0x40, 0x9b, 0x39, 0x18, 0xd4, 0x68, 0x48, 0xc3, 0x81, 0x53,
-	0x0d, 0xd5, 0x78, 0xf3, 0x40, 0x02, 0x07, 0x3c, 0x48, 0xb2, 0x18, 0xae, 0xa4, 0x64, 0x47, 0x02,
-	0x91, 0x6e, 0x5d, 0x26, 0x2a, 0xff, 0xde, 0xec, 0x2e, 0x28, 0xe0, 0x85, 0xd3, 0xbe, 0x7d, 0xfb,
-	0xde, 0xcc, 0xec, 0x1b, 0x00, 0x49, 0xaf, 0xab, 0xa4, 0xd0, 0x8a, 0x15, 0x96, 0xed, 0x11, 0x9f,
-	0x40, 0xb9, 0xbf, 0x2c, 0x78, 0x1d, 0x77, 0x00, 0x07, 0x39, 0xd3, 0x4c, 0x67, 0x3c, 0x57, 0xf9,
-	0x20, 0x9f, 0xb3, 0xa0, 0x77, 0xbc, 0x82, 0x70, 0x45, 0xfa, 0x83, 0xf4, 0x64, 0x2e, 0x1b, 0x5e,
-	0xd3, 0x6b, 0xd7, 0x45, 0xe0, 0x88, 0x81, 0x8c, 0x3b, 0x10, 0xf5, 0xbf, 0x0a, 0xa5, 0x79, 0xc4,
-	0x99, 0x66, 0x92, 0xc6, 0x70, 0x0d, 0xb0, 0x54, 0x92, 0xde, 0x26, 0xbc, 0x2e, 0xc8, 0x3a, 0x42,
-	0x11, 0x5a, 0xe6, 0x65, 0x5d, 0x50, 0x9c, 0x40, 0xdd, 0x59, 0x7a, 0x2a, 0xa7, 0x23, 0xf4, 0x63,
-	0x38, 0x1b, 0x51, 0x2e, 0x9d, 0xe7, 0x98, 0x0e, 0xd8, 0x02, 0x5f, 0x4d, 0x17, 0xab, 0x46, 0xa9,
-	0xf9, 0xbf, 0x5d, 0x4d, 0x23, 0xf7, 0xdb, 0xc4, 0x15, 0x18, 0x4e, 0x17, 0xc2, 0xbe, 0xc6, 0x9f,
-	0x10, 0xfe, 0x50, 0xf8, 0x00, 0xa1, 0xcc, 0x38, 0xfb, 0x2d, 0x78, 0x9a, 0x5e, 0x1c, 0xfa, 0x92,
-	0x5e, 0xc6, 0x99, 0x69, 0x20, 0x02, 0xb9, 0x41, 0x88, 0xe0, 0x1b, 0xdc, 0x28, 0x35, 0xbd, 0x76,
-	0x4d, 0x58, 0x1c, 0xdf, 0x40, 0xb0, 0x55, 0x62, 0x00, 0xfe, 0xd3, 0x68, 0xf8, 0x1c, 0xfd, 0x33,
-	0xa8, 0x3b, 0x16, 0xc3, 0xc8, 0x4b, 0x25, 0x54, 0x77, 0x62, 0xc6, 0x5b, 0xf0, 0x4d, 0xd4, 0xb8,
-	0xed, 0xf7, 0x77, 0x05, 0x97, 0xb5, 0xed, 0x28, 0x66, 0x4d, 0xd8, 0x82, 0x8a, 0x9b, 0x09, 0xf7,
-	0xf8, 0x7d, 0x55, 0xfa, 0x08, 0xe5, 0xee, 0x8c, 0x72, 0xc6, 0x7b, 0xa8, 0xed, 0xe6, 0x87, 0xe7,
-	0x1b, 0xd9, 0x41, 0xa8, 0xfb, 0xf6, 0x69, 0xc5, 0x5e, 0xee, 0xbe, 0x03, 0x00, 0x00, 0xff, 0xff,
-	0xd1, 0x5f, 0x3a, 0xc8, 0x30, 0x02, 0x00, 0x00,
+	// 424 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x52, 0x4d, 0x6f, 0xd3, 0x40,
+	0x10, 0xc5, 0x24, 0x29, 0xf1, 0x34, 0x05, 0x33, 0x42, 0x10, 0x8a, 0x40, 0xd5, 0x2a, 0x87, 0x9e,
+	0x0c, 0x35, 0xa8, 0xf7, 0xa2, 0x56, 0x28, 0x1c, 0x08, 0xda, 0x54, 0x5c, 0x2b, 0x87, 0x1d, 0x2a,
+	0x97, 0x74, 0x77, 0xd9, 0x5d, 0x3e, 0xf2, 0x07, 0xf8, 0xb3, 0xfc, 0x09, 0xb4, 0xeb, 0x75, 0x5d,
+	0xbb, 0x55, 0x4f, 0x1e, 0xcf, 0xcc, 0xd3, 0xbc, 0x7d, 0xef, 0x01, 0x08, 0xfa, 0x66, 0x73, 0x6d,
+	0x94, 0x53, 0x38, 0x0a, 0x1f, 0xf6, 0x00, 0x46, 0x27, 0x97, 0xda, 0x6d, 0xd8, 0x01, 0xe0, 0x5c,
+	0x3a, 0x3a, 0x37, 0xa5, 0xab, 0x94, 0x9c, 0xcb, 0xca, 0x71, 0xfa, 0x81, 0x2f, 0x20, 0xb5, 0x64,
+	0x7e, 0x91, 0x39, 0xab, 0xc4, 0x34, 0xd9, 0x4b, 0xf6, 0x77, 0xf8, 0xb8, 0x6e, 0xcc, 0x05, 0x3b,
+	0x80, 0xec, 0xe4, 0x8f, 0x56, 0xc6, 0x2d, 0x5d, 0x69, 0x1c, 0x09, 0x0f, 0x78, 0x09, 0x70, 0xa9,
+	0x04, 0xad, 0xcf, 0xdc, 0x46, 0x53, 0x40, 0xa4, 0x3c, 0x0d, 0x9d, 0xd3, 0x8d, 0x26, 0x56, 0xc0,
+	0xe3, 0x1e, 0xc4, 0x6a, 0x8f, 0xb1, 0x64, 0x6d, 0xa5, 0x64, 0x73, 0x25, 0xe5, 0x69, 0xec, 0xcc,
+	0x05, 0xcb, 0x61, 0xa7, 0xc6, 0x1c, 0x2b, 0x49, 0xf1, 0xc6, 0x5d, 0xfb, 0x7f, 0x13, 0x78, 0xb4,
+	0x24, 0x29, 0x6a, 0xd0, 0x15, 0xad, 0x3b, 0x20, 0x98, 0x03, 0xae, 0x4b, 0xeb, 0x3e, 0x1b, 0xf5,
+	0x95, 0xac, 0x25, 0x71, 0xaa, 0xbe, 0x93, 0x9c, 0xde, 0x0f, 0x6b, 0xb7, 0x4c, 0x70, 0x06, 0x43,
+	0xb5, 0xba, 0xb0, 0xd3, 0xc1, 0xde, 0x60, 0x7f, 0xbb, 0xc8, 0x6a, 0x49, 0xf3, 0xfa, 0xe0, 0x62,
+	0x75, 0xc1, 0xc3, 0x94, 0xfd, 0x86, 0xf4, 0xaa, 0x85, 0x87, 0x90, 0x8a, 0xd2, 0x95, 0xad, 0x2e,
+	0x0f, 0x8b, 0xe7, 0x7d, 0x5c, 0x7e, 0x5c, 0xba, 0xd2, 0xeb, 0xc4, 0xc7, 0x22, 0x56, 0x88, 0x30,
+	0xf4, 0x75, 0x20, 0x33, 0xe1, 0xa1, 0x66, 0xaf, 0x60, 0xdc, 0x6c, 0xe2, 0x18, 0x86, 0x1f, 0x97,
+	0x8b, 0x4f, 0xd9, 0x3d, 0x5f, 0x1d, 0x7d, 0xe1, 0x8b, 0x2c, 0x61, 0xb3, 0xc6, 0x98, 0x0f, 0xde,
+	0x45, 0xad, 0xbc, 0x02, 0x19, 0x0c, 0x7e, 0x9a, 0x75, 0x7c, 0xba, 0x2f, 0x0b, 0x01, 0xdb, 0xd7,
+	0x1c, 0xc7, 0xd7, 0x30, 0xf4, 0xae, 0x63, 0xc3, 0xea, 0x66, 0x1a, 0x76, 0x27, 0x0d, 0x61, 0x9f,
+	0x18, 0x9c, 0xc1, 0x56, 0x7d, 0x05, 0x3b, 0xfd, 0xee, 0x56, 0xf1, 0x2f, 0x81, 0xd1, 0xd1, 0x39,
+	0x49, 0x87, 0xef, 0x1b, 0x1f, 0xa3, 0xf7, 0xf8, 0xac, 0xf3, 0xfe, 0x36, 0x44, 0xbb, 0xd3, 0xdb,
+	0x07, 0x56, 0xe3, 0x1b, 0x80, 0x36, 0x0b, 0xf8, 0xa4, 0xb3, 0x17, 0xe3, 0xd1, 0x63, 0xf9, 0x0e,
+	0x26, 0xd7, 0xc3, 0x80, 0x4f, 0xe3, 0xb4, 0x97, 0x90, 0x1e, 0xea, 0xb0, 0xe1, 0x1a, 0x15, 0xec,
+	0x71, 0x6d, 0x75, 0xed, 0xe2, 0x56, 0x5b, 0xe1, 0xe7, 0xed, 0xff, 0x00, 0x00, 0x00, 0xff, 0xff,
+	0x91, 0x1f, 0x36, 0x6d, 0x6a, 0x03, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -438,8 +529,10 @@ var _Integration_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type AgentClient interface {
-	// SendExported forwards the exported objects from intergration to agent, which then upload the data when necessary
+	ExportStarted(ctx context.Context, in *ExportStartedReq, opts ...grpc.CallOption) (*ExportStartedResp, error)
+	ExportDone(ctx context.Context, in *ExportDoneReq, opts ...grpc.CallOption) (*Empty, error)
 	SendExported(ctx context.Context, in *SendExportedReq, opts ...grpc.CallOption) (*Empty, error)
+	ExportGitRepo(ctx context.Context, in *ExportGitRepoReq, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type agentClient struct {
@@ -448,6 +541,24 @@ type agentClient struct {
 
 func NewAgentClient(cc *grpc.ClientConn) AgentClient {
 	return &agentClient{cc}
+}
+
+func (c *agentClient) ExportStarted(ctx context.Context, in *ExportStartedReq, opts ...grpc.CallOption) (*ExportStartedResp, error) {
+	out := new(ExportStartedResp)
+	err := c.cc.Invoke(ctx, "/proto.Agent/ExportStarted", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) ExportDone(ctx context.Context, in *ExportDoneReq, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, "/proto.Agent/ExportDone", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *agentClient) SendExported(ctx context.Context, in *SendExportedReq, opts ...grpc.CallOption) (*Empty, error) {
@@ -459,14 +570,61 @@ func (c *agentClient) SendExported(ctx context.Context, in *SendExportedReq, opt
 	return out, nil
 }
 
+func (c *agentClient) ExportGitRepo(ctx context.Context, in *ExportGitRepoReq, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, "/proto.Agent/ExportGitRepo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentServer is the server API for Agent service.
 type AgentServer interface {
-	// SendExported forwards the exported objects from intergration to agent, which then upload the data when necessary
+	ExportStarted(context.Context, *ExportStartedReq) (*ExportStartedResp, error)
+	ExportDone(context.Context, *ExportDoneReq) (*Empty, error)
 	SendExported(context.Context, *SendExportedReq) (*Empty, error)
+	ExportGitRepo(context.Context, *ExportGitRepoReq) (*Empty, error)
 }
 
 func RegisterAgentServer(s *grpc.Server, srv AgentServer) {
 	s.RegisterService(&_Agent_serviceDesc, srv)
+}
+
+func _Agent_ExportStarted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportStartedReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).ExportStarted(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Agent/ExportStarted",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).ExportStarted(ctx, req.(*ExportStartedReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_ExportDone_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportDoneReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).ExportDone(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Agent/ExportDone",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).ExportDone(ctx, req.(*ExportDoneReq))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Agent_SendExported_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -487,13 +645,43 @@ func _Agent_SendExported_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Agent_ExportGitRepo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportGitRepoReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).ExportGitRepo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Agent/ExportGitRepo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).ExportGitRepo(ctx, req.(*ExportGitRepoReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Agent_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "proto.Agent",
 	HandlerType: (*AgentServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "ExportStarted",
+			Handler:    _Agent_ExportStarted_Handler,
+		},
+		{
+			MethodName: "ExportDone",
+			Handler:    _Agent_ExportDone_Handler,
+		},
+		{
 			MethodName: "SendExported",
 			Handler:    _Agent_SendExported_Handler,
+		},
+		{
+			MethodName: "ExportGitRepo",
+			Handler:    _Agent_ExportGitRepo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

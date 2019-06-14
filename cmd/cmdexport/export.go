@@ -2,47 +2,51 @@ package cmdexport
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
+	"strconv"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent2/rpcdef"
 )
 
-func devIntegrationCommand(integrationName string) *exec.Cmd {
-	// build to catch compile errors
-	// we don't need the resulting binary
-	cmd := exec.Command("go", "build", "-o", filepath.Join(os.TempDir(), "out"), "github.com/pinpt/agent2/integrations/"+integrationName)
-	cmd.Stdout = os.Stderr
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+type export struct {
+	logger       hclog.Logger
+	pluginClient *plugin.Client
+	sessions     *sessions
+	integration  rpcdef.Integration
+}
+
+func newExport(logger hclog.Logger) *export {
+	s := &export{}
+	s.logger = logger
+	err := s.setupPlugins()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		panic(err)
 	}
-	return exec.Command("go", "run", "github.com/pinpt/agent2/integrations/"+integrationName)
+	s.sessions = newSessions()
+
+	ctx := context.Background()
+	err = s.integration.Export(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return s
 }
 
-type agentDelegate struct {
+func (s export) Destroy() {
+	defer s.pluginClient.Kill()
 }
 
-func (s agentDelegate) SendExported(modelType string, objs []rpcdef.ExportObj) {
-	fmt.Println("agent: SendExported received event", modelType, "len(objs)=", len(objs))
-}
-
-func Run(logger hclog.Logger) error {
+func (s *export) setupPlugins() error {
 	client := plugin.NewClient(&plugin.ClientConfig{
-		Logger:          logger,
+		Logger:          s.logger,
 		HandshakeConfig: rpcdef.Handshake,
 		Plugins:         rpcdef.PluginMap,
 		Cmd:             devIntegrationCommand("mock"),
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolGRPC},
 	})
-	defer client.Kill()
+	s.pluginClient = client
 
 	rpcClient, err := client.Client()
 	if err != nil {
@@ -54,16 +58,46 @@ func Run(logger hclog.Logger) error {
 		return err
 	}
 
-	delegate := agentDelegate{}
+	s.integration = raw.(rpcdef.Integration)
 
-	impl := raw.(rpcdef.Integration)
-	ctx := context.Background()
-
-	impl.Init(delegate)
-
-	err = impl.Export(ctx)
-	if err != nil {
-		return err
+	delegate := agentDelegate{
+		export: s,
 	}
+
+	s.integration.Init(delegate)
 	return nil
+}
+
+type sessions struct {
+	m      map[int]session
+	lastID int
+}
+
+func newSessions() *sessions {
+	s := &sessions{}
+	s.m = map[int]session{}
+	return s
+}
+
+func (s *sessions) new(modelType string) (sessionID string) {
+	s.lastID++
+	id := s.lastID
+	s.m[id] = session{
+		state:     "started",
+		modelType: modelType,
+	}
+	return strconv.Itoa(id)
+}
+
+func (s *sessions) get(sessionID string) session {
+	id, err := strconv.Atoi(sessionID)
+	if err != nil {
+		panic(err)
+	}
+	return s.m[id]
+}
+
+type session struct {
+	state     string
+	modelType string
 }

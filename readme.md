@@ -12,6 +12,8 @@ After that agent calls Export methods on integrations in parallel. Integration m
 
 ### Agent RPC interface
 
+[See in code](https://github.com/pinpt/agent2/blob/master/rpcdef/agent.go)
+
 ```golang
 type Agent interface {
 
@@ -24,15 +26,20 @@ ExportDone(sessionID string)
 
 // SendExported forwards the exported objects from intergration to agent,
 // which then uploads the data (or queues for uploading).
-SendExported(sessionID string, objs interface{}, lastProcessedToken string)
+SendExported(
+		sessionID string,
+		lastProcessedToken string,
+		objs []ExportObj)
 
 // Integration can ask agent to download and process git repo using ripsrc.
-ExportGitRepo(creds Creds)
+ExportGitRepo(fetch GitRepoFetch)
 
 }
 ```
 
 ### Integration RPC interface
+
+[See in code](https://github.com/pinpt/agent2/blob/master/rpcdef/integration.go)
 
 ```golang
 type Integration interface {
