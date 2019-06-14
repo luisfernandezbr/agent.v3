@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/go-ps"
 	"github.com/pinpt/agent2/cmd/cmdexport"
 	"github.com/pinpt/agent2/cmd/cmdserviceinstall"
@@ -47,12 +48,29 @@ var cmdRoot = &cobra.Command{
 	},
 }
 
+func defaultLogger() hclog.Logger {
+	return hclog.New(&hclog.LoggerOptions{
+		Output:     os.Stdout,
+		Level:      hclog.Info,
+		JSONFormat: false,
+	})
+}
+
+func exitWithErr(logger hclog.Logger, err error) {
+	logger.Error("error: " + err.Error())
+	os.Exit(1)
+}
+
 var cmdExport = &cobra.Command{
 	Use:   "export",
 	Short: "Run data export for configured integrations",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmdexport.Run()
+		logger := defaultLogger()
+		err := cmdexport.Run(logger)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
 	},
 }
 
@@ -65,7 +83,11 @@ var cmdServiceInstall = &cobra.Command{
 	Short: "Install OS service of agent",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmdserviceinstall.Run()
+		logger := defaultLogger()
+		err := cmdserviceinstall.Run(logger)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
 	},
 }
 
@@ -78,7 +100,11 @@ var cmdServiceUninstall = &cobra.Command{
 	Short: "Uninstall OS service of agent, but keep data and configuration",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmdserviceuninstall.Run()
+		logger := defaultLogger()
+		err := cmdserviceuninstall.Run(logger)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
 	},
 }
 
@@ -91,7 +117,11 @@ var cmdServiceRun = &cobra.Command{
 	Short: "This command is called by OS service to run the service.",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmdservicerun.Run()
+		logger := defaultLogger()
+		err := cmdservicerun.Run(logger)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
 	},
 }
 

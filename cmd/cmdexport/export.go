@@ -33,13 +33,7 @@ func (s agentDelegate) SendExported(modelType string, objs []rpcdef.ExportObj) {
 	fmt.Println("agent: SendExported received event", modelType, "len(objs)=", len(objs))
 }
 
-func Run() {
-	logger := hclog.New(&hclog.LoggerOptions{
-		Output:     os.Stdout,
-		Level:      hclog.Info,
-		JSONFormat: false,
-	})
-
+func Run(logger hclog.Logger) error {
 	client := plugin.NewClient(&plugin.ClientConfig{
 		Logger:          logger,
 		HandshakeConfig: rpcdef.Handshake,
@@ -52,14 +46,12 @@ func Run() {
 
 	rpcClient, err := client.Client()
 	if err != nil {
-		fmt.Println("Error:", err.Error())
-		os.Exit(1)
+		return err
 	}
 
 	raw, err := rpcClient.Dispense("integration")
 	if err != nil {
-		fmt.Println("Error:", err.Error())
-		os.Exit(1)
+		return err
 	}
 
 	delegate := agentDelegate{}
@@ -70,5 +62,8 @@ func Run() {
 	impl.Init(delegate)
 
 	err = impl.Export(ctx)
-	fmt.Println("call err", err)
+	if err != nil {
+		return err
+	}
+	return nil
 }

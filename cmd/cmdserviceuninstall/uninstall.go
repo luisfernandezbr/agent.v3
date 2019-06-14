@@ -1,21 +1,23 @@
 package cmdserviceuninstall
 
 import (
+	"fmt"
+
+	"github.com/hashicorp/go-hclog"
 	kservice "github.com/kardianos/service"
 	"github.com/pinpt/agent2/cmd/cmdserviceinstall"
 )
 
-func Run() {
+func Run(logger hclog.Logger) error {
 	conf := cmdserviceinstall.KServiceConfig()
 	serv, err := kservice.New(nil, conf)
 	if err != nil {
-		panic(err)
-		//log.Fatal(logger, "service config", "err", err)
+		return fmt.Errorf("could not init service, err: %v", err)
 	}
 	err = serv.Stop()
 	if err != nil {
-		panic(err)
-		//log.Warn(logger, "error stopping service", "err", err)
+		return fmt.Errorf("error stopping service, err: %v", err)
 	}
 
+	return nil
 }

@@ -7,11 +7,12 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent2/pkg/pservice"
 	"github.com/pinpt/go-common/log"
 )
 
-func Run() {
+func Run(logger hclog.Logger) error {
 	fmt.Println("service-run")
 
 	for {
