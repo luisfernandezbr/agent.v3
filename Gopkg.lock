@@ -2,6 +2,17 @@
 
 
 [[projects]]
+  digest = "1:c952f10089bb57d6e6d56d8880bcbb4d444b1d40b091354cb25b10a6c23b211a"
+  name = "github.com/bxcodec/faker"
+  packages = [
+    ".",
+    "support/slice",
+  ]
+  pruneopts = "UT"
+  revision = "bfe096fd9e446fc441f79f1aa53cf1c9b5594179"
+  version = "v2.0.1"
+
+[[projects]]
   digest = "1:998cf998358a303ac2430c386ba3fd3398477d6013153d3c6e11432765cc9ae6"
   name = "github.com/cespare/xxhash"
   packages = ["."]
@@ -75,6 +86,14 @@
   version = "v1.3.1"
 
 [[projects]]
+  digest = "1:e4f5819333ac698d294fe04dbf640f84719658d5c7ce195b10060cc37292ce79"
+  name = "github.com/golang/snappy"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "2a8bb927dd31d8daada140a5d09578521ce5c36a"
+  version = "v0.0.1"
+
+[[projects]]
   digest = "1:cf6b61e1b4c26b0c7526cee4a0cee6d8302b17798af4b2a56a90eedac0aef11a"
   name = "github.com/hashicorp/go-hclog"
   packages = ["."]
@@ -134,6 +153,14 @@
   revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
 
 [[projects]]
+  digest = "1:29e8142fc5691e23f694556158a6a90609c5566b853bedaaf6fdf9044388fa62"
+  name = "github.com/linkedin/goavro"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "423ccb64cb5f50eb0292acd35451f47f28690a53"
+  version = "v2.9.0"
+
+[[projects]]
   digest = "1:c658e84ad3916da105a761660dcaeb01e63416c8ec7bc62256a9b411a05fcd67"
   name = "github.com/mattn/go-colorable"
   packages = ["."]
@@ -190,15 +217,18 @@
   revision = "2e52cf6e685269ed8aefec6390f3cac3ef74e730"
 
 [[projects]]
-  digest = "1:fee098d14774434316e69d6de4e763d4d4adfb7a11991e065362706047edd6de"
+  digest = "1:db85258e95913c5d0635e68d8be9947f93e73c7acdfb88d04b967a1d383e4627"
   name = "github.com/pinpt/go-common"
   packages = [
+    "datamodel",
     "datetime",
+    "event",
     "fileutil",
     "hash",
     "io",
     "json",
     "log",
+    "number",
     "os",
     "strings",
     "term",
@@ -206,6 +236,14 @@
   pruneopts = "UT"
   revision = "83d0f29aace32dacbedfbb0bb1cd8fed027ea57c"
   version = "6.0.20"
+
+[[projects]]
+  digest = "1:6d2ae166ab2aa86a306668522526cc66c146047e3ebeef1b59ab48592e43c3ac"
+  name = "github.com/pinpt/go-datamodel"
+  packages = ["sourcecode"]
+  pruneopts = "UT"
+  revision = "0f4897e7367f287dec463717dfc3a625137e2586"
+  version = "0.0.151"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -367,6 +405,7 @@
     "github.com/mitchellh/go-ps",
     "github.com/pinpt/go-common/io",
     "github.com/pinpt/go-common/log",
+    "github.com/pinpt/go-datamodel/sourcecode",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
     "golang.org/x/net/context",

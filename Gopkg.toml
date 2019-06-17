@@ -18,9 +18,9 @@
   name = "github.com/mitchellh/go-ps"
   branch = "master"
 
-[[constraint]]
-  name = "github.com/fsnotify/fsnotify"
-  version = "1"
+#[[constraint]]
+#  name = "github.com/fsnotify/fsnotify"
+#  version = "1"
 
 [[constraint]]
   name = "github.com/pinpt/go-common"
@@ -33,3 +33,7 @@
 [[constraint]]
   name = "github.com/mitchellh/go-homedir"
   version = "1"
+
+[[constraint]]
+  name = "github.com/pinpt/go-datamodel"
+  version = "0"

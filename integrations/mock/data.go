@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/pinpt/agent2/rpcdef"
+	"github.com/pinpt/go-datamodel/sourcecode"
 )
 
 func (s *Integration) exportAll() {
@@ -18,12 +19,11 @@ func (s *Integration) exportBlames() {
 	for i := 0; i < 10; i++ {
 		rows := []map[string]interface{}{}
 		for j := 0; j < 10; j++ {
-			row := map[string]interface{}{
-				"repo_id":  "r1",
-				"filename": "f",
-				"language": "go",
-			}
-			rows = append(rows, row)
+			row := sourcecode.Blame{}
+			row.RepoID = "r1"
+			row.Filename = "f"
+			row.Language = "go"
+			rows = append(rows, row.ToMap())
 		}
 		var objs []rpcdef.ExportObj
 		for _, row := range rows {

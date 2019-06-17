@@ -157,7 +157,7 @@ func (s *sessions) Close(sessionID string) error {
 func (s *sessions) Write(sessionID string, objs []rpcdef.ExportObj) error {
 	sess := s.get(sessionID)
 	for _, obj := range objs {
-		err := sess.stream.Write(obj)
+		err := sess.stream.Write(obj.Data)
 		if err != nil {
 			return err
 		}
