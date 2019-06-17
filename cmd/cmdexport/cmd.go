@@ -1,11 +1,7 @@
 package cmdexport
 
-import (
-	"github.com/hashicorp/go-hclog"
-)
-
-func Run(logger hclog.Logger) error {
-	exp := newExport(logger)
+func Run(opts Opts) error {
+	exp := newExport(opts)
 	defer exp.Destroy()
 	return nil
 }

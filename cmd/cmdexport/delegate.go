@@ -11,17 +11,25 @@ type agentDelegate struct {
 }
 
 func (s agentDelegate) ExportStarted(modelType string) (sessionID string) {
-	return s.export.sessions.new(modelType)
+	id, err := s.export.sessions.new(modelType)
+	if err != nil {
+		panic(err)
+	}
+	return id
 }
 
 func (s agentDelegate) ExportDone(sessionID string) {
-
+	err := s.export.sessions.Close(sessionID)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (s agentDelegate) SendExported(sessionID string, lastProcessedToken string, objs []rpcdef.ExportObj) {
-	session := s.export.sessions.get(sessionID)
-	modelType := session.modelType
-	fmt.Println("agent: SendExported ", modelType, "len(objs)=", len(objs))
+	err := s.export.sessions.Write(sessionID, objs)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (s agentDelegate) ExportGitRepo(fetch rpcdef.GitRepoFetch) {

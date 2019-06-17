@@ -29,3 +29,7 @@
 [[constraint]]  
   name = "github.com/kardianos/service"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/mitchellh/go-homedir"
+  version = "1"

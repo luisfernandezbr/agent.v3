@@ -67,7 +67,9 @@ var cmdExport = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := defaultLogger()
-		err := cmdexport.Run(logger)
+		err := cmdexport.Run(cmdexport.Opts{
+			Logger: logger,
+		})
 		if err != nil {
 			exitWithErr(logger, err)
 		}

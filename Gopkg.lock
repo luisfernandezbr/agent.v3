@@ -26,14 +26,6 @@
   version = "v1.7.0"
 
 [[projects]]
-  digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
-  name = "github.com/fsnotify/fsnotify"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
-  version = "v1.4.7"
-
-[[projects]]
   digest = "1:db2e37856e0f3e8ad322792ca2ede9bcf821f4d482ca0ef300e6a9d85776a99a"
   name = "github.com/go-kit/kit"
   packages = [
@@ -158,6 +150,14 @@
   version = "v0.0.8"
 
 [[projects]]
+  digest = "1:5d231480e1c64a726869bc4142d270184c419749d34f167646baa21008eb0a79"
+  name = "github.com/mitchellh/go-homedir"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "af06845cf3004701891bf4fdb884bfe4920b3727"
+  version = "v1.1.0"
+
+[[projects]]
   branch = "master"
   digest = "1:d0c95a34e79df79eb96ca870d6b6fc43361d34c9c05495f93a5ad0077f7bbb24"
   name = "github.com/mitchellh/go-ps"
@@ -190,12 +190,13 @@
   revision = "2e52cf6e685269ed8aefec6390f3cac3ef74e730"
 
 [[projects]]
-  digest = "1:b04bf00b600f958e28548467fc289fecdf8d041f0c0514a5ab02a7aac09d99bf"
+  digest = "1:fee098d14774434316e69d6de4e763d4d4adfb7a11991e065362706047edd6de"
   name = "github.com/pinpt/go-common"
   packages = [
     "datetime",
     "fileutil",
     "hash",
+    "io",
     "json",
     "log",
     "os",
@@ -358,12 +359,13 @@
   analyzer-version = 1
   input-imports = [
     "github.com/fatih/color",
-    "github.com/fsnotify/fsnotify",
     "github.com/golang/protobuf/proto",
     "github.com/hashicorp/go-hclog",
     "github.com/hashicorp/go-plugin",
     "github.com/kardianos/service",
+    "github.com/mitchellh/go-homedir",
     "github.com/mitchellh/go-ps",
+    "github.com/pinpt/go-common/io",
     "github.com/pinpt/go-common/log",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
