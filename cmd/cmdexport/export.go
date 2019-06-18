@@ -1,7 +1,9 @@
 package cmdexport
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -24,13 +26,16 @@ type export struct {
 	logger       hclog.Logger
 	pluginClient *plugin.Client
 	sessions     *sessions
-	integration  rpcdef.Integration
+	integration  *integration
 
 	dirs exportDirs
+
+	stderr *bytes.Buffer
 }
 
 type exportDirs struct {
 	sessions string
+	logs     string
 }
 
 func newExport(opts Opts) *export {
@@ -46,54 +51,30 @@ func newExport(opts Opts) *export {
 	s.logger = opts.Logger
 	s.dirs = exportDirs{
 		sessions: filepath.Join(opts.WorkDir, "sessions"),
-	}
-	err := s.setupPlugins()
-	if err != nil {
-		panic(err)
+		logs:     filepath.Join(opts.WorkDir, "logs"),
 	}
 	s.sessions = newSessions(s.dirs.sessions)
 
-	ctx := context.Background()
-	err = s.integration.Export(ctx)
+	var err error
+	s.integration, err = newIntegration(s, "mock")
 	if err != nil {
+		panic(err)
+	}
+
+	ctx := context.Background()
+	err = s.integration.rpcClient.Export(ctx)
+	if err != nil {
+		fmt.Println("plugin stderr", s.stderr.String())
 		panic(err)
 	}
 	return s
 }
 
 func (s export) Destroy() {
-	defer s.pluginClient.Kill()
-}
-
-func (s *export) setupPlugins() error {
-	client := plugin.NewClient(&plugin.ClientConfig{
-		Logger:          s.logger,
-		HandshakeConfig: rpcdef.Handshake,
-		Plugins:         rpcdef.PluginMap,
-		Cmd:             devIntegrationCommand("mock"),
-		AllowedProtocols: []plugin.Protocol{
-			plugin.ProtocolGRPC},
-	})
-	s.pluginClient = client
-
-	rpcClient, err := client.Client()
+	err := s.integration.Close()
 	if err != nil {
-		return err
+		panic(err)
 	}
-
-	raw, err := rpcClient.Dispense("integration")
-	if err != nil {
-		return err
-	}
-
-	s.integration = raw.(rpcdef.Integration)
-
-	delegate := agentDelegate{
-		export: s,
-	}
-
-	s.integration.Init(delegate)
-	return nil
 }
 
 type sessions struct {
