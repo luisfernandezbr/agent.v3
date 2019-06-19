@@ -2,9 +2,11 @@ package cmdexport
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
@@ -26,22 +28,25 @@ func devIntegrationCommand(integrationName string) *exec.Cmd {
 }
 
 type integration struct {
-	export  *export
-	logger  hclog.Logger
-	name    string
-	logFile *os.File
+	export *export
+	logger hclog.Logger
+	name   string
+
+	logFileLoc string
+	logFile    *os.File
 
 	pluginClient     *plugin.Client
 	rpcClientGeneric plugin.ClientProtocol
 	rpcClient        rpcdef.Integration
 
 	agentDelegate agentDelegate
+	closed        bool
 }
 
 func newIntegration(exp *export, name string) (*integration, error) {
 	s := &integration{}
 	s.export = exp
-	s.logger = s.export.logger
+	s.logger = s.export.logger.With("integration", name)
 	s.name = name
 	err := s.setupLogFile()
 	if err != nil {
@@ -56,6 +61,10 @@ func newIntegration(exp *export, name string) (*integration, error) {
 }
 
 func (s *integration) Close() error {
+	if s.closed {
+		return nil
+	}
+	s.closed = true
 	//err := s.rpcClientGeneric.Close()
 	//if err != nil {
 	//	return err
@@ -74,7 +83,8 @@ func (s *integration) setupLogFile() error {
 	if err != nil {
 		return err
 	}
-	f, err := os.Create(filepath.Join(dir, s.name))
+	s.logFileLoc = filepath.Join(dir, s.name)
+	f, err := os.Create(s.logFileLoc)
 	if err != nil {
 		return err
 	}
@@ -112,4 +122,32 @@ func (s *integration) setupRPC() error {
 	}
 	s.rpcClient.Init(s.agentDelegate)
 	return nil
+}
+
+func (s *integration) CloseAndDetectPanic() (panicOut string, rerr error) {
+	rerr = s.Close()
+	b, err := ioutil.ReadFile(s.logFileLoc)
+	if err != nil {
+		if rerr != nil {
+			return "", err
+		}
+		return
+	}
+	lines := strings.Split(string(b), "\n")
+	for i, line := range lines {
+		if startsWith(line, "panic:") {
+			return strings.Join(lines[i:], "\n"), rerr
+		}
+	}
+	return "", rerr
+}
+
+func startsWith(str, prefix string) bool {
+	if len(prefix) == 0 {
+		return true
+	}
+	if len(prefix) > len(str) {
+		return false
+	}
+	return str[0:len(prefix)] == prefix
 }

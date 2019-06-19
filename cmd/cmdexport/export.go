@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/mitchellh/go-homedir"
@@ -26,11 +27,12 @@ type export struct {
 	logger       hclog.Logger
 	pluginClient *plugin.Client
 	sessions     *sessions
-	integration  *integration
 
 	dirs exportDirs
 
 	stderr *bytes.Buffer
+
+	integrations map[string]*integration
 }
 
 type exportDirs struct {
@@ -55,25 +57,93 @@ func newExport(opts Opts) *export {
 	}
 	s.sessions = newSessions(s.dirs.sessions)
 
-	var err error
-	s.integration, err = newIntegration(s, "mock")
-	if err != nil {
-		panic(err)
-	}
-
-	ctx := context.Background()
-	err = s.integration.rpcClient.Export(ctx)
-	if err != nil {
-		fmt.Println("plugin stderr", s.stderr.String())
-		panic(err)
-	}
+	s.setupIntegrations()
+	s.runExports()
 	return s
 }
 
-func (s export) Destroy() {
-	err := s.integration.Close()
-	if err != nil {
-		panic(err)
+func (s *export) setupIntegrations() {
+	integrations := make(chan *integration)
+	go func() {
+		wg := sync.WaitGroup{}
+		for _, name := range []string{"github"} {
+			wg.Add(1)
+			name := name
+			go func() {
+				defer wg.Done()
+				integration, err := newIntegration(s, name)
+				if err != nil {
+					panic(err)
+				}
+				integrations <- integration
+			}()
+		}
+		wg.Wait()
+		close(integrations)
+	}()
+	s.integrations = map[string]*integration{}
+	for integration := range integrations {
+		s.integrations[integration.name] = integration
+	}
+}
+
+func (s *export) runExports() {
+	ctx := context.Background()
+	wg := sync.WaitGroup{}
+
+	errored := map[string]error{}
+	erroredMu := sync.Mutex{}
+
+	for name, integration := range s.integrations {
+		wg.Add(1)
+		name := name
+		integration := integration
+		go func() {
+			defer wg.Done()
+			s.logger.Info("Export starting", "integration", name, "log_file", integration.logFile.Name())
+			err := integration.rpcClient.Export(ctx)
+			if err != nil {
+				erroredMu.Lock()
+				errored[name] = err
+				erroredMu.Unlock()
+				s.logger.Error("Export failed", "integration", name, "err", err)
+			} else {
+				s.logger.Info("Export success", "integration", name)
+			}
+		}()
+	}
+	wg.Wait()
+
+	for name, integration := range s.integrations {
+		if errored[name] != nil {
+			s.logger.Error("Export failed", "integration", name, "err", errored[name])
+			panicOut, err := integration.CloseAndDetectPanic()
+			if panicOut != "" {
+				fmt.Println("Panic in integration", name)
+				fmt.Println(panicOut)
+			}
+			if err != nil {
+				s.logger.Error("Could not close integration", "err", err)
+			}
+		} else {
+			s.logger.Info("Export succeded", "integration", name)
+		}
+	}
+
+	if len(errored) > 0 {
+		s.logger.Error("Some exports failed", "failed", len(errored), "succeded", len(s.integrations)-len(errored))
+	} else {
+		s.logger.Info("Exports completed", "succeded", len(s.integrations))
+	}
+
+}
+
+func (s *export) Destroy() {
+	for _, integration := range s.integrations {
+		err := integration.Close()
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 

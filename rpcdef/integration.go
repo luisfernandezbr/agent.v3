@@ -83,7 +83,7 @@ func (s *IntegrationServer) Init(ctx context.Context, req *proto.IntegrationInit
 }
 
 func (s *IntegrationServer) Export(ctx context.Context, req *proto.Empty) (*proto.Empty, error) {
-	err := s.Impl.Export(nil)
+	err := s.Impl.Export(ctx)
 	return &proto.Empty{}, err
 }
 
