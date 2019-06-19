@@ -55,7 +55,7 @@ func newExport(opts Opts) *export {
 		sessions: filepath.Join(opts.WorkDir, "sessions"),
 		logs:     filepath.Join(opts.WorkDir, "logs"),
 	}
-	s.sessions = newSessions(s.dirs.sessions)
+	s.sessions = newSessions(s.logger, s.dirs.sessions)
 
 	s.setupIntegrations()
 	s.runExports()
@@ -151,16 +151,20 @@ type sessions struct {
 	m         map[int]session
 	streamDir string
 	lastID    int
+	logger    hclog.Logger
 }
 
-func newSessions(streamDir string) *sessions {
+func newSessions(logger hclog.Logger, streamDir string) *sessions {
 	s := &sessions{}
+	s.logger = logger
 	s.m = map[int]session{}
 	s.streamDir = streamDir
 	return s
 }
 
 func (s *sessions) new(modelType string) (sessionID string, _ error) {
+	s.logger.Info("starting session", "type", modelType)
+
 	s.lastID++
 	id := s.lastID
 
@@ -207,6 +211,7 @@ func (s *sessions) Close(sessionID string) error {
 
 func (s *sessions) Write(sessionID string, objs []rpcdef.ExportObj) error {
 	sess := s.get(sessionID)
+	s.logger.Info("writing objects", "type", sess.modelType, "count", len(objs))
 	for _, obj := range objs {
 		err := sess.stream.Write(obj.Data)
 		if err != nil {
