@@ -3,7 +3,7 @@ package cmdexport
 import (
 	"fmt"
 
-	"github.com/pinpt/agent2/rpcdef"
+	"github.com/pinpt/agent.next/rpcdef"
 )
 
 type agentDelegate struct {

@@ -3,7 +3,7 @@ package rpcdef
 import (
 	"context"
 
-	"github.com/pinpt/agent2/rpcdef/proto"
+	"github.com/pinpt/agent.next/rpcdef/proto"
 	"google.golang.org/grpc"
 
 	"github.com/hashicorp/go-plugin"

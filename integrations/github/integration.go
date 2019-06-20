@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent2/rpcdef"
+	"github.com/pinpt/agent.next/rpcdef"
 )
 
 type Integration struct {

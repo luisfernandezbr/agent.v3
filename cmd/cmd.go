@@ -8,10 +8,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/go-ps"
-	"github.com/pinpt/agent2/cmd/cmdexport"
-	"github.com/pinpt/agent2/cmd/cmdserviceinstall"
-	"github.com/pinpt/agent2/cmd/cmdservicerun"
-	"github.com/pinpt/agent2/cmd/cmdserviceuninstall"
+	"github.com/pinpt/agent.next/cmd/cmdexport"
+	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
+	"github.com/pinpt/agent.next/cmd/cmdservicerun"
+	"github.com/pinpt/agent.next/cmd/cmdserviceuninstall"
 	"github.com/spf13/cobra"
 )
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/pinpt/agent2/cmd"
+	"github.com/pinpt/agent.next/cmd"
 )
 
 func main() {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/pinpt/agent2/rpcdef"
+	"github.com/pinpt/agent.next/rpcdef"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"

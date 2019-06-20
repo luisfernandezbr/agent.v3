@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"github.com/pinpt/agent2/rpcdef"
+	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/go-datamodel/sourcecode"
 )

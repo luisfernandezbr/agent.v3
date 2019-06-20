@@ -12,7 +12,7 @@ After that agent calls Export methods on integrations in parallel. Integration m
 
 ### Agent RPC interface
 
-[See in code](https://github.com/pinpt/agent2/blob/master/rpcdef/agent.go)
+[See in code](https://github.com/pinpt/agent.next/blob/master/rpcdef/agent.go)
 
 ```golang
 type Agent interface {
@@ -39,7 +39,7 @@ ExportGitRepo(fetch GitRepoFetch)
 
 ### Integration RPC interface
 
-[See in code](https://github.com/pinpt/agent2/blob/master/rpcdef/integration.go)
+[See in code](https://github.com/pinpt/agent.next/blob/master/rpcdef/integration.go)
 
 ```golang
 type Integration interface {

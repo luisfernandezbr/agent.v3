@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/pinpt/agent2/rpcdef/proto"
+	"github.com/pinpt/agent.next/rpcdef/proto"
 )
 
 // keep in sync with readme.md

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent2/pkg/pservice"
+	"github.com/pinpt/agent.next/pkg/pservice"
 	"github.com/pinpt/go-common/log"
 )
 

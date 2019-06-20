@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/pinpt/agent2/rpcdef"
+	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-datamodel/sourcecode"
 )
 
