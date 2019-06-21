@@ -1,9 +1,21 @@
 ## How to support incremental exports?
-Since graphql doesn ot support since parameter on all objects, we iterate backwards using updated at timestamp, when we get to the object which was updated before last run we stop.
+Since graphql doesn't support since parameter on all objects, we iterate backwards using updated at timestamp, when we get to the object which was updated before last run we stop.
+
+It was possible in github v3 rest api, but in v4 graphql it's only supported for issues.
+
+There is a possible issue with iterating backwards using updated_at. If an object is updated while we are iterating, it could move from the page we haven't seen yet to the end we already iterated. It's not a big deal, since it would be picked up on next incremental export.
+
+Possible performance optimization is to limit the number of records returned to 1 for first incremental request, to quickly see if there are any records. Not worth doing now.
 
 ## How to iterate on initial export and possibly continue on interruption?
 
-We need to store both cursor (opaque string) and last processed to support both.
+If we want to support interrupting and continuing on intial export we need to store the cursor (opaque string) as well.
+
+We do not store it on disk in the current implementation, since we don't write exported objects to file properly when interrupted, but this can be fixed.
+
+We need cursor because github graphql api uses non-date cursor when sorting by updated_at.
+
+It would be possible to iterate backwards the same way for incremental and initial export, but due to the possible issue documented above, we iterate forwards on initial export.
 
 Here is the algo:
 
@@ -18,14 +30,6 @@ if lastProcessed
     stop when <= lastProcessed
     save new lastProcessed
 ````
-
-In current implementation we do not save cursor to disk in partial exports, since we do not safely write exported objects to file. But we do keep it in memory while exporting.
-
-Need cursor because github graphql api uses non-date cursor when sorting by updated_at.
-
-Have to do incrementals backwards, since api does not allow filtering after certain updated_at date. Github allowed since parameter in v3 rest api, but not in v4 graphql.
-
-But they do allow since parameter for issues, since we also need pull requests, needed something more generic.
 
 ### Other
 
