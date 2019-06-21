@@ -1,7 +1,7 @@
 ## How to support incremental exports?
 Since graphql doesn ot support since parameter on all objects, we iterate backwards using updated at timestamp, when we get to the object which was updated before last run we stop.
 
-## How to iterate on initial export and possibly continue on interruption
+## How to iterate on initial export and possibly continue on interruption?
 
 We need to store both cursor (opaque string) and last processed to support both.
 
