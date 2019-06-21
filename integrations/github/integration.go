@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/pinpt/go-common/hash"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -19,11 +21,26 @@ type Integration struct {
 	logger     hclog.Logger
 	agent      rpcdef.Agent
 	customerID string
+
+	qc api.QueryContext
 }
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
 	s.agent = agent
 	s.customerID = "c1"
+
+	qc := api.QueryContext{}
+	qc.Logger = s.logger
+	qc.Request = s.makeRequest
+	qc.CustomerID = s.customerID
+	qc.RepoID = func(refID string) string {
+		return hash.Values("Repo", s.customerID, "sourcecode.Repo", refID)
+	}
+	qc.UserID = func(refID string) string {
+		return hash.Values("User", s.customerID, "sourcecode.User", refID)
+	}
+	s.qc = qc
+
 	return nil
 }
 
@@ -34,9 +51,6 @@ func (s *Integration) Export(ctx context.Context) error {
 		return err
 	}
 
-	qc := api.QueryContext{}
-	qc.Logger = s.logger
-	qc.Request = s.makeRequest
 	repoIDChan := make(chan []string)
 
 	prDone := make(chan bool)
@@ -48,7 +62,7 @@ func (s *Integration) Export(ctx context.Context) error {
 		}
 	}()
 
-	err = api.ReposAllIDs(qc, repoIDChan)
+	err = api.ReposAllIDs(s.qc, repoIDChan)
 	if err != nil {
 		panic(err)
 	}

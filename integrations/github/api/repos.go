@@ -1,5 +1,11 @@
 package api
 
+import (
+	"time"
+
+	"github.com/pinpt/go-datamodel/sourcecode"
+)
+
 func ReposAllIDs(qc QueryContext, idChan chan []string) error {
 	defer close(idChan)
 
@@ -71,4 +77,78 @@ func ReposPageIDs(qc QueryContext, queryParams string) (pi PageInfo, ids IDs, _ 
 	}
 
 	return repositories.PageInfo, batch, nil
+}
+
+func ReposPage(qc QueryContext, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []sourcecode.Repo, _ error) {
+	qc.Logger.Debug("repos request", "q", queryParams)
+
+	query := `
+	query {
+		viewer {
+			organization(login:"pinpt"){
+				repositories(` + queryParams + `) {
+					totalCount
+					pageInfo {
+						hasNextPage
+						endCursor
+						hasPreviousPage
+						startCursor
+					}
+					nodes {
+						updatedAt
+						id
+						name
+						url						
+					}
+				}
+			}
+		}
+	}
+	`
+
+	var res struct {
+		Data struct {
+			Viewer struct {
+				Organization struct {
+					Repositories struct {
+						TotalCount int      `json:"totalCount"`
+						PageInfo   PageInfo `json:"pageInfo"`
+						Nodes      []struct {
+							UpdatedAt time.Time `json:"updatedAt"`
+							ID        string    `json:"id"`
+							Name      string    `json:"name"`
+							URL       string    `json:"url"`
+						} `json:"nodes"`
+					} `json:"repositories"`
+				} `json:"organization"`
+			} `json:"viewer"`
+		} `json:"data"`
+	}
+
+	err := qc.Request(query, &res)
+	if err != nil {
+		return pi, repos, err
+	}
+
+	repositories := res.Data.Viewer.Organization.Repositories
+	repoNodes := repositories.Nodes
+
+	if len(repoNodes) == 0 {
+		qc.Logger.Warn("no repos found")
+	}
+
+	for _, data := range repoNodes {
+		if data.UpdatedAt.Before(stopOnUpdatedAt) {
+			return PageInfo{}, repos, nil
+		}
+		repo := sourcecode.Repo{}
+		repo.RefType = "sourcecode.Repo"
+		repo.CustomerID = qc.CustomerID
+		repo.RefID = data.ID
+		repo.Name = data.Name
+		repo.URL = data.URL
+		repos = append(repos, repo)
+	}
+
+	return repositories.PageInfo, repos, nil
 }
