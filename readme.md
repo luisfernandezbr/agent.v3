@@ -19,16 +19,17 @@ type Agent interface {
 
 // ExportStarted should be called when starting export for each modelType.
 // It returns session id to be used later when sending objects.
-ExportStarted(modelType string) (sessionID string)
+ExportStarted(modelType string) 
+	(sessionID string,
+	lastProcessed interface{})
 
 // ExportDone should be called when export of a certain modelType is complete.
-ExportDone(sessionID string)
+ExportDone(sessionID string, lastProcessed interface{})
 
 // SendExported forwards the exported objects from intergration to agent,
 // which then uploads the data (or queues for uploading).
 SendExported(
 		sessionID string,
-		lastProcessedToken string,
 		objs []ExportObj)
 
 // Integration can ask agent to download and process git repo using ripsrc.

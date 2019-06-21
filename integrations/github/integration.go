@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
@@ -27,15 +28,33 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 }
 
 func (s *Integration) Export(ctx context.Context) error {
+
 	err := s.exportRepos(ctx)
 	if err != nil {
 		return err
 	}
-	/*
-		err = s.exportPullRequests(ctx)
+
+	qc := api.QueryContext{}
+	qc.Logger = s.logger
+	qc.Request = s.makeRequest
+	repoIDChan := make(chan []string)
+
+	prDone := make(chan bool)
+	go func() {
+		defer func() { prDone <- true }()
+		err := s.exportPullRequests(repoIDChan)
 		if err != nil {
-			return err
-		}*/
+			panic(err)
+		}
+	}()
+
+	err = api.ReposAllIDs(qc, repoIDChan)
+	if err != nil {
+		panic(err)
+	}
+
+	<-prDone
+
 	return nil
 }
 
@@ -91,7 +110,10 @@ func (s *Integration) makeRequest(query string, res interface{}) error {
 		return err
 	}
 
+	//TODO: catch errors properly here
+	// example {"errors":[{"message"...}]
 	if resp.StatusCode != 200 {
+
 		return errors.New(`resp resp.StatusCode != 200`)
 	}
 

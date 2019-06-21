@@ -1,58 +1,75 @@
 package main
 
 import (
-	"context"
+	"fmt"
+	"time"
 
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/go-datamodel/sourcecode"
 )
 
-func (s *Integration) exportPullRequests(ctx context.Context) error {
+func (s *Integration) exportPullRequests(repoIDs chan []string) error {
 	refType := "sourcecode.pull_requests"
-	sessionID := s.agent.ExportStarted(refType)
-	defer s.agent.ExportDone(sessionID)
+	sessionID, lastProcessedData := s.agent.ExportStarted(refType)
+	defer s.agent.ExportDone(sessionID, time.Now().Format(time.RFC3339))
 
-	return paginate(func(cursors []string) (nextCursors []string, _ error) {
-		return s.exportPullRequestsPageFrom(sessionID, cursors)
+	var lastProcessed time.Time
+	if lastProcessedData != nil {
+		var err error
+		lastProcessed, err = time.Parse(time.RFC3339, lastProcessedData.(string))
+		if err != nil {
+			return fmt.Errorf("last processed timestamp is not valid, err: %v", err)
+		}
+	}
+
+	for ids := range repoIDs {
+		for _, id := range ids {
+			err := s.exportPullRequestsRepo(id, sessionID, lastProcessed)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *Integration) exportPullRequestsRepo(repoID string, sessionID string, lastProcessed time.Time) error {
+	return paginate(lastProcessed, func(query string, stopOnUpdatedAt time.Time) (pageInfo, error) {
+		return s.exportPullRequestsPageFrom(sessionID, repoID, query, stopOnUpdatedAt)
 	})
 }
 
-func (s *Integration) exportPullRequestsPageFrom(sessionID string, cursors []string) (nextCursor []string, _ error) {
+func (s *Integration) exportPullRequestsPageFrom(sessionID string, repoID string, queryParams string, stopOnUpdatedAt time.Time) (pi pageInfo, _ error) {
+	s.logger.Info("export pull_request request", "repo", repoID, "q", queryParams)
+
 	refType := "sourcecode.pull_request"
 
 	query := `
-	query { 
-		viewer { 
-			organization(login:"pinpt"){
-				repositories(first: ` + makeAfterParam(cursors, 0) + `) {
+	query {
+		node (id: "` + repoID + `") {
+			... on Repository {
+				pullRequests(` + queryParams + `) {
 					totalCount
 					pageInfo {
 						hasNextPage
 						endCursor
+						hasPreviousPage
+						startCursor
 					}
 					nodes {
-						pullRequests(first:` + makeAfterParam(cursors, 0) + `) {
-							totalCount
-							pageInfo {
-								hasNextPage
-								endCursor
-							}		
-							nodes {
-								id
-								repository { id }
-								title
-								bodyText
-								url
-								createdAt
-								mergedAt
-								closedAt
-								updatedAt
-								# OPEN, CLOSED or MERGED
-								state
-								author { login }
-							}
-						}
+						updatedAt
+						id
+						repository { id }
+						title
+						bodyText
+						url
+						createdAt
+						mergedAt
+						closedAt
+						# OPEN, CLOSED or MERGED
+						state
+						author { login }
 					}
 				}
 			}
@@ -62,95 +79,80 @@ func (s *Integration) exportPullRequestsPageFrom(sessionID string, cursors []str
 
 	var res struct {
 		Data struct {
-			Viewer struct {
-				Organization struct {
-					Repositories struct {
-						TotalCount int `json:"totalCount"`
-						PageInfo   struct {
-							HasNextPage bool   `json:"hasNextPage"`
-							EndCursor   string `json:"endCursor"`
-						} `json:"pageInfo"`
-						Nodes []struct {
-							PullRequests struct {
-								TotalCount int `json:"totalCount"`
-								PageInfo   struct {
-									HasNextPage bool   `json:"hasNextPage"`
-									EndCursor   string `json:"endCursor"`
-								} `json:"pageInfo"`
-								Nodes []struct {
-									ID         string `json:"id"`
-									Repository struct {
-										ID string `json:"id"`
-									}
-									Title    string `json:"title"`
-									BodyText string `json:"bodyText"`
+			Node struct {
+				PullRequests struct {
+					TotalCount int      `json:"totalCount"`
+					PageInfo   pageInfo `json:"pageInfo"`
+					Nodes      []struct {
+						ID         string `json:"id"`
+						Repository struct {
+							ID string `json:"id"`
+						}
+						Title    string `json:"title"`
+						BodyText string `json:"bodyText"`
 
-									URL       string `json:"url"`
-									CreatedAt string `json:"createdAt"`
-									MergedAt  string `json:"mergedAt"`
-									ClosedAt  string `json:"closedAt"`
-									UpdatedAt string `json:"updatedAt"`
-									State     string `json:"state"`
-									Author    struct {
-										Login string `json:"login"`
-									}
-								} `json:"nodes"`
-							} `json:"pullRequests"`
-						} `json:"nodes"`
-					} `json:"repositories"`
-				} `json:"organization"`
-			} `json:"viewer"`
+						URL       string    `json:"url"`
+						CreatedAt time.Time `json:"createdAt"`
+						MergedAt  time.Time `json:"mergedAt"`
+						ClosedAt  time.Time `json:"closedAt"`
+						UpdatedAt time.Time `json:"updatedAt"`
+						State     string    `json:"state"`
+						Author    struct {
+							Login string `json:"login"`
+						}
+					} `json:"nodes"`
+				} `json:"pullRequests"`
+			} `json:"node"`
 		} `json:"data"`
 	}
 
 	err := s.makeRequest(query, &res)
 	if err != nil {
-		return nil, err
+		return pi, err
 	}
+
+	//s.logger.Info(fmt.Sprintf("%+v", res))
 
 	batch := []rpcdef.ExportObj{}
 
-	c := 0
-	repos := res.Data.Viewer.Organization.Repositories
-	repoNodes := repos.Nodes
-	for _, repoNode := range repoNodes {
-		pullRequestNodes := repoNode.PullRequests.Nodes
-		c += len(pullRequestNodes)
-	}
-	s.logger.Info("retrieved pull requests", "n", c)
+	pullRequestNodes := res.Data.Node.PullRequests.Nodes
+	s.logger.Info("retrieved pull requests", "n", len(pullRequestNodes))
 
-	for _, repoNode := range repoNodes {
-		pullRequestNodes := repoNode.PullRequests.Nodes
-		for _, node := range pullRequestNodes {
-			pr := sourcecode.PullRequest{}
-			pr.CustomerID = s.customerID
-			pr.RefType = refType
-			pr.RefID = node.ID
-			pr.RepoID = hash.Values("Repo", s.customerID, "sourcecode.Repo", node.Repository.ID)
-			pr.Title = node.Title
-			pr.Description = node.BodyText
-			pr.URL = node.URL
-			pr.CreatedAt = parseTime(node.CreatedAt)
-			pr.MergedAt = parseTime(node.MergedAt)
-			pr.ClosedAt = parseTime(node.ClosedAt)
-			pr.UpdatedAt = parseTime(node.UpdatedAt)
-			validStatus := []string{"OPEN", "CLOSED", "MERGED"}
-			if !strInArr(node.State, validStatus) {
-				panic("unknown state: " + node.State)
+	sendResults := func() {
+		s.agent.SendExported(sessionID, batch)
+	}
+
+	for _, data := range pullRequestNodes {
+		if data.UpdatedAt.Before(stopOnUpdatedAt) {
+			if len(batch) != 0 {
+				sendResults()
 			}
-			pr.Status = node.State
-			pr.UserRefID = hash.Values("User", s.customerID, "sourcecode.User", node.Author.Login)
-			batch = append(batch, rpcdef.ExportObj{Data: pr.ToMap()})
-			if len(batch) >= batchSize {
-				s.agent.SendExported(sessionID, "todo_last_processed", batch)
-				batch = []rpcdef.ExportObj{}
-			}
+			return pageInfo{}, nil
 		}
+
+		pr := sourcecode.PullRequest{}
+		pr.CustomerID = s.customerID
+		pr.RefType = refType
+		pr.RefID = data.ID
+		pr.RepoID = hash.Values("Repo", s.customerID, "sourcecode.Repo", data.Repository.ID)
+		pr.Title = data.Title
+		pr.Description = data.BodyText
+		pr.URL = data.URL
+		pr.CreatedAt = data.CreatedAt.Unix()
+		pr.MergedAt = data.MergedAt.Unix()
+		pr.ClosedAt = data.ClosedAt.Unix()
+		pr.UpdatedAt = data.UpdatedAt.Unix()
+		validStatus := []string{"OPEN", "CLOSED", "MERGED"}
+		if !strInArr(data.State, validStatus) {
+			panic("unknown state: " + data.State)
+		}
+		pr.Status = data.State
+		pr.UserRefID = hash.Values("User", s.customerID, "sourcecode.User", data.Author.Login)
+
+		batch = append(batch, rpcdef.ExportObj{Data: pr.ToMap()})
 	}
 
-	if len(batch) != 0 {
-		s.agent.SendExported(sessionID, "todo_last_processed", batch)
-	}
+	sendResults()
 
-	return nil, nil
+	return res.Data.Node.PullRequests.PageInfo, nil
 }

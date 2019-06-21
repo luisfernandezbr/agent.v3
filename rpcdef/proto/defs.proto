@@ -22,21 +22,26 @@ service Agent {
     rpc ExportGitRepo(ExportGitRepoReq) returns (Empty);
 }
 
+message LastProcessed {
+    string data_str  = 1;
+}
+
 message ExportStartedReq {
-    string model_type = 1;
+    string model_type = 1;    
 }
 
 message ExportStartedResp {
     string session_id = 1;
+    LastProcessed last_processed = 2;
 }
 
 message ExportDoneReq {
     string session_id = 1;
+    LastProcessed last_processed = 2;
 }
 
 message SendExportedReq {
     string session_id = 1;
-    string lastProcessedToken = 2;
     repeated ExportObj objs = 3; 
 }
 

@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	"github.com/pinpt/agent.next/pkg/jsonstore"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-common/io"
 )
@@ -32,7 +33,8 @@ type export struct {
 
 	stderr *bytes.Buffer
 
-	integrations map[string]*integration
+	integrations  map[string]*integration
+	lastProcessed *jsonstore.Store
 }
 
 type exportDirs struct {
@@ -55,7 +57,13 @@ func newExport(opts Opts) *export {
 		sessions: filepath.Join(opts.WorkDir, "sessions"),
 		logs:     filepath.Join(opts.WorkDir, "logs"),
 	}
-	s.sessions = newSessions(s.logger, s.dirs.sessions)
+	s.sessions = newSessions(s.logger, s, s.dirs.sessions)
+	lastProcessedFile := filepath.Join(opts.WorkDir, "last_processed.json")
+	var err error
+	s.lastProcessed, err = jsonstore.New(lastProcessedFile)
+	if err != nil {
+		panic(err)
+	}
 
 	s.setupIntegrations()
 	s.runExports()
@@ -148,22 +156,24 @@ func (s *export) Destroy() {
 }
 
 type sessions struct {
+	export    *export
 	m         map[int]session
 	streamDir string
 	lastID    int
 	logger    hclog.Logger
 }
 
-func newSessions(logger hclog.Logger, streamDir string) *sessions {
+func newSessions(logger hclog.Logger, export *export, streamDir string) *sessions {
 	s := &sessions{}
 	s.logger = logger
+	s.export = export
 	s.m = map[int]session{}
 	s.streamDir = streamDir
 	return s
 }
 
-func (s *sessions) new(modelType string) (sessionID string, _ error) {
-	s.logger.Info("starting session", "type", modelType)
+func (s *sessions) new(modelType string) (
+	sessionID string, lastProcessed interface{}, _ error) {
 
 	s.lastID++
 	id := s.lastID
@@ -172,11 +182,11 @@ func (s *sessions) new(modelType string) (sessionID string, _ error) {
 	fn := filepath.Join(s.streamDir, modelType, base)
 	err := os.MkdirAll(filepath.Dir(fn), 0777)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	stream, err := io.NewJSONStream(fn)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	s.m[id] = session{
@@ -184,7 +194,13 @@ func (s *sessions) new(modelType string) (sessionID string, _ error) {
 		modelType: modelType,
 		stream:    stream,
 	}
-	return strconv.Itoa(id), nil
+
+	sessionID = strconv.Itoa(id)
+	lastProcessed = s.export.lastProcessed.Get(modelType)
+
+	s.logger.Info("export: session: started", "type", modelType, "last_processed", lastProcessed)
+
+	return sessionID, lastProcessed, nil
 }
 
 func (s *sessions) get(sessionID string) session {
@@ -193,6 +209,19 @@ func (s *sessions) get(sessionID string) session {
 		panic(err)
 	}
 	return s.m[id]
+}
+
+func (s *sessions) ExportDone(sessionID string, lastProcessed interface{}) error {
+	sess := s.get(sessionID)
+
+	s.logger.Info("export: session: finished", "type", sess.modelType, "last_processed", lastProcessed)
+
+	err := s.Close(sessionID)
+	if err != nil {
+		return err
+	}
+
+	return s.export.lastProcessed.Set(lastProcessed, sess.modelType)
 }
 
 func (s *sessions) Close(sessionID string) error {

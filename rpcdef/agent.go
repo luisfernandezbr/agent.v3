@@ -11,16 +11,15 @@ import (
 type Agent interface {
 	// ExportStarted should be called when starting export for each modelType.
 	// It returns session id to be used later when sending objects.
-	ExportStarted(modelType string) (sessionID string)
+	ExportStarted(modelType string) (sessionID string, lastProcessed interface{})
 
 	// ExportDone should be called when export of a certain modelType is complete.
-	ExportDone(sessionID string)
+	ExportDone(sessionID string, lastProcessed interface{})
 
 	// SendExported forwards the exported objects from intergration to agent,
 	// which then uploads the data (or queues for uploading).
 	SendExported(
 		sessionID string,
-		lastProcessedToken string,
 		objs []ExportObj)
 
 	// Integration can ask agent to download and process git repo using ripsrc.
@@ -39,19 +38,40 @@ type AgentServer struct {
 	Impl Agent
 }
 
+func lastProcessedMarshal(data interface{}) *proto.LastProcessed {
+	if data == nil {
+		return &proto.LastProcessed{}
+	}
+	switch data.(type) {
+	case string:
+		return &proto.LastProcessed{DataStr: data.(string)}
+	default:
+		panic("data type not supported")
+	}
+}
+
+func lastProcessedUnmarshal(obj *proto.LastProcessed) interface{} {
+	if obj.DataStr != "" {
+		return obj.DataStr
+	}
+	return nil
+}
+
 func (s *AgentServer) ExportStarted(ctx context.Context, req *proto.ExportStartedReq) (*proto.ExportStartedResp, error) {
 
-	sessionID := s.Impl.ExportStarted(req.ModelType)
+	sessionID, lastProcessed := s.Impl.ExportStarted(req.ModelType)
 
 	resp := &proto.ExportStartedResp{}
 	resp.SessionId = sessionID
+	resp.LastProcessed = lastProcessedMarshal(lastProcessed)
 
 	return resp, nil
 }
 
 func (s *AgentServer) ExportDone(ctx context.Context, req *proto.ExportDoneReq) (*proto.Empty, error) {
 
-	s.Impl.ExportDone(req.SessionId)
+	s.Impl.ExportDone(req.SessionId, lastProcessedUnmarshal(req.LastProcessed))
+
 	resp := &proto.Empty{}
 	return resp, nil
 }
@@ -71,7 +91,6 @@ func (s *AgentServer) SendExported(ctx context.Context, req *proto.SendExportedR
 
 	s.Impl.SendExported(
 		req.SessionId,
-		req.LastProcessedToken,
 		objs)
 
 	return &proto.Empty{}, nil
@@ -91,29 +110,29 @@ type AgentClient struct {
 
 var _ Agent = (*AgentClient)(nil)
 
-func (s *AgentClient) ExportStarted(modelType string) (sessionID string) {
+func (s *AgentClient) ExportStarted(modelType string) (sessionID string, lastProcessed interface{}) {
 	args := &proto.ExportStartedReq{}
 	args.ModelType = modelType
 	resp, err := s.client.ExportStarted(context.Background(), args)
 	if err != nil {
 		panic(err)
 	}
-	return resp.SessionId
+	return resp.SessionId, lastProcessedUnmarshal(resp.LastProcessed)
 }
 
-func (s *AgentClient) ExportDone(sessionID string) {
+func (s *AgentClient) ExportDone(sessionID string, lastProcessed interface{}) {
 	args := &proto.ExportDoneReq{}
 	args.SessionId = sessionID
+	args.LastProcessed = lastProcessedMarshal(lastProcessed)
 	_, err := s.client.ExportDone(context.Background(), args)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (s *AgentClient) SendExported(sessionID string, lastProcessedToken string, objs []ExportObj) {
+func (s *AgentClient) SendExported(sessionID string, objs []ExportObj) {
 	args := &proto.SendExportedReq{}
 	args.SessionId = sessionID
-	args.LastProcessedToken = lastProcessedToken
 	for _, obj := range objs {
 		obj2 := &proto.ExportObj{}
 		obj2.DataType = proto.ExportObj_JSON

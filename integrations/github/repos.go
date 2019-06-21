@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-datamodel/sourcecode"
@@ -9,31 +11,45 @@ import (
 
 func (s *Integration) exportRepos(ctx context.Context) error {
 	refType := "sourcecode.repo"
-	sessionID := s.agent.ExportStarted(refType)
-	defer s.agent.ExportDone(sessionID)
+	sessionID, lastProcessedData := s.agent.ExportStarted(refType)
+	defer s.agent.ExportDone(sessionID, time.Now().Format(time.RFC3339))
 
-	return paginate(func(cursors []string) (nextCursors []string, _ error) {
-		return s.exportReposPageFrom(sessionID, cursors)
+	var lastProcessed time.Time
+	if lastProcessedData != nil {
+		var err error
+		lastProcessed, err = time.Parse(time.RFC3339, lastProcessedData.(string))
+		if err != nil {
+			return fmt.Errorf("last processed timestamp is not valid, err: %v", err)
+		}
+	}
+
+	return paginate(lastProcessed, func(query string, stopOnUpdatedAt time.Time) (pageInfo, error) {
+		return s.exportReposPageFrom(sessionID, query, stopOnUpdatedAt)
 	})
 }
 
-func (s *Integration) exportReposPageFrom(sessionID string, cursors []string) (nextCursor []string, _ error) {
+func (s *Integration) exportReposPageFrom(sessionID string, queryParams string, stopOnUpdatedAt time.Time) (pageInfo, error) {
+	s.logger.Info("export repos request", "q", queryParams)
+
 	refType := "sourcecode.repo"
 
 	query := `
 	query {
 		viewer {
 			organization(login:"pinpt"){
-				repositories(first:100 ` + makeAfterParam(cursors, 0) + `) {
+				repositories(` + queryParams + `) {
 					totalCount
 					pageInfo {
 						hasNextPage
 						endCursor
+						hasPreviousPage
+						startCursor
 					}
 					nodes {
+						updatedAt
 						id
 						name
-						url
+						url						
 					}
 				}
 			}
@@ -46,15 +62,13 @@ func (s *Integration) exportReposPageFrom(sessionID string, cursors []string) (n
 			Viewer struct {
 				Organization struct {
 					Repositories struct {
-						TotalCount int `json:"totalCount"`
-						PageInfo   struct {
-							HasNextPage bool   `json:"hasNextPage"`
-							EndCursor   string `json:"endCursor"`
-						} `json:"pageInfo"`
-						Nodes []struct {
-							ID   string `json:"id"`
-							Name string `json:"name"`
-							URL  string `json:"url"`
+						TotalCount int      `json:"totalCount"`
+						PageInfo   pageInfo `json:"pageInfo"`
+						Nodes      []struct {
+							UpdatedAt time.Time `json:"updatedAt"`
+							ID        string    `json:"id"`
+							Name      string    `json:"name"`
+							URL       string    `json:"url"`
 						} `json:"nodes"`
 					} `json:"repositories"`
 				} `json:"organization"`
@@ -66,7 +80,7 @@ func (s *Integration) exportReposPageFrom(sessionID string, cursors []string) (n
 
 	err := s.makeRequest(query, &res)
 	if err != nil {
-		return nil, err
+		return pageInfo{}, err
 	}
 
 	repositories := res.Data.Viewer.Organization.Repositories
@@ -74,11 +88,22 @@ func (s *Integration) exportReposPageFrom(sessionID string, cursors []string) (n
 
 	if len(repoNodes) == 0 {
 		s.logger.Warn("no repos found")
-		return nil, nil
+		return pageInfo{}, nil
 	}
 
 	batch := []rpcdef.ExportObj{}
+
+	sendResults := func() {
+		s.agent.SendExported(sessionID, batch)
+	}
+
 	for _, data := range repoNodes {
+		if data.UpdatedAt.Before(stopOnUpdatedAt) {
+			if len(batch) != 0 {
+				sendResults()
+			}
+			return pageInfo{}, nil
+		}
 		repo := sourcecode.Repo{}
 		repo.CustomerID = s.customerID
 		repo.RefType = refType
@@ -88,12 +113,7 @@ func (s *Integration) exportReposPageFrom(sessionID string, cursors []string) (n
 		batch = append(batch, rpcdef.ExportObj{Data: repo.ToMap()})
 	}
 
-	hasMore := repositories.PageInfo.HasNextPage
-	lastCursor := repositories.PageInfo.EndCursor
-	s.agent.SendExported(sessionID, lastCursor, batch)
+	sendResults()
 
-	if hasMore {
-		return []string{lastCursor}, nil
-	}
-	return nil, nil
+	return repositories.PageInfo, nil
 }
