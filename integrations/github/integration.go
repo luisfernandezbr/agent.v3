@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/pinpt/go-common/hash"
 
@@ -71,28 +70,6 @@ func (s *Integration) Export(ctx context.Context) error {
 
 	return nil
 }
-
-func strInArr(str string, arr []string) bool {
-	for _, v := range arr {
-		if v == str {
-			return true
-		}
-	}
-	return false
-}
-
-func parseTime(ts string) int64 {
-	if ts == "" {
-		return 0
-	}
-	ts2, err := time.Parse(time.RFC3339Nano, ts)
-	if err != nil {
-		panic(err)
-	}
-	return ts2.Unix()
-}
-
-const batchSize = 100
 
 func (s *Integration) makeRequest(query string, res interface{}) error {
 	data := map[string]string{
