@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-datamodel/sourcecode"
 )
@@ -11,10 +13,11 @@ func (s *Integration) exportAll() {
 }
 
 func (s *Integration) exportBlames() {
-	s.logger.Info("exporting blames")
 
-	session := s.agent.ExportStarted("sourcecode.blame")
-	defer s.agent.ExportDone(session)
+	sessionID, lastProcessed := s.agent.ExportStarted("sourcecode.blame")
+	defer s.agent.ExportDone(sessionID, time.Now().Format(time.RFC3339))
+
+	s.logger.Info("exporting blames", "lastProcessed", lastProcessed)
 
 	for i := 0; i < 10; i++ {
 		rows := []map[string]interface{}{}
@@ -32,16 +35,16 @@ func (s *Integration) exportBlames() {
 			objs = append(objs, obj)
 		}
 		s.agent.SendExported(
-			session,
-			"last_processed_todo",
+			sessionID,
 			objs)
 	}
 }
 
 func (s *Integration) exportCommits() {
-	s.logger.Info("exporting commits")
-	session := s.agent.ExportStarted("sourcecode.commit")
-	defer s.agent.ExportDone(session)
+	sessionID, lastProcessed := s.agent.ExportStarted("sourcecode.commit")
+	defer s.agent.ExportDone(sessionID, time.Now().Format(time.RFC3339))
+
+	s.logger.Info("exporting blames", "lastProcessed", lastProcessed)
 
 	for i := 0; i < 10; i++ {
 		rows := []map[string]interface{}{}
@@ -58,6 +61,6 @@ func (s *Integration) exportCommits() {
 			obj.Data = row
 			objs = append(objs, obj)
 		}
-		s.agent.SendExported(session, "last_processed_todo", objs)
+		s.agent.SendExported(sessionID, objs)
 	}
 }
