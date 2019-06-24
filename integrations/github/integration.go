@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/pinpt/go-common/hash"
 
@@ -67,7 +68,6 @@ func (s *Integration) Export(ctx context.Context) error {
 	// get all repo ids
 	repoIDs := make(chan []string)
 	go func() {
-		//return
 		defer close(repoIDs)
 		err := api.ReposAllIDs(s.qc, repoIDs)
 		if err != nil {
@@ -78,8 +78,6 @@ func (s *Integration) Export(ctx context.Context) error {
 	// at the same time, export updated pull requests
 	pullRequests := make(chan []api.PullRequest)
 	go func() {
-		//return
-
 		defer close(pullRequests)
 		err := s.exportPullRequests(repoIDs, pullRequests)
 		if err != nil {
@@ -87,19 +85,38 @@ func (s *Integration) Export(ctx context.Context) error {
 		}
 	}()
 
+	pullRequestsForComments := make(chan []api.PullRequest)
+	pullRequestsForReviews := make(chan []api.PullRequest)
+
 	go func() {
-		//pullRequestIDs <- []string{"MDExOlB1bGxSZXF1ZXN0MjkxMjAxMDk5"}
-		//close(pullRequestIDs)
+		for item := range pullRequests {
+			pullRequestsForComments <- item
+			pullRequestsForReviews <- item
+		}
+		close(pullRequestsForComments)
+		close(pullRequestsForReviews)
 	}()
 
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
 	// at the same time, export all comments for updated pull requests
-	{
-		err := s.exportPullRequestComments(pullRequests)
+	go func() {
+		defer wg.Done()
+		err := s.exportPullRequestComments(pullRequestsForComments)
 		if err != nil {
 			panic(err)
 		}
-	}
-
+	}()
+	// at the same time, export all reviews for updated pull requests
+	go func() {
+		defer wg.Done()
+		err := s.exportPullRequestReviews(pullRequestsForReviews)
+		if err != nil {
+			panic(err)
+		}
+	}()
+	wg.Wait()
 	return nil
 }
 

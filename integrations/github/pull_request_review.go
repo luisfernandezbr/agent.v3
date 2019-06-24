@@ -1,14 +1,12 @@
 package main
 
 import (
-	"time"
-
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
-func (s *Integration) exportPullRequestComments(pullRequests chan []api.PullRequest) error {
-	et, err := s.newExportType("sourcecode.pull_request_comments")
+func (s *Integration) exportPullRequestReviews(pullRequests chan []api.PullRequest) error {
+	et, err := s.newExportType("sourcecode.pull_request_review")
 	if err != nil {
 		return err
 	}
@@ -16,11 +14,11 @@ func (s *Integration) exportPullRequestComments(pullRequests chan []api.PullRequ
 
 	for prs := range pullRequests {
 		for _, pr := range prs {
-			if !pr.HasComments {
+			if !pr.HasReviews {
 				// perf optimization
 				continue
 			}
-			err := s.exportPullRequestCommentsPR(et, pr.RefID)
+			err := s.exportPullRequestReviewsPR(et, pr.RefID)
 			if err != nil {
 				return err
 			}
@@ -29,10 +27,9 @@ func (s *Integration) exportPullRequestComments(pullRequests chan []api.PullRequ
 	return nil
 }
 
-func (s *Integration) exportPullRequestCommentsPR(et *exportType, prID string) error {
-
-	return et.Paginate(true, func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, res, err := api.PullRequestCommentsPage(s.qc, prID, query, stopOnUpdatedAt)
+func (s *Integration) exportPullRequestReviewsPR(et *exportType, prID string) error {
+	return api.PaginateRegular(func(query string) (api.PageInfo, error) {
+		pi, res, err := api.PullRequestReviewsPage(s.qc, prID, query)
 		if err != nil {
 			return pi, err
 		}

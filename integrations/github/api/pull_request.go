@@ -9,6 +9,7 @@ import (
 type PullRequest struct {
 	sourcecode.PullRequest
 	HasComments bool
+	HasReviews  bool
 }
 
 func PullRequestsPage(
@@ -47,6 +48,9 @@ func PullRequestsPage(
 						comments {
 							totalCount
 						}
+						reviews {
+							totalCount
+						}
 					}
 				}
 			}
@@ -80,6 +84,9 @@ func PullRequestsPage(
 						Comments struct {
 							TotalCount int `json:"totalCount"`
 						} `json:"comments"`
+						Reviews struct {
+							TotalCount int `json:"totalCount"`
+						} `json:"reviews"`
 					} `json:"nodes"`
 				} `json:"pullRequests"`
 			} `json:"node"`
@@ -122,6 +129,7 @@ func PullRequestsPage(
 		pr2 := PullRequest{}
 		pr2.PullRequest = pr
 		pr2.HasComments = data.Comments.TotalCount != 0
+		pr2.HasReviews = data.Reviews.TotalCount != 0
 		res = append(res, pr2)
 	}
 

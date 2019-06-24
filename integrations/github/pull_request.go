@@ -10,7 +10,7 @@ import (
 func (s *Integration) exportPullRequests(
 	repoIDs chan []string,
 	pullRequests chan []api.PullRequest) error {
-	et, err := s.newExportType("sourcecode.pull_requests")
+	et, err := s.newExportType("sourcecode.pull_request")
 	if err != nil {
 		return err
 	}

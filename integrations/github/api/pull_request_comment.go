@@ -9,8 +9,7 @@ import (
 func PullRequestCommentsPage(
 	qc QueryContext,
 	pullRequestRefID string,
-	queryParams string,
-	stopOnUpdatedAt time.Time) (pi PageInfo, res []sourcecode.PullRequestComment, _ error) {
+	queryParams string) (pi PageInfo, res []sourcecode.PullRequestComment, _ error) {
 
 	if pullRequestRefID == "" {
 		panic("mussing pr id")
@@ -89,10 +88,6 @@ func PullRequestCommentsPage(
 	nodes := nodesContainer.Nodes
 	//qc.Logger.Info("got comments", "n", len(nodes))
 	for _, data := range nodes {
-		if data.UpdatedAt.Before(stopOnUpdatedAt) {
-			//qc.Logger.Info("stopping", "rec", data.UpdatedAt, "stop", stopOnUpdatedAt)
-			return PageInfo{}, res, nil
-		}
 		item := sourcecode.PullRequestComment{}
 		item.CustomerID = qc.CustomerID
 		item.RefType = "sourcecode.pull_request_comment"
