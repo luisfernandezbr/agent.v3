@@ -9,7 +9,7 @@ import (
 )
 
 func (s *Integration) exportUsers(ctx context.Context) error {
-	et, err := s.newExportType("sourcecode.User")
+	et, err := s.newExportType("sourcecode.user")
 	if err != nil {
 		return err
 	}
