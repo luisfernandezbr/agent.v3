@@ -37,29 +37,26 @@ if lastProcessed
 
 ### Does updating node children update updated_at field on parent?
 
-This is needed so that incremental export does not have to get all data again.
+This is needed so that incremental export does not have to get call for pr comments and reviews on every single pr and other similar cases.
 
 testing different cases
 
-create pr, note updatedAt date, 2019-06-24T16:07:35Z
-create a comment on pr, see pr updated_at date, 2019-06-24T16:11:20Z (updated)
-edit the comment on pr, see pr updated_at date, 2019-06-24T16:12:19Z (updated)
-create review on pr, see pr updated_at date, 2019-06-24T17:45:30Z
-edit review on pr (resolve conversation), see pr updated_at date, 2019-06-24T17:45:30Z (does not change)
-update comment on pr, date: 2019-06-24T17:52:23Z
+- create pr, note updatedAt date, 2019-06-24T16:07:35Z
+- create a comment on pr, see pr updated_at date, 2019-06-24T16:11:20Z (updated)
+- edit the comment on pr, see pr updated_at date, 2019-06-24T16:12:19Z (updated)
+- create review on pr, see pr updated_at date, 2019-06-24T17:45:30Z
+- edit review on pr (resolve conversation), see pr updated_at date, 2019-06-24T17:45:30Z (does not change)
+- update comment on pr, date: 2019-06-24T17:52:23Z
 
-So when fetching pr comments we can only fetch comments for updated prs.
+So when fetching pr comments we can only fetch comments for prs with new updated_at date.
 
-Adding review updates pull request, but not all changes change date, for example resolve conversation does not.
+Adding review updates pull request updated_at, but not for all changes, for example resolve conversation does not. (We will not refetch pr review on resolve for now)
 
-When not using updated_at filter it is sorted by created_at by default.
+When not using updated_at filter it is sorted by created_at by default. So the objects that do not have updated_at filter have to be always fully refetched, for example pr comment and pr review.
 
-test if updating comment on pr sets updated_at on repo (no it does not)
-so we need to check this on case by case basis, not all updates are propagated
+- testing if updating comment on pr sets updated_at on repo (no it does not)
 
-
-
-
+In general this needs to be tested on case by case basic. This relies on github private api implementation details. But don't know of any better way to avoid re-fetching all data on incremental.
 
 ### Other
 
