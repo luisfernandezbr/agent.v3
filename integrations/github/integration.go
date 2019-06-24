@@ -50,6 +50,11 @@ func (s *Integration) Export(ctx context.Context) error {
 		return err
 	}
 
+	err = s.exportUsers(ctx)
+	if err != nil {
+		return err
+	}
+
 	repoIDChan := make(chan []string)
 
 	prDone := make(chan bool)
