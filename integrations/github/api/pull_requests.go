@@ -6,10 +6,15 @@ import (
 	"github.com/pinpt/go-datamodel/sourcecode"
 )
 
+type PullRequest struct {
+	sourcecode.PullRequest
+	HasComments bool
+}
+
 func PullRequestsPage(
 	qc QueryContext,
 	repoRefID string,
-	queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, res []sourcecode.PullRequest, _ error) {
+	queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, res []PullRequest, _ error) {
 
 	qc.Logger.Debug("pull_request request", "repo", repoRefID, "q", queryParams)
 
@@ -38,6 +43,10 @@ func PullRequestsPage(
 						# OPEN, CLOSED or MERGED
 						state
 						author { login }
+
+						comments {
+							totalCount
+						}
 					}
 				}
 			}
@@ -68,6 +77,9 @@ func PullRequestsPage(
 						Author    struct {
 							Login string `json:"login"`
 						}
+						Comments struct {
+							TotalCount int `json:"totalCount"`
+						} `json:"comments"`
 					} `json:"nodes"`
 				} `json:"pullRequests"`
 			} `json:"node"`
@@ -107,7 +119,10 @@ func PullRequestsPage(
 		pr.Status = data.State
 		pr.UserRefID = qc.UserID(data.Author.Login)
 
-		res = append(res, pr)
+		pr2 := PullRequest{}
+		pr2.PullRequest = pr
+		pr2.HasComments = data.Comments.TotalCount != 0
+		res = append(res, pr2)
 	}
 
 	return pullRequests.PageInfo, res, nil

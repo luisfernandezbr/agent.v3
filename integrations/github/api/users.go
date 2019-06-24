@@ -6,7 +6,6 @@ import (
 )
 
 func UsersAll(qc QueryContext, resChan chan []sourcecode.User) error {
-	defer close(resChan)
 	return PaginateRegular(func(query string) (pi PageInfo, _ error) {
 		pi, sub, err := UsersPage(qc, query)
 		if err != nil {

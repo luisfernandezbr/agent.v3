@@ -43,8 +43,8 @@ func (s *exportType) init() error {
 	return nil
 }
 
-func (s *exportType) Paginate(fn api.PaginateNewerThanFn) error {
-	return api.PaginateNewerThan(s.lastProcessed, fn)
+func (s *exportType) Paginate(defaultOrderIsByUpdatedAt bool, fn api.PaginateNewerThanFn) error {
+	return api.PaginateNewerThan(s.lastProcessed, fn, defaultOrderIsByUpdatedAt)
 }
 
 func (s *exportType) Send(objs []rpcdef.ExportObj) error {

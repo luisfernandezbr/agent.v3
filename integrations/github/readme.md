@@ -1,3 +1,7 @@
+## TODO
+
+- pull_request is missing closed_by_id, closed_by_login (this fields are not available on PR and are somehow related to issue)
+
 ## How to support incremental exports?
 Since graphql doesn't support since parameter on all objects, we iterate backwards using updated at timestamp, when we get to the object which was updated before last run we stop.
 
@@ -29,7 +33,21 @@ if lastProcessed
     from end backwards
     stop when <= lastProcessed
     save new lastProcessed
-````
+```
+
+### Does updating node children update updated_at field on parent?
+This is needed so that incremental export does not have to get all data again.
+
+test
+create pr, note updatedAt date, 2019-06-24T16:07:35Z
+create a comment on pr, see pr updated_at date, 2019-06-24T16:11:20Z (updated)
+edit the comment on pr, see pr updated_at date, 2019-06-24T16:12:19Z (updated)
+
+So when fetching pr comments we can only fetch comments for updated prs.
+
+test if updating comment on pr sets updated_at on repo (no it does not)
+so we need to check this on case by case basis, not all updates are propagated
+
 
 ### Other
 

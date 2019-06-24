@@ -38,6 +38,9 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	qc.UserID = func(refID string) string {
 		return hash.Values("User", s.customerID, "sourcecode.User", refID)
 	}
+	qc.PullRequestID = func(refID string) string {
+		return hash.Values("PullRequest", s.customerID, "sourcecode.PullRequest", refID)
+	}
 	s.qc = qc
 
 	return nil
@@ -45,33 +48,57 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 
 func (s *Integration) Export(ctx context.Context) error {
 
-	err := s.exportRepos(ctx)
-	if err != nil {
-		return err
+	// export repos
+	{
+		err := s.exportRepos(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = s.exportUsers(ctx)
-	if err != nil {
-		return err
+	// export users
+	{
+		err := s.exportUsers(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
-	repoIDChan := make(chan []string)
-
-	prDone := make(chan bool)
+	// get all repo ids
+	repoIDs := make(chan []string)
 	go func() {
-		defer func() { prDone <- true }()
-		err := s.exportPullRequests(repoIDChan)
+		//return
+		defer close(repoIDs)
+		err := api.ReposAllIDs(s.qc, repoIDs)
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	err = api.ReposAllIDs(s.qc, repoIDChan)
-	if err != nil {
-		panic(err)
-	}
+	// at the same time, export updated pull requests
+	pullRequests := make(chan []api.PullRequest)
+	go func() {
+		//return
 
-	<-prDone
+		defer close(pullRequests)
+		err := s.exportPullRequests(repoIDs, pullRequests)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	go func() {
+		//pullRequestIDs <- []string{"MDExOlB1bGxSZXF1ZXN0MjkxMjAxMDk5"}
+		//close(pullRequestIDs)
+	}()
+
+	// at the same time, export all comments for updated pull requests
+	{
+		err := s.exportPullRequestComments(pullRequests)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	return nil
 }

@@ -16,28 +16,26 @@ func (s *Integration) exportUsers(ctx context.Context) error {
 	defer et.Done()
 
 	resChan := make(chan []sourcecode.User)
-	done := make(chan bool)
 
 	go func() {
-		defer func() {
-			done <- true
-		}()
-		batch := []rpcdef.ExportObj{}
-		for users := range resChan {
-			for _, user := range users {
-				batch = append(batch, rpcdef.ExportObj{Data: user.ToMap()})
-			}
+		defer close(resChan)
+		err := api.UsersAll(s.qc, resChan)
+		if err != nil {
+			panic(err)
 		}
-		if len(batch) == 0 {
-			return
-		}
-		s.agent.SendExported(et.SessionID, batch)
 	}()
 
-	err = api.UsersAll(s.qc, resChan)
-	<-done
-	if err != nil {
-		return err
+	batch := []rpcdef.ExportObj{}
+	for users := range resChan {
+		for _, user := range users {
+			batch = append(batch, rpcdef.ExportObj{Data: user.ToMap()})
+		}
 	}
+	if len(batch) == 0 {
+		return nil
+	}
+
+	s.agent.SendExported(et.SessionID, batch)
+
 	return nil
 }

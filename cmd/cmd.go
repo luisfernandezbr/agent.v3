@@ -51,7 +51,7 @@ var cmdRoot = &cobra.Command{
 func defaultLogger() hclog.Logger {
 	return hclog.New(&hclog.LoggerOptions{
 		Output:     os.Stdout,
-		Level:      hclog.Info,
+		Level:      hclog.Debug,
 		JSONFormat: false,
 	})
 }

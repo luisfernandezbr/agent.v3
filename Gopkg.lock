@@ -103,14 +103,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:17d18ad3069fb260661c5dabc62ca45cb4aed1f7b44d9cf9d481fb9dcb64b14b"
+  digest = "1:5d8ebc1cb15676990b1cb8b969b86de8549b21a3729bd2cf11754211e1919131"
   name = "github.com/hashicorp/go-plugin"
   packages = [
     ".",
     "internal/plugin",
   ]
   pruneopts = "UT"
-  revision = "a1bc61569a26c0f65865932c0d55743b0567c494"
+  revision = "9e3e1c37db188a1acb66561ee0ed4bf4d5e77554"
 
 [[projects]]
   branch = "master"
@@ -238,12 +238,12 @@
   version = "6.0.20"
 
 [[projects]]
-  digest = "1:6d2ae166ab2aa86a306668522526cc66c146047e3ebeef1b59ab48592e43c3ac"
+  digest = "1:d9938023602dca62cf38349bd1c3ab271155c52664e332ec62fd6d3ba202b5ff"
   name = "github.com/pinpt/go-datamodel"
   packages = ["sourcecode"]
   pruneopts = "UT"
-  revision = "0f4897e7367f287dec463717dfc3a625137e2586"
-  version = "0.0.151"
+  revision = "d42ac43f9e08712f0a3aa57cd09523463a9c5e76"
+  version = "0.0.174"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -407,6 +407,7 @@
     "github.com/pinpt/go-common/io",
     "github.com/pinpt/go-common/json",
     "github.com/pinpt/go-common/log",
+    "github.com/pinpt/go-common/strings",
     "github.com/pinpt/go-datamodel/sourcecode",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",

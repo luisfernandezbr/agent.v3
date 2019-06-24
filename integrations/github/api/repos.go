@@ -7,8 +7,6 @@ import (
 )
 
 func ReposAllIDs(qc QueryContext, idChan chan []string) error {
-	defer close(idChan)
-
 	return PaginateRegular(func(query string) (pi PageInfo, _ error) {
 		pi, ids, err := ReposPageIDs(qc, query)
 		if err != nil {

@@ -1,0 +1,111 @@
+package api
+
+import (
+	"time"
+
+	"github.com/pinpt/go-datamodel/sourcecode"
+)
+
+func PullRequestCommentsPage(
+	qc QueryContext,
+	pullRequestRefID string,
+	queryParams string,
+	stopOnUpdatedAt time.Time) (pi PageInfo, res []sourcecode.PullRequestComment, _ error) {
+
+	if pullRequestRefID == "" {
+		panic("mussing pr id")
+	}
+
+	qc.Logger.Debug("pull_request_comments request", "pr", pullRequestRefID, "q", queryParams)
+
+	query := `
+	query {
+		node (id: "` + pullRequestRefID + `") {
+			... on PullRequest {
+				comments(` + queryParams + `) {
+					totalCount
+					pageInfo {
+						hasNextPage
+						endCursor
+						hasPreviousPage
+						startCursor
+					}
+					nodes {
+						updatedAt
+						id
+						pullRequest {
+							id
+						}
+						repository {
+							id
+						}
+						bodyText
+						createdAt
+						author {
+							login
+						}
+					}
+				}
+			}
+		}
+	}
+	`
+
+	var requestRes struct {
+		Data struct {
+			Node struct {
+				Comments struct {
+					TotalCount int      `json:"totalCount"`
+					PageInfo   PageInfo `json:"pageInfo"`
+					Nodes      []struct {
+						UpdatedAt   time.Time `json:"updatedAt"`
+						ID          string    `json:"id"`
+						PullRequest struct {
+							ID string `json:"id"`
+						} `json:"pullRequest"`
+						Repository struct {
+							ID string `json:"id"`
+						} `json:"repository"`
+						//Body string `json:body`
+						BodyText  string    `json:"bodyText"`
+						CreatedAt time.Time `json:"createdAt"`
+						Author    struct {
+							Login string `json:"login"`
+						}
+					} `json:"nodes"`
+				} `json:"comments"`
+			} `json:"node"`
+		} `json:"data"`
+	}
+
+	err := qc.Request(query, &requestRes)
+	if err != nil {
+		return pi, res, err
+	}
+
+	//qc.Logger.Info(fmt.Sprintf("%+v", res))
+
+	nodesContainer := requestRes.Data.Node.Comments
+	nodes := nodesContainer.Nodes
+	//qc.Logger.Info("got comments", "n", len(nodes))
+	for _, data := range nodes {
+		if data.UpdatedAt.Before(stopOnUpdatedAt) {
+			//qc.Logger.Info("stopping", "rec", data.UpdatedAt, "stop", stopOnUpdatedAt)
+			return PageInfo{}, res, nil
+		}
+		item := sourcecode.PullRequestComment{}
+		item.CustomerID = qc.CustomerID
+		item.RefType = "sourcecode.pull_request_comment"
+		item.RefID = data.ID
+		item.UpdatedAt = data.UpdatedAt.Unix()
+
+		item.RepoID = qc.RepoID(data.Repository.ID)
+		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)
+		item.Body = data.BodyText
+		item.CreatedAt = data.CreatedAt.Unix()
+		item.UserRefID = data.Author.Login
+		res = append(res, item)
+	}
+
+	return nodesContainer.PageInfo, res, nil
+}

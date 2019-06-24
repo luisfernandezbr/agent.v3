@@ -20,9 +20,10 @@ type QueryContext struct {
 	Logger  hclog.Logger
 	Request func(query string, res interface{}) error
 
-	CustomerID string
-	RepoID     func(ref string) string
-	UserID     func(ref string) string
+	CustomerID    string
+	RepoID        func(ref string) string
+	UserID        func(ref string) string
+	PullRequestID func(ref string) string
 }
 
 type PaginateRegularFn func(query string) (PageInfo, error)
@@ -50,7 +51,7 @@ func PaginateRegular(fn PaginateRegularFn) error {
 
 type PaginateNewerThanFn func(query string, stopOnUpdatedAt time.Time) (PageInfo, error)
 
-func PaginateNewerThan(lastProcessed time.Time, fn PaginateNewerThanFn) error {
+func PaginateNewerThan(lastProcessed time.Time, fn PaginateNewerThanFn, defaultOrderIsByUpdatedAt bool) error {
 	if lastProcessed.IsZero() {
 		cursor := ""
 		for {
@@ -58,7 +59,9 @@ func PaginateNewerThan(lastProcessed time.Time, fn PaginateNewerThanFn) error {
 			if cursor != "" {
 				q += " after:" + pjson.Stringify(cursor)
 			}
-			q += " orderBy: {field:UPDATED_AT, direction: ASC}"
+			if !defaultOrderIsByUpdatedAt {
+				q += " orderBy: {field:UPDATED_AT, direction: ASC}"
+			}
 			pi, err := fn(q, time.Time{})
 			if err != nil {
 				return err
@@ -76,7 +79,9 @@ func PaginateNewerThan(lastProcessed time.Time, fn PaginateNewerThanFn) error {
 		if cursor != "" {
 			q += " before:" + pjson.Stringify(cursor)
 		}
-		q += " orderBy: {field:UPDATED_AT, direction: DESC}"
+		if !defaultOrderIsByUpdatedAt {
+			q += " orderBy: {field:UPDATED_AT, direction: ASC}"
+		}
 		pi, err := fn(q, lastProcessed)
 		if err != nil {
 			return err
