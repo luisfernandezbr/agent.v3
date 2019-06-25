@@ -22,7 +22,8 @@ type Integration struct {
 	agent      rpcdef.Agent
 	customerID string
 
-	qc api.QueryContext
+	qc    api.QueryContext
+	users *Users
 }
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
@@ -47,29 +48,17 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	return nil
 }
 
-// map[login]refID
-type UserIDs map[string]string
-
-func (s UserIDs) LoginToRefID(login string) (refID string, _ error) {
-	if s[login] == "" {
-		// do not return ref id for users no longer in organization
-		return "", nil
-		//return "", errors.New("could not find user_id for login: " + login)
-	}
-	return s[login], nil
-}
-
 func (s *Integration) Export(ctx context.Context) error {
 
-	// always export all users to build a mapping from login to id in memory
-	{
-		userLoginToRefID, err := s.exportUsers(ctx)
-		if err != nil {
-			return err
-		}
-		userIDs := UserIDs(userLoginToRefID)
-		s.qc.UserLoginToRefID = userIDs.LoginToRefID
+	// export all users in organization, and when later encountering new users continue export
+	var err error
+	s.users, err = NewUsers(s)
+	if err != nil {
+		return err
 	}
+	defer s.users.Done()
+
+	s.qc.UserLoginToRefID = s.users.LoginToRefID
 
 	// export repos
 	{

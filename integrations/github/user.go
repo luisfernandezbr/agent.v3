@@ -1,28 +1,53 @@
 package main
 
 import (
-	"context"
 	"errors"
+	"sync"
 
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-datamodel/sourcecode"
 )
 
-func (s *Integration) exportUsers(ctx context.Context) (loginToRefID map[string]string, _ error) {
-	et, err := s.newExportType("sourcecode.user")
+// map[login]refID
+type Users struct {
+	integration *Integration
+	et          *exportType
+	loginToID   map[string]string
+
+	mu sync.Mutex
+}
+
+func NewUsers(integration *Integration) (*Users, error) {
+	s := &Users{}
+	s.integration = integration
+	var err error
+	s.et, err = s.integration.newExportType("sourcecode.user")
 	if err != nil {
 		return nil, err
 	}
-	defer et.Done()
+	s.loginToID = map[string]string{}
 
-	loginToRefID = map[string]string{}
+	// create a special deleted user, similar to
+	// https://github.com/ghost
 
+	// TODO: create user in export results
+	s.loginToID[""] = "ghost"
+
+	err = s.exportOrganizationUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func (s *Users) exportOrganizationUsers() error {
 	resChan := make(chan []sourcecode.User)
 
 	go func() {
 		defer close(resChan)
-		err := api.UsersAll(s.qc, resChan)
+		err := api.UsersAll(s.integration.qc, resChan)
 		if err != nil {
 			panic(err)
 		}
@@ -31,15 +56,39 @@ func (s *Integration) exportUsers(ctx context.Context) (loginToRefID map[string]
 	batch := []rpcdef.ExportObj{}
 	for users := range resChan {
 		for _, user := range users {
-			loginToRefID[*user.Username] = user.RefID
+			s.loginToID[*user.Username] = user.RefID
 			batch = append(batch, rpcdef.ExportObj{Data: user.ToMap()})
 		}
 	}
 	if len(batch) == 0 {
-		return nil, errors.New("no users found, will not be able to map logins to ids")
+		return errors.New("no users found, will not be able to map logins to ids")
 	}
 
-	s.agent.SendExported(et.SessionID, batch)
+	s.integration.agent.SendExported(s.et.SessionID, batch)
+	return nil
+}
 
-	return loginToRefID, nil
+func (s *Users) LoginToRefID(login string) (refID string, _ error) {
+	if login == "dependabot" {
+		// TODO: to handle bots we will need to track urls
+		return "", nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.loginToID[login] == "" {
+		s.integration.logger.Info("could not find user in organization querying non-org github user", "login", login)
+		user, err := api.User(s.integration.qc, login)
+		if err != nil {
+			return "", err
+		}
+		batch := []rpcdef.ExportObj{}
+		batch = append(batch, rpcdef.ExportObj{Data: user.ToMap()})
+		s.integration.agent.SendExported(s.et.SessionID, batch)
+		s.loginToID[*user.Username] = user.RefID
+	}
+	return s.loginToID[login], nil
+}
+
+func (s *Users) Done() {
+	s.et.Done()
 }

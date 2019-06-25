@@ -37,7 +37,7 @@ func PullRequestCommentsPage(
 						}
 						repository {
 							id
-						}
+						}						
 						bodyText
 						createdAt
 						author {
@@ -70,7 +70,7 @@ func PullRequestCommentsPage(
 						CreatedAt time.Time `json:"createdAt"`
 						Author    struct {
 							Login string `json:"login"`
-						}
+						} `json:"author"`
 					} `json:"nodes"`
 				} `json:"comments"`
 			} `json:"node"`
@@ -81,8 +81,6 @@ func PullRequestCommentsPage(
 	if err != nil {
 		return pi, res, err
 	}
-
-	//qc.Logger.Info(fmt.Sprintf("%+v", res))
 
 	nodesContainer := requestRes.Data.Node.Comments
 	nodes := nodesContainer.Nodes
