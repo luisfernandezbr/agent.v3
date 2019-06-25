@@ -97,7 +97,11 @@ func PullRequestReviewsPage(
 		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)
 		item.State = data.State
 		item.CreatedAt = data.CreatedAt.Unix()
-		item.UserRefID = data.Author.Login
+
+		item.UserRefID, err = qc.UserLoginToRefID(data.Author.Login)
+		if err != nil {
+			panic(err)
+		}
 		res = append(res, item)
 	}
 

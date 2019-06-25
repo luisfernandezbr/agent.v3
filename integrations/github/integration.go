@@ -47,19 +47,33 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	return nil
 }
 
+// map[login]refID
+type UserIDs map[string]string
+
+func (s UserIDs) LoginToRefID(login string) (refID string, _ error) {
+	if s[login] == "" {
+		// do not return ref id for users no longer in organization
+		return "", nil
+		//return "", errors.New("could not find user_id for login: " + login)
+	}
+	return s[login], nil
+}
+
 func (s *Integration) Export(ctx context.Context) error {
+
+	// always export all users to build a mapping from login to id in memory
+	{
+		userLoginToRefID, err := s.exportUsers(ctx)
+		if err != nil {
+			return err
+		}
+		userIDs := UserIDs(userLoginToRefID)
+		s.qc.UserLoginToRefID = userIDs.LoginToRefID
+	}
 
 	// export repos
 	{
 		err := s.exportRepos(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
-	// export users
-	{
-		err := s.exportUsers(ctx)
 		if err != nil {
 			return err
 		}
@@ -85,10 +99,9 @@ func (s *Integration) Export(ctx context.Context) error {
 		}
 	}()
 
-	for range pullRequests {
-	}
-
-	return nil
+	//for range pullRequests {
+	//}
+	//return nil
 
 	pullRequestsForComments := make(chan []api.PullRequest)
 	pullRequestsForReviews := make(chan []api.PullRequest)

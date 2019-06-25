@@ -144,7 +144,10 @@ func PullRequestsPage(
 			panic("unknown state: " + data.State)
 		}
 		pr.Status = data.State
-		pr.UserRefID = qc.UserID(data.Author.Login)
+		pr.UserRefID, err = qc.UserLoginToRefID(data.Author.Login)
+		if err != nil {
+			panic(err)
+		}
 
 		if data.State == "CLOSED" {
 			events := data.ClosedEvents.Nodes
@@ -153,9 +156,10 @@ func PullRequestsPage(
 				if login == "" {
 					qc.Logger.Error("empty login")
 				}
-				// TODO: why are these the same?
-				pr.ClosedByLogin = login
-				pr.ClosedByRefID = login
+				pr.ClosedByRefID, err = qc.UserLoginToRefID(login)
+				if err != nil {
+					panic(err)
+				}
 			} else {
 				qc.Logger.Error("pr status is CLOSED, but no closed events found, can't set ClosedBy")
 			}

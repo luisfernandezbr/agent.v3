@@ -24,6 +24,8 @@ type QueryContext struct {
 	RepoID        func(ref string) string
 	UserID        func(ref string) string
 	PullRequestID func(ref string) string
+
+	UserLoginToRefID func(login string) (refID string, _ error)
 }
 
 type PaginateRegularFn func(query string) (PageInfo, error)
