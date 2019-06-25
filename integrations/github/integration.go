@@ -85,6 +85,11 @@ func (s *Integration) Export(ctx context.Context) error {
 		}
 	}()
 
+	for range pullRequests {
+	}
+
+	return nil
+
 	pullRequestsForComments := make(chan []api.PullRequest)
 	pullRequestsForReviews := make(chan []api.PullRequest)
 

@@ -44,12 +44,22 @@ func PullRequestsPage(
 						# OPEN, CLOSED or MERGED
 						state
 						author { login }
-
 						comments {
 							totalCount
 						}
 						reviews {
 							totalCount
+						}
+						# fetch the user who closed the issues
+						# this is only relevant when the state = CLOSED
+						closedEvents: timelineItems (last:1 itemTypes:CLOSED_EVENT){
+							nodes {
+								... on ClosedEvent {
+								actor {
+									login
+								}
+							}
+				  }
 						}
 					}
 				}
@@ -87,11 +97,20 @@ func PullRequestsPage(
 						Reviews struct {
 							TotalCount int `json:"totalCount"`
 						} `json:"reviews"`
+						ClosedEvents struct {
+							Nodes []struct {
+								Actor struct {
+									Login string `json:"login"`
+								} `json:"actor"`
+							} `json:"nodes"`
+						} `json:"closedEvents"`
 					} `json:"nodes"`
 				} `json:"pullRequests"`
 			} `json:"node"`
 		} `json:"data"`
 	}
+
+	// TODO: why don't we have merged_by?
 
 	err := qc.Request(query, &requestRes)
 	if err != nil {
@@ -117,6 +136,7 @@ func PullRequestsPage(
 		pr.URL = data.URL
 		pr.CreatedAt = data.CreatedAt.Unix()
 		pr.MergedAt = data.MergedAt.Unix()
+
 		pr.ClosedAt = data.ClosedAt.Unix()
 		pr.UpdatedAt = data.UpdatedAt.Unix()
 		validStatus := []string{"OPEN", "CLOSED", "MERGED"}
@@ -125,6 +145,21 @@ func PullRequestsPage(
 		}
 		pr.Status = data.State
 		pr.UserRefID = qc.UserID(data.Author.Login)
+
+		if data.State == "CLOSED" {
+			events := data.ClosedEvents.Nodes
+			if len(events) != 0 {
+				login := events[0].Actor.Login
+				if login == "" {
+					qc.Logger.Error("empty login")
+				}
+				// TODO: why are these the same?
+				pr.ClosedByLogin = login
+				pr.ClosedByRefID = login
+			} else {
+				qc.Logger.Error("pr status is CLOSED, but no closed events found, can't set ClosedBy")
+			}
+		}
 
 		pr2 := PullRequest{}
 		pr2.PullRequest = pr

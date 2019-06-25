@@ -1,7 +1,3 @@
-## TODO
-
-- pull_request is missing closed_by_id, closed_by_login (this fields are not available on PR and are somehow related to issue)
-
 ## How to support incremental exports?
 Since graphql doesn't support since parameter on all objects, we iterate backwards using updated at timestamp, when we get to the object which was updated before last run we stop.
 
