@@ -157,23 +157,33 @@ func (s *export) Destroy() {
 
 type sessions struct {
 	export    *export
-	m         map[int]session
+	m         map[int]*session
 	streamDir string
 	lastID    int
 	logger    hclog.Logger
+	mu        sync.RWMutex
+}
+
+type session struct {
+	state     string
+	modelType string
+	stream    *io.JSONStream
+	mu        sync.Mutex
 }
 
 func newSessions(logger hclog.Logger, export *export, streamDir string) *sessions {
 	s := &sessions{}
 	s.logger = logger
 	s.export = export
-	s.m = map[int]session{}
+	s.m = map[int]*session{}
 	s.streamDir = streamDir
 	return s
 }
 
 func (s *sessions) new(modelType string) (
 	sessionID string, lastProcessed interface{}, _ error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	s.lastID++
 	id := s.lastID
@@ -189,7 +199,7 @@ func (s *sessions) new(modelType string) (
 		return "", "", err
 	}
 
-	s.m[id] = session{
+	s.m[id] = &session{
 		state:     "started",
 		modelType: modelType,
 		stream:    stream,
@@ -203,7 +213,10 @@ func (s *sessions) new(modelType string) (
 	return sessionID, lastProcessed, nil
 }
 
-func (s *sessions) get(sessionID string) session {
+func (s *sessions) get(sessionID string) *session {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	id, err := strconv.Atoi(sessionID)
 	if err != nil {
 		panic(err)
@@ -241,6 +254,9 @@ func (s *sessions) Close(sessionID string) error {
 func (s *sessions) Write(sessionID string, objs []rpcdef.ExportObj) error {
 	sess := s.get(sessionID)
 	s.logger.Info("writing objects", "type", sess.modelType, "count", len(objs))
+
+	sess.mu.Lock()
+	defer sess.mu.Unlock()
 	for _, obj := range objs {
 		err := sess.stream.Write(obj.Data)
 		if err != nil {
@@ -248,10 +264,4 @@ func (s *sessions) Write(sessionID string, objs []rpcdef.ExportObj) error {
 		}
 	}
 	return nil
-}
-
-type session struct {
-	state     string
-	modelType string
-	stream    *io.JSONStream
 }

@@ -17,6 +17,24 @@ func ReposAllIDs(qc QueryContext, idChan chan []string) error {
 	})
 }
 
+func ReposAllIDsSlice(qc QueryContext) ([]string, error) {
+	res := make(chan []string)
+	go func() {
+		defer close(res)
+		err := ReposAllIDs(qc, res)
+		if err != nil {
+			panic(err)
+		}
+	}()
+	var sl []string
+	for a := range res {
+		for _, id := range a {
+			sl = append(sl, id)
+		}
+	}
+	return sl, nil
+}
+
 func ReposPageIDs(qc QueryContext, queryParams string) (pi PageInfo, ids IDs, _ error) {
 
 	query := `

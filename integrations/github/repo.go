@@ -15,7 +15,7 @@ func (s *Integration) exportRepos(ctx context.Context) error {
 	}
 	defer et.Done()
 
-	return et.Paginate(false, func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
+	return et.Paginate(func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
 		pi, repos, err := api.ReposPage(s.qc, query, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err

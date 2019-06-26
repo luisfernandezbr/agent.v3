@@ -49,6 +49,7 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 }
 
 func (s *Integration) Export(ctx context.Context) error {
+	concurrency := 1
 
 	// export all users in organization, and when later encountering new users continue export
 	var err error
@@ -60,6 +61,20 @@ func (s *Integration) Export(ctx context.Context) error {
 
 	s.qc.UserLoginToRefID = s.users.LoginToRefID
 
+	repoIDs, err := api.ReposAllIDsSlice(s.qc)
+	if err != nil {
+		return err
+	}
+
+	// export commits for all branches
+	// TODO: this is very slow compared to everything else
+	{
+		err := s.exportCommits(repoIDs, concurrency)
+		if err != nil {
+			return err
+		}
+	}
+
 	// export repos
 	{
 		err := s.exportRepos(ctx)
@@ -67,16 +82,6 @@ func (s *Integration) Export(ctx context.Context) error {
 			return err
 		}
 	}
-
-	// get all repo ids
-	repoIDs := make(chan []string)
-	go func() {
-		defer close(repoIDs)
-		err := api.ReposAllIDs(s.qc, repoIDs)
-		if err != nil {
-			panic(err)
-		}
-	}()
 
 	// at the same time, export updated pull requests
 	pullRequests := make(chan []api.PullRequest)
@@ -160,7 +165,7 @@ func (s *Integration) makeRequest(query string, res interface{}) error {
 	//TODO: catch errors properly here
 	// example {"errors":[{"message"...}]
 	if resp.StatusCode != 200 {
-
+		s.logger.Info("response body", string(b))
 		return errors.New(`resp resp.StatusCode != 200`)
 	}
 

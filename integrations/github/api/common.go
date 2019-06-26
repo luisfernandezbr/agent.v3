@@ -53,7 +53,8 @@ func PaginateRegular(fn PaginateRegularFn) error {
 
 type PaginateNewerThanFn func(query string, stopOnUpdatedAt time.Time) (PageInfo, error)
 
-func PaginateNewerThan(lastProcessed time.Time, fn PaginateNewerThanFn, defaultOrderIsByUpdatedAt bool) error {
+// PaginateNewerThan is pagination for resources supporting orderBy UPDATED_AT field.
+func PaginateNewerThan(lastProcessed time.Time, fn PaginateNewerThanFn) error {
 	if lastProcessed.IsZero() {
 		cursor := ""
 		for {
@@ -61,9 +62,7 @@ func PaginateNewerThan(lastProcessed time.Time, fn PaginateNewerThanFn, defaultO
 			if cursor != "" {
 				q += " after:" + pjson.Stringify(cursor)
 			}
-			if !defaultOrderIsByUpdatedAt {
-				q += " orderBy: {field:UPDATED_AT, direction: ASC}"
-			}
+			q += " orderBy: {field:UPDATED_AT, direction: ASC}"
 			pi, err := fn(q, time.Time{})
 			if err != nil {
 				return err
@@ -81,15 +80,42 @@ func PaginateNewerThan(lastProcessed time.Time, fn PaginateNewerThanFn, defaultO
 		if cursor != "" {
 			q += " before:" + pjson.Stringify(cursor)
 		}
-		if !defaultOrderIsByUpdatedAt {
-			q += " orderBy: {field:UPDATED_AT, direction: ASC}"
-		}
+		q += " orderBy: {field:UPDATED_AT, direction: ASC}"
 		pi, err := fn(q, lastProcessed)
 		if err != nil {
 			return err
 		}
 		if pi.HasPreviousPage {
 			cursor = pi.StartCursor
+		} else {
+			return nil
+		}
+	}
+}
+
+type PaginateCommitsFn func(query string) (PageInfo, error)
+
+const iso8601format = "2006-01-02T15:04:05-0700"
+
+// PaginateCommits is pagination for commit history which supports since argument.
+func PaginateCommits(lastProcessed time.Time, fn PaginateCommitsFn) error {
+	cursor := ""
+	since := ""
+	if !lastProcessed.IsZero() {
+		since = " since: " + pjson.Stringify(lastProcessed.Format(iso8601format))
+	}
+
+	for {
+		q := "first: " + pageSizeStr + since
+		if cursor != "" {
+			q += " after:" + pjson.Stringify(cursor)
+		}
+		pi, err := fn(q)
+		if err != nil {
+			return err
+		}
+		if pi.HasNextPage {
+			cursor = pi.EndCursor
 		} else {
 			return nil
 		}

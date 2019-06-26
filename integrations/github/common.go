@@ -43,8 +43,8 @@ func (s *exportType) init() error {
 	return nil
 }
 
-func (s *exportType) Paginate(defaultOrderIsByUpdatedAt bool, fn api.PaginateNewerThanFn) error {
-	return api.PaginateNewerThan(s.lastProcessed, fn, defaultOrderIsByUpdatedAt)
+func (s *exportType) Paginate(fn api.PaginateNewerThanFn) error {
+	return api.PaginateNewerThan(s.lastProcessed, fn)
 }
 
 func (s *exportType) Send(objs []rpcdef.ExportObj) error {
@@ -57,4 +57,15 @@ func (s *exportType) Send(objs []rpcdef.ExportObj) error {
 
 func (s *exportType) Done() {
 	s.integration.agent.ExportDone(s.SessionID, s.startTime.Format(time.RFC3339))
+}
+
+func stringsToChan(sl []string) chan string {
+	res := make(chan string)
+	go func() {
+		defer close(res)
+		for _, a := range sl {
+			res <- a
+		}
+	}()
+	return res
 }

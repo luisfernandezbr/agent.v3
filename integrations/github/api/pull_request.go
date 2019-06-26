@@ -90,7 +90,7 @@ func PullRequestsPage(
 						State     string    `json:"state"`
 						Author    struct {
 							Login string `json:"login"`
-						}
+						} `json:"author"`
 						Comments struct {
 							TotalCount int `json:"totalCount"`
 						} `json:"comments"`
