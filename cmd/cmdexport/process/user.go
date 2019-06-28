@@ -52,9 +52,9 @@ func (s *CommitUsers) Transform(data map[string]interface{}) (_ map[string]inter
 
 	if sourceID == "" {
 		// unlinked
-		obj.ID = hash.Values("User", obj.CustomerID, "git", emailRef)
+		obj.ID = hash.Values("User", obj.CustomerID, email, "git")
 	} else {
-		obj.ID = hash.Values("User", obj.CustomerID, "git", emailRef, sourceID)
+		obj.ID = hash.Values("User", obj.CustomerID, email, "git", sourceID)
 	}
 
 	obj.Email = &email
