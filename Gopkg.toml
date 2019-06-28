@@ -24,7 +24,7 @@
 
 [[constraint]]
   name = "github.com/pinpt/go-common"
-  version = "6"
+  version = "7"
 
 [[constraint]]  
   name = "github.com/kardianos/service"

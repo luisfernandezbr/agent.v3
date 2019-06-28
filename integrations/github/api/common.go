@@ -25,7 +25,8 @@ type QueryContext struct {
 	UserID        func(ref string) string
 	PullRequestID func(ref string) string
 
-	UserLoginToRefID func(login string) (refID string, _ error)
+	UserLoginToRefID           func(login string) (refID string, _ error)
+	UserLoginToRefIDFromCommit func(login, email string) (refID string, _ error)
 }
 
 type PaginateRegularFn func(query string) (PageInfo, error)

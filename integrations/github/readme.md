@@ -54,6 +54,20 @@ When not using updated_at filter it is sorted by created_at by default. So the o
 
 In general this needs to be tested on case by case basic. This relies on github private api implementation details. But don't know of any better way to avoid re-fetching all data on incremental.
 
+### Exporting users
+
+We first export all users belonging to organization. The github api does not return email in that case, so we skip that.
+
+Afterwards, when we export pull requests and related users, we check all authors using login if we have already exported a user with this login we skip it, if we haven't yet, we export this users, setting (organization) member field to false.
+
+We also retrieve commits from the api to get the link from email to github login.
+
+When commit has a login, we first do the same process of sending this user as for pull requests (only if we haven't sent the user already).
+
+As a second step, for both author and committer, we send a entry with name, email and if it exists a github login link.
+
+Agent checks if we have already sent it behind the scenes, and if not creates a user with github and git ref types.
+
 ### Other
 
 Create auth token

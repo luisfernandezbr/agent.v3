@@ -5,9 +5,12 @@ import (
 )
 
 type CommitAuthor struct {
-	CommitHash string
-	//BranchName    string
+	CommitHash     string
+	AuthorName     string
+	AuthorEmail    string
 	AuthorRefID    string
+	CommitterName  string
+	CommitterEmail string
 	CommitterRefID string
 }
 
@@ -36,11 +39,15 @@ func CommitsPage(
 								nodes {
 									oid
 									author {
+										name
+										email
 										user {
 											login
 										}
 									}
 									committer {
+										name
+										email
 										user {
 											login
 										}
@@ -66,12 +73,16 @@ func CommitsPage(
 							Nodes      []struct {
 								OID    string `json:"oid"`
 								Author struct {
-									User struct {
+									Name  string `json:"name"`
+									Email string `json:"email"`
+									User  struct {
 										Login string `json:"login"`
 									} `json:"user"`
 								} `json:"author"`
 								Committer struct {
-									User struct {
+									Name  string `json:"name"`
+									Email string `json:"email"`
+									User  struct {
 										Login string `json:"login"`
 									} `json:"user"`
 								} `json:"committer"`
@@ -96,14 +107,21 @@ func CommitsPage(
 	for _, data := range commitNodes {
 		item := CommitAuthor{}
 		item.CommitHash = data.OID
-		item.AuthorRefID, err = qc.UserLoginToRefID(data.Author.User.Login)
+
+		item.AuthorRefID, err = qc.UserLoginToRefIDFromCommit(data.Author.User.Login, data.Author.Email)
 		if err != nil {
 			panic(err)
 		}
-		item.CommitterRefID, err = qc.UserLoginToRefID(data.Committer.User.Login)
+
+		item.CommitterRefID, err = qc.UserLoginToRefIDFromCommit(data.Committer.User.Login, data.Committer.Email)
 		if err != nil {
 			panic(err)
 		}
+		item.AuthorName = data.Author.Name
+		item.AuthorEmail = data.Author.Email
+		item.CommitterName = data.Committer.Name
+		item.CommitterEmail = data.Committer.Email
+
 		res = append(res, item)
 	}
 

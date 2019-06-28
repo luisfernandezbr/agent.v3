@@ -8,6 +8,64 @@ import (
 	"github.com/pinpt/go-datamodel/sourcecode"
 )
 
+type userGithub struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatarUrl"`
+	Login     string `json:"login"`
+}
+
+const userGithubFields = `{
+	id
+	name
+	avatarUrl
+	login
+}`
+
+func (s userGithub) Convert(customerID string, orgMember bool) (user sourcecode.User) {
+	user.RefType = "github"
+	user.CustomerID = customerID
+	user.RefID = s.ID
+	user.Name = s.Name
+	user.AvatarURL = pstrings.Pointer(s.AvatarURL)
+	user.Username = pstrings.Pointer(s.Login)
+	user.Member = orgMember
+	user.Type = sourcecode.TypeHuman
+	return user
+}
+
+func User(qc QueryContext, login string, orgMember bool) (
+	user sourcecode.User, _ error) {
+
+	qc.Logger.Debug("user request", "login", login)
+
+	query := `
+	query {
+		user(login:` + pjson.Stringify(login) + `)` + userGithubFields + `
+	}
+	`
+
+	var res struct {
+		Data struct {
+			User userGithub `json:"user"`
+		} `json:"data"`
+	}
+
+	err := qc.Request(query, &res)
+	if err != nil {
+		return user, err
+	}
+
+	data := res.Data.User
+
+	if data.ID == "" {
+		panic("user not found for login: " + login)
+		return user, errors.New("user not found for login: " + login)
+	}
+
+	return data.Convert(qc.CustomerID, true), nil
+}
+
 func UsersAll(qc QueryContext, resChan chan []sourcecode.User) error {
 	return PaginateRegular(func(query string) (pi PageInfo, _ error) {
 		pi, sub, err := UsersPage(qc, query)
@@ -18,35 +76,6 @@ func UsersAll(qc QueryContext, resChan chan []sourcecode.User) error {
 		return pi, nil
 	})
 }
-
-type userGithub struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	AvatarURL string `json:"avatarUrl"`
-	Email     string `json:"email"`
-	Login     string `json:"login"`
-}
-
-func (s userGithub) Convert(customerID string, notInOrganization bool) (user sourcecode.User) {
-	user.RefType = "sourcecode.User"
-	user.CustomerID = customerID
-	user.RefID = s.ID
-	user.Name = s.Name
-	user.AvatarURL = pstrings.Pointer(s.AvatarURL)
-	user.Email = pstrings.Pointer(s.Email)
-	user.Username = pstrings.Pointer(s.Login)
-	// TODO: add to data model
-	//user.NotInOrganization = notInOrganization
-	return user
-}
-
-const userGithubFields = `{
-	id
-	name
-	avatarUrl
-	email
-	login
-}`
 
 func UsersPage(qc QueryContext, queryParams string) (pi PageInfo, users []sourcecode.User, _ error) {
 	qc.Logger.Debug("users request", "q", queryParams)
@@ -97,39 +126,9 @@ func UsersPage(qc QueryContext, queryParams string) (pi PageInfo, users []source
 	}
 
 	for _, data := range memberNodes {
-		item := data.Convert(qc.CustomerID, false)
+		item := data.Convert(qc.CustomerID, true)
 		users = append(users, item)
 	}
 
 	return members.PageInfo, users, nil
-}
-
-func User(qc QueryContext, login string) (user sourcecode.User, _ error) {
-	qc.Logger.Debug("user request", "login", login)
-
-	query := `
-	query {
-		user(login:` + pjson.Stringify(login) + `)` + userGithubFields + `
-	}
-	`
-
-	var res struct {
-		Data struct {
-			User userGithub `json:"user"`
-		} `json:"data"`
-	}
-
-	err := qc.Request(query, &res)
-	if err != nil {
-		return user, err
-	}
-
-	data := res.Data.User
-
-	if data.ID == "" {
-		panic("user not found for login: " + login)
-		return user, errors.New("user not found for login: " + login)
-	}
-
-	return data.Convert(qc.CustomerID, true), nil
 }

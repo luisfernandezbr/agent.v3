@@ -5,11 +5,10 @@ import (
 
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/rpcdef"
-	"github.com/pinpt/go-datamodel/sourcecode"
 )
 
-func (s *Integration) exportCommits(repoIDs []string, concurrency int) error {
-	et, err := s.newExportType("sourcecode.commit")
+func (s *Integration) exportCommitAuthors(repoIDs []string, concurrency int) error {
+	et, err := s.newExportType("sourcecode.commit_user")
 	if err != nil {
 		return err
 	}
@@ -59,6 +58,7 @@ func (s *Integration) exportCommitsForRepoBranch(et *exportType, repoID string, 
 	return api.PaginateCommits(
 		et.lastProcessed,
 		func(query string) (api.PageInfo, error) {
+
 			pi, res, err := api.CommitsPage(s.qc,
 				repoID,
 				branchName,
@@ -68,19 +68,41 @@ func (s *Integration) exportCommitsForRepoBranch(et *exportType, repoID string, 
 				return pi, err
 			}
 
+			s.logger.Info("got commits page", "l", len(res))
 			batch := []rpcdef.ExportObj{}
-			for _, commit := range res {
-				c2 := sourcecode.Commit{}
-				c2.CustomerID = s.customerID
-				c2.RefType = "sourcecode.commit"
-				c2.RefID = commit.CommitHash
-				c2.RepoID = s.qc.RepoID(repoID)
-				//c2.Branch = branchName
-				c2.AuthorRefID = s.qc.UserID(commit.AuthorRefID)
-				c2.CommitterRefID = s.qc.UserID(commit.CommitterRefID)
-				batch = append(batch, rpcdef.ExportObj{Data: c2.ToMap()})
 
+			for _, commit := range res {
+				author := CommitUser{}
+				author.CustomerID = s.customerID
+				author.Name = commit.AuthorName
+				author.Email = commit.AuthorEmail
+				author.SourceID = commit.AuthorRefID
+				batch = append(batch, rpcdef.ExportObj{Data: author.ToMap()})
+
+				committer := CommitUser{}
+				committer.CustomerID = s.customerID
+				committer.Name = commit.CommitterName
+				committer.Email = commit.CommitterEmail
+				committer.SourceID = commit.CommitterRefID
+				batch = append(batch, rpcdef.ExportObj{Data: committer.ToMap()})
 			}
+
 			return pi, et.Send(batch)
 		})
+}
+
+type CommitUser struct {
+	CustomerID string
+	Email      string
+	Name       string
+	SourceID   string
+}
+
+func (s CommitUser) ToMap() map[string]interface{} {
+	res := map[string]interface{}{}
+	res["customer_id"] = s.CustomerID
+	res["email"] = s.Email
+	res["name"] = s.Name
+	res["source_id"] = s.SourceID
+	return res
 }

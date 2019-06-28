@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	"github.com/pinpt/agent.next/cmd/cmdexport/process"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-common/io"
@@ -162,6 +163,8 @@ type sessions struct {
 	lastID    int
 	logger    hclog.Logger
 	mu        sync.RWMutex
+
+	commitUsers *process.CommitUsers
 }
 
 type session struct {
@@ -177,6 +180,7 @@ func newSessions(logger hclog.Logger, export *export, streamDir string) *session
 	s.export = export
 	s.m = map[int]*session{}
 	s.streamDir = streamDir
+	s.commitUsers = process.NewCommitUsers()
 	return s
 }
 
@@ -252,8 +256,30 @@ func (s *sessions) Close(sessionID string) error {
 }
 
 func (s *sessions) Write(sessionID string, objs []rpcdef.ExportObj) error {
+	if len(objs) == 0 {
+		s.logger.Warn("no objects passed to write")
+		return nil
+	}
 	sess := s.get(sessionID)
 	s.logger.Info("writing objects", "type", sess.modelType, "count", len(objs))
+
+	if sess.modelType == "sourcecode.commit_user" {
+		var res []rpcdef.ExportObj
+		for _, obj := range objs {
+			obj2, err := s.commitUsers.Transform(obj.Data.(map[string]interface{}))
+			if err != nil {
+				return err
+			}
+			if obj2 != nil {
+				res = append(res, rpcdef.ExportObj{Data: obj2})
+			}
+		}
+		if len(res) == 0 {
+			// no new users
+			return nil
+		}
+		objs = res
+	}
 
 	sess.mu.Lock()
 	defer sess.mu.Unlock()

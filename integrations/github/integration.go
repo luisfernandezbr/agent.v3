@@ -60,20 +60,23 @@ func (s *Integration) Export(ctx context.Context) error {
 	defer s.users.Done()
 
 	s.qc.UserLoginToRefID = s.users.LoginToRefID
+	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
 
 	repoIDs, err := api.ReposAllIDsSlice(s.qc)
 	if err != nil {
 		return err
 	}
 
-	// export commits for all branches
+	// export a link between commit and github user
 	// TODO: this is very slow compared to everything else
 	{
-		err := s.exportCommits(repoIDs, concurrency)
+		err := s.exportCommitAuthors(repoIDs, concurrency)
 		if err != nil {
 			return err
 		}
 	}
+
+	return nil
 
 	// export repos
 	{
@@ -165,7 +168,7 @@ func (s *Integration) makeRequest(query string, res interface{}) error {
 	//TODO: catch errors properly here
 	// example {"errors":[{"message"...}]
 	if resp.StatusCode != 200 {
-		s.logger.Info("response body", string(b))
+		//s.logger.Info("response body", string(b))
 		return errors.New(`resp resp.StatusCode != 200`)
 	}
 

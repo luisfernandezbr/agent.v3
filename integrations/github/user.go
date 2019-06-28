@@ -32,6 +32,26 @@ func NewUsers(integration *Integration) (*Users, error) {
 	// https://github.com/ghost
 
 	// TODO: create user in export results
+
+	/*
+		example ghost user
+		query {
+		repository(owner:"pinpt" name:"worker"){
+		pullRequest(number: 79){
+		comments(first:10) {
+		nodes {
+		id
+		author {
+		login
+		url
+		}
+		}
+		}
+		}
+		}
+		}
+	*/
+
 	s.loginToID[""] = "ghost"
 
 	err = s.exportOrganizationUsers()
@@ -69,7 +89,7 @@ func (s *Users) exportOrganizationUsers() error {
 }
 
 func (s *Users) LoginToRefID(login string) (refID string, _ error) {
-	if login == "dependabot" {
+	if login == "dependabot" || login == "dependabot[bot]" {
 		// TODO: to handle bots we will need to track urls
 		return "", nil
 	}
@@ -77,7 +97,7 @@ func (s *Users) LoginToRefID(login string) (refID string, _ error) {
 	defer s.mu.Unlock()
 	if s.loginToID[login] == "" {
 		s.integration.logger.Info("could not find user in organization querying non-org github user", "login", login)
-		user, err := api.User(s.integration.qc, login)
+		user, err := api.User(s.integration.qc, login, false)
 		if err != nil {
 			return "", err
 		}
@@ -87,6 +107,13 @@ func (s *Users) LoginToRefID(login string) (refID string, _ error) {
 		s.loginToID[*user.Username] = user.RefID
 	}
 	return s.loginToID[login], nil
+}
+
+func (s *Users) LoginToRefIDFromCommit(login string, email string) (refID string, _ error) {
+	if email == "noreply@github.com" {
+		return "", nil
+	}
+	return s.LoginToRefID(login)
 }
 
 func (s *Users) Done() {
