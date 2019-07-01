@@ -7,7 +7,7 @@ import (
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
-func (s *Integration) exportCommitAuthors(repoIDs []string, concurrency int) error {
+func (s *Integration) exportCommitUsers(repos []api.Repo, concurrency int) error {
 	et, err := s.newExportType("sourcecode.commit_user")
 	if err != nil {
 		return err
@@ -20,8 +20,8 @@ func (s *Integration) exportCommitAuthors(repoIDs []string, concurrency int) err
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for repoID := range stringsToChan(repoIDs) {
-				err := s.exportCommitsForRepo(et, repoID)
+			for repo := range reposToChan(repos, 0) {
+				err := s.exportCommitsForRepoDefaultBranch(et, repo)
 				if err != nil {
 					panic(err)
 				}
@@ -32,7 +32,42 @@ func (s *Integration) exportCommitAuthors(repoIDs []string, concurrency int) err
 	return nil
 }
 
-func (s *Integration) exportCommitsForRepo(et *exportType, repoID string) error {
+// maxToReturn useful for debugging
+func reposToChan(sl []api.Repo, maxToReturn int) chan api.Repo {
+	res := make(chan api.Repo)
+	go func() {
+		defer close(res)
+		for i, a := range sl {
+			if maxToReturn != 0 {
+				if i == maxToReturn {
+					return
+				}
+			}
+			res <- a
+		}
+	}()
+	return res
+}
+
+func (s *Integration) exportCommitsForRepoDefaultBranch(et *exportType, repo api.Repo) error {
+	s.logger.Info("exporting commits (to get users)", "repo_id", repo.ID, "repo_name", repo.Name)
+
+	if repo.DefaultBranch == "" {
+		return nil
+	}
+
+	err := s.exportCommitsForRepoBranch(et, repo, repo.DefaultBranch)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/*
+// unused right now, only getting commits for default branch
+func (s *Integration) exportCommitsForRepoAllBranches(et *exportType, repoID string) error {
+	s.logger.Info("exporting commits (to get users)", "repo", repoID)
 	branches := make(chan []string)
 	go func() {
 		defer close(branches)
@@ -51,16 +86,17 @@ func (s *Integration) exportCommitsForRepo(et *exportType, repoID string) error 
 	}
 	return nil
 }
+*/
 
-func (s *Integration) exportCommitsForRepoBranch(et *exportType, repoID string, branchName string) error {
-	s.logger.Info("exporting commits for branch", "repoID", repoID, "branch", branchName)
+func (s *Integration) exportCommitsForRepoBranch(et *exportType, repo api.Repo, branchName string) error {
+	s.logger.Info("exporting commits for branch", "repo_id", repo.ID, "repo_name", repo.Name)
 
 	return api.PaginateCommits(
 		et.lastProcessed,
 		func(query string) (api.PageInfo, error) {
 
 			pi, res, err := api.CommitsPage(s.qc,
-				repoID,
+				repo.ID,
 				branchName,
 				query,
 			)

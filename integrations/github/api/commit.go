@@ -108,14 +108,17 @@ func CommitsPage(
 		item := CommitAuthor{}
 		item.CommitHash = data.OID
 
-		item.AuthorRefID, err = qc.UserLoginToRefIDFromCommit(data.Author.User.Login, data.Author.Email)
-		if err != nil {
-			panic(err)
+		if data.Author.User.Login != "" {
+			item.AuthorRefID, err = qc.UserLoginToRefIDFromCommit(data.Author.User.Login, data.Author.Email)
+			if err != nil {
+				panic(err)
+			}
 		}
-
-		item.CommitterRefID, err = qc.UserLoginToRefIDFromCommit(data.Committer.User.Login, data.Committer.Email)
-		if err != nil {
-			panic(err)
+		if data.Committer.User.Login != "" {
+			item.CommitterRefID, err = qc.UserLoginToRefIDFromCommit(data.Committer.User.Login, data.Committer.Email)
+			if err != nil {
+				panic(err)
+			}
 		}
 		item.AuthorName = data.Author.Name
 		item.AuthorEmail = data.Author.Email

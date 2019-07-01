@@ -4,6 +4,8 @@ import (
 	"errors"
 	"sync"
 
+	pstrings "github.com/pinpt/go-common/strings"
+
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-datamodel/sourcecode"
@@ -28,10 +30,22 @@ func NewUsers(integration *Integration) (*Users, error) {
 	}
 	s.loginToID = map[string]string{}
 
-	// create a special deleted user, similar to
-	// https://github.com/ghost
+	err = s.createGhost()
+	if err != nil {
+		return nil, err
+	}
 
-	// TODO: create user in export results
+	err = s.exportOrganizationUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func (s *Users) createGhost() error {
+	// create a special deleted user
+	// https://github.com/ghost
 
 	/*
 		example ghost user
@@ -54,12 +68,26 @@ func NewUsers(integration *Integration) (*Users, error) {
 
 	s.loginToID[""] = "ghost"
 
-	err = s.exportOrganizationUsers()
-	if err != nil {
-		return nil, err
-	}
+	user := sourcecode.User{}
+	user.RefID = "ghost"
+	user.RefType = "github"
+	user.Name = "Ghost (all deleted users)"
+	user.Username = pstrings.Pointer("ghost")
+	user.Member = false
+	user.Type = sourcecode.TypeDeletedSpecialUser
+	return s.sendUser(user)
+}
 
-	return s, nil
+func (s *Users) sendUser(user sourcecode.User) error {
+	return s.sendUsers([]sourcecode.User{user})
+}
+
+func (s *Users) sendUsers(users []sourcecode.User) error {
+	batch := []rpcdef.ExportObj{}
+	for _, user := range users {
+		batch = append(batch, rpcdef.ExportObj{Data: user.ToMap()})
+	}
+	return s.et.Send(batch)
 }
 
 func (s *Users) exportOrganizationUsers() error {
@@ -111,6 +139,7 @@ func (s *Users) LoginToRefID(login string) (refID string, _ error) {
 
 func (s *Users) LoginToRefIDFromCommit(login string, email string) (refID string, _ error) {
 	if email == "noreply@github.com" {
+		panic("email:" + email + "login:" + login)
 		return "", nil
 	}
 	return s.LoginToRefID(login)

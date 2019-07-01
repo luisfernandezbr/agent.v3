@@ -4,6 +4,46 @@ import (
 	pjson "github.com/pinpt/go-common/json"
 )
 
+func BranchDefault(qc QueryContext, repoID string) (string, error) {
+
+	qc.Logger.Debug("branch default request", "repo", repoID)
+
+	query := `
+	query {
+		node (id: ` + pjson.Stringify(repoID) + `) {
+			... on Repository {
+				defaultBranchRef {
+					name
+				}
+			}
+		}
+	}
+	`
+
+	var reqRes struct {
+		Data struct {
+			Node struct {
+				DefaultBranchRef struct {
+					Name string `json:"name"`
+				} `json:"defaultBranchRef"`
+			} `json:"node"`
+		} `json:"data"`
+	}
+
+	err := qc.Request(query, &reqRes)
+	if err != nil {
+		return "", err
+	}
+
+	res := reqRes.Data.Node.DefaultBranchRef.Name
+
+	if res == "" {
+		qc.Logger.Info("could not get default branch", "repo", repoID)
+	}
+
+	return res, nil
+}
+
 func BranchNames(qc QueryContext, repoID string, res chan []string) error {
 	return PaginateRegular(func(query string) (pi PageInfo, _ error) {
 		pi, names, err := BranchNamesPage(qc, repoID, query)

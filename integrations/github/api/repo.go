@@ -6,36 +6,44 @@ import (
 	"github.com/pinpt/go-datamodel/sourcecode"
 )
 
-func ReposAllIDs(qc QueryContext, idChan chan []string) error {
+// Repo contains the data needed for exporting other resources depending on it
+type Repo struct {
+	ID   string
+	Name string
+	// DefaultBranch of the repo, could be empty if no commits yet. Used for getting commit_users
+	DefaultBranch string
+}
+
+func ReposAll(qc QueryContext, res chan []Repo) error {
 	return PaginateRegular(func(query string) (pi PageInfo, _ error) {
-		pi, ids, err := ReposPageIDs(qc, query)
+		pi, sub, err := ReposPageInternal(qc, query)
 		if err != nil {
 			return pi, err
 		}
-		idChan <- ids
+		res <- sub
 		return pi, nil
 	})
 }
 
-func ReposAllIDsSlice(qc QueryContext) ([]string, error) {
-	res := make(chan []string)
+func ReposAllSlice(qc QueryContext) ([]Repo, error) {
+	res := make(chan []Repo)
 	go func() {
 		defer close(res)
-		err := ReposAllIDs(qc, res)
+		err := ReposAll(qc, res)
 		if err != nil {
 			panic(err)
 		}
 	}()
-	var sl []string
+	var sl []Repo
 	for a := range res {
-		for _, id := range a {
-			sl = append(sl, id)
+		for _, sub := range a {
+			sl = append(sl, sub)
 		}
 	}
 	return sl, nil
 }
 
-func ReposPageIDs(qc QueryContext, queryParams string) (pi PageInfo, ids IDs, _ error) {
+func ReposPageInternal(qc QueryContext, queryParams string) (pi PageInfo, repos []Repo, _ error) {
 
 	query := `
 	query {
@@ -51,6 +59,10 @@ func ReposPageIDs(qc QueryContext, queryParams string) (pi PageInfo, ids IDs, _ 
 					}
 					nodes {
 						id
+						name
+						defaultBranchRef {
+							name
+						}
 					}
 				}
 			}
@@ -66,7 +78,11 @@ func ReposPageIDs(qc QueryContext, queryParams string) (pi PageInfo, ids IDs, _ 
 						TotalCount int      `json:"totalCount"`
 						PageInfo   PageInfo `json:"pageInfo"`
 						Nodes      []struct {
-							ID string `json:"id"`
+							ID               string `json:"id"`
+							Name             string `json:"name"`
+							DefaultBranchRef struct {
+								Name string `json:"name"`
+							} `json:"defaultBranchRef"`
 						} `json:"nodes"`
 					} `json:"repositories"`
 				} `json:"organization"`
@@ -76,7 +92,7 @@ func ReposPageIDs(qc QueryContext, queryParams string) (pi PageInfo, ids IDs, _ 
 
 	err := qc.Request(query, &res)
 	if err != nil {
-		return pi, ids, err
+		return pi, repos, err
 	}
 
 	repositories := res.Data.Viewer.Organization.Repositories
@@ -84,12 +100,16 @@ func ReposPageIDs(qc QueryContext, queryParams string) (pi PageInfo, ids IDs, _ 
 
 	if len(repoNodes) == 0 {
 		qc.Logger.Warn("no repos found")
-		return pi, ids, nil
+		return pi, repos, nil
 	}
 
-	var batch IDs
+	var batch []Repo
 	for _, data := range repoNodes {
-		batch = append(batch, data.ID)
+		repo := Repo{}
+		repo.ID = data.ID
+		repo.Name = data.Name
+		repo.DefaultBranch = data.DefaultBranchRef.Name
+		batch = append(batch, repo)
 	}
 
 	return repositories.PageInfo, batch, nil

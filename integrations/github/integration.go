@@ -49,8 +49,6 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 }
 
 func (s *Integration) Export(ctx context.Context) error {
-	concurrency := 1
-
 	// export all users in organization, and when later encountering new users continue export
 	var err error
 	s.users, err = NewUsers(s)
@@ -62,21 +60,10 @@ func (s *Integration) Export(ctx context.Context) error {
 	s.qc.UserLoginToRefID = s.users.LoginToRefID
 	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
 
-	repoIDs, err := api.ReposAllIDsSlice(s.qc)
+	repos, err := api.ReposAllSlice(s.qc)
 	if err != nil {
 		return err
 	}
-
-	// export a link between commit and github user
-	// TODO: this is very slow compared to everything else
-	{
-		err := s.exportCommitAuthors(repoIDs, concurrency)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 
 	// export repos
 	{
@@ -86,11 +73,24 @@ func (s *Integration) Export(ctx context.Context) error {
 		}
 	}
 
+	// export a link between commit and github user
+	// This is much slower than the rest
+	// for pinpoint takes 3.5m for initial, 47s for incremental
+	{
+		// higher concurrency does not make any real difference
+		commitConcurrency := 1
+
+		err := s.exportCommitUsers(repos, commitConcurrency)
+		if err != nil {
+			return err
+		}
+	}
+
 	// at the same time, export updated pull requests
-	pullRequests := make(chan []api.PullRequest)
+	pullRequests := make(chan []api.PullRequest, 1000)
 	go func() {
 		defer close(pullRequests)
-		err := s.exportPullRequests(repoIDs, pullRequests)
+		err := s.exportPullRequests(repos, pullRequests)
 		if err != nil {
 			panic(err)
 		}
@@ -100,8 +100,8 @@ func (s *Integration) Export(ctx context.Context) error {
 	//}
 	//return nil
 
-	pullRequestsForComments := make(chan []api.PullRequest)
-	pullRequestsForReviews := make(chan []api.PullRequest)
+	pullRequestsForComments := make(chan []api.PullRequest, 1000)
+	pullRequestsForReviews := make(chan []api.PullRequest, 1000)
 
 	go func() {
 		for item := range pullRequests {

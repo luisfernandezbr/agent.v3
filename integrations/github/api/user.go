@@ -63,7 +63,7 @@ func User(qc QueryContext, login string, orgMember bool) (
 		return user, errors.New("user not found for login: " + login)
 	}
 
-	return data.Convert(qc.CustomerID, true), nil
+	return data.Convert(qc.CustomerID, orgMember), nil
 }
 
 func UsersAll(qc QueryContext, resChan chan []sourcecode.User) error {

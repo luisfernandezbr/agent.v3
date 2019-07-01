@@ -8,7 +8,7 @@ import (
 )
 
 func (s *Integration) exportPullRequests(
-	repoIDs []string,
+	repos []api.Repo,
 	pullRequests chan []api.PullRequest) error {
 	et, err := s.newExportType("sourcecode.pull_request")
 	if err != nil {
@@ -16,8 +16,11 @@ func (s *Integration) exportPullRequests(
 	}
 	defer et.Done()
 
-	for _, repoID := range repoIDs {
-		err := s.exportPullRequestsRepo(et, repoID, pullRequests)
+	for _, repo := range repos {
+		//if i > 1 {
+		//	break
+		//}
+		err := s.exportPullRequestsRepo(et, repo, pullRequests)
 		if err != nil {
 			return err
 		}
@@ -25,10 +28,10 @@ func (s *Integration) exportPullRequests(
 	return nil
 }
 
-func (s *Integration) exportPullRequestsRepo(et *exportType, repoID string, pullRequests chan []api.PullRequest) error {
+func (s *Integration) exportPullRequestsRepo(et *exportType, repo api.Repo, pullRequests chan []api.PullRequest) error {
 
 	return et.Paginate(func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, res, err := api.PullRequestsPage(s.qc, repoID, query, stopOnUpdatedAt)
+		pi, res, err := api.PullRequestsPage(s.qc, repo.ID, query, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
 		}
