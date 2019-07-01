@@ -7,9 +7,22 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
+	"time"
 )
 
+const maxRetries = 3
+
 func (s *Integration) makeRequest(query string, res interface{}) error {
+	s.requestConcurrencyChan <- true
+	defer func() {
+		<-s.requestConcurrencyChan
+	}()
+	return s.makeRequestRetry(query, res, maxRetries)
+}
+
+func (s *Integration) makeRequestRetry(query string, res interface{}, retry int) error {
+
 	data := map[string]string{
 		"query": query,
 	}
@@ -36,6 +49,17 @@ func (s *Integration) makeRequest(query string, res interface{}) error {
 	}
 
 	if resp.StatusCode != 200 {
+
+		if resp.StatusCode == 403 && strings.Contains(string(b), "wait") {
+			if retry == 0 {
+				s.logger.Info("api request failed", "body", string(b))
+				return fmt.Errorf(`resp resp.StatusCode != 200, got %v, can't retry, too many retries already`, resp.StatusCode)
+			}
+			s.logger.Warn("api request failed with status 403 (due to throttling), will sleep for 30m and retry, this should only happen if hourly quota is used up, check here (https://developer.github.com/v4/guides/resource-limitations/#returning-a-calls-rate-limit-status)", "body", string(b), "retry", retry)
+			time.Sleep(30 * time.Minute)
+			return s.makeRequestRetry(query, res, retry-1)
+		}
+
 		s.logger.Info("api request failed", "body", string(b))
 		return fmt.Errorf(`resp resp.StatusCode != 200, got %v`, resp.StatusCode)
 	}

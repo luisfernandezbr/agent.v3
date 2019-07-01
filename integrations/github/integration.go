@@ -21,12 +21,18 @@ type Integration struct {
 	users *Users
 
 	config Config
+
+	requestConcurrencyChan chan bool
 }
 
 type Config struct {
 	Token string
 	Org   string
 }
+
+// setting higher to 1 starts returning the followign error, even though the hourly limit is not used up yet.
+// 403: You have triggered an abuse detection mechanism. Please wait a few minutes before you try again.
+const maxRequestConcurrency = 1
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
 	s.agent = agent
@@ -64,6 +70,9 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 		s.config.Org = org
 
 	}
+
+	s.requestConcurrencyChan = make(chan bool, maxRequestConcurrency)
+
 	return nil
 }
 
@@ -107,7 +116,7 @@ func (s *Integration) Export(ctx context.Context) error {
 	}
 
 	// at the same time, export updated pull requests
-	pullRequests := make(chan []api.PullRequest, 1000)
+	pullRequests := make(chan []api.PullRequest, 10)
 	go func() {
 		defer close(pullRequests)
 		err := s.exportPullRequests(repos, pullRequests)
@@ -120,8 +129,8 @@ func (s *Integration) Export(ctx context.Context) error {
 	//}
 	//return nil
 
-	pullRequestsForComments := make(chan []api.PullRequest, 1000)
-	pullRequestsForReviews := make(chan []api.PullRequest, 1000)
+	pullRequestsForComments := make(chan []api.PullRequest, 10)
+	pullRequestsForReviews := make(chan []api.PullRequest, 10)
 
 	go func() {
 		for item := range pullRequests {
