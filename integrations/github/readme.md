@@ -7,6 +7,10 @@ There is a possible issue with iterating backwards using updated_at. If an objec
 
 Possible performance optimization is to limit the number of records returned to 1 for first incremental request, to quickly see if there are any records. Not worth doing now.
 
+## Performance
+
+It takes ~10m on pinpoint organization for initial export and ~2m for incremental immediately after. Using ~1000 requests, which is 1/5 of hourly quota.
+
 ## How to iterate on initial export and possibly continue on interruption?
 
 If we want to support interrupting and continuing on intial export we need to store the cursor (opaque string) as well.
