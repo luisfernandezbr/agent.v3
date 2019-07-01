@@ -83,7 +83,7 @@ func UsersPage(qc QueryContext, queryParams string) (pi PageInfo, users []source
 	query := `
 	query {
 		viewer {
-			organization(login:"pinpt"){
+			organization(login:` + pjson.Stringify(qc.Organization()) + `){
 				membersWithRole(` + queryParams + `) {
 					totalCount
 					pageInfo {

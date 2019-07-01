@@ -1,12 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"sync"
 
@@ -24,6 +19,13 @@ type Integration struct {
 
 	qc    api.QueryContext
 	users *Users
+
+	config Config
+}
+
+type Config struct {
+	Token string
+	Org   string
 }
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
@@ -43,12 +45,30 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	qc.PullRequestID = func(refID string) string {
 		return hash.Values("PullRequest", s.customerID, "sourcecode.PullRequest", refID)
 	}
+	qc.Organization = func() string {
+		return s.config.Org
+	}
 	s.qc = qc
 
+	{
+		token := os.Getenv("PP_GITHUB_TOKEN")
+		if token == "" {
+			panic("provide PP_GITHUB_TOKEN")
+		}
+		s.config.Token = token
+
+		org := os.Getenv("PP_GITHUB_ORG")
+		if org == "" {
+			panic("provide PP_GITHUB_ORG")
+		}
+		s.config.Org = org
+
+	}
 	return nil
 }
 
 func (s *Integration) Export(ctx context.Context) error {
+
 	// export all users in organization, and when later encountering new users continue export
 	var err error
 	s.users, err = NewUsers(s)
@@ -132,51 +152,5 @@ func (s *Integration) Export(ctx context.Context) error {
 		}
 	}()
 	wg.Wait()
-	return nil
-}
-
-func (s *Integration) makeRequest(query string, res interface{}) error {
-	data := map[string]string{
-		"query": query,
-	}
-
-	b, err := json.Marshal(data)
-	if err != nil {
-		panic(err)
-	}
-
-	req, err := http.NewRequest("POST", "https://api.github.com/graphql", bytes.NewReader(b))
-	if err != nil {
-		return err
-	}
-	auth := os.Getenv("PP_GITHUB_TOKEN")
-	if auth == "" {
-		return errors.New("provide PP_GITHUB_TOKEN")
-	}
-	req.Header.Add("Authorization", "bearer "+auth)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	b, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	//TODO: catch errors properly here
-	// example {"errors":[{"message"...}]
-	if resp.StatusCode != 200 {
-		//s.logger.Info("response body", string(b))
-		return errors.New(`resp resp.StatusCode != 200`)
-	}
-
-	//s.logger.Info("response body", string(b))
-
-	err = json.Unmarshal(b, &res)
-	if err != nil {
-		return err
-	}
 	return nil
 }

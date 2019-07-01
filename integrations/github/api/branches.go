@@ -1,9 +1,6 @@
 package api
 
-import (
-	pjson "github.com/pinpt/go-common/json"
-)
-
+/*
 func BranchDefault(qc QueryContext, repoID string) (string, error) {
 
 	qc.Logger.Debug("branch default request", "repo", repoID)
@@ -114,3 +111,5 @@ func BranchNamesPage(qc QueryContext, repoID, queryParams string) (pi PageInfo, 
 
 	return reqRes.Data.Node.Refs.PageInfo, res, nil
 }
+
+*/

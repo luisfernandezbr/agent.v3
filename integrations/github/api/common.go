@@ -27,6 +27,8 @@ type QueryContext struct {
 
 	UserLoginToRefID           func(login string) (refID string, _ error)
 	UserLoginToRefIDFromCommit func(login, email string) (refID string, _ error)
+
+	Organization func() string
 }
 
 type PaginateRegularFn func(query string) (PageInfo, error)

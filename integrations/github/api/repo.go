@@ -3,6 +3,7 @@ package api
 import (
 	"time"
 
+	pjson "github.com/pinpt/go-common/json"
 	"github.com/pinpt/go-datamodel/sourcecode"
 )
 
@@ -48,7 +49,7 @@ func ReposPageInternal(qc QueryContext, queryParams string) (pi PageInfo, repos 
 	query := `
 	query {
 		viewer {
-			organization(login:"pinpt"){
+			organization(login:` + pjson.Stringify(qc.Organization()) + `){
 				repositories(` + queryParams + `) {
 					totalCount
 					pageInfo {
@@ -121,7 +122,7 @@ func ReposPage(qc QueryContext, queryParams string, stopOnUpdatedAt time.Time) (
 	query := `
 	query {
 		viewer {
-			organization(login:"pinpt"){
+			organization(login:` + pjson.Stringify(qc.Organization()) + `){
 				repositories(` + queryParams + `) {
 					totalCount
 					pageInfo {
