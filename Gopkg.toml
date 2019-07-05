@@ -37,3 +37,7 @@
 [[constraint]]
   name = "github.com/pinpt/go-datamodel"
   version = "0"
+
+[[constraint]]
+  name = "github.com/pinpt/ripsrc"
+  version = "6"

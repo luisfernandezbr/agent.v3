@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/mitchellh/go-homedir"
 
@@ -16,8 +14,8 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/cmd/cmdexport/process"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
+	"github.com/pinpt/agent.next/pkg/outsession"
 	"github.com/pinpt/agent.next/rpcdef"
-	"github.com/pinpt/go-common/io"
 )
 
 type Opts struct {
@@ -58,13 +56,14 @@ func newExport(opts Opts) *export {
 		sessions: filepath.Join(opts.WorkDir, "sessions"),
 		logs:     filepath.Join(opts.WorkDir, "logs"),
 	}
-	s.sessions = newSessions(s.logger, s, s.dirs.sessions)
 	lastProcessedFile := filepath.Join(opts.WorkDir, "last_processed.json")
 	var err error
 	s.lastProcessed, err = jsonstore.New(lastProcessedFile)
 	if err != nil {
 		panic(err)
 	}
+
+	s.sessions = newSessions(s.logger, s, s.dirs.sessions)
 
 	s.setupIntegrations()
 	s.runExports()
@@ -157,102 +156,52 @@ func (s *export) Destroy() {
 }
 
 type sessions struct {
-	export    *export
-	m         map[int]*session
-	streamDir string
-	lastID    int
-	logger    hclog.Logger
-	mu        sync.RWMutex
-
+	logger      hclog.Logger
+	export      *export
+	outsession  *outsession.Manager
 	commitUsers *process.CommitUsers
 }
 
-type session struct {
-	state     string
-	modelType string
-	stream    *io.JSONStream
-	mu        sync.Mutex
-}
+func newSessions(logger hclog.Logger, export *export, outputDir string) *sessions {
 
-func newSessions(logger hclog.Logger, export *export, streamDir string) *sessions {
 	s := &sessions{}
 	s.logger = logger
 	s.export = export
-	s.m = map[int]*session{}
-	s.streamDir = streamDir
 	s.commitUsers = process.NewCommitUsers()
+
+	s.outsession = outsession.New(outsession.Opts{
+		Logger:        logger,
+		OutputDir:     outputDir,
+		LastProcessed: export.lastProcessed,
+	})
 	return s
 }
 
 func (s *sessions) new(modelType string) (
 	sessionID string, lastProcessed interface{}, _ error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
-	s.lastID++
-	id := s.lastID
-
-	base := strconv.FormatInt(time.Now().Unix(), 10) + "_" + strconv.Itoa(id) + ".json.gz"
-	fn := filepath.Join(s.streamDir, modelType, base)
-	err := os.MkdirAll(filepath.Dir(fn), 0777)
+	id, lastProcessed, err := s.outsession.NewSession(modelType)
 	if err != nil {
-		return "", "", err
+		return "", nil, err
 	}
-	stream, err := io.NewJSONStream(fn)
-	if err != nil {
-		return "", "", err
-	}
-
-	s.m[id] = &session{
-		state:     "started",
-		modelType: modelType,
-		stream:    stream,
-	}
-
-	sessionID = strconv.Itoa(id)
-	lastProcessed = s.export.lastProcessed.Get(modelType)
-
-	s.logger.Info("export: session: started", "type", modelType, "last_processed", lastProcessed)
-
-	return sessionID, lastProcessed, nil
-}
-
-func (s *sessions) get(sessionID string) *session {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	id, err := strconv.Atoi(sessionID)
-	if err != nil {
-		panic(err)
-	}
-	return s.m[id]
+	return idToString(id), lastProcessed, nil
 }
 
 func (s *sessions) ExportDone(sessionID string, lastProcessed interface{}) error {
-	sess := s.get(sessionID)
-
-	s.logger.Info("export: session: finished", "type", sess.modelType, "last_processed", lastProcessed)
-
-	err := s.Close(sessionID)
-	if err != nil {
-		return err
-	}
-
-	return s.export.lastProcessed.Set(lastProcessed, sess.modelType)
+	id := idFromString(sessionID)
+	return s.outsession.Done(id, lastProcessed)
 }
 
-func (s *sessions) Close(sessionID string) error {
-	sess := s.get(sessionID)
-	err := sess.stream.Close()
+func idToString(id outsession.ID) string {
+	return strconv.Itoa(int(id))
+}
+
+func idFromString(str string) outsession.ID {
+	id, err := strconv.Atoi(str)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	idi, err := strconv.Atoi(sessionID)
-	if err != nil {
-		return err
-	}
-	delete(s.m, idi)
-	return nil
+	return outsession.ID(id)
 }
 
 func (s *sessions) Write(sessionID string, objs []rpcdef.ExportObj) error {
@@ -260,10 +209,12 @@ func (s *sessions) Write(sessionID string, objs []rpcdef.ExportObj) error {
 		s.logger.Warn("no objects passed to write")
 		return nil
 	}
-	sess := s.get(sessionID)
-	s.logger.Info("writing objects", "type", sess.modelType, "count", len(objs))
 
-	if sess.modelType == "sourcecode.commit_user" {
+	id := idFromString(sessionID)
+	modelType := s.outsession.GetModelType(id)
+	s.logger.Info("writing objects", "type", modelType, "count", len(objs))
+
+	if modelType == "sourcecode.commit_user" {
 		var res []rpcdef.ExportObj
 		for _, obj := range objs {
 			obj2, err := s.commitUsers.Transform(obj.Data.(map[string]interface{}))
@@ -281,13 +232,9 @@ func (s *sessions) Write(sessionID string, objs []rpcdef.ExportObj) error {
 		objs = res
 	}
 
-	sess.mu.Lock()
-	defer sess.mu.Unlock()
+	var data []map[string]interface{}
 	for _, obj := range objs {
-		err := sess.stream.Write(obj.Data)
-		if err != nil {
-			return err
-		}
+		data = append(data, obj.Data.(map[string]interface{}))
 	}
-	return nil
+	return s.outsession.Write(id, data)
 }
