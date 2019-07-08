@@ -41,3 +41,15 @@
 [[constraint]]
   name = "github.com/pinpt/ripsrc"
   version = "6"
+
+# dependency of ripsrc
+
+[[override]]
+  name = "gopkg.in/src-d/go-license-detector.v2"
+  version = "=2.0.0"
+
+# dependencies of ripsrc, go-license-detector
+
+[[override]]
+  name = "gopkg.in/src-d/go-git.v4"
+  version = "=4.7.0"
