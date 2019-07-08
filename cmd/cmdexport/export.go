@@ -8,6 +8,10 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/pinpt/agent.next/pkg/exportrepo"
+	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent.next/pkg/gitclone"
+
 	"github.com/mitchellh/go-homedir"
 
 	"github.com/hashicorp/go-hclog"
@@ -19,8 +23,8 @@ import (
 )
 
 type Opts struct {
-	Logger  hclog.Logger
-	WorkDir string
+	Logger       hclog.Logger
+	PinpointRoot string
 }
 
 type export struct {
@@ -28,46 +32,84 @@ type export struct {
 	pluginClient *plugin.Client
 	sessions     *sessions
 
-	dirs exportDirs
+	locs fsconf.Locs
 
 	stderr *bytes.Buffer
 
 	integrations  map[string]*integration
 	lastProcessed *jsonstore.Store
-}
 
-type exportDirs struct {
-	sessions string
-	logs     string
+	gitProcessingRepos chan repoProcess
 }
 
 func newExport(opts Opts) *export {
-	if opts.WorkDir == "" {
+	if opts.PinpointRoot == "" {
 		dir, err := homedir.Dir()
 		if err != nil {
 			panic(err)
 		}
-		opts.WorkDir = filepath.Join(dir, ".pinpoint", "v2", "work")
+		opts.PinpointRoot = filepath.Join(dir, ".pinpoint", "next")
 	}
 
 	s := &export{}
 	s.logger = opts.Logger
-	s.dirs = exportDirs{
-		sessions: filepath.Join(opts.WorkDir, "sessions"),
-		logs:     filepath.Join(opts.WorkDir, "logs"),
-	}
-	lastProcessedFile := filepath.Join(opts.WorkDir, "last_processed.json")
+	s.locs = fsconf.New(opts.PinpointRoot)
+
 	var err error
-	s.lastProcessed, err = jsonstore.New(lastProcessedFile)
+	s.lastProcessed, err = jsonstore.New(s.locs.LastProcessedFile)
 	if err != nil {
 		panic(err)
 	}
 
-	s.sessions = newSessions(s.logger, s, s.dirs.sessions)
+	s.sessions = newSessions(s.logger, s, s.locs.Uploads)
+
+	s.gitProcessingRepos = make(chan repoProcess, 100000)
+	gitProcessingDone := make(chan bool)
+	go func() {
+		defer func() {
+			gitProcessingDone <- true
+		}()
+		err = s.gitProcessing()
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	s.setupIntegrations()
 	s.runExports()
+	close(s.gitProcessingRepos)
+
+	s.logger.Info("waiting for git repo processing to complete")
+	<-gitProcessingDone
+
 	return s
+}
+
+type repoProcess struct {
+	Access     gitclone.AccessDetails
+	ID         string
+	CustomerID string
+}
+
+func (s *export) gitProcessing() error {
+	ctx := context.Background()
+
+	for repo := range s.gitProcessingRepos {
+		opts := exportrepo.Opts{
+			Logger:        s.logger,
+			RepoAccess:    repo.Access,
+			Sessions:      s.sessions.outsession,
+			RepoID:        repo.ID,
+			CustomerID:    repo.CustomerID,
+			LastProcessed: s.lastProcessed,
+		}
+		exp := exportrepo.New(opts, s.locs)
+		err := exp.Run(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *export) setupIntegrations() {

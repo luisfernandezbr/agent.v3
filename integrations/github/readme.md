@@ -1,3 +1,6 @@
+## TODO
+- export pull request commit shas
+
 ## How to support incremental exports?
 Since graphql doesn't support since parameter on all objects, we iterate backwards using updated at timestamp, when we get to the object which was updated before last run we stop.
 

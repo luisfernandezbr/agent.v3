@@ -32,7 +32,7 @@ func (s *Integration) makeRequestRetry(query string, res interface{}, retry int)
 		panic(err)
 	}
 
-	req, err := http.NewRequest("POST", "https://api.github.com/graphql", bytes.NewReader(b))
+	req, err := http.NewRequest("POST", s.config.APIURL, bytes.NewReader(b))
 	if err != nil {
 		return err
 	}

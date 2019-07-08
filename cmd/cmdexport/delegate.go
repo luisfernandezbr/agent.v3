@@ -1,8 +1,6 @@
 package cmdexport
 
 import (
-	"fmt"
-
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
@@ -33,5 +31,9 @@ func (s agentDelegate) SendExported(sessionID string, objs []rpcdef.ExportObj) {
 }
 
 func (s agentDelegate) ExportGitRepo(fetch rpcdef.GitRepoFetch) {
-	fmt.Println("agent: ExportGitRepo called")
+	repo := repoProcess{}
+	// TODO: set customer id correctly
+	repo.CustomerID = "c1"
+	repo.Access.URL = fetch.URL
+	s.export.gitProcessingRepos <- repo
 }

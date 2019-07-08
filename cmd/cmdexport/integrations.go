@@ -78,7 +78,7 @@ func (s *integration) Close() error {
 }
 
 func (s *integration) setupLogFile() error {
-	dir := s.export.dirs.logs
+	dir := s.export.locs.Logs
 	err := os.MkdirAll(dir, 0777)
 	if err != nil {
 		return err

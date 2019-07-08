@@ -12,6 +12,7 @@ type Locs struct {
 	State             string
 	Uploads           string
 	RipsrcCheckpoints string
+	Logs              string
 
 	// Special files
 
@@ -30,11 +31,12 @@ func New(pinpointRoot string) Locs {
 	s.Root = pinpointRoot
 	s.Temp = j(s.Root, "temp")
 	s.Cache = j(s.Root, "cache")
+	s.Logs = j(s.Root, "logs")
 
 	s.RepoCache = j(s.Cache, "repos")
 	s.State = j(s.Root, "state")
 	s.Uploads = j(s.State, "uploads")
-	s.RipsrcCheckpoints = j(s.State, "ripsrc-checkpoints")
+	s.RipsrcCheckpoints = j(s.State, "ripsrc_checkpoints")
 	s.LastProcessedFile = j(s.State, "last_processed.json")
 
 	return s

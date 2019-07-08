@@ -55,7 +55,7 @@ message ExportObj {
 }
 
 message ExportGitRepoReq {
-    string url = 1;
-    // TODO: extra headers    
+    string repo_id = 1;
+    string url = 2;
 }
 

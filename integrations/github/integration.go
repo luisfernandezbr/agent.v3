@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"sync"
 
@@ -23,11 +24,6 @@ type Integration struct {
 	config Config
 
 	requestConcurrencyChan chan bool
-}
-
-type Config struct {
-	Token string
-	Org   string
 }
 
 // setting higher to 1 starts returning the followign error, even though the hourly limit is not used up yet.
@@ -55,24 +51,37 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 		return s.config.Org
 	}
 	s.qc = qc
-
-	{
-		token := os.Getenv("PP_GITHUB_TOKEN")
-		if token == "" {
-			panic("provide PP_GITHUB_TOKEN")
-		}
-		s.config.Token = token
-
-		org := os.Getenv("PP_GITHUB_ORG")
-		if org == "" {
-			panic("provide PP_GITHUB_ORG")
-		}
-		s.config.Org = org
-
-	}
-
+	s.readConfig()
 	s.requestConcurrencyChan = make(chan bool, maxRequestConcurrency)
 
+	return nil
+}
+
+type Config struct {
+	APIURL        string
+	RepoURLPrefix string
+	Token         string
+	Org           string
+}
+
+func (s *Integration) readConfig() error {
+	conf := Config{}
+	conf.APIURL = "https://api.github.com/graphql"
+	conf.RepoURLPrefix = "https://github.com"
+
+	token := os.Getenv("PP_GITHUB_TOKEN")
+	if token == "" {
+		panic("provide PP_GITHUB_TOKEN")
+	}
+	conf.Token = token
+
+	org := os.Getenv("PP_GITHUB_ORG")
+	if org == "" {
+		panic("provide PP_GITHUB_ORG")
+	}
+	conf.Org = org
+
+	s.config = conf
 	return nil
 }
 
@@ -92,6 +101,24 @@ func (s *Integration) Export(ctx context.Context) error {
 	repos, err := api.ReposAllSlice(s.qc)
 	if err != nil {
 		return err
+	}
+
+	// queue repos for processing with ripsrc
+	{
+
+		for _, repo := range repos {
+			u, err := url.Parse(s.config.RepoURLPrefix)
+			if err != nil {
+				return err
+			}
+			u.User = url.UserPassword(s.config.Token, "")
+			u.Path = s.config.Org + "/" + repo.Name
+			repoURL := u.String()
+			args := rpcdef.GitRepoFetch{}
+			args.RepoID = s.qc.RepoID(repo.ID)
+			args.URL = repoURL
+			s.agent.ExportGitRepo(args)
+		}
 	}
 
 	// export repos
