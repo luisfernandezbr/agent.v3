@@ -20,9 +20,9 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	return nil
 }
 
-func (s *Integration) Export(ctx context.Context) error {
+func (s *Integration) Export(ctx context.Context, config map[string]interface{}) (res rpcdef.ExportResult, _ error) {
 	s.exportAll()
-	return nil
+	return res, nil
 }
 
 func main() {

@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/url"
-	"os"
+	"strings"
 	"sync"
 
 	"github.com/pinpt/go-common/hash"
@@ -51,7 +52,6 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 		return s.config.Org
 	}
 	s.qc = qc
-	s.readConfig()
 	s.requestConcurrencyChan = make(chan bool, maxRequestConcurrency)
 
 	return nil
@@ -64,28 +64,60 @@ type Config struct {
 	Org           string
 }
 
-func (s *Integration) readConfig() error {
+func (s *Integration) setConfig(data map[string]interface{}) error {
+	rerr := func(msg string, args ...interface{}) error {
+		return fmt.Errorf("config validation error: "+msg, args...)
+	}
 	conf := Config{}
-	conf.APIURL = "https://api.github.com/graphql"
-	conf.RepoURLPrefix = "https://github.com"
 
-	token := os.Getenv("PP_GITHUB_TOKEN")
+	apiURLBase, _ := data["url"].(string)
+	if apiURLBase == "" {
+		return rerr("url is missing")
+	}
+	apiURLBaseParsed, err := url.Parse(apiURLBase)
+	if err != nil {
+		return rerr("url is invalid: %v", err)
+	}
+	conf.APIURL = urlAppend(apiURLBase, "graphql")
+	conf.RepoURLPrefix = "https://" + apiURLBaseParsed.Host
+
+	token, _ := data["apitoken"].(string)
 	if token == "" {
-		panic("provide PP_GITHUB_TOKEN")
+		return rerr("apitoken is missing")
 	}
 	conf.Token = token
 
-	org := os.Getenv("PP_GITHUB_ORG")
-	if org == "" {
-		panic("provide PP_GITHUB_ORG")
+	organization, _ := data["organization"].(string)
+	if organization == "" {
+		return rerr("organization is missing")
 	}
-	conf.Org = org
+	conf.Org = organization
 
 	s.config = conf
 	return nil
 }
 
-func (s *Integration) Export(ctx context.Context) error {
+func urlAppend(p1, p2 string) string {
+	return strings.TrimSuffix(p1, "/") + "/" + p2
+}
+
+func (s *Integration) Export(ctx context.Context,
+	config map[string]interface{}) (res rpcdef.ExportResult, _ error) {
+
+	err := s.setConfig(config)
+	if err != nil {
+		return res, err
+	}
+
+	err = s.export(ctx)
+	if err != nil {
+		return res, err
+	}
+
+	return res, nil
+}
+
+func (s *Integration) export(ctx context.Context) error {
 
 	// export all users in organization, and when later encountering new users continue export
 	var err error

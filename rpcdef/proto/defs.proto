@@ -5,11 +5,19 @@ message Empty {}
 
 service Integration {
     rpc Init(IntegrationInitReq) returns (Empty);
-    rpc Export(Empty) returns (Empty);    
+    rpc Export(IntegrationExportReq) returns (IntegrationExportResp);    
 }
 
 message IntegrationInitReq {
     uint32 server_id = 1;
+}
+
+message IntegrationExportReq {
+    bytes integration_config_json = 1;
+}
+
+message IntegrationExportResp {
+    bytes integration_new_config_json = 1;
 }
 
 service Agent {

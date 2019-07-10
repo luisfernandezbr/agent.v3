@@ -1,6 +1,10 @@
 package fsconf
 
-import "path/filepath"
+import (
+	"path/filepath"
+
+	"github.com/mitchellh/go-homedir"
+)
 
 type Locs struct {
 	// Dirs
@@ -21,6 +25,14 @@ type Locs struct {
 
 func j(parts ...string) string {
 	return filepath.Join(parts...)
+}
+
+func DefaultRoot() (string, error) {
+	dir, err := homedir.Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, ".pinpoint", "next"), nil
 }
 
 func New(pinpointRoot string) Locs {

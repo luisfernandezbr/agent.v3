@@ -12,6 +12,7 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
 	"github.com/pinpt/agent.next/cmd/cmdservicerun"
 	"github.com/pinpt/agent.next/cmd/cmdserviceuninstall"
+	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/spf13/cobra"
 )
 
@@ -56,6 +57,20 @@ func defaultLogger() hclog.Logger {
 	})
 }
 
+func setupDefaultLoggerFlags(cmd *cobra.Command) {
+	cmd.Flags().String("config", "", "Config file to use.")
+	cmd.Flags().Bool("config-no-encryption", false, "Use default location for config file, but disable encryption.")
+	cmd.Flags().String("config-encryption-key-access", "", "Provide a script to call to get/set encryption key from custom storage.")
+}
+
+func defaultConfig(cmd *cobra.Command) (*agentconf.Config, error) {
+	opts := agentconf.Opts{}
+	opts.File, _ = cmd.Flags().GetString("config")
+	opts.NoEncryption, _ = cmd.Flags().GetBool("config-no-encryption")
+	opts.EncryptionKeyAccess, _ = cmd.Flags().GetString("config-encryption-key-access")
+	return agentconf.New(opts)
+}
+
 func exitWithErr(logger hclog.Logger, err error) {
 	logger.Error("error: " + err.Error())
 	os.Exit(1)
@@ -67,8 +82,13 @@ var cmdExport = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := defaultLogger()
-		err := cmdexport.Run(cmdexport.Opts{
+		config, err := defaultConfig(cmd)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+		err = cmdexport.Run(cmdexport.Opts{
 			Logger: logger,
+			Config: config,
 		})
 		if err != nil {
 			exitWithErr(logger, err)
@@ -77,6 +97,7 @@ var cmdExport = &cobra.Command{
 }
 
 func init() {
+	setupDefaultLoggerFlags(cmdExport)
 	cmdRoot.AddCommand(cmdExport)
 }
 

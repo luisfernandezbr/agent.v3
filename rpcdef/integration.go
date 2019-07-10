@@ -2,6 +2,7 @@ package rpcdef
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/pinpt/agent.next/rpcdef/proto"
 	"google.golang.org/grpc"
@@ -11,7 +12,12 @@ import (
 
 type Integration interface {
 	Init(agent Agent) error
-	Export(context.Context) error
+	Export(ctx context.Context, exportConfig map[string]interface{}) (ExportResult, error)
+}
+
+type ExportResult struct {
+	// NewConfig can be returned from Export to update the integration config. Return nil to keep the curren config.
+	NewConfig map[string]interface{}
 }
 
 type IntegrationClient struct {
@@ -49,9 +55,29 @@ func (s *IntegrationClient) Destroy() {
 	s.agentGRPCServer.Stop()
 }
 
-func (s *IntegrationClient) Export(ctx context.Context) error {
-	_, err := s.client.Export(ctx, &proto.Empty{})
-	return err
+func (s *IntegrationClient) Export(
+	ctx context.Context,
+	exportConfig map[string]interface{}) (res ExportResult, _ error) {
+
+	confBytes, err := json.Marshal(exportConfig)
+	if err != nil {
+		return res, err
+	}
+
+	args := &proto.IntegrationExportReq{}
+	args.IntegrationConfigJson = confBytes
+	resp, err := s.client.Export(ctx, args)
+	if err != nil {
+		return res, err
+	}
+	newConf := resp.IntegrationNewConfigJson
+	if len(newConf) != 0 {
+		err := json.Unmarshal(newConf, &res.NewConfig)
+		if err != nil {
+			return res, err
+		}
+	}
+	return res, nil
 }
 
 type IntegrationServer struct {
@@ -82,9 +108,25 @@ func (s *IntegrationServer) Init(ctx context.Context, req *proto.IntegrationInit
 	return &proto.Empty{}, err
 }
 
-func (s *IntegrationServer) Export(ctx context.Context, req *proto.Empty) (*proto.Empty, error) {
-	err := s.Impl.Export(ctx)
-	return &proto.Empty{}, err
+func (s *IntegrationServer) Export(ctx context.Context, req *proto.IntegrationExportReq) (res *proto.IntegrationExportResp, _ error) {
+	res = &proto.IntegrationExportResp{}
+	var conf map[string]interface{}
+	err := json.Unmarshal(req.IntegrationConfigJson, &conf)
+	if err != nil {
+		return res, err
+	}
+	r0, err := s.Impl.Export(ctx, conf)
+	if err != nil {
+		return res, err
+	}
+	if r0.NewConfig != nil {
+		b, err := json.Marshal(r0.NewConfig)
+		if err != nil {
+			return res, err
+		}
+		res.IntegrationNewConfigJson = b
+	}
+	return res, nil
 }
 
 type IntegrationPlugin struct {

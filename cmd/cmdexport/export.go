@@ -4,15 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"sync"
 
+	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/gitclone"
-
-	"github.com/mitchellh/go-homedir"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
@@ -22,13 +20,21 @@ import (
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
+func Run(opts Opts) error {
+	exp := newExport(opts)
+	defer exp.Destroy()
+	return nil
+}
+
 type Opts struct {
 	Logger       hclog.Logger
+	Config       *agentconf.Config
 	PinpointRoot string
 }
 
 type export struct {
 	logger       hclog.Logger
+	config       *agentconf.Config
 	pluginClient *plugin.Client
 	sessions     *sessions
 
@@ -44,15 +50,16 @@ type export struct {
 
 func newExport(opts Opts) *export {
 	if opts.PinpointRoot == "" {
-		dir, err := homedir.Dir()
+		root, err := fsconf.DefaultRoot()
 		if err != nil {
 			panic(err)
 		}
-		opts.PinpointRoot = filepath.Join(dir, ".pinpoint", "next")
+		opts.PinpointRoot = root
 	}
 
 	s := &export{}
 	s.logger = opts.Logger
+	s.config = opts.Config
 	s.locs = fsconf.New(opts.PinpointRoot)
 
 	var err error
@@ -113,10 +120,13 @@ func (s *export) gitProcessing() error {
 }
 
 func (s *export) setupIntegrations() {
+	integrationNames := s.config.GetEnabledIntegrations()
+	s.logger.Info("enabled integrations", "names", integrationNames)
+
 	integrations := make(chan *integration)
 	go func() {
 		wg := sync.WaitGroup{}
-		for _, name := range []string{"github"} {
+		for _, name := range integrationNames {
 			wg.Add(1)
 			name := name
 			go func() {
@@ -150,16 +160,30 @@ func (s *export) runExports() {
 		integration := integration
 		go func() {
 			defer wg.Done()
-			s.logger.Info("Export starting", "integration", name, "log_file", integration.logFile.Name())
-			err := integration.rpcClient.Export(ctx)
-			if err != nil {
+			rerr := func(err error) {
 				erroredMu.Lock()
 				errored[name] = err
 				erroredMu.Unlock()
 				s.logger.Error("Export failed", "integration", name, "err", err)
-			} else {
-				s.logger.Info("Export success", "integration", name)
 			}
+
+			s.logger.Info("Export starting", "integration", name, "log_file", integration.logFile.Name())
+
+			config, err := s.config.IntegrationConfig(name)
+			if err != nil {
+				rerr(err)
+				return
+			}
+			if len(config) == 0 {
+				rerr(fmt.Errorf("empty config for integration: %v", name))
+				return
+			}
+			_, err = integration.rpcClient.Export(ctx, config)
+			if err != nil {
+				rerr(err)
+				return
+			}
+			s.logger.Info("Export success", "integration", name)
 		}()
 	}
 	wg.Wait()

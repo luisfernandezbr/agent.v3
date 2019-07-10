@@ -35,11 +35,9 @@ SendExported(
 // Integration can ask agent to download and process git repo using ripsrc.
 ExportGitRepo(fetch GitRepoFetch)
 
-
 }
 
 ```
-
 
 
 ### Integration RPC interface
@@ -52,8 +50,45 @@ type Integration interface {
 // Init provides the connection details for connecting back to agent.
 Init(connectionDetails)
 
-// Export starts the export of all data types for this integration.
-Export()
+// Export starts export of all data types for this integration.
+// exportConfig provides configuration specific to this integration.
+Export(ctx context.Context, exportConfig map[string]interface{}) (ExportResult, error)
 
 }
+
+type ExportResult struct {
+	// NewConfig can be returned from Export to update the integration config. Return nil to keep the curren config.
+	NewConfig map[string]interface{}
+}
+```
+
+## Config encryption
+
+When running on Windows or MacOS the config file is automatically encrypted using a key that is stored in Windows credential store or MacOS Keychain.
+
+On Linux the config file is not encrypted by default because there is no uniform hardware or software encryption store.
+
+It is also possible to use an encryption key stored somewhere else, to do that you need to provide a script that supports the following arguments.
+
+```
+Get command should retrieve the encryption key to be used by the agent.
+Get command may return an empty string if no key is stored yet,
+in that case the agent will call set command.
+yourscript get
+
+Set command should store the encryption key that is used by agent.
+yourscript set "kkkxxxxx" 
+```
+
+After that the path to this script can be provided via command line argument.
+
+```
+--config-encryption-key-access="yourscript"
+```
+
+
+An example command that stores the config key in a regular file (this example is insecure) is provided as bash script, to test it out use the following:
+
+```
+--config-encryption-key-access=="path_to/examples/config-encryption-text-file.sh"
 ```

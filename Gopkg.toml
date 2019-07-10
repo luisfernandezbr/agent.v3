@@ -39,6 +39,14 @@
   version = "0"
 
 [[constraint]]
+  name = "gopkg.in/yaml.v2"
+  version = "2"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/99designs/keyring"
+  
+[[constraint]]
   name = "github.com/pinpt/ripsrc"
   version = "6"
 

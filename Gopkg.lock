@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  branch = "master"
+  digest = "1:f4a91ebcb89d535b56eb3833977a64735707139db4ed3832af82d24c72a6d3a9"
+  name = "github.com/99designs/keyring"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "2c916c935b9f0286ed72c22a3ccddb491c01c620"
+
+[[projects]]
   digest = "1:53dc856a377d6c9fbb55b86d5d45c3a9f9a5618bc0712850028699916f6eabfd"
   name = "github.com/boyter/scc"
   packages = ["processor"]
@@ -29,6 +37,14 @@
   version = "v2.0.0"
 
 [[projects]]
+  digest = "1:675c7e2e645d40363350159cfe1f719f61ce353a3859db939ca686d98aa85f16"
+  name = "github.com/danieljoos/wincred"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b892d337201d1400370ebf4fa919941c9ea222ee"
+  version = "v1.0.2"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -43,6 +59,23 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "ad340ca0307647c228c227cb844358a2c94d7f80"
+
+[[projects]]
+  digest = "1:92dfb1cad60fdfecac5def0f398e05b2b92d2422ac6ad2d7d8e4bdb6057a3d83"
+  name = "github.com/dvsekhvalnov/jose2go"
+  packages = [
+    ".",
+    "aes",
+    "arrays",
+    "base64url",
+    "compact",
+    "kdf",
+    "keys/ecc",
+    "padding",
+  ]
+  pruneopts = "UT"
+  revision = "f21a8cedbbae609f623613ec8f81125c243212e6"
+  version = "v1.3"
 
 [[projects]]
   branch = "master"
@@ -111,6 +144,14 @@
   version = "v1.8.0"
 
 [[projects]]
+  digest = "1:b3d20bcdedab2050e6bc58e52f4fdc46f710b4c74e1a1ecee262ebec1aee7b6e"
+  name = "github.com/godbus/dbus"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "2ff6f7ffd60f0f2410b3105864bdd12c7894f844"
+  version = "v5.0.1"
+
+[[projects]]
   digest = "1:239c4c7fd2159585454003d9be7207167970194216193a8a210b8d29576f19c9"
   name = "github.com/golang/protobuf"
   packages = [
@@ -131,6 +172,14 @@
   pruneopts = "UT"
   revision = "2a8bb927dd31d8daada140a5d09578521ce5c36a"
   version = "v0.0.1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:36f5bd9b89fcd728488eee3a0cf8787448579ac381fded60edd6e3ac01fe1a38"
+  name = "github.com/gsterjov/go-libsecret"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a6f4afe4910cad8688db3e0e9b9ac92ad22d54e1"
 
 [[projects]]
   digest = "1:cf6b61e1b4c26b0c7526cee4a0cee6d8302b17798af4b2a56a90eedac0aef11a"
@@ -228,6 +277,14 @@
   pruneopts = "UT"
   revision = "81db2a75821ed34e682567d48be488a1c3121088"
   version = "0.5"
+
+[[projects]]
+  branch = "master"
+  digest = "1:c6df48df7fd77f029217cf038c0abecf11a5bf1805c98cb8eb5381f38e0f36c3"
+  name = "github.com/keybase/go-keychain"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "cc436cc9fe98c5386113b23d20b884eefdbbee5a"
 
 [[projects]]
   branch = "master"
@@ -334,9 +391,10 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:6ff861b744b4ee6caa3307f5587e4b451148234c42648103f49f0c2fa6f533e7"
+  digest = "1:b129a49168a6a1d3838e806c8b282e3b272ed6f76a813112dd932fc8a1255a72"
   name = "github.com/pinpt/go-common"
   packages = [
+    "auth",
     "datamodel",
     "datetime",
     "eventing",
@@ -496,7 +554,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1a1faf2ed72743398882e02b5ec6a01416a9f2e78c6ad8068357345c495d8588"
+  digest = "1:ee2c5135eeb44e749c8fc586b2a9c339901cc40333f3f813fba06c3fdd76bd1b"
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
@@ -511,10 +569,12 @@
     "openpgp/errors",
     "openpgp/packet",
     "openpgp/s2k",
+    "pbkdf2",
     "poly1305",
     "ssh",
     "ssh/agent",
     "ssh/knownhosts",
+    "ssh/terminal",
   ]
   pruneopts = "UT"
   revision = "4def268fd1a49955bfb3dda92fe3db4f924f2285"
@@ -832,10 +892,19 @@
   revision = "ec4a0fea49c7b46c2aeb0b51aac55779c607e52b"
   version = "v0.1.2"
 
+[[projects]]
+  digest = "1:4d2e5a73dc1500038e504a8d78b986630e3626dc027bc030ba5c75da257cdb96"
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "51d6538a90f86fe93ac480b35f37b2be17fef232"
+  version = "v2.2.2"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/99designs/keyring",
     "github.com/fatih/color",
     "github.com/golang/protobuf/proto",
     "github.com/hashicorp/go-hclog",
@@ -843,6 +912,7 @@
     "github.com/kardianos/service",
     "github.com/mitchellh/go-homedir",
     "github.com/mitchellh/go-ps",
+    "github.com/pinpt/go-common/auth",
     "github.com/pinpt/go-common/datetime",
     "github.com/pinpt/go-common/fileutil",
     "github.com/pinpt/go-common/hash",
@@ -856,6 +926,7 @@
     "github.com/stretchr/testify/assert",
     "golang.org/x/net/context",
     "google.golang.org/grpc",
+    "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
