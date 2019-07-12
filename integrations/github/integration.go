@@ -27,13 +27,18 @@ type Integration struct {
 	requestConcurrencyChan chan bool
 }
 
+func NewIntegration(logger hclog.Logger) *Integration {
+	s := &Integration{}
+	s.logger = logger
+	return s
+}
+
 // setting higher to 1 starts returning the followign error, even though the hourly limit is not used up yet.
 // 403: You have triggered an abuse detection mechanism. Please wait a few minutes before you try again.
 const maxRequestConcurrency = 1
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
 	s.agent = agent
-	s.customerID = "c1"
 
 	qc := api.QueryContext{}
 	qc.Logger = s.logger
@@ -64,7 +69,7 @@ type Config struct {
 	Org           string
 }
 
-func (s *Integration) setConfig(data map[string]interface{}) error {
+func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	rerr := func(msg string, args ...interface{}) error {
 		return fmt.Errorf("config validation error: "+msg, args...)
 	}
@@ -102,9 +107,10 @@ func urlAppend(p1, p2 string) string {
 }
 
 func (s *Integration) Export(ctx context.Context,
-	config map[string]interface{}) (res rpcdef.ExportResult, _ error) {
+	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
 
-	err := s.setConfig(config)
+	s.customerID = exportConfig.Pinpoint.CustomerID
+	err := s.setIntegrationConfig(exportConfig.Integration)
 	if err != nil {
 		return res, err
 	}

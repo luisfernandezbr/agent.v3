@@ -12,7 +12,17 @@ import (
 
 type Integration interface {
 	Init(agent Agent) error
-	Export(ctx context.Context, exportConfig map[string]interface{}) (ExportResult, error)
+
+	Export(context.Context, ExportConfig) (ExportResult, error)
+}
+
+type ExportConfig struct {
+	Pinpoint    ExportConfigPinpoint
+	Integration map[string]interface{}
+}
+
+type ExportConfigPinpoint struct {
+	CustomerID string
 }
 
 type ExportResult struct {
@@ -57,15 +67,20 @@ func (s *IntegrationClient) Destroy() {
 
 func (s *IntegrationClient) Export(
 	ctx context.Context,
-	exportConfig map[string]interface{}) (res ExportResult, _ error) {
+	exportConfig ExportConfig) (res ExportResult, _ error) {
 
-	confBytes, err := json.Marshal(exportConfig)
+	args := &proto.IntegrationExportReq{}
+	confBytes, err := json.Marshal(exportConfig.Integration)
 	if err != nil {
 		return res, err
 	}
-
-	args := &proto.IntegrationExportReq{}
 	args.IntegrationConfigJson = confBytes
+
+	pinpointConfig := &proto.IntegrationExportReqPinpointConfig{}
+	pinpointConfig.CustomerId = exportConfig.Pinpoint.CustomerID
+
+	args.PinpointConfig = pinpointConfig
+
 	resp, err := s.client.Export(ctx, args)
 	if err != nil {
 		return res, err
@@ -110,12 +125,15 @@ func (s *IntegrationServer) Init(ctx context.Context, req *proto.IntegrationInit
 
 func (s *IntegrationServer) Export(ctx context.Context, req *proto.IntegrationExportReq) (res *proto.IntegrationExportResp, _ error) {
 	res = &proto.IntegrationExportResp{}
-	var conf map[string]interface{}
-	err := json.Unmarshal(req.IntegrationConfigJson, &conf)
+	var integrationConfig map[string]interface{}
+	err := json.Unmarshal(req.IntegrationConfigJson, &integrationConfig)
 	if err != nil {
 		return res, err
 	}
-	r0, err := s.Impl.Export(ctx, conf)
+	exportConfig := ExportConfig{}
+	exportConfig.Integration = integrationConfig
+	exportConfig.Pinpoint.CustomerID = req.PinpointConfig.CustomerId
+	r0, err := s.Impl.Export(ctx, exportConfig)
 	if err != nil {
 		return res, err
 	}

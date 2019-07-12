@@ -28,6 +28,12 @@ type Config struct {
 	integrations map[string]map[string]interface{}
 
 	encryptor *keychain.Encryptor
+
+	Pinpoint PinpointConfig
+}
+
+type PinpointConfig struct {
+	CustomerID string
 }
 
 const configFileYaml = ".pinpoint-agent.yaml"
@@ -36,6 +42,25 @@ const configFileEncr = ".pinpoint-agent.encr"
 func New(opts Opts) (*Config, error) {
 	s := &Config{}
 	s.opts = opts
+
+	data, err := s.getConfigData()
+	if err != nil {
+		return nil, err
+	}
+	err = s.parseYaml(data)
+	if err != nil {
+		return nil, err
+	}
+	err = s.validateAndSetPinpoint()
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func (s *Config) getConfigData() ([]byte, error) {
+	opts := s.opts
 
 	wantEncryption := false
 	mayNeedAutoEncrypt := false
@@ -62,8 +87,6 @@ func New(opts Opts) (*Config, error) {
 		}
 	}
 
-	var data []byte
-
 	if s.encryptor != nil {
 		loc := opts.File
 		if loc == "" {
@@ -78,28 +101,22 @@ func New(opts Opts) (*Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not decrypt config file at loc: %v %v", loc, err)
 		}
-		data = []byte(b)
-	} else {
-		loc := opts.File
-		if loc == "" {
-			dir, _ := homedir.Dir()
-			loc = filepath.Join(dir, configFileYaml)
-		}
-		if !fileutil.FileExists(loc) {
-			return nil, fmt.Errorf("config does not exist at loc: %v", loc)
-		}
-		b, err := ioutil.ReadFile(loc)
-		if err != nil {
-			return nil, fmt.Errorf("could not read config file at loc: %v %v", loc, err)
-		}
-		data = b
+		return []byte(b), nil
 	}
-
-	err := s.parseYaml(data)
+	loc := opts.File
+	if loc == "" {
+		dir, _ := homedir.Dir()
+		loc = filepath.Join(dir, configFileYaml)
+	}
+	if !fileutil.FileExists(loc) {
+		return nil, fmt.Errorf("config does not exist at loc: %v", loc)
+	}
+	b, err := ioutil.ReadFile(loc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not read config file at loc: %v %v", loc, err)
 	}
-	return s, nil
+	return b, nil
+
 }
 
 func (s *Config) setupEncryptor() error {
@@ -199,6 +216,22 @@ func (s *Config) parseYaml(yamlBytes []byte) error {
 	}
 	s.pinpoint = pp
 	s.integrations = integrations
+	return nil
+}
+
+func (s *Config) validateAndSetPinpoint() error {
+	rerr := func(msg string, args ...interface{}) error {
+		return fmt.Errorf("Invalid pinpoint config. "+msg, args...)
+	}
+	res := PinpointConfig{}
+
+	customerID, ok := s.pinpoint["customer_id"].(string)
+	if !ok {
+		return rerr("missing required customer_id")
+	}
+	res.CustomerID = customerID
+
+	s.Pinpoint = res
 	return nil
 }
 

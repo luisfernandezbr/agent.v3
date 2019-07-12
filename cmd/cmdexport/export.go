@@ -154,6 +154,10 @@ func (s *export) runExports() {
 	errored := map[string]error{}
 	erroredMu := sync.Mutex{}
 
+	configPinpoint := rpcdef.ExportConfigPinpoint{
+		CustomerID: s.config.Pinpoint.CustomerID,
+	}
+
 	for name, integration := range s.integrations {
 		wg.Add(1)
 		name := name
@@ -169,16 +173,20 @@ func (s *export) runExports() {
 
 			s.logger.Info("Export starting", "integration", name, "log_file", integration.logFile.Name())
 
-			config, err := s.config.IntegrationConfig(name)
+			integrationConfig, err := s.config.IntegrationConfig(name)
 			if err != nil {
 				rerr(err)
 				return
 			}
-			if len(config) == 0 {
+			if len(integrationConfig) == 0 {
 				rerr(fmt.Errorf("empty config for integration: %v", name))
 				return
 			}
-			_, err = integration.rpcClient.Export(ctx, config)
+			exportConfig := rpcdef.ExportConfig{
+				Pinpoint:    configPinpoint,
+				Integration: integrationConfig,
+			}
+			_, err = integration.rpcClient.Export(ctx, exportConfig)
 			if err != nil {
 				rerr(err)
 				return
@@ -209,7 +217,6 @@ func (s *export) runExports() {
 	} else {
 		s.logger.Info("Exports completed", "succeded", len(s.integrations))
 	}
-
 }
 
 func (s *export) Destroy() {

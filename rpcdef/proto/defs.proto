@@ -14,6 +14,11 @@ message IntegrationInitReq {
 
 message IntegrationExportReq {
     bytes integration_config_json = 1;
+    IntegrationExportReqPinpointConfig pinpoint_config = 2;   
+}
+
+message IntegrationExportReqPinpointConfig {
+    string customer_id = 1;
 }
 
 message IntegrationExportResp {

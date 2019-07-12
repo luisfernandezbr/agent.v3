@@ -413,9 +413,12 @@
   version = "7.0.9"
 
 [[projects]]
-  digest = "1:2ba2dd25118d7030367f8ced0f9c4e6dccf5bc66f56b17944240dcd95182b7a0"
+  digest = "1:908c106765bf1500812dbe9f65b7e717b4458b3c48e7b528ab0c706dc60e466f"
   name = "github.com/pinpt/go-datamodel"
-  packages = ["sourcecode"]
+  packages = [
+    "sourcecode",
+    "work",
+  ]
   pruneopts = "UT"
   revision = "c3a64067df5662ae00cb556ef3b2bc86d472f9db"
   version = "0.0.203"
@@ -921,6 +924,7 @@
     "github.com/pinpt/go-common/log",
     "github.com/pinpt/go-common/strings",
     "github.com/pinpt/go-datamodel/sourcecode",
+    "github.com/pinpt/go-datamodel/work",
     "github.com/pinpt/ripsrc/ripsrc",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",

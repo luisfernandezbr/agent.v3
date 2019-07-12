@@ -51,9 +51,19 @@ type Integration interface {
 Init(connectionDetails)
 
 // Export starts export of all data types for this integration.
-// exportConfig provides configuration specific to this integration.
-Export(ctx context.Context, exportConfig map[string]interface{}) (ExportResult, error)
+// Config contains typed config common for all integrations and map[string]interface{} for custom fields.
+Export(ctx context.Context,
+	agentConfig ExportAgentConfig,
+	Export(context.Context, ExportConfig) (ExportResult, error)
+}
 
+type ExportConfig struct {
+	Pinpoint    ExportConfigPinpoint
+	Integration map[string]interface{}
+}
+
+type ExportConfigPinpoint struct {
+	CustomerID string
 }
 
 type ExportResult struct {

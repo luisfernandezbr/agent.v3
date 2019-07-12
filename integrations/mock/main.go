@@ -20,7 +20,7 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	return nil
 }
 
-func (s *Integration) Export(ctx context.Context, config map[string]interface{}) (res rpcdef.ExportResult, _ error) {
+func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
 	s.exportAll()
 	return res, nil
 }
