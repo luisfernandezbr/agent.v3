@@ -134,11 +134,11 @@ func PullRequestsPage(
 		pr.Title = data.Title
 		pr.Description = data.BodyText
 		pr.URL = data.URL
-		pr.CreatedAt = data.CreatedAt.Unix()
-		pr.MergedAt = data.MergedAt.Unix()
+		pr.Created = TimePullRequestCreated(data.CreatedAt)
+		pr.Merged = TimePullRequestMerged(data.MergedAt)
 
-		pr.ClosedAt = data.ClosedAt.Unix()
-		pr.UpdatedAt = data.UpdatedAt.Unix()
+		pr.Closed = TimePullRequestClosed(data.ClosedAt)
+		pr.Updated = TimePullRequestUpdated(data.UpdatedAt)
 		validStatus := []string{"OPEN", "CLOSED", "MERGED"}
 		if !strInArr(data.State, validStatus) {
 			panic("unknown state: " + data.State)

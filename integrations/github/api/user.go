@@ -30,7 +30,7 @@ func (s userGithub) Convert(customerID string, orgMember bool) (user sourcecode.
 	user.AvatarURL = pstrings.Pointer(s.AvatarURL)
 	user.Username = pstrings.Pointer(s.Login)
 	user.Member = orgMember
-	user.Type = sourcecode.TypeHuman
+	user.Type = sourcecode.UserTypeHuman
 	return user
 }
 

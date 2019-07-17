@@ -22,8 +22,6 @@ func main() {
 		"integration": &rpcdef.IntegrationPlugin{Impl: integration},
 	}
 
-	logger.Info("example plugin log message")
-
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: rpcdef.Handshake,
 		Plugins:         pluginMap,

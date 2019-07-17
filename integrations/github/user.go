@@ -74,7 +74,7 @@ func (s *Users) createGhost() error {
 	user.Name = "Ghost (all deleted users)"
 	user.Username = pstrings.Pointer("ghost")
 	user.Member = false
-	user.Type = sourcecode.TypeDeletedSpecialUser
+	user.Type = sourcecode.UserTypeDeletedSpecialUser
 	return s.sendUser(user)
 }
 

@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strconv"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/jira/api"
 	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/go-datamodel/work"
 )
 
 type Integration struct {
@@ -68,6 +71,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 
 	s.qc.CustomerID = config.Pinpoint.CustomerID
 	s.qc.Logger = s.logger
+	s.qc.BaseURL = s.config.URL
 
 	{
 		opts := api.RequesterOpts{}
@@ -80,13 +84,30 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		s.qc.Request = requester.Request
 	}
 
+	users, err := NewUsers(s)
+	if err != nil {
+		return res, err
+	}
+	defer users.Done()
+	s.qc.ExportUser = users.ExportUser
+
+	fields, err := s.fields()
+	if err != nil {
+		return res, err
+	}
+
+	fieldByKey := map[string]*work.CustomField{}
+	for _, f := range fields {
+		fieldByKey[f.Key] = f
+	}
+
 	projects, err := s.projects()
 	if err != nil {
 		return res, err
 	}
 
 	for _, project := range projects {
-		err := s.issues(project)
+		err := s.issuesAndChangelogs(project, fieldByKey)
 		if err != nil {
 			return res, err
 		}
@@ -127,25 +148,120 @@ func (s *Integration) projects() (all []Project, _ error) {
 	})
 }
 
-func (s *Integration) issues(project Project) error {
-	sender := newSenderNoIncrementals(s, "work.issue")
-	defer sender.Done()
+func (s *Integration) issuesAndChangelogs(project Project, fieldByKey map[string]*work.CustomField) error {
+	senderIssues := newSenderNoIncrementals(s, "work.issue")
+	defer senderIssues.Done()
+	senderChangelogs := newSenderNoIncrementals(s, "work.changelog")
+	defer senderChangelogs.Done()
 
-	return api.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
-		pi, res, err := api.IssuesPage(s.qc, project, paginationParams)
+	startedSprintExport := time.Now()
+	sprints := NewSprints()
+
+	err := api.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
+		pi, resIssues, resChangelogs, err := api.IssuesAndChangelogsPage(s.qc, project, fieldByKey, paginationParams)
 		if err != nil {
 			return false, 0, err
 		}
-		var res2 []Model
-		for _, obj := range res {
-			res2 = append(res2, obj)
+
+		for _, issue := range resIssues {
+			for _, f := range issue.CustomFields {
+				if f.Name == "Sprint" {
+					err := sprints.processIssueSprint(issue.RefID, f.Value)
+					if err != nil {
+						return false, 0, err
+					}
+				}
+			}
 		}
-		err = sender.Send(res2)
+
+		var resIssues2 []Model
+		for _, obj := range resIssues {
+			resIssues2 = append(resIssues2, obj)
+		}
+		err = senderIssues.Send(resIssues2)
 		if err != nil {
 			return false, 0, err
 		}
+
+		var resChangelogs2 []Model
+		for _, obj := range resChangelogs {
+			resChangelogs2 = append(resChangelogs2, obj)
+		}
+		err = senderChangelogs.Send(resChangelogs2)
+		if err != nil {
+			return false, 0, err
+		}
+
 		return pi.HasMore, pi.MaxResults, nil
 	})
+	if err != nil {
+		return err
+	}
+
+	senderSprints := newSenderNoIncrementals(s, "work.sprints")
+	defer senderSprints.Done()
+
+	var sprintModels []Model
+	for _, data := range sprints.data {
+		item := &work.Sprint{}
+		item.CustomerID = s.qc.CustomerID
+		item.RefType = "jira"
+		item.RefID = strconv.Itoa(data.ID)
+
+		// TODO: datamodel is missing goal?
+		//item.Goal = data.Goal
+
+		item.Name = data.Name
+
+		startDate, err := api.ParseTime(data.StartDate)
+		if err != nil {
+			return fmt.Errorf("could not parse startdate for sprint: %v err: %v", data.Name, err)
+		}
+		item.Started = api.TimeSprintStarted(startDate)
+
+		endDate, err := api.ParseTime(data.EndDate)
+		if err != nil {
+			return fmt.Errorf("could not parse enddata for sprint: %v err: %v", data.Name, err)
+		}
+		item.Ended = api.TimeSprintEnded(endDate)
+
+		completeDate, err := api.ParseTime(data.CompleteDate)
+		if err != nil {
+			return fmt.Errorf("could not parse completed for sprint: %v err: %v", data.Name, err)
+		}
+		item.Completed = api.TimeSprintCompleted(completeDate)
+
+		switch data.State {
+		case "CLOSED":
+			item.Status = work.SprintStatusClosed
+		case "ACTIVE":
+			item.Status = work.SprintStatusActive
+		case "FUTURE":
+			item.Status = work.SprintStatusFuture
+		default:
+			return fmt.Errorf("invalid status for sprint: %v", data.State)
+		}
+
+		item.Fetched = api.TimeSprintFetched(startedSprintExport)
+
+		sprintModels = append(sprintModels, item)
+	}
+	return senderSprints.Send(sprintModels)
+}
+
+func (s *Integration) fields() ([]*work.CustomField, error) {
+	sender := newSenderNoIncrementals(s, "work.custom_field")
+	defer sender.Done()
+
+	res, err := api.FieldsAll(s.qc)
+	if err != nil {
+		return nil, err
+	}
+	var res2 []Model
+	for _, item := range res {
+		res2 = append(res2, item)
+	}
+	return res, sender.Send(res2)
 }
 
 type senderNoIncrementals struct {

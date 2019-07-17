@@ -58,7 +58,7 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 		return fmt.Errorf(`resp resp.StatusCode != 200, got %v`, resp.StatusCode)
 	}
 
-	s.logger.Info("res", "body", string(b))
+	//s.logger.Info("res", "body", string(b))
 	err = json.Unmarshal(b, &res)
 	if err != nil {
 		return err

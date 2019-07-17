@@ -90,12 +90,12 @@ func PullRequestCommentsPage(
 		item.CustomerID = qc.CustomerID
 		item.RefType = "sourcecode.pull_request_comment"
 		item.RefID = data.ID
-		item.UpdatedAt = data.UpdatedAt.Unix()
+		item.Updated = TimePullRequestCommentUpdated(data.UpdatedAt)
 
 		item.RepoID = qc.RepoID(data.Repository.ID)
 		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)
 		item.Body = data.BodyText
-		item.CreatedAt = data.CreatedAt.Unix()
+		item.Created = TimePullRequestCommentCreated(data.CreatedAt)
 
 		item.UserRefID, err = qc.UserLoginToRefID(data.Author.Login)
 		if err != nil {

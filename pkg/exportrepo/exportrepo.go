@@ -343,7 +343,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				RepoID:            hash.Values("Repo", customerID, refType, repoID),
 				Status:            string(cf.Status),
 				Ordinal:           ordinal,
-				CreatedAt:         datetime.TimeToEpoch(blame.Commit.Date),
+				Created:           timeCommitCreated(blame.Commit.Date),
 				Filename:          cf.Filename,
 				Language:          blame.Language,
 				Renamed:           cf.Renamed,
@@ -392,8 +392,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				Filename:       blame.Filename,
 				Language:       blame.Language,
 				Sha:            blame.Commit.SHA,
-				DateAt:         datetime.TimeToEpoch(blame.Commit.Date),
-				Date:           blame.Commit.Date.Format("2006-01-02T15:04:05.000000Z-07:00"),
+				Date:           timeBlameDate(blame.Commit.Date),
 				RepoID:         hash.Values("Repo", customerID, refType, repoID),
 				Complexity:     blame.Complexity,
 				Lines:          lines,
@@ -414,8 +413,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				Sha:        commit.SHA,
 				Message:    lastBlame.Commit.Message,
 				//URL:            buildURL(refType, getHtmlURLPrefix(urlPrefix), repoName, commit.SHA), //TODO: i don't have access to reponame
-				CreatedAt: datetime.TimeToEpoch(lastBlame.Commit.Date),
-				Created:   lastBlame.Commit.Date.Format("2006-01-02T15:04:05.000000Z-07:00"),
+				Created: timeCommitCreated(lastBlame.Commit.Date),
 				//Branch:         branch, // TODO: this field is not correct at all
 				Additions:      commitAdditions,
 				Deletions:      commitDeletions,
@@ -448,14 +446,14 @@ const (
 	unknownLanguage = "unknown"
 )
 
-func statusFromRipsrc(status ripsrc.CommitStatus) sourcecode.Status {
+func statusFromRipsrc(status ripsrc.CommitStatus) sourcecode.BlameStatus {
 	switch status {
 	case ripsrc.GitFileCommitStatusAdded:
-		return sourcecode.StatusAdded
+		return sourcecode.BlameStatusAdded
 	case ripsrc.GitFileCommitStatusModified:
-		return sourcecode.StatusModified
+		return sourcecode.BlameStatusModified
 	case ripsrc.GitFileCommitStatusRemoved:
-		return sourcecode.StatusRemoved
+		return sourcecode.BlameStatusRemoved
 	}
 	return 0
 }

@@ -5,12 +5,19 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/hash"
+	pstrings "github.com/pinpt/go-common/strings"
 )
 
 type QueryContext struct {
+	BaseURL    string
 	Logger     hclog.Logger
 	CustomerID string
 	Request    func(objPath string, params url.Values, res interface{}) error
+	ExportUser func(user User) error
+}
+
+func (s QueryContext) IssueURL(issueKey string) string {
+	return pstrings.JoinURL(s.BaseURL, "browse", issueKey)
 }
 
 func (s QueryContext) ProjectID(refID string) string {

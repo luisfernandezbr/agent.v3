@@ -96,7 +96,7 @@ func PullRequestReviewsPage(
 		item.RepoID = qc.RepoID(data.Repository.ID)
 		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)
 		item.State = data.State
-		item.CreatedAt = data.CreatedAt.Unix()
+		item.Created = TimePullRequestReviewCreated(data.CreatedAt)
 
 		item.UserRefID, err = qc.UserLoginToRefID(data.Author.Login)
 		if err != nil {
