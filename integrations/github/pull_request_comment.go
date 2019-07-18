@@ -2,15 +2,12 @@ package main
 
 import (
 	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent.next/pkg/objsender"
 )
 
 func (s *Integration) exportPullRequestComments(pullRequests chan []api.PullRequest) error {
-	et, err := s.newExportType("sourcecode.pull_request_comment")
-	if err != nil {
-		return err
-	}
-	defer et.Done()
+	sender := objsender.NewNotIncremental(s.agent, "sourcecode.pull_request_comment")
+	defer sender.Done()
 
 	for prs := range pullRequests {
 		for _, pr := range prs {
@@ -18,7 +15,7 @@ func (s *Integration) exportPullRequestComments(pullRequests chan []api.PullRequ
 				// perf optimization
 				continue
 			}
-			err := s.exportPullRequestCommentsPR(et, pr.RefID)
+			err := s.exportPullRequestCommentsPR(sender, pr.RefID)
 			if err != nil {
 				return err
 			}
@@ -27,19 +24,20 @@ func (s *Integration) exportPullRequestComments(pullRequests chan []api.PullRequ
 	return nil
 }
 
-func (s *Integration) exportPullRequestCommentsPR(et *exportType, prID string) error {
+func (s *Integration) exportPullRequestCommentsPR(sender *objsender.NotIncremental, prID string) error {
 	return api.PaginateRegular(func(query string) (api.PageInfo, error) {
 		pi, res, err := api.PullRequestCommentsPage(s.qc, prID, query)
 		if err != nil {
 			return pi, err
 		}
-		batch := []rpcdef.ExportObj{}
+
+		var batch []objsender.Model
 		//var ids []string
 		for _, obj := range res {
 			//ids = append(ids, obj.ID)
-			batch = append(batch, rpcdef.ExportObj{Data: obj.ToMap()})
+			batch = append(batch, obj)
 		}
 		//resIDs <- ids
-		return pi, et.Send(batch)
+		return pi, sender.Send(batch)
 	})
 }

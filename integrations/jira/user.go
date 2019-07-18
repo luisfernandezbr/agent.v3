@@ -2,26 +2,26 @@ package main
 
 import (
 	"github.com/pinpt/agent.next/integrations/jira/api"
+	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/go-datamodel/work"
 )
 
 type Users struct {
 	integration *Integration
-	sender      *senderNoIncrementals
+	sender      *objsender.NotIncremental
 	exported    map[string]bool
 }
 
 func NewUsers(integration *Integration) (*Users, error) {
 	s := &Users{}
 	s.integration = integration
-	s.sender = newSenderNoIncrementals(integration, "work.user")
+	s.sender = objsender.NewNotIncremental(integration.agent, "work.user")
 	s.exported = map[string]bool{}
 	return s, nil
 }
 
 func (s *Users) ExportUser(user api.User) error {
-	s.integration.logger.Info("exporting user", "user", user.EmailAddress)
 	customerID := s.integration.qc.CustomerID
 	pk := ""
 	if user.AccountID != "" {
@@ -32,6 +32,7 @@ func (s *Users) ExportUser(user api.User) error {
 	if s.exported[pk] {
 		return nil
 	}
+	//s.integration.logger.Info("exporting user", "user", user.EmailAddress)
 	s.exported[pk] = true
 	return s.sendUser(&work.User{
 		//ID:         hash.Values(customerID, pk),
@@ -50,7 +51,7 @@ func (s *Users) sendUser(user *work.User) error {
 }
 
 func (s *Users) sendUsers(users []*work.User) error {
-	var batch []Model
+	var batch []objsender.Model
 	for _, user := range users {
 		batch = append(batch, user)
 	}

@@ -4,17 +4,18 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/pinpt/agent.next/pkg/objsender"
+
 	pstrings "github.com/pinpt/go-common/strings"
 
 	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-datamodel/sourcecode"
 )
 
 // map[login]refID
 type Users struct {
 	integration *Integration
-	et          *exportType
+	sender      *objsender.NotIncremental
 	loginToID   map[string]string
 
 	mu sync.Mutex
@@ -23,14 +24,10 @@ type Users struct {
 func NewUsers(integration *Integration) (*Users, error) {
 	s := &Users{}
 	s.integration = integration
-	var err error
-	s.et, err = s.integration.newExportType("sourcecode.user")
-	if err != nil {
-		return nil, err
-	}
+	s.sender = objsender.NewNotIncremental(integration.agent, "sourcecode.user")
 	s.loginToID = map[string]string{}
 
-	err = s.createGhost()
+	err := s.createGhost()
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +65,7 @@ func (s *Users) createGhost() error {
 
 	s.loginToID[""] = "ghost"
 
-	user := sourcecode.User{}
+	user := &sourcecode.User{}
 	user.RefID = "ghost"
 	user.RefType = "github"
 	user.Name = "Ghost (all deleted users)"
@@ -78,20 +75,20 @@ func (s *Users) createGhost() error {
 	return s.sendUser(user)
 }
 
-func (s *Users) sendUser(user sourcecode.User) error {
-	return s.sendUsers([]sourcecode.User{user})
+func (s *Users) sendUser(user *sourcecode.User) error {
+	return s.sendUsers([]*sourcecode.User{user})
 }
 
-func (s *Users) sendUsers(users []sourcecode.User) error {
-	batch := []rpcdef.ExportObj{}
+func (s *Users) sendUsers(users []*sourcecode.User) error {
+	var batch []objsender.Model
 	for _, user := range users {
-		batch = append(batch, rpcdef.ExportObj{Data: user.ToMap()})
+		batch = append(batch, user)
 	}
-	return s.et.Send(batch)
+	return s.sender.Send(batch)
 }
 
 func (s *Users) exportOrganizationUsers() error {
-	resChan := make(chan []sourcecode.User)
+	resChan := make(chan []*sourcecode.User)
 
 	go func() {
 		defer close(resChan)
@@ -101,19 +98,18 @@ func (s *Users) exportOrganizationUsers() error {
 		}
 	}()
 
-	batch := []rpcdef.ExportObj{}
+	var batch []objsender.Model
 	for users := range resChan {
 		for _, user := range users {
 			s.loginToID[*user.Username] = user.RefID
-			batch = append(batch, rpcdef.ExportObj{Data: user.ToMap()})
+			batch = append(batch, user)
 		}
 	}
 	if len(batch) == 0 {
 		return errors.New("no users found, will not be able to map logins to ids")
 	}
 
-	s.integration.agent.SendExported(s.et.SessionID, batch)
-	return nil
+	return s.sender.Send(batch)
 }
 
 func (s *Users) LoginToRefID(login string) (refID string, _ error) {
@@ -129,9 +125,10 @@ func (s *Users) LoginToRefID(login string) (refID string, _ error) {
 		if err != nil {
 			return "", err
 		}
-		batch := []rpcdef.ExportObj{}
-		batch = append(batch, rpcdef.ExportObj{Data: user.ToMap()})
-		s.integration.agent.SendExported(s.et.SessionID, batch)
+		err = s.sendUser(user)
+		if err != nil {
+			return "", err
+		}
 		s.loginToID[*user.Username] = user.RefID
 	}
 	return s.loginToID[login], nil
@@ -146,5 +143,5 @@ func (s *Users) LoginToRefIDFromCommit(login string, email string) (refID string
 }
 
 func (s *Users) Done() {
-	s.et.Done()
+	s.sender.Done()
 }

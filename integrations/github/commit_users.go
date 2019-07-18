@@ -3,16 +3,17 @@ package main
 import (
 	"sync"
 
+	"github.com/pinpt/agent.next/pkg/objsender"
+
 	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/agent.next/rpcdef"
 )
 
 func (s *Integration) exportCommitUsers(repos []api.Repo, concurrency int) error {
-	et, err := s.newExportType("sourcecode.commit_user")
+	sender, err := objsender.NewIncrementalDateBased(s.agent, "sourcecode.commit_user")
 	if err != nil {
 		return err
 	}
-	defer et.Done()
+	defer sender.Done()
 
 	wg := sync.WaitGroup{}
 
@@ -21,7 +22,7 @@ func (s *Integration) exportCommitUsers(repos []api.Repo, concurrency int) error
 		go func() {
 			defer wg.Done()
 			for repo := range reposToChan(repos, 0) {
-				err := s.exportCommitsForRepoDefaultBranch(et, repo)
+				err := s.exportCommitsForRepoDefaultBranch(sender, repo)
 				if err != nil {
 					panic(err)
 				}
@@ -49,14 +50,14 @@ func reposToChan(sl []api.Repo, maxToReturn int) chan api.Repo {
 	return res
 }
 
-func (s *Integration) exportCommitsForRepoDefaultBranch(et *exportType, repo api.Repo) error {
+func (s *Integration) exportCommitsForRepoDefaultBranch(userSender *objsender.IncrementalDateBased, repo api.Repo) error {
 	s.logger.Info("exporting commits (to get users)", "repo_id", repo.ID, "repo_name", repo.Name)
 
 	if repo.DefaultBranch == "" {
 		return nil
 	}
 
-	err := s.exportCommitsForRepoBranch(et, repo, repo.DefaultBranch)
+	err := s.exportCommitsForRepoBranch(userSender, repo, repo.DefaultBranch)
 	if err != nil {
 		return err
 	}
@@ -88,11 +89,11 @@ func (s *Integration) exportCommitsForRepoAllBranches(et *exportType, repoID str
 }
 */
 
-func (s *Integration) exportCommitsForRepoBranch(et *exportType, repo api.Repo, branchName string) error {
+func (s *Integration) exportCommitsForRepoBranch(userSender *objsender.IncrementalDateBased, repo api.Repo, branchName string) error {
 	s.logger.Info("exporting commits for branch", "repo_id", repo.ID, "repo_name", repo.Name)
 
 	return api.PaginateCommits(
-		et.lastProcessed,
+		userSender.LastProcessed,
 		func(query string) (api.PageInfo, error) {
 
 			pi, res, err := api.CommitsPage(s.qc,
@@ -105,7 +106,8 @@ func (s *Integration) exportCommitsForRepoBranch(et *exportType, repo api.Repo, 
 			}
 
 			s.logger.Info("got commits page", "l", len(res))
-			batch := []rpcdef.ExportObj{}
+
+			var batch []map[string]interface{}
 
 			for _, commit := range res {
 				author := CommitUser{}
@@ -113,17 +115,17 @@ func (s *Integration) exportCommitsForRepoBranch(et *exportType, repo api.Repo, 
 				author.Name = commit.AuthorName
 				author.Email = commit.AuthorEmail
 				author.SourceID = commit.AuthorRefID
-				batch = append(batch, rpcdef.ExportObj{Data: author.ToMap()})
+				batch = append(batch, author.ToMap())
 
 				committer := CommitUser{}
 				committer.CustomerID = s.customerID
 				committer.Name = commit.CommitterName
 				committer.Email = commit.CommitterEmail
 				committer.SourceID = commit.CommitterRefID
-				batch = append(batch, rpcdef.ExportObj{Data: committer.ToMap()})
+				batch = append(batch, committer.ToMap())
 			}
 
-			return pi, et.Send(batch)
+			return pi, userSender.SendMaps(batch)
 		})
 }
 

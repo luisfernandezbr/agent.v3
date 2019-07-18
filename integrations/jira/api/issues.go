@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 
 	"github.com/pinpt/go-datamodel/work"
@@ -16,10 +17,12 @@ func IssuesAndChangelogsPage(
 	qc QueryContext,
 	project Project,
 	fieldByKey map[string]*work.CustomField,
+	updatedSince time.Time,
 	paginationParams url.Values) (
 	pi PageInfo,
 	resIssues []*work.Issue,
 	resChangelogs []*work.Changelog,
+
 	rerr error) {
 
 	objectPath := "search"
@@ -27,7 +30,12 @@ func IssuesAndChangelogsPage(
 
 	//params.Set("maxResults", "1") // for testing
 	params.Set("validateQuery", "strict")
-	params.Set("jql", "project="+project.JiraID)
+	jql := "project=" + project.JiraID
+	if !updatedSince.IsZero() {
+		s := updatedSince.Format("2006-01-02 15:04")
+		jql += fmt.Sprintf(` and (created >= "%s" or updated >= "%s")`, s, s)
+	}
+	params.Set("jql", jql)
 	params.Add("expand", "changelog")
 
 	qc.Logger.Debug("issues request", "project", project.Key, "params", params)
@@ -124,7 +132,7 @@ func IssuesAndChangelogsPage(
 				rerr = fmt.Errorf("could not parse duedate of jira issue: %v err: %v", orig, err)
 				return
 			}
-			item.DueDate = TimeIssueDueDate(d)
+			date.ConvertToModel(d, &item.DueDate)
 		}
 
 		item.Title = fields.Summary
@@ -134,13 +142,13 @@ func IssuesAndChangelogsPage(
 			rerr = err
 			return
 		}
-		item.Created = TimeIssueCreated(created)
+		date.ConvertToModel(created, &item.Created)
 		updated, err := ParseTime(fields.Updated)
 		if err != nil {
 			rerr = err
 			return
 		}
-		item.Updated = TimeIssueUpdated(updated)
+		date.ConvertToModel(updated, &item.Updated)
 
 		// TODO: check if name or id should be here
 		item.Priority = fields.Priority.Name
@@ -235,7 +243,7 @@ func IssuesAndChangelogsPage(
 					rerr = fmt.Errorf("could not parse created time of changelog for issue: %v err: %v", issueRefID, err)
 					return
 				}
-				item.Created = TimeChangelogCreated(createdAt)
+				date.ConvertToModel(createdAt, &item.Created)
 				item.UserID = qc.UserID(cl.Author.AccountID)
 
 				item.Field = data.Field

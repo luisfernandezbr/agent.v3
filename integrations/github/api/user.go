@@ -22,7 +22,8 @@ const userGithubFields = `{
 	login
 }`
 
-func (s userGithub) Convert(customerID string, orgMember bool) (user sourcecode.User) {
+func (s userGithub) Convert(customerID string, orgMember bool) (user *sourcecode.User) {
+	user = &sourcecode.User{}
 	user.RefType = "github"
 	user.CustomerID = customerID
 	user.RefID = s.ID
@@ -35,7 +36,7 @@ func (s userGithub) Convert(customerID string, orgMember bool) (user sourcecode.
 }
 
 func User(qc QueryContext, login string, orgMember bool) (
-	user sourcecode.User, _ error) {
+	user *sourcecode.User, _ error) {
 
 	qc.Logger.Debug("user request", "login", login)
 
@@ -66,7 +67,7 @@ func User(qc QueryContext, login string, orgMember bool) (
 	return data.Convert(qc.CustomerID, orgMember), nil
 }
 
-func UsersAll(qc QueryContext, resChan chan []sourcecode.User) error {
+func UsersAll(qc QueryContext, resChan chan []*sourcecode.User) error {
 	return PaginateRegular(func(query string) (pi PageInfo, _ error) {
 		pi, sub, err := UsersPage(qc, query)
 		if err != nil {
@@ -77,7 +78,7 @@ func UsersAll(qc QueryContext, resChan chan []sourcecode.User) error {
 	})
 }
 
-func UsersPage(qc QueryContext, queryParams string) (pi PageInfo, users []sourcecode.User, _ error) {
+func UsersPage(qc QueryContext, queryParams string) (pi PageInfo, users []*sourcecode.User, _ error) {
 	qc.Logger.Debug("users request", "q", queryParams)
 
 	query := `

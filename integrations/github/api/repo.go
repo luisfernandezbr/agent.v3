@@ -116,7 +116,7 @@ func ReposPageInternal(qc QueryContext, queryParams string) (pi PageInfo, repos 
 	return repositories.PageInfo, batch, nil
 }
 
-func ReposPage(qc QueryContext, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []sourcecode.Repo, _ error) {
+func ReposPage(qc QueryContext, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*sourcecode.Repo, _ error) {
 	qc.Logger.Debug("repos request", "q", queryParams)
 
 	query := `
@@ -178,7 +178,7 @@ func ReposPage(qc QueryContext, queryParams string, stopOnUpdatedAt time.Time) (
 		if data.UpdatedAt.Before(stopOnUpdatedAt) {
 			return PageInfo{}, repos, nil
 		}
-		repo := sourcecode.Repo{}
+		repo := &sourcecode.Repo{}
 		repo.RefType = "sourcecode.Repo"
 		repo.CustomerID = qc.CustomerID
 		repo.RefID = data.ID

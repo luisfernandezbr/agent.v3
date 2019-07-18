@@ -3,24 +3,26 @@ package main
 import (
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/objsender"
+
 	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/agent.next/rpcdef"
 )
 
 func (s *Integration) exportPullRequests(
 	repos []api.Repo,
 	pullRequests chan []api.PullRequest) error {
-	et, err := s.newExportType("sourcecode.pull_request")
+
+	sender, err := objsender.NewIncrementalDateBased(s.agent, "sourcecode.pull_request")
 	if err != nil {
 		return err
 	}
-	defer et.Done()
+	defer sender.Done()
 
 	for _, repo := range repos {
 		//if i > 1 {
 		//	break
 		//}
-		err := s.exportPullRequestsRepo(et, repo, pullRequests)
+		err := s.exportPullRequestsRepo(sender, repo, pullRequests)
 		if err != nil {
 			return err
 		}
@@ -28,9 +30,8 @@ func (s *Integration) exportPullRequests(
 	return nil
 }
 
-func (s *Integration) exportPullRequestsRepo(et *exportType, repo api.Repo, pullRequests chan []api.PullRequest) error {
-
-	return et.Paginate(func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
+func (s *Integration) exportPullRequestsRepo(sender *objsender.IncrementalDateBased, repo api.Repo, pullRequests chan []api.PullRequest) error {
+	return api.PaginateNewerThan(sender.LastProcessed, func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
 		pi, res, err := api.PullRequestsPage(s.qc, repo.ID, query, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
@@ -38,10 +39,10 @@ func (s *Integration) exportPullRequestsRepo(et *exportType, repo api.Repo, pull
 
 		pullRequests <- res
 
-		batch := []rpcdef.ExportObj{}
+		var batch []objsender.Model
 		for _, obj := range res {
-			batch = append(batch, rpcdef.ExportObj{Data: obj.ToMap()})
+			batch = append(batch, obj)
 		}
-		return pi, et.Send(batch)
+		return pi, sender.Send(batch)
 	})
 }

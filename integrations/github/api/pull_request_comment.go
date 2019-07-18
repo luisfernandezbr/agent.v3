@@ -3,13 +3,14 @@ package api
 import (
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/go-datamodel/sourcecode"
 )
 
 func PullRequestCommentsPage(
 	qc QueryContext,
 	pullRequestRefID string,
-	queryParams string) (pi PageInfo, res []sourcecode.PullRequestComment, _ error) {
+	queryParams string) (pi PageInfo, res []*sourcecode.PullRequestComment, _ error) {
 
 	if pullRequestRefID == "" {
 		panic("mussing pr id")
@@ -86,16 +87,15 @@ func PullRequestCommentsPage(
 	nodes := nodesContainer.Nodes
 	//qc.Logger.Info("got comments", "n", len(nodes))
 	for _, data := range nodes {
-		item := sourcecode.PullRequestComment{}
+		item := &sourcecode.PullRequestComment{}
 		item.CustomerID = qc.CustomerID
 		item.RefType = "sourcecode.pull_request_comment"
 		item.RefID = data.ID
-		item.Updated = TimePullRequestCommentUpdated(data.UpdatedAt)
-
+		date.ConvertToModel(data.UpdatedAt, &item.Updated)
 		item.RepoID = qc.RepoID(data.Repository.ID)
 		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)
 		item.Body = data.BodyText
-		item.Created = TimePullRequestCommentCreated(data.CreatedAt)
+		date.ConvertToModel(data.CreatedAt, &item.Created)
 
 		item.UserRefID, err = qc.UserLoginToRefID(data.Author.Login)
 		if err != nil {
