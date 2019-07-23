@@ -17,24 +17,38 @@ type RequesterOpts struct {
 	APIURL   string
 	Username string
 	Password string
+	//SelfHosted bool
 }
 
 type Requester struct {
-	logger hclog.Logger
-	opts   RequesterOpts
+	logger     hclog.Logger
+	opts       RequesterOpts
+	httpClient *http.Client
 }
 
 func NewRequester(opts RequesterOpts) *Requester {
 	s := &Requester{}
 	s.opts = opts
 	s.logger = opts.Logger
+
+	{
+		c := &http.Client{}
+		//if s.opts.SelfHosted {
+		//	transport := httpdefaults.DefaultTransport()
+		//	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		//	c.Transport = transport
+		//}
+		s.httpClient = c
+	}
 	return s
 }
 
-const apiVersion = "3"
-
 func (s *Requester) Request(objPath string, params url.Values, res interface{}) error {
-	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", apiVersion, objPath)
+	version := "3"
+	//if s.opts.SelfHosted {
+	//	version = "2"
+	//}
+	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", version, objPath)
 
 	if len(params) != 0 {
 		u += "?" + params.Encode()
@@ -44,7 +58,8 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 		return err
 	}
 	req.SetBasicAuth(s.opts.Username, s.opts.Password)
-	resp, err := http.DefaultClient.Do(req)
+
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return err
 	}

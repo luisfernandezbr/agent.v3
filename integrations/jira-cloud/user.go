@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/pinpt/agent.next/integrations/jira/api"
+	"github.com/pinpt/agent.next/integrations/jira-cloud/api"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/go-datamodel/work"

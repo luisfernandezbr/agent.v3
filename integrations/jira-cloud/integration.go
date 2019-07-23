@@ -11,7 +11,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/objsender"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/jira/api"
+	"github.com/pinpt/agent.next/integrations/jira-cloud/api"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-datamodel/work"
 )
@@ -20,7 +20,7 @@ type Integration struct {
 	logger hclog.Logger
 	agent  rpcdef.Agent
 	config Config
-
+	//selfHosted bool
 	qc api.QueryContext
 }
 
@@ -72,6 +72,17 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		return res, err
 	}
 
+	/*
+		{
+			u, err := url.Parse(s.config.URL)
+			if err != nil {
+				return res, err
+			}
+			if !strings.HasSuffix(u.Hostname(), ".atlassian.net") {
+				s.selfHosted = true
+			}
+		}*/
+
 	s.qc.CustomerID = config.Pinpoint.CustomerID
 	s.qc.Logger = s.logger
 	s.qc.BaseURL = s.config.URL
@@ -82,6 +93,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		opts.APIURL = s.config.URL
 		opts.Username = s.config.Username
 		opts.Password = s.config.Password
+		//opts.SelfHosted = s.selfHosted
 		requester := api.NewRequester(opts)
 
 		s.qc.Request = requester.Request
@@ -116,8 +128,6 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 
 	return res, nil
 }
-
-const apiVersion = "3"
 
 type Project = api.Project
 
