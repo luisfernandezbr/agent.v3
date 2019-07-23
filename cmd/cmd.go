@@ -86,9 +86,11 @@ var cmdExport = &cobra.Command{
 		if err != nil {
 			exitWithErr(logger, err)
 		}
+		pinpointRoot, _ := cmd.Flags().GetString("pinpoint-root")
 		err = cmdexport.Run(cmdexport.Opts{
-			Logger: logger,
-			Config: config,
+			Logger:       logger,
+			Config:       config,
+			PinpointRoot: pinpointRoot,
 		})
 		if err != nil {
 			exitWithErr(logger, err)
@@ -98,6 +100,7 @@ var cmdExport = &cobra.Command{
 
 func init() {
 	setupDefaultLoggerFlags(cmdExport)
+	cmdExport.Flags().String("pinpoint-root", "", "Custom location of pinpoint work dir.")
 	cmdRoot.AddCommand(cmdExport)
 }
 
