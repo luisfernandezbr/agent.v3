@@ -4,10 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pinpt/agent.next/integrations/pkg/jiracommon"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/jira-hosted/api"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
+	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/go-datamodel/work"
 )
 
 func main() {
@@ -21,6 +25,8 @@ type Integration struct {
 	agent  rpcdef.Agent
 	config Config
 	qc     api.QueryContext
+
+	common *jiracommon.JiraCommon
 }
 
 func NewIntegration(logger hclog.Logger) *Integration {
@@ -72,7 +78,6 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	}
 
 	s.qc.CustomerID = config.Pinpoint.CustomerID
-	s.qc.BaseURL = s.config.URL
 	s.qc.Logger = s.logger
 
 	{
@@ -86,49 +91,82 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		s.qc.Request = requester.Request
 	}
 
-	_, err = s.projects()
+	s.common, err = jiracommon.New(jiracommon.Opts{
+		Logger:     s.logger,
+		CustomerID: config.Pinpoint.CustomerID,
+		Request:    s.qc.Request,
+		Agent:      s.agent,
+	})
 	if err != nil {
-		return res, nil
+		return res, err
+	}
+	defer s.common.ExportDone()
+
+	fields, err := s.fields()
+	if err != nil {
+		return res, err
+	}
+
+	fieldByID := map[string]*work.CustomField{}
+	for _, f := range fields {
+		fieldByID[f.RefID] = f
+	}
+
+	projects, err := s.projects()
+	if err != nil {
+		return res, err
+	}
+
+	err = s.common.IssuesAndChangelogs(projects, fieldByID)
+	if err != nil {
+		return res, err
 	}
 
 	return res, nil
 }
 
-type Project = api.Project
+type Project = jiracommon.Project
 
 func (s *Integration) projects() (all []Project, _ error) {
-	//sender := objsender.NewNotIncremental(s.agent, "work.project")
-	//defer sender.Done()
+	sender := objsender.NewNotIncremental(s.agent, "work.project")
+	defer sender.Done()
 
 	res, err := api.Projects(s.qc)
 	if err != nil {
 		return nil, err
 	}
 
-	s.logger.Info("projects returned", "projects", res)
+	for _, obj := range res {
+		p := Project{}
+		p.JiraID = obj.RefID
+		p.Key = obj.Identifier
+		all = append(all, p)
+	}
 
-	return nil, nil
-	/*
+	var res2 []objsender.Model
+	for _, obj := range res {
+		res2 = append(res2, obj)
+	}
+	err = sender.Send(res2)
 
-		return all, api.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
-			pi, res, err := api.ProjectsPage(s.qc, paginationParams)
-			if err != nil {
-				return false, 0, err
-			}
-			for _, obj := range res {
-				p := Project{}
-				p.JiraID = obj.RefID
-				p.Key = obj.Identifier
-				all = append(all, p)
-			}
-			var res2 []objsender.Model
-			for _, obj := range res {
-				res2 = append(res2, obj)
-			}
-			err = sender.Send(res2)
-			if err != nil {
-				return false, 0, err
-			}
-			return pi.HasMore, pi.MaxResults, nil
-		})*/
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
+
+func (s *Integration) fields() ([]*work.CustomField, error) {
+	sender := objsender.NewNotIncremental(s.agent, "work.custom_field")
+	defer sender.Done()
+
+	res, err := api.FieldsAll(s.qc)
+	if err != nil {
+		return nil, err
+	}
+	var res2 []objsender.Model
+	for _, item := range res {
+		res2 = append(res2, item)
+	}
+	return res, sender.Send(res2)
 }

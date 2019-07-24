@@ -1,16 +1,27 @@
-package api
+package jiracommonapi
 
 type User struct {
+	// AccountID not available in hosted jira.
+	AccountID    string  `json:"accountId"`
 	Self         string  `json:"self"`
 	Name         string  `json:"name"`
 	Key          string  `json:"key"`
-	AccountID    string  `json:"accountId"`
 	EmailAddress string  `json:"emailAddress"`
 	Avatars      Avatars `json:"avatarUrls"`
 	DisplayName  string  `json:"displayName"`
 	Active       bool    `json:"active"`
 	Timezone     string  `json:"timeZone"`
-	AccountType  string  `json:"accountType"`
+}
+
+func (s User) IsZero() bool {
+	return s.RefID() == ""
+}
+
+func (s User) RefID() string {
+	if s.AccountID != "" {
+		return s.AccountID
+	}
+	return s.Key
 }
 
 // Avatars is a type that describes a set of avatar image properties

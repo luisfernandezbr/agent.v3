@@ -28,7 +28,6 @@ func ProjectsPage(
 			ID          string `json:"id"`
 			Key         string `json:"key"`
 			Name        string `json:"name"`
-			Active      bool   `json:"active"`
 			Description string `json:"description"`
 			Category    struct {
 				ID string `json:"id"`
@@ -55,7 +54,7 @@ func ProjectsPage(
 
 		item.Name = data.Name
 		item.Identifier = data.Key
-		item.Active = data.Active
+		item.Active = true
 		item.Description = pstrings.Pointer(data.Description)
 		if data.Category.ID != "" {
 			item.Category = pstrings.Pointer(data.Category.ID)

@@ -4,15 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strconv"
-	"time"
 
-	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/objsender"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/jira-cloud/api"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
+	"github.com/pinpt/agent.next/integrations/pkg/jiracommon"
+	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-datamodel/work"
 )
@@ -27,8 +26,9 @@ type Integration struct {
 	logger hclog.Logger
 	agent  rpcdef.Agent
 	config Config
-	//selfHosted bool
-	qc api.QueryContext
+	qc     api.QueryContext
+
+	common *jiracommon.JiraCommon
 }
 
 func NewIntegration(logger hclog.Logger) *Integration {
@@ -79,20 +79,8 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		return res, err
 	}
 
-	/*
-		{
-			u, err := url.Parse(s.config.URL)
-			if err != nil {
-				return res, err
-			}
-			if !strings.HasSuffix(u.Hostname(), ".atlassian.net") {
-				s.selfHosted = true
-			}
-		}*/
-
 	s.qc.CustomerID = config.Pinpoint.CustomerID
 	s.qc.Logger = s.logger
-	s.qc.BaseURL = s.config.URL
 
 	{
 		opts := api.RequesterOpts{}
@@ -100,27 +88,30 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		opts.APIURL = s.config.URL
 		opts.Username = s.config.Username
 		opts.Password = s.config.Password
-		//opts.SelfHosted = s.selfHosted
 		requester := api.NewRequester(opts)
 
 		s.qc.Request = requester.Request
 	}
 
-	users, err := NewUsers(s)
+	s.common, err = jiracommon.New(jiracommon.Opts{
+		Logger:     s.logger,
+		CustomerID: config.Pinpoint.CustomerID,
+		Request:    s.qc.Request,
+		Agent:      s.agent,
+	})
 	if err != nil {
 		return res, err
 	}
-	defer users.Done()
-	s.qc.ExportUser = users.ExportUser
+	defer s.common.ExportDone()
 
 	fields, err := s.fields()
 	if err != nil {
 		return res, err
 	}
 
-	fieldByKey := map[string]*work.CustomField{}
+	fieldByID := map[string]*work.CustomField{}
 	for _, f := range fields {
-		fieldByKey[f.Key] = f
+		fieldByID[f.RefID] = f
 	}
 
 	projects, err := s.projects()
@@ -128,7 +119,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		return res, err
 	}
 
-	err = s.issuesAndChangelogs(projects, fieldByKey)
+	err = s.common.IssuesAndChangelogs(projects, fieldByID)
 	if err != nil {
 		return res, err
 	}
@@ -136,13 +127,13 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	return res, nil
 }
 
-type Project = api.Project
+type Project = jiracommon.Project
 
 func (s *Integration) projects() (all []Project, _ error) {
 	sender := objsender.NewNotIncremental(s.agent, "work.project")
 	defer sender.Done()
 
-	return all, api.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
+	return all, jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
 		pi, res, err := api.ProjectsPage(s.qc, paginationParams)
 		if err != nil {
 			return false, 0, err
@@ -163,130 +154,6 @@ func (s *Integration) projects() (all []Project, _ error) {
 		}
 		return pi.HasMore, pi.MaxResults, nil
 	})
-}
-
-func (s *Integration) issuesAndChangelogs(projects []Project, fieldByKey map[string]*work.CustomField) error {
-	senderIssues, err := objsender.NewIncrementalDateBased(s.agent, "work.issue")
-	if err != nil {
-		return err
-	}
-	defer senderIssues.Done()
-
-	senderChangelogs := objsender.NewNotIncremental(s.agent, "work.changelog")
-	defer senderChangelogs.Done()
-
-	startedSprintExport := time.Now()
-	sprints := NewSprints()
-
-	for _, p := range projects {
-		err := s.issuesAndChangelogsForProject(p, fieldByKey, senderIssues, senderChangelogs, sprints)
-		if err != nil {
-			return err
-		}
-	}
-
-	senderSprints := objsender.NewNotIncremental(s.agent, "work.sprints")
-	defer senderSprints.Done()
-
-	var sprintModels []objsender.Model
-	for _, data := range sprints.data {
-		item := &work.Sprint{}
-		item.CustomerID = s.qc.CustomerID
-		item.RefType = "jira"
-		item.RefID = strconv.Itoa(data.ID)
-
-		// TODO: datamodel is missing goal?
-		//item.Goal = data.Goal
-
-		item.Name = data.Name
-
-		startDate, err := api.ParseTime(data.StartDate)
-		if err != nil {
-			return fmt.Errorf("could not parse startdate for sprint: %v err: %v", data.Name, err)
-		}
-		date.ConvertToModel(startDate, &item.Started)
-
-		endDate, err := api.ParseTime(data.EndDate)
-		if err != nil {
-			return fmt.Errorf("could not parse enddata for sprint: %v err: %v", data.Name, err)
-		}
-		date.ConvertToModel(endDate, &item.Ended)
-
-		completeDate, err := api.ParseTime(data.CompleteDate)
-		if err != nil {
-			return fmt.Errorf("could not parse completed for sprint: %v err: %v", data.Name, err)
-		}
-		date.ConvertToModel(completeDate, &item.Completed)
-
-		switch data.State {
-		case "CLOSED":
-			item.Status = work.SprintStatusClosed
-		case "ACTIVE":
-			item.Status = work.SprintStatusActive
-		case "FUTURE":
-			item.Status = work.SprintStatusFuture
-		default:
-			return fmt.Errorf("invalid status for sprint: %v", data.State)
-		}
-
-		date.ConvertToModel(startedSprintExport, &item.Fetched)
-
-		sprintModels = append(sprintModels, item)
-	}
-	return senderSprints.Send(sprintModels)
-
-	return nil
-}
-
-func (s *Integration) issuesAndChangelogsForProject(project Project, fieldByKey map[string]*work.CustomField, senderIssues *objsender.IncrementalDateBased, senderChangelogs *objsender.NotIncremental, sprints *Sprints) error {
-
-	err := api.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
-		pi, resIssues, resChangelogs, err := api.IssuesAndChangelogsPage(s.qc, project, fieldByKey, senderIssues.LastProcessed, paginationParams)
-		if err != nil {
-			return false, 0, err
-		}
-
-		for _, issue := range resIssues {
-			for _, f := range issue.CustomFields {
-				if f.Name == "Sprint" {
-					if f.Value == "" {
-						continue
-					}
-					err := sprints.processIssueSprint(issue.RefID, f.Value)
-					if err != nil {
-						return false, 0, err
-					}
-
-					break
-				}
-			}
-		}
-
-		var resIssues2 []objsender.Model
-		for _, obj := range resIssues {
-			resIssues2 = append(resIssues2, obj)
-		}
-		err = senderIssues.Send(resIssues2)
-		if err != nil {
-			return false, 0, err
-		}
-
-		var resChangelogs2 []objsender.Model
-		for _, obj := range resChangelogs {
-			resChangelogs2 = append(resChangelogs2, obj)
-		}
-		err = senderChangelogs.Send(resChangelogs2)
-		if err != nil {
-			return false, 0, err
-		}
-
-		return pi.HasMore, pi.MaxResults, nil
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *Integration) fields() ([]*work.CustomField, error) {

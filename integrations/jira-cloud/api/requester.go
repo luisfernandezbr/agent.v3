@@ -21,33 +21,19 @@ type RequesterOpts struct {
 }
 
 type Requester struct {
-	logger     hclog.Logger
-	opts       RequesterOpts
-	httpClient *http.Client
+	logger hclog.Logger
+	opts   RequesterOpts
 }
 
 func NewRequester(opts RequesterOpts) *Requester {
 	s := &Requester{}
 	s.opts = opts
 	s.logger = opts.Logger
-
-	{
-		c := &http.Client{}
-		//if s.opts.SelfHosted {
-		//	transport := httpdefaults.DefaultTransport()
-		//	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		//	c.Transport = transport
-		//}
-		s.httpClient = c
-	}
 	return s
 }
 
 func (s *Requester) Request(objPath string, params url.Values, res interface{}) error {
 	version := "3"
-	//if s.opts.SelfHosted {
-	//	version = "2"
-	//}
 	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", version, objPath)
 
 	if len(params) != 0 {
@@ -59,7 +45,7 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 	}
 	req.SetBasicAuth(s.opts.Username, s.opts.Password)
 
-	resp, err := s.httpClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}

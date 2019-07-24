@@ -1,34 +1,37 @@
-package main
+package jiracommon
 
 import (
-	"github.com/pinpt/agent.next/integrations/jira-cloud/api"
+	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent.next/pkg/objsender"
-	"github.com/pinpt/go-common/hash"
+	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-datamodel/work"
 )
 
 type Users struct {
-	integration *Integration
-	sender      *objsender.NotIncremental
-	exported    map[string]bool
+	sender     *objsender.NotIncremental
+	exported   map[string]bool
+	customerID string
 }
 
-func NewUsers(integration *Integration) (*Users, error) {
+func NewUsers(customerID string, agent rpcdef.Agent) (*Users, error) {
 	s := &Users{}
-	s.integration = integration
-	s.sender = objsender.NewNotIncremental(integration.agent, "work.user")
+	s.customerID = customerID
+	s.sender = objsender.NewNotIncremental(agent, "work.user")
 	s.exported = map[string]bool{}
 	return s, nil
 }
 
-func (s *Users) ExportUser(user api.User) error {
-	customerID := s.integration.qc.CustomerID
-	pk := ""
-	if user.AccountID != "" {
-		pk = user.AccountID
-	} else {
-		pk = hash.Values("users", customerID, user.Key, "jira")
-	}
+func (s *Users) ExportUser(user jiracommonapi.User) error {
+	customerID := s.customerID
+	pk := user.RefID()
+	/*
+		TODO: we were hashing user key before, not sure why, needs checking
+		if user.AccountID != "" {
+			pk = user.AccountID
+		} else {
+			pk = hash.Values("users", customerID, user.Key, "jira")
+		}
+	*/
 	if s.exported[pk] {
 		return nil
 	}

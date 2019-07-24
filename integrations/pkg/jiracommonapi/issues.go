@@ -1,4 +1,4 @@
-package api
+package jiracommonapi
 
 import (
 	"encoding/json"
@@ -13,6 +13,7 @@ import (
 	"github.com/pinpt/go-datamodel/work"
 )
 
+// IssuesAndChangelogsPage returns issues and related changelogs. Calls qc.ExportUser for each user. Current difference from jira-cloud version is that user.Key is used instead of user.AccountID everywhere.
 func IssuesAndChangelogsPage(
 	qc QueryContext,
 	project Project,
@@ -49,10 +50,8 @@ func IssuesAndChangelogsPage(
 			Fields    map[string]interface{} `json:"fields"`
 			Changelog struct {
 				Histories []struct {
-					ID     string `json:"id"`
-					Author struct {
-						AccountID string `json:"accountId"`
-					} `json:"author"`
+					ID      string `json:"id"`
+					Author  User   `json:"author"`
 					Created string `json:"created"`
 					Items   []struct {
 						Field      string `json:"field"`
@@ -159,25 +158,24 @@ func IssuesAndChangelogsPage(
 		// TODO: check if name or id should be here
 		item.Resolution = fields.Resolution.Name
 
-		// TODO: for account references do we want ids or emails?
-		if fields.Creator.AccountID != "" {
-			item.CreatorRefID = fields.Creator.AccountID
+		if !fields.Creator.IsZero() {
+			item.CreatorRefID = fields.Creator.RefID()
 			err := qc.ExportUser(fields.Creator)
 			if err != nil {
 				rerr = err
 				return
 			}
 		}
-		if fields.Reporter.AccountID != "" {
-			item.ReporterRefID = fields.Reporter.AccountID
+		if !fields.Reporter.IsZero() {
+			item.ReporterRefID = fields.Reporter.RefID()
 			err := qc.ExportUser(fields.Reporter)
 			if err != nil {
 				rerr = err
 				return
 			}
 		}
-		if fields.Assignee.AccountID != "" {
-			item.AssigneeRefID = fields.Assignee.AccountID
+		if !fields.Assignee.IsZero() {
+			item.AssigneeRefID = fields.Assignee.RefID()
 			err := qc.ExportUser(fields.Assignee)
 			if err != nil {
 				rerr = err
@@ -244,7 +242,7 @@ func IssuesAndChangelogsPage(
 					return
 				}
 				date.ConvertToModel(createdAt, &item.Created)
-				item.UserID = qc.UserID(cl.Author.AccountID)
+				item.UserID = qc.UserID(cl.Author.RefID())
 
 				item.Field = data.Field
 				item.FieldType = data.FieldType
@@ -271,15 +269,4 @@ func ParseTime(ts string) (time.Time, error) {
 		return time.Time{}, nil
 	}
 	return time.Parse(jiraTimeFormat, ts)
-}
-
-func ParseTimeUnix(ts string) (int64, error) {
-	if ts == "" {
-		return 0, nil
-	}
-	res, err := time.Parse(jiraTimeFormat, ts)
-	if err != nil {
-		return 0, err
-	}
-	return res.Unix(), nil
 }
