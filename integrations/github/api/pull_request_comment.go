@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func PullRequestCommentsPage(
@@ -91,11 +91,11 @@ func PullRequestCommentsPage(
 		item.CustomerID = qc.CustomerID
 		item.RefType = "sourcecode.pull_request_comment"
 		item.RefID = data.ID
-		date.ConvertToModel(data.UpdatedAt, &item.Updated)
+		date.ConvertToModel(data.UpdatedAt, &item.UpdatedDate)
 		item.RepoID = qc.RepoID(data.Repository.ID)
 		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)
 		item.Body = data.BodyText
-		date.ConvertToModel(data.CreatedAt, &item.Created)
+		date.ConvertToModel(data.CreatedAt, &item.CreatedDate)
 
 		item.UserRefID, err = qc.UserLoginToRefID(data.Author.Login)
 		if err != nil {

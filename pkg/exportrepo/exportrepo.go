@@ -14,8 +14,9 @@ import (
 	"github.com/pinpt/go-common/fileutil"
 	"github.com/pinpt/go-common/hash"
 
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 
+	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
@@ -338,31 +339,34 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				lic = blame.License.Name
 			}
 
-			commitFiles = append(commitFiles, sourcecode.CommitFiles{
-				CommitID:          hash.Values("Commit", customerID, refType, commit.SHA),
-				RepoID:            hash.Values("Repo", customerID, refType, repoID),
-				Status:            string(cf.Status),
-				Ordinal:           ordinal,
-				Created:           timeCommitCreated(blame.Commit.Date),
-				Filename:          cf.Filename,
-				Language:          blame.Language,
-				Renamed:           cf.Renamed,
-				RenamedFrom:       cf.RenamedFrom,
-				RenamedTo:         cf.RenamedTo,
-				Additions:         int64(cf.Additions),
-				Deletions:         int64(cf.Deletions),
-				Binary:            cf.Binary,
-				Excluded:          blame.Skipped != "",
-				ExcludedReason:    blame.Skipped,
-				License:           lic,
-				LicenseConfidence: float64(licenseConfidence),
-				Size:              blame.Size,
-				Loc:               blame.Loc,
-				Sloc:              blame.Sloc,
-				Comments:          blame.Comments,
-				Blanks:            blame.Blanks,
-				Complexity:        blame.Complexity,
-			})
+			{
+				cf := sourcecode.CommitFiles{
+					CommitID:          hash.Values("Commit", customerID, refType, commit.SHA),
+					RepoID:            hash.Values("Repo", customerID, refType, repoID),
+					Status:            string(cf.Status),
+					Ordinal:           ordinal,
+					Filename:          cf.Filename,
+					Language:          blame.Language,
+					Renamed:           cf.Renamed,
+					RenamedFrom:       cf.RenamedFrom,
+					RenamedTo:         cf.RenamedTo,
+					Additions:         int64(cf.Additions),
+					Deletions:         int64(cf.Deletions),
+					Binary:            cf.Binary,
+					Excluded:          blame.Skipped != "",
+					ExcludedReason:    blame.Skipped,
+					License:           lic,
+					LicenseConfidence: float64(licenseConfidence),
+					Size:              blame.Size,
+					Loc:               blame.Loc,
+					Sloc:              blame.Sloc,
+					Comments:          blame.Comments,
+					Blanks:            blame.Blanks,
+					Complexity:        blame.Complexity,
+				}
+				date.ConvertToModel(blame.Commit.Date, &cf.CreatedDate)
+				commitFiles = append(commitFiles, cf)
+			}
 
 			commitComplexityCount += blame.Complexity
 			commitSize += blame.Size
@@ -374,7 +378,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				continue
 			}
 
-			err := writeBlame(sourcecode.Blame{
+			bl := sourcecode.Blame{
 				Status:         statusFromRipsrc(blame.Status),
 				License:        &lic,
 				Excluded:       blame.Skipped != "",
@@ -392,11 +396,13 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				Filename:       blame.Filename,
 				Language:       blame.Language,
 				Sha:            blame.Commit.SHA,
-				Date:           timeBlameDate(blame.Commit.Date),
 				RepoID:         hash.Values("Repo", customerID, refType, repoID),
 				Complexity:     blame.Complexity,
 				Lines:          lines,
-			})
+			}
+			date.ConvertToModel(blame.Commit.Date, &bl.ChangeDate)
+
+			err := writeBlame(bl)
 			if err != nil {
 				return "", err
 			}
@@ -404,7 +410,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 		}
 
 		if lastBlame != nil {
-			err := writeCommit(sourcecode.Commit{
+			c := sourcecode.Commit{
 				RefID:      commit.SHA,
 				RefType:    refType,
 				CustomerID: customerID,
@@ -413,7 +419,6 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				Sha:        commit.SHA,
 				Message:    lastBlame.Commit.Message,
 				//URL:            buildURL(refType, getHtmlURLPrefix(urlPrefix), repoName, commit.SHA), //TODO: i don't have access to reponame
-				Created: timeCommitCreated(lastBlame.Commit.Date),
 				//Branch:         branch, // TODO: this field is not correct at all
 				Additions:      commitAdditions,
 				Deletions:      commitDeletions,
@@ -430,7 +435,10 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				GpgSigned:      lastBlame.Commit.Signed,
 				Excluded:       excludedFilesCount == commitFilesCount,
 				Files:          commitFiles,
-			})
+			}
+			date.ConvertToModel(lastBlame.Commit.Date, &c.CreatedDate)
+
+			err := writeCommit(c)
 			if err != nil {
 				return "", err
 			}

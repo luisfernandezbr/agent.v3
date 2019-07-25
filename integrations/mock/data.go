@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/rpcdef"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func (s *Integration) exportAll() {

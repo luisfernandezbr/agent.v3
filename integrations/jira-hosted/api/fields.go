@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/pinpt/go-datamodel/work"
+	"github.com/pinpt/integration-sdk/work"
 )
 
 func FieldsAll(qc QueryContext) (res []*work.CustomField, rerr error) {

@@ -9,7 +9,7 @@ import (
 	pstrings "github.com/pinpt/go-common/strings"
 
 	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 // map[login]refID

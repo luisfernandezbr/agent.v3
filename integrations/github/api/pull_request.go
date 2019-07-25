@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 type PullRequest struct {
@@ -135,16 +135,16 @@ func PullRequestsPage(
 		pr.Title = data.Title
 		pr.Description = data.BodyText
 		pr.URL = data.URL
-		date.ConvertToModel(data.CreatedAt, &pr.Created)
-		date.ConvertToModel(data.MergedAt, &pr.Merged)
-		date.ConvertToModel(data.ClosedAt, &pr.Closed)
-		date.ConvertToModel(data.UpdatedAt, &pr.Updated)
+		date.ConvertToModel(data.CreatedAt, &pr.CreatedDate)
+		date.ConvertToModel(data.MergedAt, &pr.MergedDate)
+		date.ConvertToModel(data.ClosedAt, &pr.ClosedDate)
+		date.ConvertToModel(data.UpdatedAt, &pr.UpdatedDate)
 		validStatus := []string{"OPEN", "CLOSED", "MERGED"}
 		if !strInArr(data.State, validStatus) {
 			panic("unknown state: " + data.State)
 		}
 		pr.Status = data.State
-		pr.UserRefID, err = qc.UserLoginToRefID(data.Author.Login)
+		pr.CreatedByRefID, err = qc.UserLoginToRefID(data.Author.Login)
 		if err != nil {
 			panic(err)
 		}

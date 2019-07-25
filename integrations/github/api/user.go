@@ -5,7 +5,7 @@ import (
 
 	pjson "github.com/pinpt/go-common/json"
 	pstrings "github.com/pinpt/go-common/strings"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 type userGithub struct {

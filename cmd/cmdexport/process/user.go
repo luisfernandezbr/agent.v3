@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/pinpt/go-common/hash"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 type CommitUsers struct {

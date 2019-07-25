@@ -35,7 +35,7 @@
   version = "1"
 
 [[constraint]]
-  name = "github.com/pinpt/go-datamodel"
+  name = "github.com/pinpt/integration-sdk"
   version = "0"
 
 [[constraint]]

@@ -13,7 +13,7 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommon"
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent.next/rpcdef"
-	"github.com/pinpt/go-datamodel/work"
+	"github.com/pinpt/integration-sdk/work"
 )
 
 func main() {

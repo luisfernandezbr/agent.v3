@@ -10,7 +10,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 
-	"github.com/pinpt/go-datamodel/work"
+	"github.com/pinpt/integration-sdk/work"
 )
 
 // IssuesAndChangelogsPage returns issues and related changelogs. Calls qc.ExportUser for each user. Current difference from jira-cloud version is that user.Key is used instead of user.AccountID everywhere.
@@ -141,13 +141,13 @@ func IssuesAndChangelogsPage(
 			rerr = err
 			return
 		}
-		date.ConvertToModel(created, &item.Created)
+		date.ConvertToModel(created, &item.CreatedDate)
 		updated, err := ParseTime(fields.Updated)
 		if err != nil {
 			rerr = err
 			return
 		}
-		date.ConvertToModel(updated, &item.Updated)
+		date.ConvertToModel(updated, &item.UpdatedDate)
 
 		// TODO: check if name or id should be here
 		item.Priority = fields.Priority.Name
@@ -241,7 +241,7 @@ func IssuesAndChangelogsPage(
 					rerr = fmt.Errorf("could not parse created time of changelog for issue: %v err: %v", issueRefID, err)
 					return
 				}
-				date.ConvertToModel(createdAt, &item.Created)
+				date.ConvertToModel(createdAt, &item.CreatedDate)
 				item.UserID = qc.UserID(cl.Author.RefID())
 
 				item.Field = data.Field

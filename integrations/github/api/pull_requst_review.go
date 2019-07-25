@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func PullRequestReviewsPage(
@@ -98,7 +98,7 @@ func PullRequestReviewsPage(
 		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)
 		item.State = data.State
 
-		date.ConvertToModel(data.CreatedAt, &item.Created)
+		date.ConvertToModel(data.CreatedAt, &item.CreatedDate)
 
 		item.UserRefID, err = qc.UserLoginToRefID(data.Author.Login)
 		if err != nil {

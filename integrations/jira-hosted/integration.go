@@ -11,7 +11,7 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/rpcdef"
-	"github.com/pinpt/go-datamodel/work"
+	"github.com/pinpt/integration-sdk/work"
 )
 
 func main() {

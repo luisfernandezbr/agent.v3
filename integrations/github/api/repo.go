@@ -4,7 +4,7 @@ import (
 	"time"
 
 	pjson "github.com/pinpt/go-common/json"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 // Repo contains the data needed for exporting other resources depending on it

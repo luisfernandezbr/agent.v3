@@ -9,7 +9,7 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/objsender"
-	"github.com/pinpt/go-datamodel/work"
+	"github.com/pinpt/integration-sdk/work"
 )
 
 type Project = jiracommonapi.Project
@@ -51,19 +51,19 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 		if err != nil {
 			return fmt.Errorf("could not parse startdate for sprint: %v err: %v", data.Name, err)
 		}
-		date.ConvertToModel(startDate, &item.Started)
+		date.ConvertToModel(startDate, &item.StartedDate)
 
 		endDate, err := jiracommonapi.ParseTime(data.EndDate)
 		if err != nil {
 			return fmt.Errorf("could not parse enddata for sprint: %v err: %v", data.Name, err)
 		}
-		date.ConvertToModel(endDate, &item.Ended)
+		date.ConvertToModel(endDate, &item.EndedDate)
 
 		completeDate, err := jiracommonapi.ParseTime(data.CompleteDate)
 		if err != nil {
 			return fmt.Errorf("could not parse completed for sprint: %v err: %v", data.Name, err)
 		}
-		date.ConvertToModel(completeDate, &item.Completed)
+		date.ConvertToModel(completeDate, &item.CompletedDate)
 
 		switch data.State {
 		case "CLOSED":
@@ -76,7 +76,7 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 			return fmt.Errorf("invalid status for sprint: %v", data.State)
 		}
 
-		date.ConvertToModel(startedSprintExport, &item.Fetched)
+		date.ConvertToModel(startedSprintExport, &item.FetchedDate)
 
 		sprintModels = append(sprintModels, item)
 	}
