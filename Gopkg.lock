@@ -383,12 +383,15 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:5278ed25b85bebdeefafece15dc300e35fdb7aff9ca1b8901acfe9750c7dae9e"
+  digest = "1:a896222ceb2fa6b421239646502a2dcf47f3334c013c6c06c4fb97710a70f912"
   name = "github.com/pinpt/go-common"
   packages = [
+    "api",
     "auth",
     "datamodel",
     "datetime",
+    "event",
+    "event/action",
     "eventing",
     "fileutil",
     "hash",
@@ -403,19 +406,32 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "6bb23e2506a5e10733e62ca627cfdcc7bc7b62f8"
-  version = "7.0.35"
+  revision = "2e80a71a166aa5796b41d57e6271c2fac002371a"
+  version = "7.0.41"
 
 [[projects]]
-  digest = "1:693762c01a5818878769e4336f50bc1b29dcf12ac7d296ffba468731fb1abbaa"
+  digest = "1:cf1d50f0d59ea783d797310528fcfea1e7d6dc8dc225d575c24aa56737b55636"
+  name = "github.com/pinpt/httpclient"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d5b1a3dad0cc4d092866eb91bb511a38f01946b3"
+  version = "1.2.1"
+
+[[projects]]
+  digest = "1:36ab8588c7759595bd7f71236ac1220baa0101d0badac586644482a8b57214c7"
   name = "github.com/pinpt/integration-sdk"
   packages = [
+    ".",
+    "agent",
+    "cicd",
+    "codequality",
+    "customer",
     "sourcecode",
     "work",
   ]
   pruneopts = "UT"
-  revision = "f6bf6b9e716557835d18f1790128b7bd1ddcba5f"
-  version = "0.0.323"
+  revision = "d5ca683c18612cb1885e01024fa5d3ce6507ccfc"
+  version = "0.0.353"
 
 [[projects]]
   digest = "1:34a566614ac60b2d765e9149ac5b554b56184c2ce62202817c13fd7f6ef2a44f"
@@ -612,7 +628,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:06b21ce3a9cce3639d21341952f7b26718f8a94befa27d22bcaf9ca39732d8e8"
+  digest = "1:f13137f04efa55b5c7b4d5160ba16f7cb8116df265791022909d137d7e4d5bf4"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -624,7 +640,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "fae7ac547cb717d141c433a2a173315e216b64c4"
+  revision = "1393eb0183657fb29200106b17a5042ec6e48dbe"
 
 [[projects]]
   digest = "1:3952dba92e6a837cf34e6a073160d31029412bf863e37274cb779f319ddbe0b4"
@@ -708,7 +724,7 @@
   revision = "c506a9f9061087022822e8da603a52fc387115a8"
 
 [[projects]]
-  digest = "1:04c178286a005bab0c6b2770203d8ce846f79aae989e38c8290f43f3d5c45c25"
+  digest = "1:630e92180cd33deada273ff1fe293c9451884eb3c25b73f835c28f5f3444a76c"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -748,8 +764,8 @@
     "tap",
   ]
   pruneopts = "UT"
-  revision = "1d89a3c832915b2314551c1d2a506874d62e53f7"
-  version = "v1.22.0"
+  revision = "045159ad57f3781d409358e3ade910a018c16b30"
+  version = "v1.22.1"
 
 [[projects]]
   digest = "1:85b60f4403e2aae0eee2ac2ba50e4124dea766b582c6ec0d94fb1335d9c0d16e"
@@ -793,7 +809,7 @@
   version = "v4.5.1"
 
 [[projects]]
-  digest = "1:b6b0bf6de7681ac1c3b5d7ea764d982328e875762cd16f22ebcb27b837cbfe0e"
+  digest = "1:a5a896b43e77f9392d29a18a4a49acf7e125922fd81acbdbbabcb1e25dc5d9ee"
   name = "gopkg.in/src-d/go-billy.v4"
   packages = [
     ".",
@@ -805,8 +821,8 @@
     "util",
   ]
   pruneopts = "UT"
-  revision = "711f3aa5b30ce9bbc7d708792ca98b913cbbd4a5"
-  version = "v4.3.1"
+  revision = "780403cfc1bc95ff4d07e7b26db40a6186c5326e"
+  version = "v4.3.2"
 
 [[projects]]
   digest = "1:336779a462e14e1802fef62517172dee311db2224f62391167f969cea6637a7d"
@@ -875,12 +891,12 @@
   version = "v2"
 
 [[projects]]
-  digest = "1:c849f9d60bc0aecf490f7ddb7b478a07cc93a48303aa0ed2c024231c80bfddfb"
+  digest = "1:cef6478c93523276d29fa1b4bb6b7593aba4be9681a73302b22f8bb0f9c93f97"
   name = "gopkg.in/src-d/go-siva.v1"
   packages = ["."]
   pruneopts = "UT"
-  revision = "4cc10f1d897bb8a6ce358b33311621c39ae81338"
-  version = "v1.5.0"
+  revision = "9ee6c8caf21f534cac8b65e5ca6b2a38323502bc"
+  version = "v1.6.0"
 
 [[projects]]
   digest = "1:98e121dbd49eb03c58bd8ef3b76322b2fdc3676cf11fa0084bb17ff01b2aa704"
@@ -920,6 +936,7 @@
     "github.com/mitchellh/go-ps",
     "github.com/pinpt/go-common/auth",
     "github.com/pinpt/go-common/datetime",
+    "github.com/pinpt/go-common/event/action",
     "github.com/pinpt/go-common/fileutil",
     "github.com/pinpt/go-common/hash",
     "github.com/pinpt/go-common/httpdefaults",
@@ -927,6 +944,8 @@
     "github.com/pinpt/go-common/json",
     "github.com/pinpt/go-common/log",
     "github.com/pinpt/go-common/strings",
+    "github.com/pinpt/integration-sdk",
+    "github.com/pinpt/integration-sdk/agent",
     "github.com/pinpt/integration-sdk/sourcecode",
     "github.com/pinpt/integration-sdk/work",
     "github.com/pinpt/ripsrc/ripsrc",
