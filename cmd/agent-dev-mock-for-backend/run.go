@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	pstrings "github.com/pinpt/go-common/strings"
+
+	"github.com/pinpt/go-common/hash"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"
@@ -14,7 +18,7 @@ func handleIntegrationEvents(ctx context.Context, log hclog.Logger, apiKey strin
 	errors := make(chan error, 1)
 
 	actionConfig := action.Config{
-		APIKey:  apiKey + "xxx",
+		APIKey:  apiKey,
 		GroupID: fmt.Sprintf("agent-%v", agentOpts.DeviceID),
 		Channel: agentOpts.Channel,
 		Factory: factory,
@@ -22,19 +26,42 @@ func handleIntegrationEvents(ctx context.Context, log hclog.Logger, apiKey strin
 		Errors:  errors,
 		Headers: map[string]string{
 			"customer_id": customerID,
-			"uuid":        agentOpts.DeviceID,
+			//"uuid":        agentOpts.DeviceID, //NOTE: eventmachine does not send uuid
 		},
 	}
 
-	done := make(chan bool)
-
 	cb := func(instance datamodel.Model) (datamodel.Model, error) {
-		defer func() { done <- true }()
-		resp := instance.(*agent.IntegrationRequest)
+		req := instance.(*agent.IntegrationRequest)
 
-		log.Info("received integration request", "data", resp.ToMap())
+		log.Info("received integration request", "data", req.ToMap())
 
-		return nil, nil
+		// validate the integration data here
+
+		integration := req.Integration
+
+		log.Info("authorization", "data", integration.Authorization.ToMap())
+
+		log.Info("sending back integration response")
+
+		// success for jira
+		if integration.Name == "jira" {
+			resp := &agent.IntegrationResponse{}
+			resp.RefType = integration.Name
+			resp.RefID = hash.Values(agentOpts.DeviceID, integration.Name)
+			resp.Success = true
+			resp.Type = agent.IntegrationResponseTypeIntegration
+			resp.Authorization = "encrypted blob data"
+			return resp, nil
+		}
+
+		// error for everything else
+		resp := &agent.IntegrationResponse{}
+		resp.RefType = integration.Name
+		resp.RefID = hash.Values(agentOpts.DeviceID, integration.Name)
+		resp.Type = agent.IntegrationResponseTypeIntegration
+		resp.Error = pstrings.Pointer("Only jira returns successful IntegrationResponse for this mock")
+
+		return resp, nil
 	}
 
 	log.Info("listening for integration request")
