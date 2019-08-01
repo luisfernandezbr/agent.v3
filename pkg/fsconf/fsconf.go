@@ -19,7 +19,7 @@ type Locs struct {
 	Logs              string
 
 	// Special files
-
+	Config2           string // new config that is populated from enroll, not for manual editing
 	LastProcessedFile string
 }
 
@@ -50,6 +50,8 @@ func New(pinpointRoot string) Locs {
 	s.Uploads = j(s.State, "uploads")
 	s.RipsrcCheckpoints = j(s.State, "ripsrc_checkpoints")
 	s.LastProcessedFile = j(s.State, "last_processed.json")
+
+	s.Config2 = j(s.Root, "config.json")
 
 	return s
 }

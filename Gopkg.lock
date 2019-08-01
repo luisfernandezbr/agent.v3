@@ -53,6 +53,14 @@
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:0eedda1a2d639b2dfec429234bd1ea7e5ff16372037ad8615dc502fa5aa7eef4"
+  name = "github.com/denisbrodbeck/machineid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "2777226d0340d8da18b49993ce2b4aeb9c1c6929"
+  version = "v0.8.0"
+
+[[projects]]
   branch = "master"
   digest = "1:d7ed547b6b8cf0d3d1d756a3a02482fd7ddb0986b7f3ff4ddcfcd8ab7b1555fe"
   name = "github.com/dgryski/go-minhash"
@@ -927,6 +935,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/99designs/keyring",
+    "github.com/denisbrodbeck/machineid",
     "github.com/fatih/color",
     "github.com/golang/protobuf/proto",
     "github.com/hashicorp/go-hclog",
@@ -935,7 +944,9 @@
     "github.com/mitchellh/go-homedir",
     "github.com/mitchellh/go-ps",
     "github.com/pinpt/go-common/auth",
+    "github.com/pinpt/go-common/datamodel",
     "github.com/pinpt/go-common/datetime",
+    "github.com/pinpt/go-common/event",
     "github.com/pinpt/go-common/event/action",
     "github.com/pinpt/go-common/fileutil",
     "github.com/pinpt/go-common/hash",

@@ -1,13 +1,21 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"runtime"
 	"strings"
 
+	"github.com/pinpt/agent.next/cmd/cmdservicerun2"
+
+	"github.com/pinpt/agent.next/pkg/fsconf"
+
+	"github.com/pinpt/agent.next/pkg/deviceinfo"
+
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/go-ps"
+	"github.com/pinpt/agent.next/cmd/cmdenroll"
 	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
 	"github.com/pinpt/agent.next/cmd/cmdservicerun"
@@ -57,7 +65,7 @@ func defaultLogger() hclog.Logger {
 	})
 }
 
-func setupDefaultLoggerFlags(cmd *cobra.Command) {
+func setupDefaultConfigFlags(cmd *cobra.Command) {
 	cmd.Flags().String("config", "", "Config file to use.")
 	cmd.Flags().Bool("config-no-encryption", false, "Use default location for config file, but disable encryption.")
 	cmd.Flags().String("config-encryption-key-access", "", "Provide a script to call to get/set encryption key from custom storage.")
@@ -76,6 +84,52 @@ func exitWithErr(logger hclog.Logger, err error) {
 	os.Exit(1)
 }
 
+func getPinpointRoot(cmd *cobra.Command) (string, error) {
+	res, _ := cmd.Flags().GetString("pinpoint-root")
+	if res != "" {
+		return res, nil
+	}
+	return fsconf.DefaultRoot()
+}
+
+var cmdEnroll = &cobra.Command{
+	Use:   "enroll <code>",
+	Short: "Enroll the agent with the Pinpoint Cloud",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		code := args[0]
+		logger := defaultLogger()
+		pinpointRoot, err := getPinpointRoot(cmd)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+		channel, _ := cmd.Flags().GetString("channel")
+		deviceID := deviceinfo.DeviceID()
+		ctx := context.Background()
+		err = cmdenroll.Run(ctx, cmdenroll.Opts{
+			Logger:       logger,
+			PinpointRoot: pinpointRoot,
+			Code:         code,
+			Channel:      channel,
+			DeviceID:     deviceID,
+		})
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+	},
+}
+
+func flagPinpointRoot(cmd *cobra.Command) {
+	cmd.Flags().String("pinpoint-root", "", "Custom location of pinpoint work dir.")
+}
+
+func init() {
+	cmd := cmdEnroll
+	flagPinpointRoot(cmd)
+	cmd.Flags().String("channel", "dev", "Cloud channel to use.")
+	cmdRoot.AddCommand(cmd)
+}
+
 var cmdExport = &cobra.Command{
 	Use:   "export",
 	Short: "Run data export for configured integrations",
@@ -86,7 +140,10 @@ var cmdExport = &cobra.Command{
 		if err != nil {
 			exitWithErr(logger, err)
 		}
-		pinpointRoot, _ := cmd.Flags().GetString("pinpoint-root")
+		pinpointRoot, err := getPinpointRoot(cmd)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
 		err = cmdexport.Run(cmdexport.Opts{
 			Logger:       logger,
 			Config:       config,
@@ -99,7 +156,7 @@ var cmdExport = &cobra.Command{
 }
 
 func init() {
-	setupDefaultLoggerFlags(cmdExport)
+	setupDefaultConfigFlags(cmdExport)
 	cmdExport.Flags().String("pinpoint-root", "", "Custom location of pinpoint work dir.")
 	cmdRoot.AddCommand(cmdExport)
 }
@@ -153,4 +210,30 @@ var cmdServiceRun = &cobra.Command{
 
 func init() {
 	cmdRoot.AddCommand(cmdServiceRun)
+}
+
+var cmdServiceRun2 = &cobra.Command{
+	Use:   "service-run2",
+	Short: "This command is called by OS service to run the service.",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		logger := defaultLogger()
+		pinpointRoot, err := getPinpointRoot(cmd)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+		opts := cmdservicerun2.Opts{}
+		opts.Logger = logger
+		opts.PinpointRoot = pinpointRoot
+		err = cmdservicerun2.Run(opts)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+	},
+}
+
+func init() {
+	cmd := cmdServiceRun2
+	flagPinpointRoot(cmd)
+	cmdRoot.AddCommand(cmd)
 }

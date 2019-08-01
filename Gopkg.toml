@@ -43,6 +43,10 @@
   version = "2"
 
 [[constraint]]
+  name = "github.com/denisbrodbeck/machineid"
+  version = "0.8.0"
+
+[[constraint]]
   branch = "master"
   name = "github.com/99designs/keyring"
   

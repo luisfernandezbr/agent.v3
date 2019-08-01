@@ -49,14 +49,6 @@ type export struct {
 }
 
 func newExport(opts Opts) *export {
-	if opts.PinpointRoot == "" {
-		root, err := fsconf.DefaultRoot()
-		if err != nil {
-			panic(err)
-		}
-		opts.PinpointRoot = root
-	}
-
 	s := &export{}
 	s.logger = opts.Logger
 	s.config = opts.Config
