@@ -81,6 +81,28 @@ func init() {
 	cmdRoot.AddCommand(cmdRun)
 }
 
+var cmdUpload = &cobra.Command{
+	Use:   "upload <path_to_zip> <upload_url>",
+	Short: "Upload",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		/*
+			logger := defaultLogger()
+
+			zipPath := args[0]
+			uploadURL := args[1]
+			ctx := context.Background()
+
+			if err != nil {
+				exitWithErr(logger, err)
+			}*/
+	},
+}
+
+func init() {
+	cmdRoot.AddCommand(cmdUpload)
+}
+
 func main() {
 	cmdRoot.Execute()
 }

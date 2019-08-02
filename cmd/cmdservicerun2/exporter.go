@@ -1,7 +1,15 @@
 package cmdservicerun2
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"net/url"
+	"os"
+	"os/exec"
+	"strings"
+
+	pjson "github.com/pinpt/go-common/json"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/cmd/cmdexport"
@@ -42,19 +50,18 @@ func (s *exporter) Run() error {
 }
 
 func (s *exporter) export(data *agent.ExportRequest) error {
-	opts := cmdexport.Opts{}
-	opts.Logger = s.logger
-	opts.CustomerID = s.opts.CustomerID
-	opts.PinpointRoot = s.opts.PinpointRoot
+	s.logger.Info("processing export request", "upload_url", *data.UploadURL)
+
+	agentConfig := cmdexport.AgentConfig{}
+	agentConfig.CustomerID = s.opts.CustomerID
+	agentConfig.PinpointRoot = s.opts.PinpointRoot
+
+	var integrations []cmdexport.Integration
+
 	for _, integration := range data.Integrations {
 		s.logger.Info("exporting integration", "name", integration.Name)
 
 		in := cmdexport.Integration{}
-		in.Name = integration.Name
-
-		if in.Name == "jira" {
-			in.Name = "jira-hosted"
-		}
 
 		if integration.Authorization.Authorization == nil {
 			panic("missing encrypted auth data")
@@ -64,31 +71,80 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 		if err != nil {
 			return err
 		}
-		err = json.Unmarshal([]byte(data), &in.Config)
+
+		remoteConfig := map[string]interface{}{}
+		err = json.Unmarshal([]byte(data), &remoteConfig)
 		if err != nil {
 			return err
 		}
-		in.Config = s.convertConfig(in.Name, in.Config)
 
-		s.logger.Debug("integration export config used", "config", in.Config)
-		opts.Integrations = append(opts.Integrations, in)
+		s.logger.Debug("integration export", "remote config", remoteConfig)
+
+		name2 := ""
+		in.Config, name2 = s.convertConfig(integration.Name, remoteConfig)
+		if name2 != "" {
+			in.Name = name2
+		} else {
+			in.Name = integration.Name
+		}
+
+		integrations = append(integrations, in)
 	}
 
-	return cmdexport.Run(opts)
+	ctx := context.Background()
+	return s.execExport(ctx, agentConfig, integrations)
 }
 
-func (s *exporter) convertConfig(in string, c1 map[string]interface{}) map[string]interface{} {
-	res := map[string]interface{}{}
+func (s *exporter) convertConfig(in string, c1 map[string]interface{}) (res map[string]interface{}, integrationName string) {
+	res = map[string]interface{}{}
 	if in == "github" {
 		res["organization"] = "pinpt"
+		_, ok := c1["api_token"].(string)
+		if !ok {
+			panic("missing api_token")
+		}
 		res["apitoken"] = c1["api_token"]
+		_, ok = c1["url"].(string)
+		if !ok {
+			panic("missing url")
+		}
 		res["url"] = c1["url"]
-		return res
+		return
 	} else if in == "jira" {
-		panic("jira config not implemented")
-		//res["organization"] = "pinpt"
-		//res["apitoken"] = c1["api_token"]
-		//res["url"] = c1["url"]
+		us, ok := c1["url"].(string)
+		if !ok {
+			panic("missing jira url in config")
+		}
+		u, err := url.Parse(us)
+		if err != nil {
+			panic(fmt.Errorf("invlid jira url: %v", err))
+		}
+		integrationName = "jira-hosted"
+		if strings.HasSuffix(u.Host, ".atlassian.net") {
+			integrationName = "jira-cloud"
+		}
+		res["url"] = us
+		_, ok = c1["username"].(string)
+		if !ok {
+			panic("missing username")
+		}
+
+		res["username"] = c1["username"]
+		_, ok = c1["password"].(string)
+		if !ok {
+			panic("missing password")
+		}
+
+		res["password"] = c1["password"]
+
+		return
 	}
 	panic("unsupported integration: " + in)
+}
+
+func (s *exporter) execExport(ctx context.Context, agentConfig cmdexport.AgentConfig, integrations []cmdexport.Integration) error {
+	cmd := exec.CommandContext(ctx, os.Args[0], "export", "--agent-config-json", pjson.Stringify(agentConfig), "--integrations-json", pjson.Stringify(integrations))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }

@@ -2,9 +2,14 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"runtime"
 	"strings"
+
+	"github.com/pinpt/agent.next/cmd/cmdexport"
 
 	"github.com/pinpt/agent.next/pkg/keychain"
 
@@ -154,27 +159,35 @@ func init() {
 	cmdRoot.AddCommand(cmd)
 }
 
-/*
-
 var cmdExport = &cobra.Command{
 	Use:   "export",
-	Short: "Run data export for configured integrations",
+	Short: "Run export passing configured integrations via command line",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := defaultLogger()
-		config, err := defaultConfig(cmd)
-		if err != nil {
-			exitWithErr(logger, err)
+		opts := cmdexport.Opts{}
+
+		agentConfigJSON, _ := cmd.Flags().GetString("agent-config-json")
+		if agentConfigJSON == "" {
+			exitWithErr(logger, errors.New("missing agent-config-json"))
 		}
-		pinpointRoot, err := getPinpointRoot(cmd)
+		err := json.Unmarshal([]byte(agentConfigJSON), &opts.AgentConfig)
 		if err != nil {
-			exitWithErr(logger, err)
+			exitWithErr(logger, fmt.Errorf("integrations-json is not valid: %v", err))
 		}
-		err = cmdexport.Run(cmdexport.Opts{
-			Logger:       logger,
-			Config:       config,
-			PinpointRoot: pinpointRoot,
-		})
+
+		integrationsJSON, _ := cmd.Flags().GetString("integrations-json")
+		if integrationsJSON == "" {
+			exitWithErr(logger, errors.New("missing integrations-json"))
+		}
+
+		err = json.Unmarshal([]byte(integrationsJSON), &opts.Integrations)
+		if err != nil {
+			exitWithErr(logger, fmt.Errorf("integrations-json is not valid: %v", err))
+		}
+
+		opts.Logger = logger
+		err = cmdexport.Run(opts)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
@@ -183,10 +196,12 @@ var cmdExport = &cobra.Command{
 
 func init() {
 	cmd := cmdExport
-	setupDefaultConfigFlags(cmdExport)
-	flagPinpointRoot(cmd)
+	cmd.Flags().String("agent-config-json", "", "Agent config as json")
+	cmd.Flags().String("integrations-json", "", "Integrations config as json")
 	cmdRoot.AddCommand(cmdExport)
 }
+
+/*
 
 var cmdServiceInstall = &cobra.Command{
 	Use:   "service-install",

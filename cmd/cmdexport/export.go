@@ -19,6 +19,17 @@ import (
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
+type Opts struct {
+	Logger       hclog.Logger
+	AgentConfig  AgentConfig
+	Integrations []Integration
+}
+
+type AgentConfig struct {
+	CustomerID   string `json:"customer_id"`
+	PinpointRoot string `json:"pinpoint_root"`
+}
+
 type Integration struct {
 	Name   string
 	Config map[string]interface{}
@@ -28,13 +39,6 @@ func Run(opts Opts) error {
 	exp := newExport(opts)
 	defer exp.Destroy()
 	return nil
-}
-
-type Opts struct {
-	Logger       hclog.Logger
-	CustomerID   string
-	PinpointRoot string
-	Integrations []Integration
 }
 
 type export struct {
@@ -60,7 +64,17 @@ func newExport(opts Opts) *export {
 	s := &export{}
 	s.opts = opts
 	s.logger = opts.Logger
-	s.locs = fsconf.New(opts.PinpointRoot)
+
+	root := opts.AgentConfig.PinpointRoot
+	if root == "" {
+		v, err := fsconf.DefaultRoot()
+		if err != nil {
+			panic(err)
+		}
+		root = v
+	}
+
+	s.locs = fsconf.New(root)
 
 	var err error
 	s.lastProcessed, err = jsonstore.New(s.locs.LastProcessedFile)
@@ -164,7 +178,7 @@ func (s *export) runExports() {
 	erroredMu := sync.Mutex{}
 
 	configPinpoint := rpcdef.ExportConfigPinpoint{
-		CustomerID: s.opts.CustomerID,
+		CustomerID: s.opts.AgentConfig.CustomerID,
 	}
 
 	for name, integration := range s.integrations {
