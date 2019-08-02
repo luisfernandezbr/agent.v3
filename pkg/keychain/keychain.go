@@ -74,6 +74,14 @@ func randBytes(n int) ([]byte, error) {
 	return b, nil
 }
 
+func (s *Encryptor) Encrypt(content string) (string, error) {
+	key, err := s.getKey()
+	if err != nil {
+		return "", err
+	}
+	return pauth.EncryptString(content, key)
+}
+
 // EncryptToFile will encrypt the contents to outputfile
 func (s *Encryptor) EncryptToFile(content string, outputFile string) error {
 	key, err := s.getKey()
@@ -85,6 +93,15 @@ func (s *Encryptor) EncryptToFile(content string, outputFile string) error {
 		return err
 	}
 	return ioutil.WriteFile(outputFile, []byte(contentEncrypted), 0755)
+}
+
+func (s *Encryptor) Decrypt(encr string) (string, error) {
+	key, err := s.getKey()
+	if err != nil {
+		return "", err
+	}
+
+	return pauth.DecryptString(encr, key)
 }
 
 // DecryptFile returns decrypted content of file.

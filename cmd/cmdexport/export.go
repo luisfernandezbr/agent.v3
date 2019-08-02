@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/gitclone"
@@ -20,6 +19,11 @@ import (
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
+type Integration struct {
+	Name   string
+	Config map[string]interface{}
+}
+
 func Run(opts Opts) error {
 	exp := newExport(opts)
 	defer exp.Destroy()
@@ -28,13 +32,15 @@ func Run(opts Opts) error {
 
 type Opts struct {
 	Logger       hclog.Logger
-	Config       *agentconf.Config
+	CustomerID   string
 	PinpointRoot string
+	Integrations []Integration
 }
 
 type export struct {
+	opts Opts
+
 	logger       hclog.Logger
-	config       *agentconf.Config
 	pluginClient *plugin.Client
 	sessions     *sessions
 
@@ -46,12 +52,14 @@ type export struct {
 	lastProcessed *jsonstore.Store
 
 	gitProcessingRepos chan repoProcess
+
+	integrationConfigs map[string]Integration
 }
 
 func newExport(opts Opts) *export {
 	s := &export{}
+	s.opts = opts
 	s.logger = opts.Logger
-	s.config = opts.Config
 	s.locs = fsconf.New(opts.PinpointRoot)
 
 	var err error
@@ -73,6 +81,11 @@ func newExport(opts Opts) *export {
 			panic(err)
 		}
 	}()
+
+	s.integrationConfigs = map[string]Integration{}
+	for _, in := range opts.Integrations {
+		s.integrationConfigs[in.Name] = in
+	}
 
 	s.setupIntegrations()
 	s.runExports()
@@ -112,8 +125,12 @@ func (s *export) gitProcessing() error {
 }
 
 func (s *export) setupIntegrations() {
-	integrationNames := s.config.GetEnabledIntegrations()
-	s.logger.Info("enabled integrations", "names", integrationNames)
+	var integrationNames []string
+	for name := range s.integrationConfigs {
+		integrationNames = append(integrationNames, name)
+	}
+
+	s.logger.Info("running integrations", "integrations", integrationNames)
 
 	integrations := make(chan *integration)
 	go func() {
@@ -147,7 +164,7 @@ func (s *export) runExports() {
 	erroredMu := sync.Mutex{}
 
 	configPinpoint := rpcdef.ExportConfigPinpoint{
-		CustomerID: s.config.Pinpoint.CustomerID,
+		CustomerID: s.opts.CustomerID,
 	}
 
 	for name, integration := range s.integrations {
@@ -165,11 +182,11 @@ func (s *export) runExports() {
 
 			s.logger.Info("Export starting", "integration", name, "log_file", integration.logFile.Name())
 
-			integrationConfig, err := s.config.IntegrationConfig(name)
-			if err != nil {
-				rerr(err)
-				return
+			integrationDef, ok := s.integrationConfigs[name]
+			if !ok {
+				panic("no config for integration")
 			}
+			integrationConfig := integrationDef.Config
 			if len(integrationConfig) == 0 {
 				rerr(fmt.Errorf("empty config for integration: %v", name))
 				return
@@ -178,7 +195,7 @@ func (s *export) runExports() {
 				Pinpoint:    configPinpoint,
 				Integration: integrationConfig,
 			}
-			_, err = integration.rpcClient.Export(ctx, exportConfig)
+			_, err := integration.rpcClient.Export(ctx, exportConfig)
 			if err != nil {
 				rerr(err)
 				return

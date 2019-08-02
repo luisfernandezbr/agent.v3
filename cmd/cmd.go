@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/pinpt/agent.next/pkg/keychain"
+
 	"github.com/pinpt/agent.next/cmd/cmdservicerun2"
 
 	"github.com/pinpt/agent.next/pkg/fsconf"
@@ -16,10 +18,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/go-ps"
 	"github.com/pinpt/agent.next/cmd/cmdenroll"
-	"github.com/pinpt/agent.next/cmd/cmdexport"
-	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
-	"github.com/pinpt/agent.next/cmd/cmdservicerun"
-	"github.com/pinpt/agent.next/cmd/cmdserviceuninstall"
 	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/spf13/cobra"
 )
@@ -79,6 +77,32 @@ func defaultConfig(cmd *cobra.Command) (*agentconf.Config, error) {
 	return agentconf.New(opts)
 }
 
+func flagsEncryption(cmd *cobra.Command) {
+	cmd.Flags().String("encryption-key-access", "", "Provide a script to call to get/set encryption key from custom storage.")
+}
+
+func getEncryptor(cmd *cobra.Command) (*keychain.Encryptor, error) {
+	keyAccess, _ := cmd.Flags().GetString("encryption-key-access")
+	if keyAccess != "" {
+		// using key retrieved with config encryption script
+		kc, err := keychain.NewCustomKeyChain(keyAccess)
+		if err != nil {
+			return nil, err
+		}
+		return keychain.NewEncryptor(kc), nil
+	}
+	// no default encryption on linux
+	if runtime.GOOS == "linux" {
+		panic("default encryption storage not implemented yet, use custom script")
+		return nil, nil
+	}
+	kc, err := keychain.NewOSKeyChain()
+	if err != nil {
+		return nil, err
+	}
+	return keychain.NewEncryptor(kc), nil
+}
+
 func exitWithErr(logger hclog.Logger, err error) {
 	logger.Error("error: " + err.Error())
 	os.Exit(1)
@@ -130,6 +154,8 @@ func init() {
 	cmdRoot.AddCommand(cmd)
 }
 
+/*
+
 var cmdExport = &cobra.Command{
 	Use:   "export",
 	Short: "Run data export for configured integrations",
@@ -156,8 +182,9 @@ var cmdExport = &cobra.Command{
 }
 
 func init() {
+	cmd := cmdExport
 	setupDefaultConfigFlags(cmdExport)
-	cmdExport.Flags().String("pinpoint-root", "", "Custom location of pinpoint work dir.")
+	flagPinpointRoot(cmd)
 	cmdRoot.AddCommand(cmdExport)
 }
 
@@ -211,6 +238,7 @@ var cmdServiceRun = &cobra.Command{
 func init() {
 	cmdRoot.AddCommand(cmdServiceRun)
 }
+*/
 
 var cmdServiceRun2 = &cobra.Command{
 	Use:   "service-run2",
@@ -222,10 +250,17 @@ var cmdServiceRun2 = &cobra.Command{
 		if err != nil {
 			exitWithErr(logger, err)
 		}
+		encr, err := getEncryptor(cmd)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+
+		ctx := context.Background()
 		opts := cmdservicerun2.Opts{}
 		opts.Logger = logger
 		opts.PinpointRoot = pinpointRoot
-		err = cmdservicerun2.Run(opts)
+		opts.Encryptor = encr
+		err = cmdservicerun2.Run(ctx, opts)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
@@ -235,5 +270,6 @@ var cmdServiceRun2 = &cobra.Command{
 func init() {
 	cmd := cmdServiceRun2
 	flagPinpointRoot(cmd)
+	flagsEncryption(cmd)
 	cmdRoot.AddCommand(cmd)
 }
