@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pinpt/agent.next/cmd/cmdupload"
+
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
 	"github.com/pinpt/agent.next/pkg/outsession"
@@ -117,6 +119,45 @@ func init() {
 	cmdExportRepo.Flags().String("url", "", "repo url")
 	cmdExportRepo.Flags().String("pinpoint-root", "", "pinpoint-root")
 	cmdRoot.AddCommand(cmdExportRepo)
+}
+
+func flagPinpointRoot(cmd *cobra.Command) {
+	cmd.Flags().String("pinpoint-root", "", "Custom location of pinpoint work dir.")
+}
+
+func getPinpointRoot(cmd *cobra.Command) (string, error) {
+	res, _ := cmd.Flags().GetString("pinpoint-root")
+	if res != "" {
+		return res, nil
+	}
+	return fsconf.DefaultRoot()
+}
+
+var cmdUpload = &cobra.Command{
+	Use:   "upload <upload_url>",
+	Short: "Upload processed data",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		logger := defaultLogger()
+		ctx := context.Background()
+
+		uploadURL := args[0]
+		pinpointRoot, err := getPinpointRoot(cmd)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+
+		err = cmdupload.Run(ctx, logger, pinpointRoot, uploadURL)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+	},
+}
+
+func init() {
+	cmd := cmdUpload
+	flagPinpointRoot(cmd)
+	cmdRoot.AddCommand(cmd)
 }
 
 func main() {

@@ -9,6 +9,10 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/pinpt/agent.next/cmd/cmdupload"
+
+	"github.com/pinpt/agent.next/pkg/fsconf"
+
 	pjson "github.com/pinpt/go-common/json"
 
 	"github.com/hashicorp/go-hclog"
@@ -22,31 +26,34 @@ type exporterOpts struct {
 	CustomerID   string
 	PinpointRoot string
 	Encryptor    *keychain.Encryptor
+	FSConf       fsconf.Locs
 }
 
 type exporter struct {
-	ExportQueue chan *agent.ExportRequest
+	ExportQueue chan exportRequest
 
 	logger hclog.Logger
 	opts   exporterOpts
+}
+
+type exportRequest struct {
+	Done chan error
+	Data *agent.ExportRequest
 }
 
 func newExporter(opts exporterOpts) *exporter {
 	s := &exporter{}
 	s.opts = opts
 	s.logger = opts.Logger
-	s.ExportQueue = make(chan *agent.ExportRequest)
+	s.ExportQueue = make(chan exportRequest)
 	return s
 }
 
-func (s *exporter) Run() error {
-	for data := range s.ExportQueue {
-		err := s.export(data)
-		if err != nil {
-			return err
-		}
+func (s *exporter) Run() {
+	for req := range s.ExportQueue {
+		req.Done <- s.export(req.Data)
 	}
-	return nil
+	return
 }
 
 func (s *exporter) export(data *agent.ExportRequest) error {
@@ -58,7 +65,17 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 
 	var integrations []cmdexport.Integration
 
+	/*
+		integrations = append(integrations, cmdexport.Integration{
+			Name:   "mock",
+			Config: map[string]interface{}{"k1": "v1"},
+		})
+	*/
+
 	for _, integration := range data.Integrations {
+		// TODO: using mock above instead
+		//continue
+
 		s.logger.Info("exporting integration", "name", integration.Name)
 
 		in := cmdexport.Integration{}
@@ -92,7 +109,27 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 	}
 
 	ctx := context.Background()
-	return s.execExport(ctx, agentConfig, integrations)
+
+	fsconf := s.opts.FSConf
+
+	// delete existing uploads
+	err := os.RemoveAll(fsconf.Uploads)
+	if err != nil {
+		return err
+	}
+
+	err = s.execExport(ctx, agentConfig, integrations)
+	if err != nil {
+		return err
+	}
+
+	s.logger.Info("export finished, running upload")
+
+	err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *exporter) convertConfig(in string, c1 map[string]interface{}) (res map[string]interface{}, integrationName string) {

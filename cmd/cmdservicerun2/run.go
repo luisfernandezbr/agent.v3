@@ -67,13 +67,11 @@ func (s *runner) run(ctx context.Context) error {
 		CustomerID:   s.conf.CustomerID,
 		PinpointRoot: s.opts.PinpointRoot,
 		Encryptor:    s.opts.Encryptor,
+		FSConf:       s.fsconf,
 	})
 
 	go func() {
-		err := s.exporter.Run()
-		if err != nil {
-			panic(err)
-		}
+		s.exporter.Run()
 	}()
 
 	err = s.sendEnabled(ctx)
@@ -226,36 +224,44 @@ func (s *runner) handleExportEvents(ctx context.Context) error {
 	}
 
 	cb := func(instance datamodel.Model) (datamodel.Model, error) {
-		req := instance.(*agent.ExportRequest)
-
 		s.logger.Info("received export request")
+		ev := instance.(*agent.ExportRequest)
 
-		//jobID := req.JobID
-		//uploadURL := req.UploadURL
+		done := make(chan error)
+
+		req := exportRequest{
+			Done: done,
+			Data: ev,
+		}
 
 		s.exporter.ExportQueue <- req
 
-		/*
-					data := agent.ExportResponse{
-				CustomerID: s.conf.CustomerID,
-				UUID:       s.conf.DeviceID,
-				JobID:      jobID,
-			}
+		err := <-done
 
-			publishEvent := event.PublishEvent{
-				Object: &data,
-				Headers: map[string]string{
-					"uuid": s.conf.DeviceID,
-				},
-			}
+		jobID := ev.JobID
 
-			err := event.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
-			if err != nil {
-				panic(err)
-			}
+		data := agent.ExportResponse{
+			CustomerID: s.conf.CustomerID,
+			UUID:       s.conf.DeviceID,
+			JobID:      jobID,
+		}
+		if err != nil {
+			data.Error = pstrings.Pointer(err.Error())
+		}
 
-			s.logger.Info("sent back export result")
-		*/
+		publishEvent := event.PublishEvent{
+			Object: &data,
+			Headers: map[string]string{
+				"uuid": s.conf.DeviceID,
+			},
+		}
+
+		err = event.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
+		if err != nil {
+			panic(err)
+		}
+
+		s.logger.Info("sent back export result")
 
 		return nil, nil
 	}

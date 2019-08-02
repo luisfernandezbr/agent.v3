@@ -86,16 +86,15 @@ var cmdUpload = &cobra.Command{
 	Short: "Upload",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		/*
-			logger := defaultLogger()
+		logger := defaultLogger()
 
-			zipPath := args[0]
-			uploadURL := args[1]
-			ctx := context.Background()
+		zipPath := args[0]
+		uploadURL := args[1]
 
-			if err != nil {
-				exitWithErr(logger, err)
-			}*/
+		err := Upload(logger, zipPath, uploadURL)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
 	},
 }
 
