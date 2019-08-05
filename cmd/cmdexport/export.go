@@ -154,7 +154,7 @@ func (s *export) setupIntegrations() {
 			name := name
 			go func() {
 				defer wg.Done()
-				integration, err := newIntegration(s, name)
+				integration, err := newIntegration(s, name, s.locs)
 				if err != nil {
 					panic(err)
 				}

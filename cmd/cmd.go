@@ -168,12 +168,22 @@ var cmdExport = &cobra.Command{
 		opts := cmdexport.Opts{}
 
 		agentConfigJSON, _ := cmd.Flags().GetString("agent-config-json")
-		if agentConfigJSON == "" {
-			exitWithErr(logger, errors.New("missing agent-config-json"))
+		if agentConfigJSON != "" {
+			err := json.Unmarshal([]byte(agentConfigJSON), &opts.AgentConfig)
+			if err != nil {
+				exitWithErr(logger, fmt.Errorf("integrations-json is not valid: %v", err))
+			}
 		}
-		err := json.Unmarshal([]byte(agentConfigJSON), &opts.AgentConfig)
-		if err != nil {
-			exitWithErr(logger, fmt.Errorf("integrations-json is not valid: %v", err))
+
+		// allow setting pinpoint root in either json or command line flag
+		{
+			root, _ := cmd.Flags().GetString("pinpoint-root")
+			if root != "" {
+				if opts.AgentConfig.PinpointRoot != "" {
+					exitWithErr(logger, errors.New("pinpoint-root was set in both agent-config-json and pinpoint-root, should be set in one place only"))
+				}
+				opts.AgentConfig.PinpointRoot = root
+			}
 		}
 
 		integrationsJSON, _ := cmd.Flags().GetString("integrations-json")
@@ -181,7 +191,7 @@ var cmdExport = &cobra.Command{
 			exitWithErr(logger, errors.New("missing integrations-json"))
 		}
 
-		err = json.Unmarshal([]byte(integrationsJSON), &opts.Integrations)
+		err := json.Unmarshal([]byte(integrationsJSON), &opts.Integrations)
 		if err != nil {
 			exitWithErr(logger, fmt.Errorf("integrations-json is not valid: %v", err))
 		}
@@ -196,6 +206,7 @@ var cmdExport = &cobra.Command{
 
 func init() {
 	cmd := cmdExport
+	flagPinpointRoot(cmd)
 	cmd.Flags().String("agent-config-json", "", "Agent config as json")
 	cmd.Flags().String("integrations-json", "", "Integrations config as json")
 	cmdRoot.AddCommand(cmdExport)

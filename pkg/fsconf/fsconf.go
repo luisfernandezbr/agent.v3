@@ -9,14 +9,16 @@ import (
 type Locs struct {
 	// Dirs
 
-	Root              string
-	Temp              string
-	Cache             string
+	Root         string
+	Temp         string
+	Cache        string
+	Logs         string
+	Integrations string
+
 	RepoCache         string
 	State             string
 	Uploads           string
 	RipsrcCheckpoints string
-	Logs              string
 
 	// Special files
 	Config2           string // new config that is populated from enroll, not for manual editing
@@ -44,14 +46,15 @@ func New(pinpointRoot string) Locs {
 	s.Temp = j(s.Root, "temp")
 	s.Cache = j(s.Root, "cache")
 	s.Logs = j(s.Root, "logs")
+	s.Integrations = j(s.Root, "integrations")
 
 	s.RepoCache = j(s.Cache, "repos")
 	s.State = j(s.Root, "state")
 	s.Uploads = j(s.State, "uploads")
 	s.RipsrcCheckpoints = j(s.State, "ripsrc_checkpoints")
-	s.LastProcessedFile = j(s.State, "last_processed.json")
 
 	s.Config2 = j(s.Root, "config.json")
+	s.LastProcessedFile = j(s.State, "last_processed.json")
 
 	return s
 }

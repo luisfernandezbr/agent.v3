@@ -5,13 +5,23 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+
 	"path/filepath"
 	"strings"
+
+	"github.com/pinpt/agent.next/pkg/build"
+
+	"github.com/pinpt/agent.next/pkg/fsconf"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/rpcdef"
 )
+
+func prodIntegrationCommand(fslocs fsconf.Locs, integrationName string) *exec.Cmd {
+	bin := filepath.Join(fslocs.Integrations, integrationName)
+	return exec.Command(bin)
+}
 
 func devIntegrationCommand(integrationName string) *exec.Cmd {
 	// build to catch compile errors
@@ -41,13 +51,16 @@ type integration struct {
 
 	agentDelegate agentDelegate
 	closed        bool
+
+	fslocs fsconf.Locs
 }
 
-func newIntegration(exp *export, name string) (*integration, error) {
+func newIntegration(exp *export, name string, fslocs fsconf.Locs) (*integration, error) {
 	s := &integration{}
 	s.export = exp
 	s.logger = s.export.logger.With("integration", name)
 	s.name = name
+	s.fslocs = fslocs
 	err := s.setupLogFile()
 	if err != nil {
 		return nil, err
@@ -93,12 +106,19 @@ func (s *integration) setupLogFile() error {
 }
 
 func (s *integration) setupRPC() error {
+	var cmd *exec.Cmd
+	if build.IsProd() {
+		cmd = prodIntegrationCommand(s.fslocs, s.name)
+	} else {
+		cmd = devIntegrationCommand(s.name)
+	}
+
 	client := plugin.NewClient(&plugin.ClientConfig{
 		Stderr:          s.logFile,
 		Logger:          s.logger,
 		HandshakeConfig: rpcdef.Handshake,
 		Plugins:         rpcdef.PluginMap,
-		Cmd:             devIntegrationCommand(s.name),
+		Cmd:             cmd,
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolGRPC},
 	})
