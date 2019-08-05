@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/pinpt/agent.next/pkg/structmarshal"
+
 	"github.com/pinpt/agent.next/pkg/objsender"
 
 	"github.com/hashicorp/go-hclog"
@@ -43,32 +45,30 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 }
 
 type Config struct {
-	URL      string
-	Username string
-	Password string
+	URL              string   `json:"url"`
+	Username         string   `json:"username"`
+	Password         string   `json:"password"`
+	ExcludedProjects []string `json:"excluded_projects"`
 }
 
 func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	rerr := func(msg string, args ...interface{}) error {
 		return fmt.Errorf("config validation error: "+msg, args...)
 	}
-	conf := Config{}
-
-	conf.URL, _ = data["url"].(string)
+	var conf Config
+	err := structmarshal.MapToStruct(data, &conf)
+	if err != nil {
+		return err
+	}
 	if conf.URL == "" {
 		return rerr("url is missing")
 	}
-
-	conf.Username, _ = data["username"].(string)
 	if conf.Username == "" {
 		return rerr("username is missing")
 	}
-
-	conf.Password, _ = data["password"].(string)
 	if conf.Password == "" {
 		return rerr("password is missing")
 	}
-
 	s.config = conf
 	return nil
 }
@@ -114,7 +114,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		fieldByID[f.RefID] = f
 	}
 
-	projects, err := s.projects()
+	projects, err := s.projects(s.config.ExcludedProjects)
 	if err != nil {
 		return res, err
 	}
@@ -129,15 +129,31 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 
 type Project = jiracommon.Project
 
-func (s *Integration) projects() (all []Project, _ error) {
+func (s *Integration) projects(excluded []string) (all []Project, _ error) {
 	sender := objsender.NewNotIncremental(s.agent, "work.project")
 	defer sender.Done()
+
+	excludedMap := map[string]bool{}
+	for _, id := range excluded {
+		excludedMap[id] = true
+	}
 
 	return all, jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
 		pi, res, err := api.ProjectsPage(s.qc, paginationParams)
 		if err != nil {
 			return false, 0, err
 		}
+		{
+			var filtered []*work.Project
+			for _, obj := range res {
+				if excludedMap[obj.RefID] {
+					continue
+				}
+				filtered = append(filtered, obj)
+			}
+			res = filtered
+		}
+
 		for _, obj := range res {
 			p := Project{}
 			p.JiraID = obj.RefID

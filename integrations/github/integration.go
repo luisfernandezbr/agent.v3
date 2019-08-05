@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pinpt/agent.next/pkg/structmarshal"
+
 	"github.com/pinpt/go-common/hash"
 
 	"github.com/hashicorp/go-hclog"
@@ -40,7 +42,7 @@ func NewIntegration(logger hclog.Logger) *Integration {
 	return s
 }
 
-// setting higher to 1 starts returning the followign error, even though the hourly limit is not used up yet.
+// setting higher to 1 starts returning the following error, even though the hourly limit is not used up yet.
 // 403: You have triggered an abuse detection mechanism. Please wait a few minutes before you try again.
 const maxRequestConcurrency = 1
 
@@ -74,38 +76,49 @@ type Config struct {
 	RepoURLPrefix string
 	Token         string
 	Org           string
+	ExcludedRepos []string
+}
+
+type configDef struct {
+	URL           string   `json:"url"`
+	APIToken      string   `json:"apitoken"`
+	Organization  string   `json:"organization"`
+	ExcludedRepos []string `json:"excluded_repos"`
 }
 
 func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	rerr := func(msg string, args ...interface{}) error {
 		return fmt.Errorf("config validation error: "+msg, args...)
 	}
-	conf := Config{}
+	var def configDef
+	err := structmarshal.MapToStruct(data, &def)
+	if err != nil {
+		return err
+	}
 
-	apiURLBase, _ := data["url"].(string)
-	if apiURLBase == "" {
+	if def.URL == "" {
 		return rerr("url is missing")
 	}
-	apiURLBaseParsed, err := url.Parse(apiURLBase)
+	if def.APIToken == "" {
+		return rerr("apitoken is missing")
+	}
+	if def.Organization == "" {
+		return rerr("organization is missing")
+	}
+
+	var res Config
+	res.Token = def.APIToken
+	res.Org = def.Organization
+	res.ExcludedRepos = def.ExcludedRepos
+
+	apiURLBaseParsed, err := url.Parse(def.URL)
 	if err != nil {
 		return rerr("url is invalid: %v", err)
 	}
-	conf.APIURL = urlAppend(apiURLBase, "graphql")
-	conf.RepoURLPrefix = "https://" + strings.TrimPrefix(apiURLBaseParsed.Host, "api.")
+	res.APIURL = urlAppend(def.URL, "graphql")
+	res.RepoURLPrefix = "https://" + strings.TrimPrefix(apiURLBaseParsed.Host, "api.")
 
-	token, _ := data["apitoken"].(string)
-	if token == "" {
-		return rerr("apitoken is missing")
-	}
-	conf.Token = token
-
-	organization, _ := data["organization"].(string)
-	if organization == "" {
-		return rerr("organization is missing")
-	}
-	conf.Org = organization
-
-	s.config = conf
+	s.config = res
 	return nil
 }
 
@@ -147,6 +160,22 @@ func (s *Integration) export(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	{
+		excluded := map[string]bool{}
+		for _, id := range s.config.ExcludedRepos {
+			excluded[id] = true
+		}
+		var filtered []api.Repo
+		// filter excluded repos
+		for _, repo := range repos {
+			if excluded[repo.ID] {
+				continue
+			}
+			filtered = append(filtered, repo)
+		}
+		s.logger.Info("repos", "found", len(repos), "excluded_definition", len(s.config.ExcludedRepos), "result", len(filtered))
+		repos = filtered
+	}
 
 	// queue repos for processing with ripsrc
 	{
@@ -169,7 +198,7 @@ func (s *Integration) export(ctx context.Context) error {
 
 	// export repos
 	{
-		err := s.exportRepos(ctx)
+		err := s.exportRepos(ctx, s.config.ExcludedRepos)
 		if err != nil {
 			return err
 		}

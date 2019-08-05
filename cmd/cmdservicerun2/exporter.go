@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/pinpt/agent.next/pkg/structmarshal"
+
 	"github.com/pinpt/agent.next/cmd/cmdupload"
 
 	"github.com/pinpt/agent.next/pkg/fsconf"
@@ -98,7 +100,7 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 		s.logger.Debug("integration export", "remote config", remoteConfig)
 
 		name2 := ""
-		in.Config, name2 = s.convertConfig(integration.Name, remoteConfig)
+		in.Config, name2 = s.convertConfig(integration.Name, remoteConfig, integration.Exclusions)
 		if name2 != "" {
 			in.Name = name2
 		} else {
@@ -132,22 +134,50 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 	return nil
 }
 
-func (s *exporter) convertConfig(in string, c1 map[string]interface{}) (res map[string]interface{}, integrationName string) {
-	res = map[string]interface{}{}
+func (s *exporter) convertConfig(in string, c1 map[string]interface{}, exclusions []string) (res map[string]interface{}, integrationName string) {
 	if in == "github" {
-		res["organization"] = "pinpt"
-		_, ok := c1["api_token"].(string)
-		if !ok {
-			panic("missing api_token")
+		var config struct {
+			URL           string   `json:"url"`
+			APIToken      string   `json:"apitoken"`
+			Organization  string   `json:"organization"`
+			ExcludedRepos []string `json:"excluded_repos"`
 		}
-		res["apitoken"] = c1["api_token"]
-		_, ok = c1["url"].(string)
-		if !ok {
-			panic("missing url")
+		err := structmarshal.MapToStruct(c1, &config)
+		if err != nil {
+			panic(err)
 		}
-		res["url"] = c1["url"]
-		return
+		config.Organization = "pinpt"
+		{
+			v, ok := c1["api_token"].(string)
+			if !ok {
+				panic("missing api_token")
+			}
+			config.APIToken = v
+		}
+		{
+			v, ok := c1["url"].(string)
+			if !ok {
+				panic("missing url")
+			}
+			config.URL = v
+		}
+		config.ExcludedRepos = exclusions
+		res, err := structmarshal.StructToMap(config)
+		if err != nil {
+			panic(err)
+		}
+		return res, ""
 	} else if in == "jira" {
+		var config struct {
+			URL              string   `json:"url"`
+			Username         string   `json:"username"`
+			Password         string   `json:"password"`
+			ExcludedProjects []string `json:"excluded_projects"`
+		}
+		err := structmarshal.MapToStruct(c1, &config)
+		if err != nil {
+			panic(err)
+		}
 		us, ok := c1["url"].(string)
 		if !ok {
 			panic("missing jira url in config")
@@ -160,21 +190,27 @@ func (s *exporter) convertConfig(in string, c1 map[string]interface{}) (res map[
 		if strings.HasSuffix(u.Host, ".atlassian.net") {
 			integrationName = "jira-cloud"
 		}
-		res["url"] = us
-		_, ok = c1["username"].(string)
-		if !ok {
-			panic("missing username")
+		config.URL = us
+		{
+			v, ok := c1["username"].(string)
+			if !ok {
+				panic("missing username")
+			}
+			config.Username = v
 		}
-
-		res["username"] = c1["username"]
-		_, ok = c1["password"].(string)
-		if !ok {
-			panic("missing password")
+		{
+			v, ok := c1["password"].(string)
+			if !ok {
+				panic("missing password")
+			}
+			config.Password = v
 		}
-
-		res["password"] = c1["password"]
-
-		return
+		config.ExcludedProjects = exclusions
+		res, err := structmarshal.StructToMap(config)
+		if err != nil {
+			panic(err)
+		}
+		return res, integrationName
 	}
 	panic("unsupported integration: " + in)
 }

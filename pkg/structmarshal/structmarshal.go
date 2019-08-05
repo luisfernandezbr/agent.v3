@@ -9,3 +9,16 @@ func MapToStruct(m map[string]interface{}, target interface{}) error {
 	}
 	return json.Unmarshal(b, &target)
 }
+
+func StructToMap(s interface{}) (map[string]interface{}, error) {
+	res := map[string]interface{}{}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(b, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}

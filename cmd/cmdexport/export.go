@@ -28,6 +28,8 @@ type Opts struct {
 type AgentConfig struct {
 	CustomerID   string `json:"customer_id"`
 	PinpointRoot string `json:"pinpoint_root"`
+	// SkipGit is a flag for skipping git repo cloning, ripsrc processing, useful when developing
+	SkipGit bool `json:"skip_git"`
 }
 
 type Integration struct {
@@ -118,8 +120,15 @@ type repoProcess struct {
 }
 
 func (s *export) gitProcessing() error {
-	ctx := context.Background()
+	if s.opts.AgentConfig.SkipGit {
+		s.logger.Warn("SkipGit is true, skipping git clone and ripsrc for all repos")
+		for range s.gitProcessingRepos {
 
+		}
+		return nil
+	}
+
+	ctx := context.Background()
 	for repo := range s.gitProcessingRepos {
 		opts := exportrepo.Opts{
 			Logger:     s.logger,
