@@ -91,7 +91,7 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 		return rerr("url is invalid: %v", err)
 	}
 	conf.APIURL = urlAppend(apiURLBase, "graphql")
-	conf.RepoURLPrefix = "https://" + apiURLBaseParsed.Host
+	conf.RepoURLPrefix = "https://" + strings.TrimPrefix(apiURLBaseParsed.Host, "api.")
 
 	token, _ := data["apitoken"].(string)
 	if token == "" {
@@ -159,6 +159,7 @@ func (s *Integration) export(ctx context.Context) error {
 			u.User = url.UserPassword(s.config.Token, "")
 			u.Path = s.config.Org + "/" + repo.Name
 			repoURL := u.String()
+
 			args := rpcdef.GitRepoFetch{}
 			args.RepoID = s.qc.RepoID(repo.ID)
 			args.URL = repoURL

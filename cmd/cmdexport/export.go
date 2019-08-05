@@ -112,9 +112,9 @@ func newExport(opts Opts) *export {
 }
 
 type repoProcess struct {
-	Access     gitclone.AccessDetails
-	ID         string
-	CustomerID string
+	Access gitclone.AccessDetails
+	ID     string
+	URL    string
 }
 
 func (s *export) gitProcessing() error {
@@ -122,12 +122,14 @@ func (s *export) gitProcessing() error {
 
 	for repo := range s.gitProcessingRepos {
 		opts := exportrepo.Opts{
-			Logger:        s.logger,
-			RepoAccess:    repo.Access,
-			Sessions:      s.sessions.outsession,
-			RepoID:        repo.ID,
-			CustomerID:    repo.CustomerID,
+			Logger:     s.logger,
+			CustomerID: s.opts.AgentConfig.CustomerID,
+			RepoID:     repo.ID,
+
+			Sessions: s.sessions.outsession,
+
 			LastProcessed: s.lastProcessed,
+			RepoAccess:    repo.Access,
 		}
 		exp := exportrepo.New(opts, s.locs)
 		err := exp.Run(ctx)

@@ -32,8 +32,7 @@ func (s agentDelegate) SendExported(sessionID string, objs []rpcdef.ExportObj) {
 
 func (s agentDelegate) ExportGitRepo(fetch rpcdef.GitRepoFetch) {
 	repo := repoProcess{}
-	// TODO: set customer id correctly
-	repo.CustomerID = "c1"
+	repo.ID = fetch.RepoID
 	repo.Access.URL = fetch.URL
 	s.export.gitProcessingRepos <- repo
 }
