@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/pinpt/go-common/fileutil"
+
 	"github.com/pinpt/agent.next/pkg/agentconf2"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 
@@ -59,6 +61,10 @@ func newEnroller(opts Opts) (*enroller, error) {
 }
 
 func (s *enroller) Run(ctx context.Context) error {
+	if fileutil.FileExists(s.fsconf.Config2) {
+		return errors.New("agent is already enrolled")
+	}
+
 	done := make(chan error)
 	go func() {
 		res, err := s.WaitForResponse(ctx)

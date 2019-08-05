@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/pinpt/agent.next/pkg/fs"
 )
@@ -16,6 +18,10 @@ type Config struct {
 }
 
 func Save(c Config, loc string) error {
+	err := os.Mkdir(filepath.Dir(loc), 0777)
+	if err != nil {
+		return err
+	}
 	b, err := json.MarshalIndent(c, "", "")
 	if err != nil {
 		return err
