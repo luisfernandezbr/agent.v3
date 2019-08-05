@@ -10,12 +10,12 @@
   revision = "c16e44923ac28d91641236181ee8d8f4ca7f4e79"
 
 [[projects]]
-  digest = "1:53dc856a377d6c9fbb55b86d5d45c3a9f9a5618bc0712850028699916f6eabfd"
+  digest = "1:6d9a5d6dcfac5015c0a2ec641a09e4a64fefaf1f9cf1ca30c4135d72e331cf90"
   name = "github.com/boyter/scc"
   packages = ["processor"]
   pruneopts = "UT"
-  revision = "529a0c48e1057b9168b439fc1a3a0219c801150e"
-  version = "v2.5.0"
+  revision = "88c6c6741f7f6d607b4e7b3720630a52a752b375"
+  version = "v2.6.0"
 
 [[projects]]
   digest = "1:c952f10089bb57d6e6d56d8880bcbb4d444b1d40b091354cb25b10a6c23b211a"
@@ -327,6 +327,14 @@
   version = "v0.0.8"
 
 [[projects]]
+  branch = "master"
+  digest = "1:130cefe87d7eeefc824978dcb78e35672d4c49a11f25c153fbf0cfd952756fa3"
+  name = "github.com/minio/blake2b-simd"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "3f5f724cb5b182a5c278d6d3d55b40e7f8c2efb4"
+
+[[projects]]
   digest = "1:5d231480e1c64a726869bc4142d270184c419749d34f167646baa21008eb0a79"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
@@ -391,7 +399,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:a896222ceb2fa6b421239646502a2dcf47f3334c013c6c06c4fb97710a70f912"
+  digest = "1:4e9ec12cb6b5f5ea719147b565b1c6b2517c919af4c4c8253551d13bdafd8ecd"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -414,8 +422,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "2e80a71a166aa5796b41d57e6271c2fac002371a"
-  version = "7.0.41"
+  revision = "0016774216847b2e81726de22ddaf3f9222996c5"
+  version = "7.0.47"
 
 [[projects]]
   digest = "1:cf1d50f0d59ea783d797310528fcfea1e7d6dc8dc225d575c24aa56737b55636"
@@ -426,7 +434,7 @@
   version = "1.2.1"
 
 [[projects]]
-  digest = "1:36ab8588c7759595bd7f71236ac1220baa0101d0badac586644482a8b57214c7"
+  digest = "1:0837b366302b928391abd2d908a740da1a24919299518e3bb0c95c254c27a6d2"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -438,8 +446,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "d5ca683c18612cb1885e01024fa5d3ce6507ccfc"
-  version = "0.0.353"
+  revision = "5b8b67e5b991f36c4d999c20c8840a4e8b3a367c"
+  version = "0.0.363"
 
 [[projects]]
   digest = "1:34a566614ac60b2d765e9149ac5b554b56184c2ce62202817c13fd7f6ef2a44f"
@@ -614,7 +622,7 @@
   name = "golang.org/x/exp"
   packages = ["rand"]
   pruneopts = "UT"
-  revision = "cfdd5522f6f692191e7471ac6992d5ae58b8e33c"
+  revision = "ec7cb31e5a562f5e9e31b300128d2f530f55d127"
 
 [[projects]]
   branch = "master"
@@ -636,7 +644,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f13137f04efa55b5c7b4d5160ba16f7cb8116df265791022909d137d7e4d5bf4"
+  digest = "1:60d56840281f7bae0836046486295b60d7c23cb617f736831c0ca91b5681abbb"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -648,7 +656,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "1393eb0183657fb29200106b17a5042ec6e48dbe"
+  revision = "51ab0e2deafac1f46c46ad59cf0921be2f180c3d"
 
 [[projects]]
   digest = "1:3952dba92e6a837cf34e6a073160d31029412bf863e37274cb779f319ddbe0b4"
@@ -686,7 +694,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:06d0cbdabf1ffd1f1cd543a9c09469de3f93e6164c9ad5ba57d4205dec26ebd9"
+  digest = "1:9d356b1c241042fec5b6f7528d348336746fade0be0c544b92a9f9c19ff36a97"
   name = "gonum.org/v1/gonum"
   packages = [
     "blas",
@@ -713,7 +721,7 @@
     "stat/distuv",
   ]
   pruneopts = "UT"
-  revision = "3129c79de28915da9e85680bac9474cb60a58593"
+  revision = "3ce8ac2a2fb11ca0240b45098d1f4393d3912a71"
 
 [[projects]]
   digest = "1:c25289f43ac4a68d88b02245742347c94f1e108c534dda442188015ff80669b3"
@@ -729,7 +737,7 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "UT"
-  revision = "c506a9f9061087022822e8da603a52fc387115a8"
+  revision = "fa694d86fc64c7654a660f8908de4e879866748d"
 
 [[projects]]
   digest = "1:630e92180cd33deada273ff1fe293c9451884eb3c25b73f835c28f5f3444a76c"
@@ -809,12 +817,12 @@
   version = "v1.7.3"
 
 [[projects]]
-  digest = "1:b345d22cddb947c95b3ee2f7fec492c5d03bbec26e06cccd11e9c4549e3fc1d6"
+  digest = "1:f22348dc3443f0cd395a5c25ba9e0f7892ee8ffac5ef5c01586c63318b4f259e"
   name = "gopkg.in/src-d/go-billy-siva.v4"
   packages = ["."]
   pruneopts = "UT"
-  revision = "0dae46e2b7bde79563f0b4eb2657beb467ed2115"
-  version = "v4.5.1"
+  revision = "3c94aa28aff3d189d59f6cf832e41739944a7cc6"
+  version = "v4.6.0"
 
 [[projects]]
   digest = "1:a5a896b43e77f9392d29a18a4a49acf7e125922fd81acbdbbabcb1e25dc5d9ee"
@@ -899,12 +907,12 @@
   version = "v2"
 
 [[projects]]
-  digest = "1:cef6478c93523276d29fa1b4bb6b7593aba4be9681a73302b22f8bb0f9c93f97"
+  digest = "1:230742f38717fbc6bb5a97947c9fbf2bb7e146a09a496863a75672df001d2161"
   name = "gopkg.in/src-d/go-siva.v1"
   packages = ["."]
   pruneopts = "UT"
-  revision = "9ee6c8caf21f534cac8b65e5ca6b2a38323502bc"
-  version = "v1.6.0"
+  revision = "a73bed3f9039652fff58a8e989ec90305042b962"
+  version = "v1.7.0"
 
 [[projects]]
   digest = "1:98e121dbd49eb03c58bd8ef3b76322b2fdc3676cf11fa0084bb17ff01b2aa704"

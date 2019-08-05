@@ -139,11 +139,16 @@ func PullRequestsPage(
 		date.ConvertToModel(data.MergedAt, &pr.MergedDate)
 		date.ConvertToModel(data.ClosedAt, &pr.ClosedDate)
 		date.ConvertToModel(data.UpdatedAt, &pr.UpdatedDate)
-		validStatus := []string{"OPEN", "CLOSED", "MERGED"}
-		if !strInArr(data.State, validStatus) {
+		switch data.State {
+		case "OPEN":
+			pr.Status = sourcecode.PullRequestStatusOpen
+		case "CLOSED":
+			pr.Status = sourcecode.PullRequestStatusClosed
+		case "MERGED":
+			pr.Status = sourcecode.PullRequestStatusMerged
+		default:
 			panic("unknown state: " + data.State)
 		}
-		pr.Status = data.State
 		pr.CreatedByRefID, err = qc.UserLoginToRefID(data.Author.Login)
 		if err != nil {
 			panic(err)
