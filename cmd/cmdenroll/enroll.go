@@ -140,7 +140,7 @@ func (s *enroller) WaitForResponse(ctx context.Context) (res agent.EnrollRespons
 	done := make(chan bool)
 	doneOnce := false
 
-	cb := func(instance datamodel.Model) (datamodel.Model, error) {
+	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		if doneOnce {
 			return nil, nil
 		}
@@ -149,7 +149,7 @@ func (s *enroller) WaitForResponse(ctx context.Context) (res agent.EnrollRespons
 		defer func() {
 			done <- true
 		}()
-		resp := instance.(*agent.EnrollResponse)
+		resp := instance.Object().(*agent.EnrollResponse)
 		res = *resp
 		return nil, nil
 	}

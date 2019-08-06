@@ -147,8 +147,8 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 		},
 	}
 
-	cb := func(instance datamodel.Model) (datamodel.Model, error) {
-		req := instance.(*agent.IntegrationRequest)
+	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
+		req := instance.Object().(*agent.IntegrationRequest)
 
 		integration := req.Integration
 
@@ -177,7 +177,8 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 			resp.Success = true
 			resp.Type = agent.IntegrationResponseTypeIntegration
 			resp.Authorization = encrAuthData
-			return resp, nil
+
+			return datamodel.NewModelSendEvent(resp), nil
 		}
 
 		// error for everything else
@@ -187,7 +188,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 		resp.Type = agent.IntegrationResponseTypeIntegration
 		resp.Error = pstrings.Pointer("Only jira and github integrations are supported")
 
-		return resp, nil
+		return datamodel.NewModelSendEvent(resp), nil
 	}
 
 	go func() {
@@ -223,9 +224,9 @@ func (s *runner) handleExportEvents(ctx context.Context) error {
 		},
 	}
 
-	cb := func(instance datamodel.Model) (datamodel.Model, error) {
+	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		s.logger.Info("received export request")
-		ev := instance.(*agent.ExportRequest)
+		ev := instance.Object().(*agent.ExportRequest)
 
 		done := make(chan error)
 
