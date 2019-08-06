@@ -76,8 +76,8 @@ func handleIntegrationEvents(ctx context.Context, log hclog.Logger, apiKey strin
 		},
 	}
 
-	cb := func(instance datamodel.Model) (datamodel.Model, error) {
-		req := instance.(*agent.IntegrationRequest)
+	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
+		req := instance.Object().(*agent.IntegrationRequest)
 
 		log.Info("received integration request", "data", req.ToMap())
 
@@ -97,7 +97,7 @@ func handleIntegrationEvents(ctx context.Context, log hclog.Logger, apiKey strin
 			resp.Success = true
 			resp.Type = agent.IntegrationResponseTypeIntegration
 			resp.Authorization = "encrypted blob data"
-			return resp, nil
+			return datamodel.NewModelSendEvent(resp), nil
 		}
 
 		// error for everything else
@@ -107,7 +107,7 @@ func handleIntegrationEvents(ctx context.Context, log hclog.Logger, apiKey strin
 		resp.Type = agent.IntegrationResponseTypeIntegration
 		resp.Error = pstrings.Pointer("Only jira returns successful IntegrationResponse for this mock")
 
-		return resp, nil
+		return datamodel.NewModelSendEvent(resp), nil
 	}
 
 	log.Info("listening for integration request")
@@ -142,8 +142,8 @@ func handleExportEvents(ctx context.Context, log hclog.Logger, apiKey string, cu
 		},
 	}
 
-	cb := func(instance datamodel.Model) (datamodel.Model, error) {
-		req := instance.(*agent.ExportRequest)
+	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
+		req := instance.Object().(*agent.ExportRequest)
 
 		log.Info("received export request", "data", req.ToMap())
 

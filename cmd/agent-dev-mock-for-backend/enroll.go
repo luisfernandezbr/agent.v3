@@ -30,9 +30,9 @@ func enrollRequest(ctx context.Context, log hclog.Logger, code string, agentOpts
 
 	done := make(chan bool)
 
-	cb := func(instance datamodel.Model) (datamodel.Model, error) {
+	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		defer func() { done <- true }()
-		resp := instance.(*agent.EnrollResponse)
+		resp := instance.Object().(*agent.EnrollResponse)
 
 		//log.Info("received enroll response", "data", resp.ToMap())
 
