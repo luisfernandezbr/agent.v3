@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/fsconf"
@@ -30,11 +31,13 @@ type AgentConfig struct {
 	PinpointRoot string `json:"pinpoint_root"`
 	// SkipGit is a flag for skipping git repo cloning, ripsrc processing, useful when developing
 	SkipGit bool `json:"skip_git"`
+	// IntegrationsDir is a custom location of the integrations binaries
+	IntegrationsDir string `json:"integrations_dir"`
 }
 
 type Integration struct {
-	Name   string
-	Config map[string]interface{}
+	Name   string                 `json:"name"`
+	Config map[string]interface{} `json:"config"`
 }
 
 func Run(opts Opts) error {
@@ -60,12 +63,16 @@ type export struct {
 	gitProcessingRepos chan repoProcess
 
 	integrationConfigs map[string]Integration
+
+	startTime time.Time
 }
 
 func newExport(opts Opts) *export {
 	s := &export{}
 	s.opts = opts
 	s.logger = opts.Logger
+
+	s.startTime = time.Now()
 
 	root := opts.AgentConfig.PinpointRoot
 	if root == "" {
@@ -77,6 +84,9 @@ func newExport(opts Opts) *export {
 	}
 
 	s.locs = fsconf.New(root)
+	if opts.AgentConfig.IntegrationsDir != "" {
+		s.locs.Integrations = opts.AgentConfig.IntegrationsDir
+	}
 
 	var err error
 	s.lastProcessed, err = jsonstore.New(s.locs.LastProcessedFile)
@@ -88,6 +98,7 @@ func newExport(opts Opts) *export {
 
 	s.gitProcessingRepos = make(chan repoProcess, 100000)
 	gitProcessingDone := make(chan bool)
+
 	go func() {
 		defer func() {
 			gitProcessingDone <- true
@@ -104,11 +115,13 @@ func newExport(opts Opts) *export {
 	}
 
 	s.setupIntegrations()
-	s.runExports()
+	exportRes := s.runExports()
 	close(s.gitProcessingRepos)
 
-	s.logger.Info("waiting for git repo processing to complete")
+	s.logger.Info("Waiting for git repo processing to complete")
 	<-gitProcessingDone
+
+	s.printExportRes(exportRes)
 
 	return s
 }
@@ -116,7 +129,6 @@ func newExport(opts Opts) *export {
 type repoProcess struct {
 	Access gitclone.AccessDetails
 	ID     string
-	URL    string
 }
 
 func (s *export) gitProcessing() error {
@@ -128,10 +140,18 @@ func (s *export) gitProcessing() error {
 		return nil
 	}
 
+	i := 0
+	reposFailedRevParse := 0
+	var start time.Time
+
 	ctx := context.Background()
 	for repo := range s.gitProcessingRepos {
+		if i == 0 {
+			start = time.Now()
+		}
+		i++
 		opts := exportrepo.Opts{
-			Logger:     s.logger,
+			Logger:     s.logger.With("c", i),
 			CustomerID: s.opts.AgentConfig.CustomerID,
 			RepoID:     repo.ID,
 
@@ -142,10 +162,28 @@ func (s *export) gitProcessing() error {
 		}
 		exp := exportrepo.New(opts, s.locs)
 		err := exp.Run(ctx)
+		if err == exportrepo.ErrRevParseFailed {
+			reposFailedRevParse++
+			continue
+		}
 		if err != nil {
 			return err
 		}
 	}
+
+	if i == 0 {
+		s.logger.Warn("Finished git repo processing: No git repos found")
+		return nil
+	}
+
+	if reposFailedRevParse != 0 {
+		s.logger.Warn("Skipped ripsrc on empty repos", "repos", reposFailedRevParse)
+	}
+
+	if i != 0 {
+		s.logger.Info("Finished git repo processing", "count", i, "dur", time.Since(start))
+	}
+
 	return nil
 }
 
@@ -181,12 +219,17 @@ func (s *export) setupIntegrations() {
 	}
 }
 
-func (s *export) runExports() {
+type runResult struct {
+	Err      error
+	Duration time.Duration
+}
+
+func (s *export) runExports() map[string]runResult {
 	ctx := context.Background()
 	wg := sync.WaitGroup{}
 
-	errored := map[string]error{}
-	erroredMu := sync.Mutex{}
+	res := map[string]runResult{}
+	resMu := sync.Mutex{}
 
 	configPinpoint := rpcdef.ExportConfigPinpoint{
 		CustomerID: s.opts.AgentConfig.CustomerID,
@@ -198,11 +241,17 @@ func (s *export) runExports() {
 		integration := integration
 		go func() {
 			defer wg.Done()
-			rerr := func(err error) {
-				erroredMu.Lock()
-				errored[name] = err
-				erroredMu.Unlock()
-				s.logger.Error("Export failed", "integration", name, "err", err)
+			start := time.Now()
+
+			ret := func(err error) {
+				resMu.Lock()
+				res[name] = runResult{Err: err, Duration: time.Since(start)}
+				resMu.Unlock()
+				if err != nil {
+					s.logger.Error("Export failed", "integration", name, "dur", time.Since(start), "err", err)
+					return
+				}
+				s.logger.Info("Export success", "integration", name, "dur", time.Since(start))
 			}
 
 			s.logger.Info("Export starting", "integration", name, "log_file", integration.logFile.Name())
@@ -213,7 +262,7 @@ func (s *export) runExports() {
 			}
 			integrationConfig := integrationDef.Config
 			if len(integrationConfig) == 0 {
-				rerr(fmt.Errorf("empty config for integration: %v", name))
+				ret(fmt.Errorf("empty config for integration: %v", name))
 				return
 			}
 			exportConfig := rpcdef.ExportConfig{
@@ -222,17 +271,28 @@ func (s *export) runExports() {
 			}
 			_, err := integration.rpcClient.Export(ctx, exportConfig)
 			if err != nil {
-				rerr(err)
+				ret(err)
 				return
 			}
-			s.logger.Info("Export success", "integration", name)
+
+			ret(nil)
 		}()
 	}
 	wg.Wait()
 
+	s.printExportRes(res)
+
+	return res
+}
+
+func (s *export) printExportRes(res map[string]runResult) {
+	var successNames []string
+	var failedNames []string
+
 	for name, integration := range s.integrations {
-		if errored[name] != nil {
-			s.logger.Error("Export failed", "integration", name, "err", errored[name])
+		ires := res[name]
+		if ires.Err != nil {
+			s.logger.Error("Export failed", "integration", name, "dur", ires.Duration, "err", ires.Err)
 			panicOut, err := integration.CloseAndDetectPanic()
 			if panicOut != "" {
 				fmt.Println("Panic in integration", name)
@@ -241,15 +301,20 @@ func (s *export) runExports() {
 			if err != nil {
 				s.logger.Error("Could not close integration", "err", err)
 			}
-		} else {
-			s.logger.Info("Export succeded", "integration", name)
+			failedNames = append(failedNames, name)
+			continue
 		}
+
+		s.logger.Info("Export success", "integration", name, "dur", ires.Duration)
+		successNames = append(successNames, name)
 	}
 
-	if len(errored) > 0 {
-		s.logger.Error("Some exports failed", "failed", len(errored), "succeded", len(s.integrations)-len(errored))
+	dur := time.Since(s.startTime)
+
+	if len(failedNames) > 0 {
+		s.logger.Error("Some exports failed", "failed", failedNames, "succeded", successNames, "dur", dur)
 	} else {
-		s.logger.Info("Exports completed", "succeded", len(s.integrations))
+		s.logger.Info("Exports completed", "succeded", successNames, "dur", dur)
 	}
 }
 

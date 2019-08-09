@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -70,18 +69,24 @@ func (s *Integration) makeRequestRetryThrottled(query string, res interface{}, r
 		return
 	}
 
+	rateLimited := func() (isErrorRetryable bool, rerr error) {
+		if retryThrottled >= maxThrottledRetries {
+			s.logger.Info("api request failed", "body", string(b))
+			rerr = fmt.Errorf(`resp resp.StatusCode != 200, got %v, can't retry, too many retries already`, resp.StatusCode)
+			return
+		}
+
+		s.logger.Warn("api request failed due to throttling, will sleep for 30m and retry, this should only happen if hourly quota is used up, check here (https://developer.github.com/v4/guides/resource-limitations/#returning-a-calls-rate-limit-status)", "body", string(b), "retryThrottled", retryThrottled)
+		time.Sleep(30 * time.Minute)
+
+		return s.makeRequestRetryThrottled(query, res, retryThrottled+1)
+
+	}
+
 	if resp.StatusCode != 200 {
 
 		if resp.StatusCode == 403 && strings.Contains(string(b), "wait") {
-			if retryThrottled >= maxThrottledRetries {
-				s.logger.Info("api request failed", "body", string(b))
-				rerr = fmt.Errorf(`resp resp.StatusCode != 200, got %v, can't retry, too many retries already`, resp.StatusCode)
-				return
-			}
-			s.logger.Warn("api request failed with status 403 (due to throttling), will sleep for 30m and retry, this should only happen if hourly quota is used up, check here (https://developer.github.com/v4/guides/resource-limitations/#returning-a-calls-rate-limit-status)", "body", string(b), "retryThrottled", retryThrottled)
-			time.Sleep(30 * time.Minute)
-
-			return s.makeRequestRetryThrottled(query, res, retryThrottled+1)
+			return rateLimited()
 		}
 
 		s.logger.Info("api request failed", "body", string(b))
@@ -94,14 +99,22 @@ func (s *Integration) makeRequestRetryThrottled(query string, res interface{}, r
 
 	var errRes struct {
 		Errors []struct {
+			Type    string `json:"type"`
 			Message string `json:"message"`
 		} `json:"errors"`
 	}
 
 	json.Unmarshal(b, &errRes)
 	if len(errRes.Errors) != 0 {
-		s.logger.Info("api request failed", "body", string(b))
-		rerr = errors.New("api request failed: " + errRes.Errors[0].Message)
+		s.logger.Info("api request got errors returned in json", "body", string(b))
+
+		err1 := errRes.Errors[0]
+		// "{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}"
+		if err1.Type == "RATE_LIMITED" {
+			return rateLimited()
+		}
+
+		rerr = fmt.Errorf("api request failed: type: %v message %v", err1.Type, err1.Message)
 		return
 	}
 

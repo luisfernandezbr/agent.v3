@@ -77,6 +77,7 @@ type Config struct {
 	Token         string
 	Org           string
 	ExcludedRepos []string
+	OnlyRipsrc    bool
 }
 
 type configDef struct {
@@ -84,6 +85,7 @@ type configDef struct {
 	APIToken      string   `json:"apitoken"`
 	Organization  string   `json:"organization"`
 	ExcludedRepos []string `json:"excluded_repos"`
+	OnlyRipsrc    bool     `json:"only_ripsrc"`
 }
 
 func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
@@ -110,6 +112,7 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	res.Token = def.APIToken
 	res.Org = def.Organization
 	res.ExcludedRepos = def.ExcludedRepos
+	res.OnlyRipsrc = def.OnlyRipsrc
 
 	apiURLBaseParsed, err := url.Parse(def.URL)
 	if err != nil {
@@ -144,17 +147,6 @@ func (s *Integration) Export(ctx context.Context,
 }
 
 func (s *Integration) export(ctx context.Context) error {
-
-	// export all users in organization, and when later encountering new users continue export
-	var err error
-	s.users, err = NewUsers(s)
-	if err != nil {
-		return err
-	}
-	defer s.users.Done()
-
-	s.qc.UserLoginToRefID = s.users.LoginToRefID
-	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
 
 	repos, err := api.ReposAllSlice(s.qc)
 	if err != nil {
@@ -195,6 +187,21 @@ func (s *Integration) export(ctx context.Context) error {
 			s.agent.ExportGitRepo(args)
 		}
 	}
+
+	if s.config.OnlyRipsrc {
+		s.logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
+		return nil
+	}
+
+	// export all users in organization, and when later encountering new users continue export
+	s.users, err = NewUsers(s)
+	if err != nil {
+		return err
+	}
+	defer s.users.Done()
+
+	s.qc.UserLoginToRefID = s.users.LoginToRefID
+	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
 
 	// export repos
 	{

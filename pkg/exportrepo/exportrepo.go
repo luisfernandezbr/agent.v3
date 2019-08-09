@@ -1,11 +1,14 @@
 package exportrepo
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -62,6 +65,8 @@ func New(opts Opts, locs fsconf.Locs) *Export {
 	return s
 }
 
+var ErrRevParseFailed = errors.New("git rev-parse HEAD failed")
+
 func (s *Export) Run(ctx context.Context) error {
 	err := os.MkdirAll(s.locs.Temp, 0777)
 	if err != nil {
@@ -71,6 +76,10 @@ func (s *Export) Run(ctx context.Context) error {
 	checkoutDir, cacheDir, err := s.clone(ctx)
 	if err != nil {
 		return err
+	}
+
+	if !hasHeadCommit(ctx, checkoutDir) {
+		return ErrRevParseFailed
 	}
 
 	s.repoNameUsedInCacheDir = filepath.Base(cacheDir)
@@ -90,6 +99,19 @@ func (s *Export) Run(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func hasHeadCommit(ctx context.Context, repoDir string) bool {
+	out := bytes.NewBuffer(nil)
+	c := exec.Command("git", "rev-parse", "HEAD")
+	c.Dir = repoDir
+	c.Stdout = out
+	c.Run()
+	res := strings.TrimSpace(out.String())
+	if len(res) != 40 {
+		return false
+	}
+	return true
 }
 
 func (s *Export) clone(ctx context.Context) (
@@ -124,13 +146,14 @@ func (s *Export) ripsrcSetup(repoDir string) {
 	opts.RepoDir = repoDir
 	opts.AllBranches = true
 	opts.BranchesUseOrigin = true
-	opts.CheckpointsDir = s.locs.RipsrcCheckpoints
+	opts.CheckpointsDir = filepath.Join(s.locs.RipsrcCheckpoints, s.repoNameUsedInCacheDir)
 
 	s.lastProcessedKey = []string{"ripsrc", s.repoNameUsedInCacheDir}
 
 	lastCommit := s.opts.LastProcessed.Get(s.lastProcessedKey...)
 	if lastCommit != nil {
 		opts.CommitFromIncl = lastCommit.(string)
+		opts.CommitFromMakeNonIncl = true
 
 		if !fileutil.FileExists(opts.CheckpointsDir) {
 			panic(fmt.Errorf("expecting to run incrementals, but ripsrc checkpoints dir does not exist for repo: %v", s.repoNameUsedInCacheDir))

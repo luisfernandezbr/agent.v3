@@ -177,12 +177,17 @@ var cmdExport = &cobra.Command{
 
 		// allow setting pinpoint root in either json or command line flag
 		{
-			root, _ := cmd.Flags().GetString("pinpoint-root")
-			if root != "" {
-				if opts.AgentConfig.PinpointRoot != "" {
-					exitWithErr(logger, errors.New("pinpoint-root was set in both agent-config-json and pinpoint-root, should be set in one place only"))
-				}
-				opts.AgentConfig.PinpointRoot = root
+			v, _ := cmd.Flags().GetString("pinpoint-root")
+			if v != "" {
+				opts.AgentConfig.PinpointRoot = v
+			}
+		}
+
+		// allow setting integrations-dir in both json and command line flag
+		{
+			v, _ := cmd.Flags().GetString("integrations-dir")
+			if v != "" {
+				opts.AgentConfig.IntegrationsDir = v
 			}
 		}
 
@@ -209,6 +214,7 @@ func init() {
 	flagPinpointRoot(cmd)
 	cmd.Flags().String("agent-config-json", "", "Agent config as json")
 	cmd.Flags().String("integrations-json", "", "Integrations config as json")
+	cmd.Flags().String("integrations-dir", "", "Integrations dir")
 	cmdRoot.AddCommand(cmdExport)
 }
 

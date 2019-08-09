@@ -3,11 +3,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:964d623b31c240773610f9b92f4ec63b1b9cb01eb000b06f3223d2ef08da9673"
+  digest = "1:adceedafc49615ab3cbc4572f7366f7cad58573984bd64f81628610095c13547"
   name = "github.com/99designs/keyring"
   packages = ["."]
   pruneopts = "UT"
-  revision = "c16e44923ac28d91641236181ee8d8f4ca7f4e79"
+  revision = "32398645371922410a37187feed382bbe60ae4da"
 
 [[projects]]
   digest = "1:6d9a5d6dcfac5015c0a2ec641a09e4a64fefaf1f9cf1ca30c4135d72e331cf90"
@@ -180,6 +180,14 @@
   pruneopts = "UT"
   revision = "2a8bb927dd31d8daada140a5d09578521ce5c36a"
   version = "v0.0.1"
+
+[[projects]]
+  digest = "1:7b5c6e2eeaa9ae5907c391a91c132abfd5c9e8a784a341b5625e750c67e6825d"
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d"
+  version = "v1.4.0"
 
 [[projects]]
   branch = "master"
@@ -399,7 +407,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:515109a9f00383102e8dd53c1fba3f6977ce6877d220d941bf612ed974e7baf9"
+  digest = "1:0758f5eeafcab5e24219aa274134c545b2f13b271592ab76cdd894888df0b5c0"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -422,8 +430,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "92b1b95c1ba6ae5d0d4bfbf91f8b7fa3cf141de1"
-  version = "7.0.50"
+  revision = "a026d9d7892c096c8d6e395077d0b7cc45b66dfd"
+  version = "7.056"
 
 [[projects]]
   digest = "1:cf1d50f0d59ea783d797310528fcfea1e7d6dc8dc225d575c24aa56737b55636"
@@ -434,7 +442,7 @@
   version = "1.2.1"
 
 [[projects]]
-  digest = "1:2ba2a051fe1cf3e563f8a375808bea74fdaeb0e9b2a6320dc7aaa1d4cdc16369"
+  digest = "1:0915a14c61d6cc0b4259908c35280f5a50d565200d4b4fc6d573a830ecbba55b"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -446,19 +454,21 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "8c13afdee8c30ea87c97237bc95f672a29fe6442"
-  version = "0.0.366"
+  revision = "f358b61e155f8527631f5db0c6f6d28b9082cc23"
+  version = "0.0.373"
 
 [[projects]]
-  digest = "1:34a566614ac60b2d765e9149ac5b554b56184c2ce62202817c13fd7f6ef2a44f"
+  digest = "1:3db456275fbaedf3c401bd81d914b98b6ac0dbff38cf9280fb3a60dca54d38cf"
   name = "github.com/pinpt/ripsrc"
   packages = [
     "ripsrc",
     "ripsrc/branches2",
+    "ripsrc/branchmeta",
     "ripsrc/commitmeta",
     "ripsrc/fileinfo",
     "ripsrc/gitblame2",
     "ripsrc/gitexec",
+    "ripsrc/gittime",
     "ripsrc/history3/incblame",
     "ripsrc/history3/process",
     "ripsrc/history3/process/parser",
@@ -469,8 +479,8 @@
     "ripsrc/pkg/logger",
   ]
   pruneopts = "UT"
-  revision = "b1b278d74b19a3b62a47aaf427077334a5feb4e8"
-  version = "6.0.2"
+  revision = "ae2c2ec6617b68ab695b5596e324e3434dd3d3bd"
+  version = "6.1.0"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
@@ -694,7 +704,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9d356b1c241042fec5b6f7528d348336746fade0be0c544b92a9f9c19ff36a97"
+  digest = "1:429515c7a24e7594826064eb8766df0cbd2721bf8f7c15fae8a0e73c6a55dc1f"
   name = "gonum.org/v1/gonum"
   packages = [
     "blas",
@@ -721,7 +731,7 @@
     "stat/distuv",
   ]
   pruneopts = "UT"
-  revision = "3ce8ac2a2fb11ca0240b45098d1f4393d3912a71"
+  revision = "ced62fe5104b907b6c16cb7e575c17b2e62ceddd"
 
 [[projects]]
   digest = "1:c25289f43ac4a68d88b02245742347c94f1e108c534dda442188015ff80669b3"
