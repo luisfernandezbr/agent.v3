@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/pinpt/agent.next/pkg/encrypt"
+
 	"github.com/pinpt/go-common/fileutil"
 
-	"github.com/pinpt/agent.next/pkg/agentconf2"
+	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
@@ -179,13 +181,18 @@ func (s *enroller) WaitForResponse(ctx context.Context) (res agent.EnrollRespons
 
 func (s *enroller) ProcessResult(res agent.EnrollResponse) error {
 
-	conf := agentconf2.Config{}
+	conf := agentconf.Config{}
 	conf.APIKey = res.Apikey
 	conf.CustomerID = res.CustomerID
 	conf.Channel = s.opts.Channel
 	conf.DeviceID = s.opts.DeviceID
+	var err error
+	conf.PPEncryptionKey, err = encrypt.GenerateKey()
+	if err != nil {
+		return err
+	}
 
-	err := agentconf2.Save(conf, s.fsconf.Config2)
+	err = agentconf.Save(conf, s.fsconf.Config2)
 	if err != nil {
 		return fmt.Errorf("could not save config, err: %v", err)
 	}

@@ -2,6 +2,10 @@ package pservice
 
 import "context"
 
+func init() {
+	panic("TODO: not currently used, but should use it to auto restart os service on onroll")
+}
+
 // Run is the primary interface for service defintion. Easy to compose.
 type Run func(context.Context) error
 

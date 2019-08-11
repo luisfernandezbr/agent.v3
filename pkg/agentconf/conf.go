@@ -1,4 +1,4 @@
-package agentconf2
+package agentconf
 
 import (
 	"bytes"
@@ -11,10 +11,11 @@ import (
 )
 
 type Config struct {
-	APIKey     string
-	Channel    string
-	CustomerID string
-	DeviceID   string
+	APIKey          string `json:"api_key"`
+	Channel         string `json:"channel"`
+	CustomerID      string `json:"customer_id"`
+	DeviceID        string `json:"device_id"`
+	PPEncryptionKey string `json:"pp_encryption_key"`
 }
 
 func Save(c Config, loc string) error {

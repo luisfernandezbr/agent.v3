@@ -1,4 +1,4 @@
-package cmdservicerun2
+package cmdservicerun
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/pinpt/agent.next/pkg/encrypt"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 
 	"github.com/pinpt/agent.next/cmd/cmdupload"
@@ -19,7 +20,6 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/cmd/cmdexport"
-	"github.com/pinpt/agent.next/pkg/keychain"
 	"github.com/pinpt/integration-sdk/agent"
 )
 
@@ -27,8 +27,9 @@ type exporterOpts struct {
 	Logger       hclog.Logger
 	CustomerID   string
 	PinpointRoot string
-	Encryptor    *keychain.Encryptor
 	FSConf       fsconf.Locs
+
+	PPEncryptionKey string
 }
 
 type exporter struct {
@@ -44,6 +45,9 @@ type exportRequest struct {
 }
 
 func newExporter(opts exporterOpts) *exporter {
+	if opts.PPEncryptionKey == "" {
+		panic(`opts.PPEncryptionKey == ""`)
+	}
 	s := &exporter{}
 	s.opts = opts
 	s.logger = opts.Logger
@@ -86,7 +90,7 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 			panic("missing encrypted auth data")
 		}
 
-		data, err := s.opts.Encryptor.Decrypt(*integration.Authorization.Authorization)
+		data, err := encrypt.DecryptString(*integration.Authorization.Authorization, s.opts.PPEncryptionKey)
 		if err != nil {
 			return err
 		}
