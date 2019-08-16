@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/url"
 
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
@@ -41,6 +42,10 @@ func UsersOnboard(qc QueryContext) (res []*agent.UserResponseUsers, rerr error) 
 			item.Groups = append(item.Groups, g2)
 		}
 		res = append(res, item)
+	}
+
+	if len(res) == 1000 {
+		return nil, errors.New("jira: instance has more than 1000 users, we can't retrieve more than this")
 	}
 
 	return

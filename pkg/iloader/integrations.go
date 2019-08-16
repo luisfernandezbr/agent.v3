@@ -26,6 +26,9 @@ type Loader struct {
 }
 
 func New(opts Opts) *Loader {
+	if opts.Logger == nil || opts.Locs.Root == "" || opts.Agent == nil {
+		panic("provide all opts")
+	}
 	s := &Loader{}
 	s.opts = opts
 	s.logger = opts.Logger

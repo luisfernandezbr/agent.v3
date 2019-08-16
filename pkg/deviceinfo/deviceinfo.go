@@ -2,6 +2,7 @@ package deviceinfo
 
 import (
 	"reflect"
+	"time"
 
 	"github.com/pinpt/agent.next/pkg/sysinfo"
 	"github.com/pinpt/go-common/datetime"
@@ -10,6 +11,8 @@ import (
 func DeviceID() string {
 	return sysinfo.GetSystemInfo().ID
 }
+
+var started = time.Now()
 
 // AppendCommonInfo append device information to event
 func AppendCommonInfo(event interface{}, customerID string) {
@@ -74,8 +77,9 @@ func AppendCommonInfo(event interface{}, customerID string) {
 			dt := datetime.EpochNow()
 			val.Set(reflect.ValueOf(dt))
 		} else if field.Name == "Uptime" {
-			panic("uptime")
-			//val.Set(reflect.ValueOf(datetime.EpochNow() - started))
+			// TODO: it would be better to refactor this and have some info passed based on the app run, not depending on init
+			ts := datetime.TimeToEpoch(time.Now()) - datetime.TimeToEpoch(started)
+			val.Set(reflect.ValueOf(ts))
 		}
 	}
 }

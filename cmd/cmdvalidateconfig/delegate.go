@@ -1,4 +1,4 @@
-package cmdvalidate
+package cmdvalidateconfig
 
 import (
 	"github.com/pinpt/agent.next/rpcdef"

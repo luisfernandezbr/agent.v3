@@ -3,14 +3,10 @@ package cmdservicerun
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"net/url"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/pinpt/agent.next/pkg/encrypt"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
 
 	"github.com/pinpt/agent.next/cmd/cmdupload"
 
@@ -104,7 +100,10 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 		s.logger.Debug("integration export", "remote config", remoteConfig)
 
 		name2 := ""
-		in.Config, name2 = s.convertConfig(integration.Name, remoteConfig, integration.Exclusions)
+		in.Config, name2, err = convertConfig(integration.Name, remoteConfig, integration.Exclusions)
+		if err != nil {
+			return err
+		}
 		if name2 != "" {
 			in.Name = name2
 		} else {
@@ -136,87 +135,6 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 		return err
 	}
 	return nil
-}
-
-func (s *exporter) convertConfig(in string, c1 map[string]interface{}, exclusions []string) (res map[string]interface{}, integrationName string) {
-	if in == "github" {
-		var config struct {
-			URL           string   `json:"url"`
-			APIToken      string   `json:"apitoken"`
-			Organization  string   `json:"organization"`
-			ExcludedRepos []string `json:"excluded_repos"`
-		}
-		err := structmarshal.MapToStruct(c1, &config)
-		if err != nil {
-			panic(err)
-		}
-		config.Organization = "pinpt"
-		{
-			v, ok := c1["api_token"].(string)
-			if !ok {
-				panic("missing api_token")
-			}
-			config.APIToken = v
-		}
-		{
-			v, ok := c1["url"].(string)
-			if !ok {
-				panic("missing url")
-			}
-			config.URL = v
-		}
-		config.ExcludedRepos = exclusions
-		res, err := structmarshal.StructToMap(config)
-		if err != nil {
-			panic(err)
-		}
-		return res, ""
-	} else if in == "jira" {
-		var config struct {
-			URL              string   `json:"url"`
-			Username         string   `json:"username"`
-			Password         string   `json:"password"`
-			ExcludedProjects []string `json:"excluded_projects"`
-		}
-		err := structmarshal.MapToStruct(c1, &config)
-		if err != nil {
-			panic(err)
-		}
-		us, ok := c1["url"].(string)
-		if !ok {
-			panic("missing jira url in config")
-		}
-		u, err := url.Parse(us)
-		if err != nil {
-			panic(fmt.Errorf("invlid jira url: %v", err))
-		}
-		integrationName = "jira-hosted"
-		if strings.HasSuffix(u.Host, ".atlassian.net") {
-			integrationName = "jira-cloud"
-		}
-		config.URL = us
-		{
-			v, ok := c1["username"].(string)
-			if !ok {
-				panic("missing username")
-			}
-			config.Username = v
-		}
-		{
-			v, ok := c1["password"].(string)
-			if !ok {
-				panic("missing password")
-			}
-			config.Password = v
-		}
-		config.ExcludedProjects = exclusions
-		res, err := structmarshal.StructToMap(config)
-		if err != nil {
-			panic(err)
-		}
-		return res, integrationName
-	}
-	panic("unsupported integration: " + in)
 }
 
 func (s *exporter) execExport(ctx context.Context, agentConfig cmdexport.AgentConfig, integrations []cmdexport.Integration) error {

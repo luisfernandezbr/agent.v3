@@ -2,7 +2,10 @@ package cmdservicerun
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/pinpt/agent.next/pkg/encrypt"
 
@@ -60,6 +63,15 @@ func (s *runner) run(ctx context.Context) error {
 		return err
 	}
 
+	go func() {
+		s.sendPings()
+	}()
+
+	err = s.sendStart(context.Background())
+	if err != nil {
+		return err
+	}
+
 	s.exporter = newExporter(exporterOpts{
 		Logger:          s.logger,
 		CustomerID:      s.conf.CustomerID,
@@ -78,6 +90,11 @@ func (s *runner) run(ctx context.Context) error {
 	}
 
 	err = s.handleIntegrationEvents(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = s.handleOnboardingEvents(ctx)
 	if err != nil {
 		return err
 	}
@@ -133,7 +150,7 @@ var factory action.ModelFactory = &modelFactory{}
 func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 	s.logger.Info("listening for integration requests")
 
-	errors := make(chan error, 1)
+	errorsChan := make(chan error, 1)
 
 	actionConfig := action.Config{
 		APIKey:  s.conf.APIKey,
@@ -141,7 +158,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 		Channel: s.conf.Channel,
 		Factory: factory,
 		Topic:   agent.IntegrationRequestTopic.String(),
-		Errors:  errors,
+		Errors:  errorsChan,
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,
 			"uuid":        s.conf.DeviceID,
@@ -176,12 +193,28 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 		resp.UUID = s.conf.DeviceID
 		//resp.RefID = hash.Values(s.conf.DeviceID, integration.Name)
 
-		if integration.Name == "jira" || integration.Name == "github" {
-			authData := pjson.Stringify(integration.Authorization.ToMap())
+		rerr := func(err error) (datamodel.ModelSendEvent, error) {
+			// error for everything else
+			resp.Type = agent.IntegrationResponseTypeIntegration
+			resp.Error = pstrings.Pointer(err.Error())
+			return sendEvent(resp)
+		}
 
-			encrAuthData, err := encrypt.EncryptString(authData, s.conf.PPEncryptionKey)
+		if integration.Name == "jira" || integration.Name == "github" {
+			auth := integration.Authorization.ToMap()
+
+			res, err := s.validate(ctx, integration.Name, auth)
 			if err != nil {
-				panic(err)
+				return rerr(err)
+			}
+
+			if !res.Success {
+				return rerr(errors.New(strings.Join(res.Errors, ", ")))
+			}
+
+			encrAuthData, err := encrypt.EncryptString(pjson.Stringify(auth), s.conf.PPEncryptionKey)
+			if err != nil {
+				return rerr(err)
 			}
 
 			resp.Success = true
@@ -190,15 +223,11 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 			return sendEvent(resp)
 		}
 
-		// error for everything else
-		resp.Type = agent.IntegrationResponseTypeIntegration
-		resp.Error = pstrings.Pointer("Only jira and github integrations are supported")
-
-		return sendEvent(resp)
+		return rerr(errors.New("Only jira and github integrations are supported"))
 	}
 
 	go func() {
-		for err := range errors {
+		for err := range errorsChan {
 			s.logger.Error("error in integration events", "err", err)
 		}
 	}()
@@ -210,6 +239,66 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 
 	return nil
 
+}
+
+func (s *runner) handleOnboardingEvents(ctx context.Context) error {
+	s.logger.Info("listening for onboarding events")
+
+	cbUser := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
+		//req := instance.Object().(*agent.UserRequest)
+		s.logger.Info("received user request")
+		return nil, nil
+	}
+
+	cbRepo := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
+		//req := instance.Object().(*agent.RepoRequest)
+		s.logger.Info("received repo request")
+		return nil, nil
+	}
+
+	cbProject := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
+		//req := instance.Object().(*agent.ProjectRequest)
+		s.logger.Info("received project request")
+		return nil, nil
+	}
+
+	_, err := action.Register(ctx, action.NewAction(cbUser), s.newSubConfig(agent.UserRequestTopic.String()))
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = action.Register(ctx, action.NewAction(cbRepo), s.newSubConfig(agent.RepoRequestTopic.String()))
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = action.Register(ctx, action.NewAction(cbProject), s.newSubConfig(agent.ProjectRequestTopic.String()))
+	if err != nil {
+		panic(err)
+	}
+
+	return nil
+}
+
+func (s *runner) newSubConfig(topic string) action.Config {
+	errorsChan := make(chan error, 1)
+	go func() {
+		for err := range errorsChan {
+			s.logger.Error("error in integration events", "err", err)
+		}
+	}()
+	return action.Config{
+		APIKey:  s.conf.APIKey,
+		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
+		Channel: s.conf.Channel,
+		Factory: factory,
+		Topic:   topic,
+		Errors:  errorsChan,
+		Headers: map[string]string{
+			"customer_id": s.conf.CustomerID,
+			"uuid":        s.conf.DeviceID,
+		},
+	}
 }
 
 func (s *runner) handleExportEvents(ctx context.Context) error {
@@ -287,4 +376,60 @@ func (s *runner) handleExportEvents(ctx context.Context) error {
 
 	return nil
 
+}
+
+func (s *runner) sendPings() {
+	for {
+		select {
+		case <-time.After(10 * time.Second):
+			ctx := context.Background()
+			err := s.sendPing(ctx)
+			if err != nil {
+				s.logger.Error("could not send ping", "err", err.Error())
+			}
+		}
+	}
+}
+
+func (s *runner) sendStart(ctx context.Context) error {
+	agentEvent := &agent.Start{
+		Type:    agent.StartTypeStart,
+		Success: true,
+	}
+	return s.sendEvent(ctx, agentEvent, "", nil)
+}
+
+func (s *runner) sendStop(ctx context.Context) error {
+	agentEvent := &agent.Stop{
+		Type:    agent.StopTypeStop,
+		Success: true,
+	}
+	return s.sendEvent(ctx, agentEvent, "", nil)
+}
+
+func (s *runner) sendPing(ctx context.Context) error {
+	agentEvent := &agent.Ping{
+		Type:    agent.PingTypePing,
+		Success: true,
+	}
+	return s.sendEvent(ctx, agentEvent, "", nil)
+}
+
+func (s *runner) sendEvent(ctx context.Context, agentEvent datamodel.Model, jobID string, extraHeaders map[string]string) error {
+	deviceinfo.AppendCommonInfo(agentEvent, s.conf.CustomerID)
+	headers := map[string]string{
+		"uuid":        s.conf.DeviceID,
+		"customer_id": s.conf.CustomerID,
+	}
+	if jobID != "" {
+		headers["job_id"] = jobID
+	}
+	for k, v := range extraHeaders {
+		headers[k] = v
+	}
+	e := event.PublishEvent{
+		Object:  agentEvent,
+		Headers: headers,
+	}
+	return event.Publish(ctx, e, s.conf.Channel, s.conf.APIKey)
 }

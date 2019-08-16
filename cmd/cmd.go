@@ -16,7 +16,7 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
 	"github.com/pinpt/agent.next/cmd/cmdserviceuninstall"
-	"github.com/pinpt/agent.next/cmd/cmdvalidate"
+	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 
 	"github.com/pinpt/agent.next/cmd/cmdexport"
 
@@ -238,14 +238,14 @@ var cmdValidateConfig = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := defaultLogger()
 		baseOpts := integrationCommandOpts(logger, cmd)
-		opts := cmdvalidate.Opts{}
+		opts := cmdvalidateconfig.Opts{}
 		opts.Opts = baseOpts
 
 		outputFile := newOutputFile(logger, cmd)
 		defer outputFile.Close()
 		opts.Output = outputFile.Writer
 
-		err := cmdvalidate.Run(opts)
+		err := cmdvalidateconfig.Run(opts)
 		if err != nil {
 			exitWithErr(logger, err)
 		}

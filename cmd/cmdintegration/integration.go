@@ -81,7 +81,11 @@ func NewCommand(opts Opts) *Command {
 func (s *Command) SetupIntegrations(agent rpcdef.Agent) {
 	var integrationNames []string
 	for _, integration := range s.Opts.Integrations {
-		integrationNames = append(integrationNames, integration.Name)
+		name := integration.Name
+		if name == "" {
+			panic("integration name is empty")
+		}
+		integrationNames = append(integrationNames, name)
 	}
 
 	opts := iloader.Opts{}

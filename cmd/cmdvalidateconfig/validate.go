@@ -1,4 +1,4 @@
-package cmdvalidate
+package cmdvalidateconfig
 
 import (
 	"context"
@@ -53,6 +53,12 @@ func newValidator(opts Opts) *validator {
 	return s
 }
 
+type Result struct {
+	rpcdef.ValidationResult
+	// Success is true if there are no errors. Useful when returning result as json to ensure that marshalling worked.
+	Success bool `json:"success"`
+}
+
 func (s *validator) runValidate() error {
 	ctx := context.Background()
 	client := s.integration.RPCClient()
@@ -65,9 +71,15 @@ func (s *validator) runValidate() error {
 		Integration: s.integrationConfig.Config,
 	}
 
-	res, err := client.ValidateConfig(ctx, exportConfig)
+	res0, err := client.ValidateConfig(ctx, exportConfig)
 	if err != nil {
 		return err
+	}
+
+	res := Result{ValidationResult: res0}
+
+	if len(res.Errors) == 0 {
+		res.Success = true
 	}
 
 	b, err := json.Marshal(res)

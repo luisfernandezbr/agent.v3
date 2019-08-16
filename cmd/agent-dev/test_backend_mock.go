@@ -260,6 +260,7 @@ var cmdTestBackendMock = &cobra.Command{
 				"customer_id": pinpointCustomerID,
 				"uuid":        pinpointTestUUID,
 			}
+			logger.Info("sending integration request")
 			return datamodel.NewModelSendEventWithHeaders(integrationRequest, headers), nil
 		})
 
