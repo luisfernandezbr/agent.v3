@@ -39,12 +39,12 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 	if len(params) != 0 {
 		u += "?" + params.Encode()
 	}
+	s.logger.Info("request", "url", u)
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return err
 	}
 	req.SetBasicAuth(s.opts.Username, s.opts.Password)
-
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err

@@ -11,6 +11,14 @@ type User struct {
 	DisplayName  string  `json:"displayName"`
 	Active       bool    `json:"active"`
 	Timezone     string  `json:"timeZone"`
+
+	Groups struct {
+		Groups []UserGroup `json:"items,omitempty"`
+	} `json:"groups"`
+}
+
+type UserGroup struct {
+	Name string `json:"name,omitempty"`
 }
 
 func (s User) IsZero() bool {

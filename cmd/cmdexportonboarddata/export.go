@@ -23,7 +23,10 @@ type AgentConfig = cmdintegration.AgentConfig
 type Integration = cmdintegration.Integration
 
 func Run(opts Opts) error {
-	exp := newExport(opts)
+	exp, err := newExport(opts)
+	if err != nil {
+		return err
+	}
 	defer exp.Destroy()
 	return nil
 }
@@ -37,7 +40,7 @@ type export struct {
 	integration       *iloader.Integration
 }
 
-func newExport(opts Opts) *export {
+func newExport(opts Opts) (*export, error) {
 	s := &export{}
 	if len(opts.Integrations) != 1 {
 		panic("pass exactly 1 integration")
@@ -51,8 +54,11 @@ func newExport(opts Opts) *export {
 	s.integrationConfig = opts.Integrations[0]
 	s.integration = s.Integrations[s.integrationConfig.Name]
 
-	s.runExport()
-	return s
+	err := s.runExport()
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 func (s *export) runExport() error {

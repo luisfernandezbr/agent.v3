@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"net/url"
 
-	"github.com/pinpt/agent.next/integrations/jira-cloud/api"
-	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent.next/integrations/jira-hosted/api"
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
@@ -26,7 +24,7 @@ func (s *Integration) onboardExportUsers(ctx context.Context, config rpcdef.Expo
 	if err != nil {
 		return res, err
 	}
-	users, err := api.UsersAll(s.qc)
+	users, err := api.UsersOnboard(s.qc)
 	if err != nil {
 		return res, err
 	}
@@ -41,18 +39,12 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 	if err != nil {
 		return res, err
 	}
-	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
-		pi, projects, err := api.ProjectsOnboardPage(s.qc, paginationParams)
-		if err != nil {
-			return false, 0, err
-		}
-		for _, obj := range projects {
-			res.Records = append(res.Records, obj.ToMap())
-		}
-		return pi.HasMore, pi.MaxResults, nil
-	})
+	projects, err := api.ProjectsOnboard(s.qc)
 	if err != nil {
 		return res, err
+	}
+	for _, obj := range projects {
+		res.Records = append(res.Records, obj.ToMap())
 	}
 	return res, nil
 }

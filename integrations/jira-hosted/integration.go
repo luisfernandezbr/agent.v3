@@ -125,11 +125,6 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 	return
 }
 
-func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.OnboardExportType, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
-	res.Error = rpcdef.ErrOnboardExportNotSupported
-	return
-}
-
 func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
 	err := s.initWithConfig(config)
 	if err != nil {
