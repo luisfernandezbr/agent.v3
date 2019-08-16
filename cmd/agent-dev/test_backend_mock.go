@@ -243,13 +243,11 @@ var cmdTestBackendMock = &cobra.Command{
 			integrationRequest := &agent.IntegrationRequest{
 				CustomerID: pinpointCustomerID,
 				UUID:       pinpointTestUUID,
-				Location:   agent.IntegrationRequestLocationPrivate,
 				RequestDate: agent.IntegrationRequestRequestDate{
 					Epoch:   date.Epoch,
 					Rfc3339: date.Rfc3339,
 					Offset:  date.Offset,
 				},
-				SystemType: agent.IntegrationRequestSystemTypeSourcecode,
 				Integration: agent.IntegrationRequestIntegration{
 					Name: "github",
 					Authorization: agent.IntegrationRequestIntegrationAuthorization{
@@ -304,8 +302,6 @@ var cmdTestBackendMock = &cobra.Command{
 				CustomerID: pinpointCustomerID,
 				UUID:       pinpointTestUUID,
 				RefType:    "github",
-				Location:   agent.UserRequestLocationPrivate,
-				SystemType: agent.UserRequestSystemTypeSourcecode,
 				RequestDate: agent.UserRequestRequestDate{
 					Epoch:   date.Epoch,
 					Rfc3339: date.Rfc3339,
@@ -358,8 +354,6 @@ var cmdTestBackendMock = &cobra.Command{
 				CustomerID: pinpointCustomerID,
 				UUID:       pinpointTestUUID,
 				RefType:    "github",
-				Location:   agent.RepoRequestLocationPrivate,
-				SystemType: agent.RepoRequestSystemTypeSourcecode,
 				RequestDate: agent.RepoRequestRequestDate{
 					Epoch:   date.Epoch,
 					Rfc3339: date.Rfc3339,
@@ -432,7 +426,6 @@ var cmdTestBackendMock = &cobra.Command{
 				CustomerID:          pinpointCustomerID,
 				UUID:                pinpointTestUUID,
 				JobID:               pinpointJobID,
-				Location:            agent.ExportRequestLocationPrivate,
 				UploadURL:           pstrings.Pointer(httpserver.URL),
 				ReprocessHistorical: true,
 				RequestDate: agent.ExportRequestRequestDate{

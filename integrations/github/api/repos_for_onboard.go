@@ -3,11 +3,13 @@ package api
 import (
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/integration-sdk/agent"
+
 	pjson "github.com/pinpt/go-common/json"
-	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func ReposForOnboardAll(qc QueryContext) (res []*sourcecode.Repo, _ error) {
+func ReposForOnboardAll(qc QueryContext) (res []*agent.RepoResponseRepos, _ error) {
 	err := PaginateRegular(func(query string) (pi PageInfo, _ error) {
 		pi, sub, err := ReposForOnboardPage(qc, query, time.Time{})
 		if err != nil {
@@ -24,7 +26,7 @@ func ReposForOnboardAll(qc QueryContext) (res []*sourcecode.Repo, _ error) {
 	return res, nil
 }
 
-func ReposForOnboardPage(qc QueryContext, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*sourcecode.Repo, _ error) {
+func ReposForOnboardPage(qc QueryContext, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*agent.RepoResponseRepos, _ error) {
 	qc.Logger.Debug("repos request", "q", queryParams)
 
 	query := `
@@ -125,9 +127,9 @@ func ReposForOnboardPage(qc QueryContext, queryParams string, stopOnUpdatedAt ti
 		if data.UpdatedAt.Before(stopOnUpdatedAt) {
 			return PageInfo{}, repos, nil
 		}
-		repo := &sourcecode.Repo{}
+		repo := &agent.RepoResponseRepos{}
 		repo.RefType = "github"
-		repo.CustomerID = qc.CustomerID
+		//repo.CustomerID = qc.CustomerID
 		repo.RefID = data.ID
 		repo.Name = data.Name
 		repo.Description = data.Description
@@ -136,21 +138,18 @@ func ReposForOnboardPage(qc QueryContext, queryParams string, stopOnUpdatedAt ti
 		lastCommitDate := data.DefaultBranchRef.Target.CommittedDate
 		repo.Active = isActive(lastCommitDate, data.CreatedAt, data.IsFork, data.IsArchived)
 
-		/*
-			// TODO: update datamodel to save the following
-			//date.ConvertToModel(data.CreatedAt, &repo.CreatedDate)
+		date.ConvertToModel(data.CreatedAt, &repo.CreatedDate)
 
-			cdata := data.DefaultBranchRef.Target
-			if cdata.OID != "" {
-				commit := agent.RepoResponseReposLastCommit{}
-				commit.CommitID = cdata.OID
-				commit.URL = cdata.URL
-				commit.Message = cdata.Message
-				commit.Author.Name = cdata.Author.Name
-				commit.Author.Email = cdata.Author.Email
-				commit.Author.AvatarURL = cdata.Author.AvatarURL
-			}
-		*/
+		cdata := data.DefaultBranchRef.Target
+		if cdata.OID != "" {
+			commit := agent.RepoResponseReposLastCommit{}
+			commit.CommitID = cdata.OID
+			commit.URL = cdata.URL
+			commit.Message = cdata.Message
+			commit.Author.Name = cdata.Author.Name
+			commit.Author.Email = cdata.Author.Email
+			commit.Author.AvatarURL = cdata.Author.AvatarURL
+		}
 
 		repos = append(repos, repo)
 	}
