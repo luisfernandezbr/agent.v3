@@ -71,10 +71,10 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	return nil
 }
 
-func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
+func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	err := s.setIntegrationConfig(config.Integration)
 	if err != nil {
-		return res, err
+		return err
 	}
 
 	s.qc.CustomerID = config.Pinpoint.CustomerID
@@ -98,8 +98,44 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		Agent:      s.agent,
 	})
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Integration) ValidateConfig(ctx context.Context,
+	exportConfig rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
+
+	rerr := func(err error) {
+		res.Errors = append(res.Errors, err.Error())
+	}
+
+	err := s.initWithConfig(exportConfig)
+	if err != nil {
+		rerr(err)
+		return
+	}
+
+	_, err = api.Projects(s.qc)
+	if err != nil {
+		rerr(err)
+		return
+	}
+
+	return
+}
+
+func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.OnboardExportType, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
+	res.Error = rpcdef.ErrOnboardExportNotSupported
+	return
+}
+
+func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
+	err := s.initWithConfig(config)
+	if err != nil {
 		return res, err
 	}
+	s.common.SetupUsers()
 	defer s.common.ExportDone()
 
 	fields, err := s.fields()

@@ -22,6 +22,59 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+type IntegrationOnboardExportReq_Kind int32
+
+const (
+	IntegrationOnboardExportReq_USERS    IntegrationOnboardExportReq_Kind = 0
+	IntegrationOnboardExportReq_REPOS    IntegrationOnboardExportReq_Kind = 1
+	IntegrationOnboardExportReq_PROJECTS IntegrationOnboardExportReq_Kind = 2
+)
+
+var IntegrationOnboardExportReq_Kind_name = map[int32]string{
+	0: "USERS",
+	1: "REPOS",
+	2: "PROJECTS",
+}
+
+var IntegrationOnboardExportReq_Kind_value = map[string]int32{
+	"USERS":    0,
+	"REPOS":    1,
+	"PROJECTS": 2,
+}
+
+func (x IntegrationOnboardExportReq_Kind) String() string {
+	return proto.EnumName(IntegrationOnboardExportReq_Kind_name, int32(x))
+}
+
+func (IntegrationOnboardExportReq_Kind) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_bf10f51bd2cb5547, []int{8, 0}
+}
+
+type IntegrationOnboardExportResp_Error int32
+
+const (
+	IntegrationOnboardExportResp_NONE          IntegrationOnboardExportResp_Error = 0
+	IntegrationOnboardExportResp_NOT_SUPPORTED IntegrationOnboardExportResp_Error = 1
+)
+
+var IntegrationOnboardExportResp_Error_name = map[int32]string{
+	0: "NONE",
+	1: "NOT_SUPPORTED",
+}
+
+var IntegrationOnboardExportResp_Error_value = map[string]int32{
+	"NONE":          0,
+	"NOT_SUPPORTED": 1,
+}
+
+func (x IntegrationOnboardExportResp_Error) String() string {
+	return proto.EnumName(IntegrationOnboardExportResp_Error_name, int32(x))
+}
+
+func (IntegrationOnboardExportResp_Error) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_bf10f51bd2cb5547, []int{9, 0}
+}
+
 type ExportObj_DataType int32
 
 const (
@@ -44,7 +97,7 @@ func (x ExportObj_DataType) String() string {
 }
 
 func (ExportObj_DataType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{10, 0}
+	return fileDescriptor_bf10f51bd2cb5547, []int{15, 0}
 }
 
 type Empty struct {
@@ -118,11 +171,10 @@ func (m *IntegrationInitReq) GetServerId() uint32 {
 }
 
 type IntegrationExportReq struct {
-	IntegrationConfigJson []byte                              `protobuf:"bytes,1,opt,name=integration_config_json,json=integrationConfigJson,proto3" json:"integration_config_json,omitempty"`
-	PinpointConfig        *IntegrationExportReqPinpointConfig `protobuf:"bytes,2,opt,name=pinpoint_config,json=pinpointConfig,proto3" json:"pinpoint_config,omitempty"`
-	XXX_NoUnkeyedLiteral  struct{}                            `json:"-"`
-	XXX_unrecognized      []byte                              `json:"-"`
-	XXX_sizecache         int32                               `json:"-"`
+	Config               *IntegrationExportConfig `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                 `json:"-"`
+	XXX_unrecognized     []byte                   `json:"-"`
+	XXX_sizecache        int32                    `json:"-"`
 }
 
 func (m *IntegrationExportReq) Reset()         { *m = IntegrationExportReq{} }
@@ -150,53 +202,93 @@ func (m *IntegrationExportReq) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_IntegrationExportReq proto.InternalMessageInfo
 
-func (m *IntegrationExportReq) GetIntegrationConfigJson() []byte {
+func (m *IntegrationExportReq) GetConfig() *IntegrationExportConfig {
+	if m != nil {
+		return m.Config
+	}
+	return nil
+}
+
+type IntegrationExportConfig struct {
+	IntegrationConfigJson []byte                  `protobuf:"bytes,1,opt,name=integration_config_json,json=integrationConfigJson,proto3" json:"integration_config_json,omitempty"`
+	AgentConfig           *IntegrationAgentConfig `protobuf:"bytes,2,opt,name=agent_config,json=agentConfig,proto3" json:"agent_config,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}                `json:"-"`
+	XXX_unrecognized      []byte                  `json:"-"`
+	XXX_sizecache         int32                   `json:"-"`
+}
+
+func (m *IntegrationExportConfig) Reset()         { *m = IntegrationExportConfig{} }
+func (m *IntegrationExportConfig) String() string { return proto.CompactTextString(m) }
+func (*IntegrationExportConfig) ProtoMessage()    {}
+func (*IntegrationExportConfig) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bf10f51bd2cb5547, []int{3}
+}
+
+func (m *IntegrationExportConfig) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_IntegrationExportConfig.Unmarshal(m, b)
+}
+func (m *IntegrationExportConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_IntegrationExportConfig.Marshal(b, m, deterministic)
+}
+func (m *IntegrationExportConfig) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_IntegrationExportConfig.Merge(m, src)
+}
+func (m *IntegrationExportConfig) XXX_Size() int {
+	return xxx_messageInfo_IntegrationExportConfig.Size(m)
+}
+func (m *IntegrationExportConfig) XXX_DiscardUnknown() {
+	xxx_messageInfo_IntegrationExportConfig.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_IntegrationExportConfig proto.InternalMessageInfo
+
+func (m *IntegrationExportConfig) GetIntegrationConfigJson() []byte {
 	if m != nil {
 		return m.IntegrationConfigJson
 	}
 	return nil
 }
 
-func (m *IntegrationExportReq) GetPinpointConfig() *IntegrationExportReqPinpointConfig {
+func (m *IntegrationExportConfig) GetAgentConfig() *IntegrationAgentConfig {
 	if m != nil {
-		return m.PinpointConfig
+		return m.AgentConfig
 	}
 	return nil
 }
 
-type IntegrationExportReqPinpointConfig struct {
+type IntegrationAgentConfig struct {
 	CustomerId           string   `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *IntegrationExportReqPinpointConfig) Reset()         { *m = IntegrationExportReqPinpointConfig{} }
-func (m *IntegrationExportReqPinpointConfig) String() string { return proto.CompactTextString(m) }
-func (*IntegrationExportReqPinpointConfig) ProtoMessage()    {}
-func (*IntegrationExportReqPinpointConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{3}
+func (m *IntegrationAgentConfig) Reset()         { *m = IntegrationAgentConfig{} }
+func (m *IntegrationAgentConfig) String() string { return proto.CompactTextString(m) }
+func (*IntegrationAgentConfig) ProtoMessage()    {}
+func (*IntegrationAgentConfig) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bf10f51bd2cb5547, []int{4}
 }
 
-func (m *IntegrationExportReqPinpointConfig) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_IntegrationExportReqPinpointConfig.Unmarshal(m, b)
+func (m *IntegrationAgentConfig) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_IntegrationAgentConfig.Unmarshal(m, b)
 }
-func (m *IntegrationExportReqPinpointConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_IntegrationExportReqPinpointConfig.Marshal(b, m, deterministic)
+func (m *IntegrationAgentConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_IntegrationAgentConfig.Marshal(b, m, deterministic)
 }
-func (m *IntegrationExportReqPinpointConfig) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_IntegrationExportReqPinpointConfig.Merge(m, src)
+func (m *IntegrationAgentConfig) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_IntegrationAgentConfig.Merge(m, src)
 }
-func (m *IntegrationExportReqPinpointConfig) XXX_Size() int {
-	return xxx_messageInfo_IntegrationExportReqPinpointConfig.Size(m)
+func (m *IntegrationAgentConfig) XXX_Size() int {
+	return xxx_messageInfo_IntegrationAgentConfig.Size(m)
 }
-func (m *IntegrationExportReqPinpointConfig) XXX_DiscardUnknown() {
-	xxx_messageInfo_IntegrationExportReqPinpointConfig.DiscardUnknown(m)
+func (m *IntegrationAgentConfig) XXX_DiscardUnknown() {
+	xxx_messageInfo_IntegrationAgentConfig.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_IntegrationExportReqPinpointConfig proto.InternalMessageInfo
+var xxx_messageInfo_IntegrationAgentConfig proto.InternalMessageInfo
 
-func (m *IntegrationExportReqPinpointConfig) GetCustomerId() string {
+func (m *IntegrationAgentConfig) GetCustomerId() string {
 	if m != nil {
 		return m.CustomerId
 	}
@@ -204,17 +296,16 @@ func (m *IntegrationExportReqPinpointConfig) GetCustomerId() string {
 }
 
 type IntegrationExportResp struct {
-	IntegrationNewConfigJson []byte   `protobuf:"bytes,1,opt,name=integration_new_config_json,json=integrationNewConfigJson,proto3" json:"integration_new_config_json,omitempty"`
-	XXX_NoUnkeyedLiteral     struct{} `json:"-"`
-	XXX_unrecognized         []byte   `json:"-"`
-	XXX_sizecache            int32    `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *IntegrationExportResp) Reset()         { *m = IntegrationExportResp{} }
 func (m *IntegrationExportResp) String() string { return proto.CompactTextString(m) }
 func (*IntegrationExportResp) ProtoMessage()    {}
 func (*IntegrationExportResp) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{4}
+	return fileDescriptor_bf10f51bd2cb5547, []int{5}
 }
 
 func (m *IntegrationExportResp) XXX_Unmarshal(b []byte) error {
@@ -235,9 +326,174 @@ func (m *IntegrationExportResp) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_IntegrationExportResp proto.InternalMessageInfo
 
-func (m *IntegrationExportResp) GetIntegrationNewConfigJson() []byte {
+type IntegrationValidateConfigReq struct {
+	Config               *IntegrationExportConfig `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                 `json:"-"`
+	XXX_unrecognized     []byte                   `json:"-"`
+	XXX_sizecache        int32                    `json:"-"`
+}
+
+func (m *IntegrationValidateConfigReq) Reset()         { *m = IntegrationValidateConfigReq{} }
+func (m *IntegrationValidateConfigReq) String() string { return proto.CompactTextString(m) }
+func (*IntegrationValidateConfigReq) ProtoMessage()    {}
+func (*IntegrationValidateConfigReq) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bf10f51bd2cb5547, []int{6}
+}
+
+func (m *IntegrationValidateConfigReq) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_IntegrationValidateConfigReq.Unmarshal(m, b)
+}
+func (m *IntegrationValidateConfigReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_IntegrationValidateConfigReq.Marshal(b, m, deterministic)
+}
+func (m *IntegrationValidateConfigReq) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_IntegrationValidateConfigReq.Merge(m, src)
+}
+func (m *IntegrationValidateConfigReq) XXX_Size() int {
+	return xxx_messageInfo_IntegrationValidateConfigReq.Size(m)
+}
+func (m *IntegrationValidateConfigReq) XXX_DiscardUnknown() {
+	xxx_messageInfo_IntegrationValidateConfigReq.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_IntegrationValidateConfigReq proto.InternalMessageInfo
+
+func (m *IntegrationValidateConfigReq) GetConfig() *IntegrationExportConfig {
 	if m != nil {
-		return m.IntegrationNewConfigJson
+		return m.Config
+	}
+	return nil
+}
+
+type IntegrationValidateConfigResp struct {
+	Errors               []string `protobuf:"bytes,1,rep,name=errors,proto3" json:"errors,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *IntegrationValidateConfigResp) Reset()         { *m = IntegrationValidateConfigResp{} }
+func (m *IntegrationValidateConfigResp) String() string { return proto.CompactTextString(m) }
+func (*IntegrationValidateConfigResp) ProtoMessage()    {}
+func (*IntegrationValidateConfigResp) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bf10f51bd2cb5547, []int{7}
+}
+
+func (m *IntegrationValidateConfigResp) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_IntegrationValidateConfigResp.Unmarshal(m, b)
+}
+func (m *IntegrationValidateConfigResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_IntegrationValidateConfigResp.Marshal(b, m, deterministic)
+}
+func (m *IntegrationValidateConfigResp) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_IntegrationValidateConfigResp.Merge(m, src)
+}
+func (m *IntegrationValidateConfigResp) XXX_Size() int {
+	return xxx_messageInfo_IntegrationValidateConfigResp.Size(m)
+}
+func (m *IntegrationValidateConfigResp) XXX_DiscardUnknown() {
+	xxx_messageInfo_IntegrationValidateConfigResp.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_IntegrationValidateConfigResp proto.InternalMessageInfo
+
+func (m *IntegrationValidateConfigResp) GetErrors() []string {
+	if m != nil {
+		return m.Errors
+	}
+	return nil
+}
+
+type IntegrationOnboardExportReq struct {
+	Config               *IntegrationExportConfig         `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
+	Kind                 IntegrationOnboardExportReq_Kind `protobuf:"varint,2,opt,name=kind,proto3,enum=proto.IntegrationOnboardExportReq_Kind" json:"kind,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                         `json:"-"`
+	XXX_unrecognized     []byte                           `json:"-"`
+	XXX_sizecache        int32                            `json:"-"`
+}
+
+func (m *IntegrationOnboardExportReq) Reset()         { *m = IntegrationOnboardExportReq{} }
+func (m *IntegrationOnboardExportReq) String() string { return proto.CompactTextString(m) }
+func (*IntegrationOnboardExportReq) ProtoMessage()    {}
+func (*IntegrationOnboardExportReq) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bf10f51bd2cb5547, []int{8}
+}
+
+func (m *IntegrationOnboardExportReq) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_IntegrationOnboardExportReq.Unmarshal(m, b)
+}
+func (m *IntegrationOnboardExportReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_IntegrationOnboardExportReq.Marshal(b, m, deterministic)
+}
+func (m *IntegrationOnboardExportReq) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_IntegrationOnboardExportReq.Merge(m, src)
+}
+func (m *IntegrationOnboardExportReq) XXX_Size() int {
+	return xxx_messageInfo_IntegrationOnboardExportReq.Size(m)
+}
+func (m *IntegrationOnboardExportReq) XXX_DiscardUnknown() {
+	xxx_messageInfo_IntegrationOnboardExportReq.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_IntegrationOnboardExportReq proto.InternalMessageInfo
+
+func (m *IntegrationOnboardExportReq) GetConfig() *IntegrationExportConfig {
+	if m != nil {
+		return m.Config
+	}
+	return nil
+}
+
+func (m *IntegrationOnboardExportReq) GetKind() IntegrationOnboardExportReq_Kind {
+	if m != nil {
+		return m.Kind
+	}
+	return IntegrationOnboardExportReq_USERS
+}
+
+type IntegrationOnboardExportResp struct {
+	Error                IntegrationOnboardExportResp_Error `protobuf:"varint,1,opt,name=error,proto3,enum=proto.IntegrationOnboardExportResp_Error" json:"error,omitempty"`
+	RecordsJson          []byte                             `protobuf:"bytes,2,opt,name=records_json,json=recordsJson,proto3" json:"records_json,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                           `json:"-"`
+	XXX_unrecognized     []byte                             `json:"-"`
+	XXX_sizecache        int32                              `json:"-"`
+}
+
+func (m *IntegrationOnboardExportResp) Reset()         { *m = IntegrationOnboardExportResp{} }
+func (m *IntegrationOnboardExportResp) String() string { return proto.CompactTextString(m) }
+func (*IntegrationOnboardExportResp) ProtoMessage()    {}
+func (*IntegrationOnboardExportResp) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bf10f51bd2cb5547, []int{9}
+}
+
+func (m *IntegrationOnboardExportResp) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_IntegrationOnboardExportResp.Unmarshal(m, b)
+}
+func (m *IntegrationOnboardExportResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_IntegrationOnboardExportResp.Marshal(b, m, deterministic)
+}
+func (m *IntegrationOnboardExportResp) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_IntegrationOnboardExportResp.Merge(m, src)
+}
+func (m *IntegrationOnboardExportResp) XXX_Size() int {
+	return xxx_messageInfo_IntegrationOnboardExportResp.Size(m)
+}
+func (m *IntegrationOnboardExportResp) XXX_DiscardUnknown() {
+	xxx_messageInfo_IntegrationOnboardExportResp.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_IntegrationOnboardExportResp proto.InternalMessageInfo
+
+func (m *IntegrationOnboardExportResp) GetError() IntegrationOnboardExportResp_Error {
+	if m != nil {
+		return m.Error
+	}
+	return IntegrationOnboardExportResp_NONE
+}
+
+func (m *IntegrationOnboardExportResp) GetRecordsJson() []byte {
+	if m != nil {
+		return m.RecordsJson
 	}
 	return nil
 }
@@ -253,7 +509,7 @@ func (m *LastProcessed) Reset()         { *m = LastProcessed{} }
 func (m *LastProcessed) String() string { return proto.CompactTextString(m) }
 func (*LastProcessed) ProtoMessage()    {}
 func (*LastProcessed) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{5}
+	return fileDescriptor_bf10f51bd2cb5547, []int{10}
 }
 
 func (m *LastProcessed) XXX_Unmarshal(b []byte) error {
@@ -292,7 +548,7 @@ func (m *ExportStartedReq) Reset()         { *m = ExportStartedReq{} }
 func (m *ExportStartedReq) String() string { return proto.CompactTextString(m) }
 func (*ExportStartedReq) ProtoMessage()    {}
 func (*ExportStartedReq) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{6}
+	return fileDescriptor_bf10f51bd2cb5547, []int{11}
 }
 
 func (m *ExportStartedReq) XXX_Unmarshal(b []byte) error {
@@ -332,7 +588,7 @@ func (m *ExportStartedResp) Reset()         { *m = ExportStartedResp{} }
 func (m *ExportStartedResp) String() string { return proto.CompactTextString(m) }
 func (*ExportStartedResp) ProtoMessage()    {}
 func (*ExportStartedResp) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{7}
+	return fileDescriptor_bf10f51bd2cb5547, []int{12}
 }
 
 func (m *ExportStartedResp) XXX_Unmarshal(b []byte) error {
@@ -379,7 +635,7 @@ func (m *ExportDoneReq) Reset()         { *m = ExportDoneReq{} }
 func (m *ExportDoneReq) String() string { return proto.CompactTextString(m) }
 func (*ExportDoneReq) ProtoMessage()    {}
 func (*ExportDoneReq) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{8}
+	return fileDescriptor_bf10f51bd2cb5547, []int{13}
 }
 
 func (m *ExportDoneReq) XXX_Unmarshal(b []byte) error {
@@ -426,7 +682,7 @@ func (m *SendExportedReq) Reset()         { *m = SendExportedReq{} }
 func (m *SendExportedReq) String() string { return proto.CompactTextString(m) }
 func (*SendExportedReq) ProtoMessage()    {}
 func (*SendExportedReq) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{9}
+	return fileDescriptor_bf10f51bd2cb5547, []int{14}
 }
 
 func (m *SendExportedReq) XXX_Unmarshal(b []byte) error {
@@ -473,7 +729,7 @@ func (m *ExportObj) Reset()         { *m = ExportObj{} }
 func (m *ExportObj) String() string { return proto.CompactTextString(m) }
 func (*ExportObj) ProtoMessage()    {}
 func (*ExportObj) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{10}
+	return fileDescriptor_bf10f51bd2cb5547, []int{15}
 }
 
 func (m *ExportObj) XXX_Unmarshal(b []byte) error {
@@ -520,7 +776,7 @@ func (m *ExportGitRepoReq) Reset()         { *m = ExportGitRepoReq{} }
 func (m *ExportGitRepoReq) String() string { return proto.CompactTextString(m) }
 func (*ExportGitRepoReq) ProtoMessage()    {}
 func (*ExportGitRepoReq) Descriptor() ([]byte, []int) {
-	return fileDescriptor_bf10f51bd2cb5547, []int{11}
+	return fileDescriptor_bf10f51bd2cb5547, []int{16}
 }
 
 func (m *ExportGitRepoReq) XXX_Unmarshal(b []byte) error {
@@ -556,12 +812,19 @@ func (m *ExportGitRepoReq) GetUrl() string {
 }
 
 func init() {
+	proto.RegisterEnum("proto.IntegrationOnboardExportReq_Kind", IntegrationOnboardExportReq_Kind_name, IntegrationOnboardExportReq_Kind_value)
+	proto.RegisterEnum("proto.IntegrationOnboardExportResp_Error", IntegrationOnboardExportResp_Error_name, IntegrationOnboardExportResp_Error_value)
 	proto.RegisterEnum("proto.ExportObj_DataType", ExportObj_DataType_name, ExportObj_DataType_value)
 	proto.RegisterType((*Empty)(nil), "proto.Empty")
 	proto.RegisterType((*IntegrationInitReq)(nil), "proto.IntegrationInitReq")
 	proto.RegisterType((*IntegrationExportReq)(nil), "proto.IntegrationExportReq")
-	proto.RegisterType((*IntegrationExportReqPinpointConfig)(nil), "proto.IntegrationExportReqPinpointConfig")
+	proto.RegisterType((*IntegrationExportConfig)(nil), "proto.IntegrationExportConfig")
+	proto.RegisterType((*IntegrationAgentConfig)(nil), "proto.IntegrationAgentConfig")
 	proto.RegisterType((*IntegrationExportResp)(nil), "proto.IntegrationExportResp")
+	proto.RegisterType((*IntegrationValidateConfigReq)(nil), "proto.IntegrationValidateConfigReq")
+	proto.RegisterType((*IntegrationValidateConfigResp)(nil), "proto.IntegrationValidateConfigResp")
+	proto.RegisterType((*IntegrationOnboardExportReq)(nil), "proto.IntegrationOnboardExportReq")
+	proto.RegisterType((*IntegrationOnboardExportResp)(nil), "proto.IntegrationOnboardExportResp")
 	proto.RegisterType((*LastProcessed)(nil), "proto.LastProcessed")
 	proto.RegisterType((*ExportStartedReq)(nil), "proto.ExportStartedReq")
 	proto.RegisterType((*ExportStartedResp)(nil), "proto.ExportStartedResp")
@@ -574,44 +837,58 @@ func init() {
 func init() { proto.RegisterFile("defs.proto", fileDescriptor_bf10f51bd2cb5547) }
 
 var fileDescriptor_bf10f51bd2cb5547 = []byte{
-	// 588 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x54, 0xcd, 0x6e, 0xd3, 0x40,
-	0x10, 0xc6, 0x34, 0x6d, 0xe3, 0x49, 0xd2, 0x86, 0x55, 0x4b, 0xd3, 0x96, 0x9f, 0x6a, 0xc5, 0x21,
-	0x70, 0x08, 0x34, 0xa0, 0x5c, 0x50, 0x0f, 0xa5, 0x8d, 0x90, 0x2b, 0xd4, 0x54, 0x1b, 0x94, 0xab,
-	0xe5, 0xc4, 0xdb, 0xc8, 0x21, 0xd9, 0x5d, 0xbc, 0x5b, 0x42, 0xce, 0xbc, 0x09, 0xaf, 0xc7, 0x4b,
-	0xa0, 0x5d, 0xaf, 0x63, 0xc7, 0x84, 0x72, 0xe2, 0xe4, 0xf9, 0xd9, 0x6f, 0x66, 0xbe, 0xf9, 0x31,
-	0x40, 0x48, 0x6f, 0x65, 0x4b, 0xc4, 0x5c, 0x71, 0xb4, 0x69, 0x3e, 0x78, 0x1b, 0x36, 0xbb, 0x33,
-	0xa1, 0x16, 0xf8, 0x14, 0x90, 0xc7, 0x14, 0x1d, 0xc7, 0x81, 0x8a, 0x38, 0xf3, 0x58, 0xa4, 0x08,
-	0xfd, 0x8a, 0x8e, 0xc1, 0x95, 0x34, 0xfe, 0x46, 0x63, 0x3f, 0x0a, 0x1b, 0xce, 0x89, 0xd3, 0xac,
-	0x91, 0x72, 0x62, 0xf0, 0x42, 0xfc, 0xd3, 0x81, 0xbd, 0x1c, 0xa6, 0xfb, 0x5d, 0xf0, 0xd8, 0xa0,
-	0x3a, 0x70, 0x10, 0x65, 0x76, 0x7f, 0xc4, 0xd9, 0x6d, 0x34, 0xf6, 0x27, 0x92, 0x33, 0x13, 0xa3,
-	0x4a, 0xf6, 0x73, 0xee, 0x0b, 0xe3, 0xbd, 0x92, 0x9c, 0x21, 0x02, 0xbb, 0x22, 0x62, 0x82, 0x47,
-	0x4c, 0x59, 0x50, 0xe3, 0xe1, 0x89, 0xd3, 0xac, 0xb4, 0x5f, 0x26, 0x45, 0xb7, 0xd6, 0x65, 0xbb,
-	0xb1, 0x88, 0x24, 0x0e, 0xd9, 0x11, 0x2b, 0x3a, 0xee, 0x02, 0xfe, 0x37, 0x0a, 0x3d, 0x87, 0xca,
-	0xe8, 0x4e, 0x2a, 0x3e, 0xcb, 0x98, 0xba, 0x04, 0x52, 0x93, 0x17, 0xe2, 0x01, 0xec, 0xaf, 0x09,
-	0x23, 0x05, 0x3a, 0x83, 0xe3, 0x3c, 0x57, 0x46, 0xe7, 0x6b, 0xf8, 0x36, 0x72, 0x4f, 0xae, 0xe9,
-	0x3c, 0xa3, 0x8c, 0x5f, 0x41, 0xed, 0x53, 0x20, 0xd5, 0x4d, 0xcc, 0x47, 0x54, 0x4a, 0x1a, 0xa2,
-	0x43, 0x28, 0x87, 0x81, 0x0a, 0x7c, 0xa9, 0x62, 0x5b, 0xc6, 0xb6, 0xd6, 0xfb, 0x2a, 0xc6, 0xa7,
-	0x50, 0x4f, 0x12, 0xf7, 0x55, 0x10, 0x2b, 0x1a, 0xea, 0x56, 0x3f, 0x05, 0x98, 0xf1, 0x90, 0x4e,
-	0x7d, 0xb5, 0x10, 0xd4, 0x02, 0x5c, 0x63, 0xf9, 0xbc, 0x10, 0x14, 0x73, 0x78, 0x54, 0x80, 0x48,
-	0xa1, 0x31, 0x92, 0x4a, 0xa9, 0xcb, 0x5d, 0x72, 0x75, 0xad, 0xc5, 0x0b, 0xd1, 0x7b, 0xd8, 0x99,
-	0x06, 0x52, 0xf9, 0x22, 0xad, 0xc9, 0x0e, 0x61, 0xcf, 0x0e, 0x61, 0xa5, 0x5e, 0x52, 0x9b, 0xe6,
-	0x55, 0xfc, 0x05, 0x6a, 0x49, 0xc2, 0x4b, 0xce, 0xa8, 0x2d, 0xf0, 0xbf, 0x25, 0x1b, 0xc0, 0x6e,
-	0x9f, 0xb2, 0x30, 0x49, 0xb8, 0xec, 0xc7, 0x7d, 0xe9, 0x5e, 0x40, 0x89, 0x0f, 0x27, 0xb2, 0xb1,
-	0x71, 0xb2, 0xd1, 0xac, 0xb4, 0xeb, 0x36, 0x49, 0x12, 0xa0, 0x37, 0x9c, 0x10, 0xe3, 0xc5, 0x73,
-	0x70, 0x97, 0x26, 0xd4, 0x01, 0xd7, 0x0c, 0x64, 0xd9, 0xe0, 0x9d, 0xf6, 0x61, 0x11, 0xd7, 0xba,
-	0x0c, 0x54, 0xa0, 0x1b, 0x4e, 0xcc, 0xf0, 0xb4, 0x84, 0x10, 0x94, 0xb4, 0x6c, 0xf8, 0x54, 0x89,
-	0x91, 0xf1, 0x33, 0x28, 0xa7, 0x2f, 0x51, 0x19, 0x4a, 0x57, 0xfd, 0xde, 0x75, 0xfd, 0x81, 0x96,
-	0xce, 0x07, 0xa4, 0x57, 0x77, 0xf0, 0x59, 0x3a, 0xe1, 0x8f, 0xfa, 0xfc, 0x04, 0xd7, 0x8c, 0x0e,
-	0x60, 0x3b, 0xa6, 0x82, 0x67, 0x74, 0xb6, 0xb4, 0xea, 0x85, 0xa8, 0x0e, 0x1b, 0x77, 0xf1, 0xd4,
-	0xc4, 0x77, 0x89, 0x16, 0xdb, 0x3f, 0x1c, 0xa8, 0xe4, 0xb6, 0x14, 0xbd, 0x86, 0x92, 0x3e, 0x64,
-	0x74, 0xf8, 0xe7, 0xf9, 0xd8, 0x03, 0x3f, 0xaa, 0xa6, 0x54, 0xf4, 0x4f, 0x00, 0x5d, 0xc0, 0x56,
-	0x92, 0x1f, 0x1d, 0xdf, 0x73, 0x71, 0x47, 0x4f, 0xfe, 0xee, 0x94, 0xa2, 0xfd, 0xcb, 0x81, 0xcd,
-	0xf3, 0x31, 0x65, 0x0a, 0x7d, 0x48, 0x97, 0xc1, 0x6e, 0x1f, 0x3a, 0x58, 0x69, 0x5c, 0xb6, 0xc6,
-	0x47, 0x8d, 0xf5, 0x0e, 0x29, 0xd0, 0x1b, 0x80, 0x6c, 0xa1, 0xd0, 0xde, 0xca, 0x3b, 0xbb, 0x63,
-	0x05, 0x12, 0xef, 0xa0, 0x9a, 0xdf, 0x0a, 0xf4, 0xd8, 0x7a, 0x0b, 0xab, 0x52, 0x40, 0x75, 0xd2,
-	0x5a, 0x6d, 0xeb, 0x0b, 0xb5, 0x66, 0x03, 0x59, 0xc5, 0x0d, 0xb7, 0x8c, 0xf2, 0xf6, 0x77, 0x00,
-	0x00, 0x00, 0xff, 0xff, 0x5f, 0x17, 0xd7, 0xfd, 0x5c, 0x05, 0x00, 0x00,
+	// 809 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x54, 0xef, 0x6e, 0x1b, 0x45,
+	0x10, 0xcf, 0x25, 0xb6, 0xe3, 0x1b, 0xff, 0xe1, 0x3a, 0x4a, 0x63, 0x27, 0x69, 0x4a, 0xd8, 0x46,
+	0x22, 0xf4, 0x83, 0xa1, 0x06, 0x05, 0xa1, 0x0a, 0x41, 0x49, 0x2c, 0xe4, 0x80, 0x7c, 0xd6, 0x5e,
+	0x1a, 0x21, 0xf1, 0xc1, 0xba, 0xe4, 0xb6, 0xd1, 0xa5, 0xce, 0xed, 0xb2, 0xbb, 0x05, 0xf2, 0x1c,
+	0xbc, 0x04, 0xcf, 0xc0, 0x07, 0x5e, 0x88, 0x97, 0x40, 0xbb, 0xb7, 0xfe, 0x77, 0x4e, 0x1a, 0xa4,
+	0x88, 0x4f, 0x37, 0xff, 0x7e, 0x37, 0xb3, 0x33, 0xbf, 0x19, 0x80, 0x84, 0xbd, 0x51, 0x1d, 0x21,
+	0xb9, 0xe6, 0x58, 0xb6, 0x1f, 0xb2, 0x0e, 0xe5, 0xde, 0xb5, 0xd0, 0x37, 0xe4, 0x05, 0x60, 0x3f,
+	0xd3, 0xec, 0x52, 0xc6, 0x3a, 0xe5, 0x59, 0x3f, 0x4b, 0x35, 0x65, 0xbf, 0xe0, 0x0e, 0xf8, 0x8a,
+	0xc9, 0x5f, 0x99, 0x1c, 0xa5, 0x49, 0xdb, 0xdb, 0xf3, 0x0e, 0x1a, 0xb4, 0x9a, 0x1b, 0xfa, 0x09,
+	0x19, 0xc0, 0xc6, 0x1c, 0xa4, 0xf7, 0xbb, 0xe0, 0xd2, 0x82, 0x0e, 0xa1, 0x72, 0xc1, 0xb3, 0x37,
+	0xe9, 0xa5, 0x45, 0xd4, 0xba, 0x4f, 0xf3, 0x94, 0x9d, 0xa5, 0xe0, 0x23, 0x1b, 0x45, 0x5d, 0x34,
+	0xf9, 0xc3, 0x83, 0xd6, 0x1d, 0x31, 0x78, 0x08, 0xad, 0x74, 0xe6, 0x1a, 0xe5, 0x88, 0xd1, 0x95,
+	0xe2, 0x99, 0x4d, 0x52, 0xa7, 0x8f, 0xe7, 0xdc, 0x39, 0xe6, 0x44, 0xf1, 0x0c, 0xbf, 0x85, 0x7a,
+	0x7c, 0xc9, 0x32, 0xed, 0x10, 0xed, 0x55, 0x5b, 0xd1, 0xee, 0x72, 0x45, 0xaf, 0x4c, 0x94, 0x2b,
+	0xa8, 0x16, 0xcf, 0x14, 0xf2, 0x15, 0x6c, 0xde, 0x1e, 0x86, 0x1f, 0x42, 0xed, 0xe2, 0x9d, 0xd2,
+	0xfc, 0x7a, 0xd6, 0x1e, 0x9f, 0xc2, 0xc4, 0xd4, 0x4f, 0x48, 0x0b, 0x1e, 0xdf, 0xd2, 0x20, 0x25,
+	0xc8, 0x19, 0x3c, 0x99, 0x73, 0x9c, 0xc5, 0xe3, 0x34, 0x89, 0x35, 0x73, 0xd9, 0x1f, 0xd0, 0xc1,
+	0x2f, 0x61, 0xf7, 0x3d, 0xff, 0x55, 0x02, 0x37, 0xa1, 0xc2, 0xa4, 0xe4, 0x52, 0xb5, 0xbd, 0xbd,
+	0xb5, 0x03, 0x9f, 0x3a, 0x8d, 0xfc, 0xed, 0xc1, 0xce, 0x1c, 0x32, 0xcc, 0xce, 0x79, 0x2c, 0x93,
+	0x07, 0x8f, 0x14, 0x5f, 0x42, 0xe9, 0x6d, 0x9a, 0x25, 0xb6, 0xed, 0xcd, 0xee, 0xc7, 0xcb, 0xa8,
+	0x62, 0xa6, 0xce, 0x0f, 0x69, 0x96, 0x50, 0x0b, 0x22, 0xcf, 0xa1, 0x64, 0x34, 0xf4, 0xa1, 0xfc,
+	0x3a, 0xea, 0xd1, 0x28, 0x58, 0x31, 0x22, 0xed, 0x0d, 0xc3, 0x28, 0xf0, 0xb0, 0x0e, 0xd5, 0x21,
+	0x0d, 0x4f, 0x7a, 0x47, 0xa7, 0x51, 0xb0, 0x4a, 0xfe, 0xf4, 0x16, 0x5a, 0x5a, 0xf8, 0xad, 0x12,
+	0xf8, 0x0d, 0x94, 0xed, 0x5b, 0xed, 0x03, 0x9a, 0xdd, 0x4f, 0xee, 0x2d, 0x45, 0x89, 0x4e, 0xcf,
+	0x00, 0x68, 0x8e, 0xc3, 0x8f, 0xa0, 0x2e, 0xd9, 0x05, 0x97, 0x89, 0xca, 0x69, 0xb7, 0x6a, 0x69,
+	0x57, 0x73, 0x36, 0x43, 0x36, 0xb2, 0x0f, 0x65, 0x0b, 0xc1, 0x2a, 0x94, 0x06, 0xe1, 0xa0, 0x17,
+	0xac, 0xe0, 0x23, 0x68, 0x0c, 0xc2, 0xd3, 0x51, 0xf4, 0x7a, 0x38, 0x0c, 0xe9, 0x69, 0xef, 0x38,
+	0xf0, 0xc8, 0x73, 0x68, 0xfc, 0x18, 0x2b, 0x3d, 0x94, 0xfc, 0x82, 0x29, 0xc5, 0x12, 0xdc, 0x82,
+	0x6a, 0x12, 0xeb, 0x78, 0xa4, 0xb4, 0x74, 0x24, 0x5a, 0x37, 0x7a, 0xa4, 0x25, 0x79, 0x01, 0x41,
+	0x5e, 0x4f, 0xa4, 0x63, 0xa9, 0x59, 0x62, 0x66, 0xb1, 0x0b, 0x70, 0xcd, 0x13, 0x36, 0x1e, 0xe9,
+	0x1b, 0xc1, 0x1c, 0xc0, 0xb7, 0x96, 0xd3, 0x1b, 0xc1, 0x08, 0x87, 0x47, 0x05, 0x88, 0x12, 0x06,
+	0xa3, 0x98, 0x52, 0x66, 0x75, 0xa6, 0x4c, 0xf5, 0x9d, 0xa5, 0x9f, 0xe0, 0x4b, 0x68, 0x8e, 0x63,
+	0xa5, 0x47, 0x62, 0x52, 0x93, 0xdb, 0x93, 0x0d, 0xd7, 0xa5, 0x85, 0x7a, 0x69, 0x63, 0x3c, 0xaf,
+	0x92, 0xb7, 0xd0, 0xc8, 0x13, 0x1e, 0xf3, 0x8c, 0xb9, 0x02, 0xff, 0xb7, 0x64, 0x67, 0xf0, 0x41,
+	0xc4, 0x32, 0x37, 0xa4, 0x69, 0x3f, 0xde, 0x97, 0x6e, 0x1f, 0x4a, 0xfc, 0xfc, 0x4a, 0xb5, 0xd7,
+	0xf6, 0xd6, 0x0e, 0x6a, 0xdd, 0xc0, 0x25, 0xc9, 0x7f, 0x10, 0x9e, 0x5f, 0x51, 0xeb, 0x25, 0xbf,
+	0x81, 0x3f, 0x35, 0xe1, 0x21, 0xf8, 0x76, 0x20, 0xd3, 0x06, 0x37, 0xbb, 0x5b, 0x45, 0x5c, 0xe7,
+	0x38, 0xd6, 0xb1, 0x69, 0x38, 0xb5, 0xc3, 0x33, 0x12, 0x22, 0x94, 0x8c, 0xec, 0xa8, 0x61, 0x65,
+	0xf2, 0x14, 0xaa, 0x93, 0x48, 0x43, 0x8b, 0x93, 0x28, 0x1c, 0x04, 0x2b, 0x46, 0x7a, 0x75, 0x46,
+	0xc3, 0xc0, 0x23, 0x5f, 0x4f, 0x26, 0xfc, 0xbd, 0xb9, 0xb8, 0x82, 0x9b, 0x17, 0xb5, 0x60, 0x5d,
+	0x32, 0xc1, 0x67, 0xcf, 0xa9, 0x18, 0xb5, 0x9f, 0x60, 0x00, 0x6b, 0xef, 0xe4, 0xd8, 0xfe, 0xdf,
+	0xa7, 0x46, 0xec, 0xfe, 0xb5, 0x0a, 0xb5, 0x39, 0x0e, 0xe3, 0xa7, 0x50, 0x32, 0xb7, 0x1b, 0xb7,
+	0x96, 0xf9, 0xed, 0x6e, 0xfa, 0x76, 0x7d, 0xf2, 0x14, 0x73, 0xf7, 0xf1, 0x08, 0x2a, 0x79, 0x7e,
+	0xdc, 0xb9, 0x6b, 0xa7, 0x0d, 0xe8, 0xc9, 0xdd, 0x4e, 0x25, 0xf0, 0x67, 0x68, 0x2e, 0x1e, 0x1b,
+	0x7c, 0xb6, 0x1c, 0xbf, 0x74, 0xe6, 0xb6, 0xf7, 0xef, 0x0f, 0x52, 0x02, 0x7f, 0x82, 0xc6, 0xc2,
+	0x6a, 0x22, 0xb9, 0xff, 0x8c, 0x6c, 0x3f, 0xfb, 0x0f, 0xfb, 0xdd, 0xfd, 0xc7, 0x83, 0xb2, 0x3d,
+	0xe8, 0xf8, 0xdd, 0x84, 0xc3, 0x6e, 0x69, 0xb0, 0xb5, 0x30, 0xef, 0xd9, 0xf6, 0x6d, 0xb7, 0x6f,
+	0x77, 0x28, 0x81, 0x9f, 0x01, 0xcc, 0xf6, 0x00, 0x37, 0x16, 0xe2, 0xdc, 0x6a, 0x14, 0x7a, 0xff,
+	0x05, 0xd4, 0xe7, 0xc9, 0x8c, 0x9b, 0xce, 0x5b, 0x60, 0x78, 0x01, 0x75, 0x38, 0xa9, 0xd5, 0x31,
+	0xa6, 0x50, 0xeb, 0x8c, 0x47, 0x8b, 0xb8, 0xf3, 0x8a, 0x55, 0x3e, 0xff, 0x37, 0x00, 0x00, 0xff,
+	0xff, 0xc3, 0x19, 0x11, 0x1c, 0x06, 0x08, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -628,6 +905,8 @@ const _ = grpc.SupportPackageIsVersion4
 type IntegrationClient interface {
 	Init(ctx context.Context, in *IntegrationInitReq, opts ...grpc.CallOption) (*Empty, error)
 	Export(ctx context.Context, in *IntegrationExportReq, opts ...grpc.CallOption) (*IntegrationExportResp, error)
+	ValidateConfig(ctx context.Context, in *IntegrationValidateConfigReq, opts ...grpc.CallOption) (*IntegrationValidateConfigResp, error)
+	OnboardExport(ctx context.Context, in *IntegrationOnboardExportReq, opts ...grpc.CallOption) (*IntegrationOnboardExportResp, error)
 }
 
 type integrationClient struct {
@@ -656,10 +935,30 @@ func (c *integrationClient) Export(ctx context.Context, in *IntegrationExportReq
 	return out, nil
 }
 
+func (c *integrationClient) ValidateConfig(ctx context.Context, in *IntegrationValidateConfigReq, opts ...grpc.CallOption) (*IntegrationValidateConfigResp, error) {
+	out := new(IntegrationValidateConfigResp)
+	err := c.cc.Invoke(ctx, "/proto.Integration/ValidateConfig", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *integrationClient) OnboardExport(ctx context.Context, in *IntegrationOnboardExportReq, opts ...grpc.CallOption) (*IntegrationOnboardExportResp, error) {
+	out := new(IntegrationOnboardExportResp)
+	err := c.cc.Invoke(ctx, "/proto.Integration/OnboardExport", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IntegrationServer is the server API for Integration service.
 type IntegrationServer interface {
 	Init(context.Context, *IntegrationInitReq) (*Empty, error)
 	Export(context.Context, *IntegrationExportReq) (*IntegrationExportResp, error)
+	ValidateConfig(context.Context, *IntegrationValidateConfigReq) (*IntegrationValidateConfigResp, error)
+	OnboardExport(context.Context, *IntegrationOnboardExportReq) (*IntegrationOnboardExportResp, error)
 }
 
 func RegisterIntegrationServer(s *grpc.Server, srv IntegrationServer) {
@@ -702,6 +1001,42 @@ func _Integration_Export_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Integration_ValidateConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IntegrationValidateConfigReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IntegrationServer).ValidateConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Integration/ValidateConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IntegrationServer).ValidateConfig(ctx, req.(*IntegrationValidateConfigReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Integration_OnboardExport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IntegrationOnboardExportReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IntegrationServer).OnboardExport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Integration/OnboardExport",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IntegrationServer).OnboardExport(ctx, req.(*IntegrationOnboardExportReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Integration_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "proto.Integration",
 	HandlerType: (*IntegrationServer)(nil),
@@ -713,6 +1048,14 @@ var _Integration_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Export",
 			Handler:    _Integration_Export_Handler,
+		},
+		{
+			MethodName: "ValidateConfig",
+			Handler:    _Integration_ValidateConfig_Handler,
+		},
+		{
+			MethodName: "OnboardExport",
+			Handler:    _Integration_OnboardExport_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

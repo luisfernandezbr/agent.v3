@@ -18,7 +18,6 @@ import (
 
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"
-	"github.com/pinpt/go-common/hash"
 	pstrings "github.com/pinpt/go-common/strings"
 	isdk "github.com/pinpt/integration-sdk"
 )
@@ -62,10 +61,11 @@ func (s *runner) run(ctx context.Context) error {
 	}
 
 	s.exporter = newExporter(exporterOpts{
-		Logger:       s.logger,
-		CustomerID:   s.conf.CustomerID,
-		PinpointRoot: s.opts.PinpointRoot,
-		FSConf:       s.fsconf,
+		Logger:          s.logger,
+		CustomerID:      s.conf.CustomerID,
+		PinpointRoot:    s.opts.PinpointRoot,
+		FSConf:          s.fsconf,
+		PPEncryptionKey: s.conf.PPEncryptionKey,
 	})
 
 	go func() {
@@ -101,6 +101,9 @@ func (s *runner) sendEnabled(ctx context.Context) error {
 		CustomerID: s.conf.CustomerID,
 		UUID:       s.conf.DeviceID,
 	}
+	data.Success = true
+	data.Error = nil
+	data.Data = nil
 	deviceinfo.AppendCommonInfo(&data, s.conf.CustomerID)
 
 	publishEvent := event.PublishEvent{
@@ -141,7 +144,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 		Errors:  errors,
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,
-			//"uuid":        agentOpts.DeviceID, //NOTE: eventmachine does not send uuid
+			"uuid":        s.conf.DeviceID,
 		},
 	}
 
@@ -162,6 +165,17 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 
 		// TODO: add connection validation
 
+		sendEvent := func(resp *agent.IntegrationResponse) (datamodel.ModelSendEvent, error) {
+			deviceinfo.AppendCommonInfo(resp, s.conf.CustomerID)
+			return datamodel.NewModelSendEvent(resp), nil
+		}
+
+		resp := &agent.IntegrationResponse{}
+		resp.RefType = integration.Name
+		resp.RequestID = req.ID
+		resp.UUID = s.conf.DeviceID
+		//resp.RefID = hash.Values(s.conf.DeviceID, integration.Name)
+
 		if integration.Name == "jira" || integration.Name == "github" {
 			authData := pjson.Stringify(integration.Authorization.ToMap())
 
@@ -170,24 +184,17 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 				panic(err)
 			}
 
-			resp := &agent.IntegrationResponse{}
-			resp.RefType = integration.Name
-			resp.RefID = hash.Values(s.conf.DeviceID, integration.Name)
 			resp.Success = true
 			resp.Type = agent.IntegrationResponseTypeIntegration
 			resp.Authorization = encrAuthData
-
-			return datamodel.NewModelSendEvent(resp), nil
+			return sendEvent(resp)
 		}
 
 		// error for everything else
-		resp := &agent.IntegrationResponse{}
-		resp.RefType = integration.Name
-		resp.RefID = hash.Values(s.conf.DeviceID, integration.Name)
 		resp.Type = agent.IntegrationResponseTypeIntegration
 		resp.Error = pstrings.Pointer("Only jira and github integrations are supported")
 
-		return datamodel.NewModelSendEvent(resp), nil
+		return sendEvent(resp)
 	}
 
 	go func() {

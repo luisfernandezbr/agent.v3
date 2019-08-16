@@ -1,4 +1,4 @@
-package cmdexport
+package iloader
 
 import (
 	"fmt"
@@ -17,6 +17,61 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/rpcdef"
 )
+
+type IntegrationOpts struct {
+	Logger                     hclog.Logger
+	Agent                      rpcdef.Agent
+	Name                       string
+	Locs                       fsconf.Locs
+	DevUseCompiledIntegrations bool
+}
+
+type Integration struct {
+	opts   IntegrationOpts
+	logger hclog.Logger
+	name   string
+
+	logFileLoc string
+	logFile    *os.File
+
+	pluginClient     *plugin.Client
+	rpcClientGeneric plugin.ClientProtocol
+	rpcClient        rpcdef.Integration
+
+	closed bool
+}
+
+func NewIntegration(opts IntegrationOpts) (*Integration, error) {
+	if opts.Logger == nil || opts.Agent == nil || opts.Name == "" || opts.Locs.Root == "" {
+		panic("provide all opts")
+	}
+	s := &Integration{}
+	s.opts = opts
+	s.logger = opts.Logger.With("integration", s.opts.Name)
+	s.name = s.opts.Name
+	err := s.setupLogFile()
+	if err != nil {
+		return nil, err
+	}
+	err = s.setupRPC()
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func (s *Integration) Name() string {
+	return s.name
+}
+
+func (s *Integration) LogFile() string {
+	return s.logFile.Name()
+}
+
+func (s *Integration) RPCClient() rpcdef.Integration {
+	return s.rpcClient
+}
 
 func prodIntegrationCommand(fslocs fsconf.Locs, integrationName string) *exec.Cmd {
 	bin := filepath.Join(fslocs.Integrations, integrationName)
@@ -37,43 +92,7 @@ func devIntegrationCommand(integrationName string) *exec.Cmd {
 	return exec.Command("go", "run", "github.com/pinpt/agent.next/integrations/"+integrationName)
 }
 
-type integration struct {
-	export *export
-	logger hclog.Logger
-	name   string
-
-	logFileLoc string
-	logFile    *os.File
-
-	pluginClient     *plugin.Client
-	rpcClientGeneric plugin.ClientProtocol
-	rpcClient        rpcdef.Integration
-
-	agentDelegate agentDelegate
-	closed        bool
-
-	fslocs fsconf.Locs
-}
-
-func newIntegration(exp *export, name string, fslocs fsconf.Locs) (*integration, error) {
-	s := &integration{}
-	s.export = exp
-	s.logger = s.export.logger.With("integration", name)
-	s.name = name
-	s.fslocs = fslocs
-	err := s.setupLogFile()
-	if err != nil {
-		return nil, err
-	}
-	err = s.setupRPC()
-	if err != nil {
-		return nil, err
-	}
-
-	return s, nil
-}
-
-func (s *integration) Close() error {
+func (s *Integration) Close() error {
 	if s.closed {
 		return nil
 	}
@@ -90,8 +109,8 @@ func (s *integration) Close() error {
 	return nil
 }
 
-func (s *integration) setupLogFile() error {
-	dir := s.export.locs.Logs
+func (s *Integration) setupLogFile() error {
+	dir := s.opts.Locs.Logs
 	err := os.MkdirAll(dir, 0777)
 	if err != nil {
 		return err
@@ -105,10 +124,10 @@ func (s *integration) setupLogFile() error {
 	return nil
 }
 
-func (s *integration) setupRPC() error {
+func (s *Integration) setupRPC() error {
 	var cmd *exec.Cmd
-	if build.IsProd() {
-		cmd = prodIntegrationCommand(s.fslocs, s.name)
+	if build.IsProd() || s.opts.DevUseCompiledIntegrations {
+		cmd = prodIntegrationCommand(s.opts.Locs, s.name)
 	} else {
 		cmd = devIntegrationCommand(s.name)
 	}
@@ -137,14 +156,11 @@ func (s *integration) setupRPC() error {
 
 	s.rpcClient = rpcClientIface.(rpcdef.Integration)
 
-	s.agentDelegate = agentDelegate{
-		export: s.export,
-	}
-	s.rpcClient.Init(s.agentDelegate)
+	s.rpcClient.Init(s.opts.Agent)
 	return nil
 }
 
-func (s *integration) CloseAndDetectPanic() (panicOut string, rerr error) {
+func (s *Integration) CloseAndDetectPanic() (panicOut string, rerr error) {
 	rerr = s.Close()
 	b, err := ioutil.ReadFile(s.logFileLoc)
 	if err != nil {

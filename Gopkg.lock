@@ -2,14 +2,6 @@
 
 
 [[projects]]
-  branch = "master"
-  digest = "1:adceedafc49615ab3cbc4572f7366f7cad58573984bd64f81628610095c13547"
-  name = "github.com/99designs/keyring"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "32398645371922410a37187feed382bbe60ae4da"
-
-[[projects]]
   digest = "1:6d9a5d6dcfac5015c0a2ec641a09e4a64fefaf1f9cf1ca30c4135d72e331cf90"
   name = "github.com/boyter/scc"
   packages = ["processor"]
@@ -37,14 +29,6 @@
   version = "v2.0.0"
 
 [[projects]]
-  digest = "1:675c7e2e645d40363350159cfe1f719f61ce353a3859db939ca686d98aa85f16"
-  name = "github.com/danieljoos/wincred"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "b892d337201d1400370ebf4fa919941c9ea222ee"
-  version = "v1.0.2"
-
-[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -67,23 +51,6 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "ad340ca0307647c228c227cb844358a2c94d7f80"
-
-[[projects]]
-  digest = "1:92dfb1cad60fdfecac5def0f398e05b2b92d2422ac6ad2d7d8e4bdb6057a3d83"
-  name = "github.com/dvsekhvalnov/jose2go"
-  packages = [
-    ".",
-    "aes",
-    "arrays",
-    "base64url",
-    "compact",
-    "kdf",
-    "keys/ecc",
-    "padding",
-  ]
-  pruneopts = "UT"
-  revision = "f21a8cedbbae609f623613ec8f81125c243212e6"
-  version = "v1.3"
 
 [[projects]]
   branch = "master"
@@ -136,28 +103,12 @@
   version = "v0.4.0"
 
 [[projects]]
-  digest = "1:ec6f9bf5e274c833c911923c9193867f3f18788c461f76f05f62bb1510e0ae65"
-  name = "github.com/go-sql-driver/mysql"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "72cd26f257d44c1114970e19afddcd812016007e"
-  version = "v1.4.1"
-
-[[projects]]
   digest = "1:586ea76dbd0374d6fb649a91d70d652b7fe0ccffb8910a77468e7702e7901f3d"
   name = "github.com/go-stack/stack"
   packages = ["."]
   pruneopts = "UT"
   revision = "2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a"
   version = "v1.8.0"
-
-[[projects]]
-  digest = "1:b3d20bcdedab2050e6bc58e52f4fdc46f710b4c74e1a1ecee262ebec1aee7b6e"
-  name = "github.com/godbus/dbus"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "2ff6f7ffd60f0f2410b3105864bdd12c7894f844"
-  version = "v5.0.1"
 
 [[projects]]
   digest = "1:f5ce1529abc1204444ec73779f44f94e2fa8fcdb7aca3c355b0c95947e4005c6"
@@ -182,20 +133,20 @@
   version = "v0.0.1"
 
 [[projects]]
+  digest = "1:582b704bebaa06b48c29b0cec224a6058a09c86883aaddabde889cd1a5f73e1b"
+  name = "github.com/google/uuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4"
+  version = "v1.1.1"
+
+[[projects]]
   digest = "1:7b5c6e2eeaa9ae5907c391a91c132abfd5c9e8a784a341b5625e750c67e6825d"
   name = "github.com/gorilla/websocket"
   packages = ["."]
   pruneopts = "UT"
   revision = "66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d"
   version = "v1.4.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:36f5bd9b89fcd728488eee3a0cf8787448579ac381fded60edd6e3ac01fe1a38"
-  name = "github.com/gsterjov/go-libsecret"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "a6f4afe4910cad8688db3e0e9b9ac92ad22d54e1"
 
 [[projects]]
   digest = "1:cf6b61e1b4c26b0c7526cee4a0cee6d8302b17798af4b2a56a90eedac0aef11a"
@@ -263,14 +214,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:9eddcfbbc797dd81c6335772d8b33e189d4fb76a29dd047a05ef8d121996f22e"
-  name = "github.com/jhaynie/go-gator"
-  packages = ["orm"]
-  pruneopts = "UT"
-  revision = "ca7ccc0cf82e05d7ea8edc18b0e9d0d08b79156f"
-  version = "2.2.0"
-
-[[projects]]
   branch = "master"
   digest = "1:e16e59a601c80bbbb595ead29aed47c3ce80ae66eefc115e4b5d9c4edefc274f"
   name = "github.com/kardianos/service"
@@ -296,14 +239,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c6df48df7fd77f029217cf038c0abecf11a5bf1805c98cb8eb5381f38e0f36c3"
-  name = "github.com/keybase/go-keychain"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "48d3d31d256d9922a90b14c518c4b685f321fab2"
-
-[[projects]]
-  branch = "master"
   digest = "1:a64e323dc06b73892e5bb5d040ced475c4645d456038333883f58934abbf6f72"
   name = "github.com/kr/logfmt"
   packages = ["."]
@@ -317,6 +252,19 @@
   pruneopts = "UT"
   revision = "6315d37042482c83edf87d503cb0d70a1b109767"
   version = "v2.9.6"
+
+[[projects]]
+  branch = "master"
+  digest = "1:ad157c87bae81a72ca4cc7b5d2da8907eeedf060ac9828833bfa3013982f6f66"
+  name = "github.com/mailru/easyjson"
+  packages = [
+    ".",
+    "buffer",
+    "jlexer",
+    "jwriter",
+  ]
+  pruneopts = "UT"
+  revision = "b2ccc519800e761ac8000b95e5d57c80a897ff9e"
 
 [[projects]]
   digest = "1:c658e84ad3916da105a761660dcaeb01e63416c8ec7bc62256a9b411a05fcd67"
@@ -399,6 +347,18 @@
   revision = "2e52cf6e685269ed8aefec6390f3cac3ef74e730"
 
 [[projects]]
+  digest = "1:c2d643e8b2c25cf18d6e1237233df6457729d9491bbad6fa9598cad8d01466a6"
+  name = "github.com/olivere/elastic"
+  packages = [
+    ".",
+    "config",
+    "uritemplates",
+  ]
+  pruneopts = "UT"
+  revision = "8ebe6a0fc23d9d53fbd8890da8ae7ee7cea78dbe"
+  version = "v6.2.22"
+
+[[projects]]
   digest = "1:5e73b34a27d827212102605789de00bd411b2e434812133c83935fe9897c75e1"
   name = "github.com/philhofer/fwd"
   packages = ["."]
@@ -407,7 +367,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:0758f5eeafcab5e24219aa274134c545b2f13b271592ab76cdd894888df0b5c0"
+  digest = "1:1c862dabb47cad2b0bf564822d4bdf2fe90f836db9ed22bcc92ff0238d7e3a6c"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -422,6 +382,7 @@
     "httpdefaults",
     "io",
     "json",
+    "kafka",
     "log",
     "number",
     "os",
@@ -430,8 +391,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "a026d9d7892c096c8d6e395077d0b7cc45b66dfd"
-  version = "7.056"
+  revision = "fbc59fefc97b77c2ee8f64c82083734c7a39f134"
+  version = "8.1.4"
 
 [[projects]]
   digest = "1:cf1d50f0d59ea783d797310528fcfea1e7d6dc8dc225d575c24aa56737b55636"
@@ -442,7 +403,7 @@
   version = "1.2.1"
 
 [[projects]]
-  digest = "1:0915a14c61d6cc0b4259908c35280f5a50d565200d4b4fc6d573a830ecbba55b"
+  digest = "1:720cdce187559fa3150a270c11a4fcd523176cb8991d91602ce040401889fc59"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -454,8 +415,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "f358b61e155f8527631f5db0c6f6d28b9082cc23"
-  version = "0.0.373"
+  revision = "837f618b07659d6f3bbb8d780f8986c65033b622"
+  version = "0.0.385"
 
 [[projects]]
   digest = "1:3db456275fbaedf3c401bd81d914b98b6ac0dbff38cf9280fb3a60dca54d38cf"
@@ -601,7 +562,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ee2c5135eeb44e749c8fc586b2a9c339901cc40333f3f813fba06c3fdd76bd1b"
+  digest = "1:c58d0b78ba045850d80ee83947ff8e4d2f65bb8b7bc5e13235604a232aaf2304"
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
@@ -621,7 +582,6 @@
     "ssh",
     "ssh/agent",
     "ssh/knownhosts",
-    "ssh/terminal",
   ]
   pruneopts = "UT"
   revision = "4def268fd1a49955bfb3dda92fe3db4f924f2285"
@@ -654,7 +614,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:60d56840281f7bae0836046486295b60d7c23cb617f736831c0ca91b5681abbb"
+  digest = "1:b9d099fdd08a76b7a6c783983a060337fc27d55554b2818378002c9b95075280"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -666,7 +626,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "51ab0e2deafac1f46c46ad59cf0921be2f180c3d"
+  revision = "4e8604ab3aff7fe78f7fc5aabae5194a3a190cdd"
 
 [[projects]]
   digest = "1:3952dba92e6a837cf34e6a073160d31029412bf863e37274cb779f319ddbe0b4"
@@ -734,14 +694,6 @@
   revision = "ced62fe5104b907b6c16cb7e575c17b2e62ceddd"
 
 [[projects]]
-  digest = "1:c25289f43ac4a68d88b02245742347c94f1e108c534dda442188015ff80669b3"
-  name = "google.golang.org/appengine"
-  packages = ["cloudsql"]
-  pruneopts = "UT"
-  revision = "b2f4a3cf3c67576a2ee09e1fe62656a5086ce880"
-  version = "v1.6.1"
-
-[[projects]]
   branch = "master"
   digest = "1:583a0c80f5e3a9343d33aea4aead1e1afcc0043db66fdf961ddd1fe8cd3a4faf"
   name = "google.golang.org/genproto"
@@ -792,6 +744,14 @@
   pruneopts = "UT"
   revision = "045159ad57f3781d409358e3ade910a018c16b30"
   version = "v1.22.1"
+
+[[projects]]
+  digest = "1:9169e569b3e6517da7de4476059f8fa889d508007e53fa5fc6a2ea4ffc5ae199"
+  name = "gopkg.in/confluentinc/confluent-kafka-go.v1"
+  packages = ["kafka"]
+  pruneopts = "UT"
+  revision = "48acc03b9ddd85b5c8c268b480d5a9a3d523b9ad"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:85b60f4403e2aae0eee2ac2ba50e4124dea766b582c6ec0d94fb1335d9c0d16e"
@@ -952,7 +912,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/99designs/keyring",
     "github.com/denisbrodbeck/machineid",
     "github.com/fatih/color",
     "github.com/golang/protobuf/proto",
@@ -971,7 +930,9 @@
     "github.com/pinpt/go-common/httpdefaults",
     "github.com/pinpt/go-common/io",
     "github.com/pinpt/go-common/json",
+    "github.com/pinpt/go-common/kafka",
     "github.com/pinpt/go-common/log",
+    "github.com/pinpt/go-common/os",
     "github.com/pinpt/go-common/strings",
     "github.com/pinpt/integration-sdk",
     "github.com/pinpt/integration-sdk/agent",
@@ -982,7 +943,6 @@
     "github.com/stretchr/testify/assert",
     "golang.org/x/net/context",
     "google.golang.org/grpc",
-    "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

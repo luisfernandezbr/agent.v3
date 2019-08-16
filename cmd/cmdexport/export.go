@@ -9,36 +9,20 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/exportrepo"
-	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/cmd/cmdexport/process"
+	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
 	"github.com/pinpt/agent.next/pkg/outsession"
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
-type Opts struct {
-	Logger       hclog.Logger
-	AgentConfig  AgentConfig
-	Integrations []Integration
-}
-
-type AgentConfig struct {
-	CustomerID   string `json:"customer_id"`
-	PinpointRoot string `json:"pinpoint_root"`
-	// SkipGit is a flag for skipping git repo cloning, ripsrc processing, useful when developing
-	SkipGit bool `json:"skip_git"`
-	// IntegrationsDir is a custom location of the integrations binaries
-	IntegrationsDir string `json:"integrations_dir"`
-}
-
-type Integration struct {
-	Name   string                 `json:"name"`
-	Config map[string]interface{} `json:"config"`
-}
+type Opts = cmdintegration.Opts
+type AgentConfig = cmdintegration.AgentConfig
+type Integration = cmdintegration.Integration
 
 func Run(opts Opts) error {
 	exp := newExport(opts)
@@ -47,54 +31,29 @@ func Run(opts Opts) error {
 }
 
 type export struct {
-	opts Opts
+	*cmdintegration.Command
 
-	logger       hclog.Logger
 	pluginClient *plugin.Client
 	sessions     *sessions
 
-	locs fsconf.Locs
-
 	stderr *bytes.Buffer
 
-	integrations  map[string]*integration
 	lastProcessed *jsonstore.Store
 
 	gitProcessingRepos chan repoProcess
-
-	integrationConfigs map[string]Integration
-
-	startTime time.Time
 }
 
 func newExport(opts Opts) *export {
 	s := &export{}
-	s.opts = opts
-	s.logger = opts.Logger
-
-	s.startTime = time.Now()
-
-	root := opts.AgentConfig.PinpointRoot
-	if root == "" {
-		v, err := fsconf.DefaultRoot()
-		if err != nil {
-			panic(err)
-		}
-		root = v
-	}
-
-	s.locs = fsconf.New(root)
-	if opts.AgentConfig.IntegrationsDir != "" {
-		s.locs.Integrations = opts.AgentConfig.IntegrationsDir
-	}
+	s.Command = cmdintegration.NewCommand(opts)
 
 	var err error
-	s.lastProcessed, err = jsonstore.New(s.locs.LastProcessedFile)
+	s.lastProcessed, err = jsonstore.New(s.Locs.LastProcessedFile)
 	if err != nil {
 		panic(err)
 	}
 
-	s.sessions = newSessions(s.logger, s, s.locs.Uploads)
+	s.sessions = newSessions(s.Logger, s, s.Locs.Uploads)
 
 	s.gitProcessingRepos = make(chan repoProcess, 100000)
 	gitProcessingDone := make(chan bool)
@@ -109,16 +68,12 @@ func newExport(opts Opts) *export {
 		}
 	}()
 
-	s.integrationConfigs = map[string]Integration{}
-	for _, in := range opts.Integrations {
-		s.integrationConfigs[in.Name] = in
-	}
+	s.SetupIntegrations(agentDelegate{export: s})
 
-	s.setupIntegrations()
 	exportRes := s.runExports()
 	close(s.gitProcessingRepos)
 
-	s.logger.Info("Waiting for git repo processing to complete")
+	s.Logger.Info("Waiting for git repo processing to complete")
 	<-gitProcessingDone
 
 	s.printExportRes(exportRes)
@@ -132,8 +87,8 @@ type repoProcess struct {
 }
 
 func (s *export) gitProcessing() error {
-	if s.opts.AgentConfig.SkipGit {
-		s.logger.Warn("SkipGit is true, skipping git clone and ripsrc for all repos")
+	if s.Opts.AgentConfig.SkipGit {
+		s.Logger.Warn("SkipGit is true, skipping git clone and ripsrc for all repos")
 		for range s.gitProcessingRepos {
 
 		}
@@ -151,8 +106,8 @@ func (s *export) gitProcessing() error {
 		}
 		i++
 		opts := exportrepo.Opts{
-			Logger:     s.logger.With("c", i),
-			CustomerID: s.opts.AgentConfig.CustomerID,
+			Logger:     s.Logger.With("c", i),
+			CustomerID: s.Opts.AgentConfig.CustomerID,
 			RepoID:     repo.ID,
 
 			Sessions: s.sessions.outsession,
@@ -160,7 +115,7 @@ func (s *export) gitProcessing() error {
 			LastProcessed: s.lastProcessed,
 			RepoAccess:    repo.Access,
 		}
-		exp := exportrepo.New(opts, s.locs)
+		exp := exportrepo.New(opts, s.Locs)
 		err := exp.Run(ctx)
 		if err == exportrepo.ErrRevParseFailed {
 			reposFailedRevParse++
@@ -172,51 +127,19 @@ func (s *export) gitProcessing() error {
 	}
 
 	if i == 0 {
-		s.logger.Warn("Finished git repo processing: No git repos found")
+		s.Logger.Warn("Finished git repo processing: No git repos found")
 		return nil
 	}
 
 	if reposFailedRevParse != 0 {
-		s.logger.Warn("Skipped ripsrc on empty repos", "repos", reposFailedRevParse)
+		s.Logger.Warn("Skipped ripsrc on empty repos", "repos", reposFailedRevParse)
 	}
 
 	if i != 0 {
-		s.logger.Info("Finished git repo processing", "count", i, "dur", time.Since(start))
+		s.Logger.Info("Finished git repo processing", "count", i, "dur", time.Since(start))
 	}
 
 	return nil
-}
-
-func (s *export) setupIntegrations() {
-	var integrationNames []string
-	for name := range s.integrationConfigs {
-		integrationNames = append(integrationNames, name)
-	}
-
-	s.logger.Info("running integrations", "integrations", integrationNames)
-
-	integrations := make(chan *integration)
-	go func() {
-		wg := sync.WaitGroup{}
-		for _, name := range integrationNames {
-			wg.Add(1)
-			name := name
-			go func() {
-				defer wg.Done()
-				integration, err := newIntegration(s, name, s.locs)
-				if err != nil {
-					panic(err)
-				}
-				integrations <- integration
-			}()
-		}
-		wg.Wait()
-		close(integrations)
-	}()
-	s.integrations = map[string]*integration{}
-	for integration := range integrations {
-		s.integrations[integration.name] = integration
-	}
 }
 
 type runResult struct {
@@ -232,10 +155,10 @@ func (s *export) runExports() map[string]runResult {
 	resMu := sync.Mutex{}
 
 	configPinpoint := rpcdef.ExportConfigPinpoint{
-		CustomerID: s.opts.AgentConfig.CustomerID,
+		CustomerID: s.Opts.AgentConfig.CustomerID,
 	}
 
-	for name, integration := range s.integrations {
+	for name, integration := range s.Integrations {
 		wg.Add(1)
 		name := name
 		integration := integration
@@ -248,15 +171,15 @@ func (s *export) runExports() map[string]runResult {
 				res[name] = runResult{Err: err, Duration: time.Since(start)}
 				resMu.Unlock()
 				if err != nil {
-					s.logger.Error("Export failed", "integration", name, "dur", time.Since(start), "err", err)
+					s.Logger.Error("Export failed", "integration", name, "dur", time.Since(start), "err", err)
 					return
 				}
-				s.logger.Info("Export success", "integration", name, "dur", time.Since(start))
+				s.Logger.Info("Export success", "integration", name, "dur", time.Since(start))
 			}
 
-			s.logger.Info("Export starting", "integration", name, "log_file", integration.logFile.Name())
+			s.Logger.Info("Export starting", "integration", name, "log_file", integration.LogFile())
 
-			integrationDef, ok := s.integrationConfigs[name]
+			integrationDef, ok := s.IntegrationConfigs[name]
 			if !ok {
 				panic("no config for integration")
 			}
@@ -269,7 +192,7 @@ func (s *export) runExports() map[string]runResult {
 				Pinpoint:    configPinpoint,
 				Integration: integrationConfig,
 			}
-			_, err := integration.rpcClient.Export(ctx, exportConfig)
+			_, err := integration.RPCClient().Export(ctx, exportConfig)
 			if err != nil {
 				ret(err)
 				return
@@ -289,37 +212,37 @@ func (s *export) printExportRes(res map[string]runResult) {
 	var successNames []string
 	var failedNames []string
 
-	for name, integration := range s.integrations {
+	for name, integration := range s.Integrations {
 		ires := res[name]
 		if ires.Err != nil {
-			s.logger.Error("Export failed", "integration", name, "dur", ires.Duration, "err", ires.Err)
+			s.Logger.Error("Export failed", "integration", name, "dur", ires.Duration, "err", ires.Err)
 			panicOut, err := integration.CloseAndDetectPanic()
 			if panicOut != "" {
 				fmt.Println("Panic in integration", name)
 				fmt.Println(panicOut)
 			}
 			if err != nil {
-				s.logger.Error("Could not close integration", "err", err)
+				s.Logger.Error("Could not close integration", "err", err)
 			}
 			failedNames = append(failedNames, name)
 			continue
 		}
 
-		s.logger.Info("Export success", "integration", name, "dur", ires.Duration)
+		s.Logger.Info("Export success", "integration", name, "dur", ires.Duration)
 		successNames = append(successNames, name)
 	}
 
-	dur := time.Since(s.startTime)
+	dur := time.Since(s.StartTime)
 
 	if len(failedNames) > 0 {
-		s.logger.Error("Some exports failed", "failed", failedNames, "succeded", successNames, "dur", dur)
+		s.Logger.Error("Some exports failed", "failed", failedNames, "succeded", successNames, "dur", dur)
 	} else {
-		s.logger.Info("Exports completed", "succeded", successNames, "dur", dur)
+		s.Logger.Info("Exports completed", "succeded", successNames, "dur", dur)
 	}
 }
 
 func (s *export) Destroy() {
-	for _, integration := range s.integrations {
+	for _, integration := range s.Integrations {
 		err := integration.Close()
 		if err != nil {
 			panic(err)

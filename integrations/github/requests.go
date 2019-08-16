@@ -83,19 +83,32 @@ func (s *Integration) makeRequestRetryThrottled(query string, res interface{}, r
 
 	}
 
+	// check if there were errors returned first
+
 	if resp.StatusCode != 200 {
 
 		if resp.StatusCode == 403 && strings.Contains(string(b), "wait") {
 			return rateLimited()
 		}
 
-		s.logger.Info("api request failed", "body", string(b))
-		rerr = fmt.Errorf(`resp resp.StatusCode != 200, got %v`, resp.StatusCode)
-		isErrorRetryable = true
+		var errRes struct {
+			Message string `json:"message"`
+		}
+
+		if resp.StatusCode == 401 {
+			json.Unmarshal(b, &errRes)
+			if errRes.Message != "" {
+				rerr = fmt.Errorf(`github request failed with status code %v: %v`, resp.StatusCode, errRes.Message)
+				isErrorRetryable = false
+				return
+			}
+		}
+
+		s.logger.Info("api request failed", "body", string(b), "code", resp.StatusCode)
+		rerr = fmt.Errorf(`github request failed with status code %v`, resp.StatusCode)
+		isErrorRetryable = false
 		return
 	}
-
-	// check if there were errors returned first
 
 	var errRes struct {
 		Errors []struct {

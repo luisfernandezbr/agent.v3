@@ -6,6 +6,8 @@ message Empty {}
 service Integration {
     rpc Init(IntegrationInitReq) returns (Empty);
     rpc Export(IntegrationExportReq) returns (IntegrationExportResp);    
+    rpc ValidateConfig(IntegrationValidateConfigReq) returns (IntegrationValidateConfigResp);
+    rpc OnboardExport(IntegrationOnboardExportReq) returns (IntegrationOnboardExportResp);
 }
 
 message IntegrationInitReq {
@@ -13,16 +15,47 @@ message IntegrationInitReq {
 }
 
 message IntegrationExportReq {
-    bytes integration_config_json = 1;
-    IntegrationExportReqPinpointConfig pinpoint_config = 2;   
+    IntegrationExportConfig config = 1;
 }
 
-message IntegrationExportReqPinpointConfig {
+message IntegrationExportConfig {
+    bytes integration_config_json = 1;
+    IntegrationAgentConfig agent_config = 2;   
+}
+
+message IntegrationAgentConfig {
     string customer_id = 1;
 }
 
 message IntegrationExportResp {
-    bytes integration_new_config_json = 1;
+//   bytes integration_new_config_json = 1;
+}
+
+message IntegrationValidateConfigReq {
+    IntegrationExportConfig config = 1;
+}
+
+message IntegrationValidateConfigResp {
+    repeated string errors = 1;
+}
+
+message IntegrationOnboardExportReq {
+    IntegrationExportConfig config = 1;
+    enum Kind {
+        USERS = 0;
+        REPOS = 1;
+        PROJECTS = 2;
+    }
+    Kind kind = 2;
+}
+
+message IntegrationOnboardExportResp {
+    enum Error {
+        NONE = 0;
+        NOT_SUPPORTED = 1;
+    }
+    Error error = 1;
+    bytes records_json = 2;
 }
 
 service Agent {

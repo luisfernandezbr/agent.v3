@@ -125,15 +125,46 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	return nil
 }
 
+func (s *Integration) ValidateConfig(ctx context.Context,
+	exportConfig rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
+
+	rerr := func(err error) {
+		res.Errors = append(res.Errors, err.Error())
+	}
+
+	err := s.initWithConfig(exportConfig)
+	if err != nil {
+		rerr(err)
+		return
+	}
+
+	_, err = api.ReposAllSlice(s.qc)
+	if err != nil {
+		rerr(err)
+		return
+	}
+
+	// TODO: return a repo and validate repo that repo can be cloned in agent
+
+	return
+}
+
 func urlAppend(p1, p2 string) string {
 	return strings.TrimSuffix(p1, "/") + "/" + p2
 }
 
-func (s *Integration) Export(ctx context.Context,
-	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
-
+func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	s.customerID = exportConfig.Pinpoint.CustomerID
 	err := s.setIntegrationConfig(exportConfig.Integration)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Integration) Export(ctx context.Context,
+	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
+	err := s.initWithConfig(exportConfig)
 	if err != nil {
 		return res, err
 	}

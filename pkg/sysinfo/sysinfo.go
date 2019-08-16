@@ -39,6 +39,9 @@ func getDefault() SystemInfo {
 	s.GoVersion = runtime.Version()
 	s.Architecture = runtime.GOARCH
 	s.AgentVersion = os.Getenv("PP_AGENT_VERSION")
+	if s.AgentVersion == "" {
+		s.AgentVersion = "dev"
+	}
 	dir := os.Getenv("PP_CACHEDIR")
 	if dir == "" {
 		dir, _ = os.Getwd()

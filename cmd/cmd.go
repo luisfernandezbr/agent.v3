@@ -5,12 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
 	"strings"
 
+	"github.com/pinpt/agent.next/rpcdef"
+
+	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
+	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
 	"github.com/pinpt/agent.next/cmd/cmdserviceuninstall"
+	"github.com/pinpt/agent.next/cmd/cmdvalidate"
 
 	"github.com/pinpt/agent.next/cmd/cmdexport"
 
@@ -119,50 +125,62 @@ func init() {
 	cmdRoot.AddCommand(cmd)
 }
 
-var cmdExport = &cobra.Command{
-	Use:   "export",
-	Short: "Run export passing configured integrations via command line",
-	Args:  cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		logger := defaultLogger()
-		opts := cmdexport.Opts{}
+func integrationCommandFlags(cmd *cobra.Command) {
+	flagPinpointRoot(cmd)
+	cmd.Flags().String("agent-config-json", "", "Agent config as json")
+	cmd.Flags().String("integrations-json", "", "Integrations config as json")
+	cmd.Flags().String("integrations-dir", "", "Integrations dir")
+}
 
-		agentConfigJSON, _ := cmd.Flags().GetString("agent-config-json")
-		if agentConfigJSON != "" {
-			err := json.Unmarshal([]byte(agentConfigJSON), &opts.AgentConfig)
-			if err != nil {
-				exitWithErr(logger, fmt.Errorf("integrations-json is not valid: %v", err))
-			}
-		}
-
-		// allow setting pinpoint root in either json or command line flag
-		{
-			v, _ := cmd.Flags().GetString("pinpoint-root")
-			if v != "" {
-				opts.AgentConfig.PinpointRoot = v
-			}
-		}
-
-		// allow setting integrations-dir in both json and command line flag
-		{
-			v, _ := cmd.Flags().GetString("integrations-dir")
-			if v != "" {
-				opts.AgentConfig.IntegrationsDir = v
-			}
-		}
-
-		integrationsJSON, _ := cmd.Flags().GetString("integrations-json")
-		if integrationsJSON == "" {
-			exitWithErr(logger, errors.New("missing integrations-json"))
-		}
-
-		err := json.Unmarshal([]byte(integrationsJSON), &opts.Integrations)
+func integrationCommandOpts(logger hclog.Logger, cmd *cobra.Command) cmdintegration.Opts {
+	opts := cmdintegration.Opts{}
+	agentConfigJSON, _ := cmd.Flags().GetString("agent-config-json")
+	if agentConfigJSON != "" {
+		err := json.Unmarshal([]byte(agentConfigJSON), &opts.AgentConfig)
 		if err != nil {
 			exitWithErr(logger, fmt.Errorf("integrations-json is not valid: %v", err))
 		}
+	}
 
-		opts.Logger = logger
-		err = cmdexport.Run(opts)
+	// allow setting pinpoint root in either json or command line flag
+	{
+		v, _ := cmd.Flags().GetString("pinpoint-root")
+		if v != "" {
+			opts.AgentConfig.PinpointRoot = v
+		}
+	}
+
+	// allow setting integrations-dir in both json and command line flag
+	{
+		v, _ := cmd.Flags().GetString("integrations-dir")
+		if v != "" {
+			opts.AgentConfig.IntegrationsDir = v
+		}
+	}
+
+	integrationsJSON, _ := cmd.Flags().GetString("integrations-json")
+	if integrationsJSON == "" {
+		exitWithErr(logger, errors.New("missing integrations-json"))
+	}
+
+	err := json.Unmarshal([]byte(integrationsJSON), &opts.Integrations)
+	if err != nil {
+		exitWithErr(logger, fmt.Errorf("integrations-json is not valid: %v", err))
+	}
+
+	opts.Logger = logger
+	return opts
+}
+
+var cmdExport = &cobra.Command{
+	Use:    "export",
+	Hidden: true,
+	Short:  "Export all data of multiple passed integrations",
+	Args:   cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		logger := defaultLogger()
+		opts := integrationCommandOpts(logger, cmd)
+		err := cmdexport.Run(opts)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
@@ -171,11 +189,116 @@ var cmdExport = &cobra.Command{
 
 func init() {
 	cmd := cmdExport
-	flagPinpointRoot(cmd)
-	cmd.Flags().String("agent-config-json", "", "Agent config as json")
-	cmd.Flags().String("integrations-json", "", "Integrations config as json")
-	cmd.Flags().String("integrations-dir", "", "Integrations dir")
-	cmdRoot.AddCommand(cmdExport)
+	integrationCommandFlags(cmd)
+	cmdRoot.AddCommand(cmd)
+}
+
+type outputFile struct {
+	logger hclog.Logger
+	close  io.Closer
+	Writer io.Writer
+}
+
+func newOutputFile(logger hclog.Logger, cmd *cobra.Command) *outputFile {
+	s := &outputFile{}
+	s.logger = logger
+
+	v, _ := cmd.Flags().GetString("output-file")
+	if v != "" {
+		f, err := os.Create(v)
+		if err != nil {
+			exitWithErr(logger, fmt.Errorf("could not create output-file: %v", err))
+		}
+		s.close = f
+		s.Writer = f
+	} else {
+		s.Writer = os.Stdout
+	}
+	return s
+}
+
+func (s outputFile) Close() {
+	if s.close != nil {
+		err := s.close.Close()
+		if err != nil {
+			exitWithErr(s.logger, fmt.Errorf("could not close the output-file: %v", err))
+		}
+	}
+}
+
+func flagOutputFile(cmd *cobra.Command) {
+	cmd.Flags().String("output-file", "", "File to save validation result. Writes to stdout if not specified.")
+}
+
+var cmdValidateConfig = &cobra.Command{
+	Use:    "validate-config",
+	Hidden: true,
+	Short:  "Validates the configuration by making a test connection",
+	Args:   cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		logger := defaultLogger()
+		baseOpts := integrationCommandOpts(logger, cmd)
+		opts := cmdvalidate.Opts{}
+		opts.Opts = baseOpts
+
+		outputFile := newOutputFile(logger, cmd)
+		defer outputFile.Close()
+		opts.Output = outputFile.Writer
+
+		err := cmdvalidate.Run(opts)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+	},
+}
+
+func init() {
+	cmd := cmdValidateConfig
+	integrationCommandFlags(cmd)
+	flagOutputFile(cmd)
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdExportOboardData = &cobra.Command{
+	Use:    "export-onboard-data",
+	Hidden: true,
+	Short:  "Exports users, repos or projects based on param for a specified integration. Saves that data into provided file.",
+	Args:   cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		logger := defaultLogger()
+		baseOpts := integrationCommandOpts(logger, cmd)
+		opts := cmdexportonboarddata.Opts{}
+		opts.Opts = baseOpts
+
+		outputFile := newOutputFile(logger, cmd)
+		defer outputFile.Close()
+		opts.Output = outputFile.Writer
+
+		{
+			v, _ := cmd.Flags().GetString("object-type")
+			if v == "" {
+				exitWithErr(logger, errors.New("provide object-type arg"))
+			}
+			if v == "users" || v == "repos" || v == "projects" {
+				opts.ExportType = rpcdef.OnboardExportType(v)
+			} else {
+				exitWithErr(logger, fmt.Errorf("object-type must be one of: users, repos, projects, got %v", v))
+			}
+		}
+
+		err := cmdexportonboarddata.Run(opts)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+	},
+}
+
+func init() {
+	cmd := cmdExportOboardData
+	integrationCommandFlags(cmd)
+	flagOutputFile(cmd)
+	cmd.Flags().String("object-type", "", "Object type to export, one of: users, repos, projects.")
+	cmdRoot.AddCommand(cmd)
 }
 
 var cmdServiceInstall = &cobra.Command{

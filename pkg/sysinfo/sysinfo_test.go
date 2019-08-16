@@ -1,11 +1,12 @@
 package sysinfo
 
 import (
-	"github.com/denisbrodbeck/machineid"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"runtime"
 	"testing"
+
+	"github.com/denisbrodbeck/machineid"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetDefault(t *testing.T) {
@@ -32,6 +33,9 @@ func myDefaultInfo() SystemInfo {
 	s.GoVersion = runtime.Version()
 	s.Architecture = runtime.GOARCH
 	s.AgentVersion = os.Getenv("PP_AGENT_VERSION")
+	if s.AgentVersion == "" {
+		s.AgentVersion = "dev"
+	}
 	dir := os.Getenv("PP_CACHEDIR")
 	if dir == "" {
 		dir, _ = os.Getwd()

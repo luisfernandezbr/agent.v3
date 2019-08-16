@@ -3,6 +3,8 @@ package rpcdef
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 
 	"github.com/pinpt/agent.next/rpcdef/proto"
 	"google.golang.org/grpc"
@@ -12,8 +14,10 @@ import (
 
 type Integration interface {
 	Init(agent Agent) error
-
 	Export(context.Context, ExportConfig) (ExportResult, error)
+	ValidateConfig(context.Context, ExportConfig) (ValidationResult, error)
+	// OnboardExport returns the data used in onboard. Kind is one of users, repos, projects.
+	OnboardExport(ctx context.Context, objectType OnboardExportType, config ExportConfig) (OnboardExportResult, error)
 }
 
 type ExportConfig struct {
@@ -21,14 +25,84 @@ type ExportConfig struct {
 	Integration map[string]interface{}
 }
 
+func exportConfigFromProto(data *proto.IntegrationExportConfig) (res ExportConfig, _ error) {
+	err := json.Unmarshal(data.IntegrationConfigJson, &res.Integration)
+	if err != nil {
+		return res, err
+	}
+	res.Pinpoint.CustomerID = data.AgentConfig.CustomerId
+	return res, nil
+}
+
+func (s ExportConfig) proto() (*proto.IntegrationExportConfig, error) {
+	res := &proto.IntegrationExportConfig{}
+	b, err := json.Marshal(s.Integration)
+	if err != nil {
+		return res, err
+	}
+	res.IntegrationConfigJson = b
+	res.AgentConfig = s.Pinpoint.proto()
+	return res, nil
+}
+
 type ExportConfigPinpoint struct {
 	CustomerID string
 }
 
-type ExportResult struct {
-	// NewConfig can be returned from Export to update the integration config. Return nil to keep the curren config.
-	NewConfig map[string]interface{}
+func (s ExportConfigPinpoint) proto() *proto.IntegrationAgentConfig {
+	res := &proto.IntegrationAgentConfig{}
+	res.CustomerId = s.CustomerID
+	return res
 }
+
+type ExportResult struct {
+}
+
+type ValidationResult struct {
+	Errors []string `json:"errors"`
+}
+
+type OnboardExportType string
+
+const (
+	OnboardExportTypeUsers    OnboardExportType = "users"
+	OnboardExportTypeRepos                      = "repos"
+	OnboardExportTypeProjects                   = "projects"
+)
+
+func onboardExportTypeFromProto(k proto.IntegrationOnboardExportReq_Kind) (res OnboardExportType) {
+	switch k {
+	case proto.IntegrationOnboardExportReq_USERS:
+		return OnboardExportTypeUsers
+	case proto.IntegrationOnboardExportReq_REPOS:
+		return OnboardExportTypeRepos
+	case proto.IntegrationOnboardExportReq_PROJECTS:
+		return OnboardExportTypeProjects
+	default:
+		panic(fmt.Errorf("unsupported object type: %v", k))
+	}
+}
+
+func (s OnboardExportType) proto() proto.IntegrationOnboardExportReq_Kind {
+	switch s {
+	case OnboardExportTypeUsers:
+		return proto.IntegrationOnboardExportReq_USERS
+	case OnboardExportTypeRepos:
+		return proto.IntegrationOnboardExportReq_REPOS
+	case OnboardExportTypeProjects:
+		return proto.IntegrationOnboardExportReq_PROJECTS
+	default:
+		panic(fmt.Errorf("unsupported object type: %v", s))
+	}
+}
+
+// OnboardExportResult is the result of the onboard call. If the particular data type is not supported by integration, return Error will be equal to OnboardExportErrNotSupported.
+type OnboardExportResult struct {
+	Error   error
+	Records []map[string]interface{}
+}
+
+var ErrOnboardExportNotSupported = errors.New("onboard for integration does not support requested object type")
 
 type IntegrationClient struct {
 	client          proto.IntegrationClient
@@ -70,27 +144,50 @@ func (s *IntegrationClient) Export(
 	exportConfig ExportConfig) (res ExportResult, _ error) {
 
 	args := &proto.IntegrationExportReq{}
-	confBytes, err := json.Marshal(exportConfig.Integration)
+	var err error
+	args.Config, err = exportConfig.proto()
 	if err != nil {
 		return res, err
 	}
-	args.IntegrationConfigJson = confBytes
-
-	pinpointConfig := &proto.IntegrationExportReqPinpointConfig{}
-	pinpointConfig.CustomerId = exportConfig.Pinpoint.CustomerID
-
-	args.PinpointConfig = pinpointConfig
-
-	resp, err := s.client.Export(ctx, args)
+	_, err = s.client.Export(ctx, args)
 	if err != nil {
 		return res, err
 	}
-	newConf := resp.IntegrationNewConfigJson
-	if len(newConf) != 0 {
-		err := json.Unmarshal(newConf, &res.NewConfig)
-		if err != nil {
-			return res, err
-		}
+	return res, nil
+}
+
+func (s *IntegrationClient) ValidateConfig(ctx context.Context,
+	exportConfig ExportConfig) (res ValidationResult, _ error) {
+	args := &proto.IntegrationValidateConfigReq{}
+	var err error
+	args.Config, err = exportConfig.proto()
+	resp, err := s.client.ValidateConfig(ctx, args)
+	if err != nil {
+		return res, err
+	}
+	res.Errors = resp.Errors
+	return res, nil
+}
+
+func (s *IntegrationClient) OnboardExport(ctx context.Context, objectType OnboardExportType, exportConfig ExportConfig) (res OnboardExportResult, _ error) {
+	args := &proto.IntegrationOnboardExportReq{}
+	var err error
+	args.Config, err = exportConfig.proto()
+	args.Kind = objectType.proto()
+	resp, err := s.client.OnboardExport(ctx, args)
+	if err != nil {
+		return res, err
+	}
+	switch resp.Error {
+	case proto.IntegrationOnboardExportResp_NONE:
+		res.Error = nil
+	case proto.IntegrationOnboardExportResp_NOT_SUPPORTED:
+		res.Error = ErrOnboardExportNotSupported
+	}
+
+	err = json.Unmarshal(resp.RecordsJson, &res.Records)
+	if err != nil {
+		return res, err
 	}
 	return res, nil
 }
@@ -125,24 +222,56 @@ func (s *IntegrationServer) Init(ctx context.Context, req *proto.IntegrationInit
 
 func (s *IntegrationServer) Export(ctx context.Context, req *proto.IntegrationExportReq) (res *proto.IntegrationExportResp, _ error) {
 	res = &proto.IntegrationExportResp{}
-	var integrationConfig map[string]interface{}
-	err := json.Unmarshal(req.IntegrationConfigJson, &integrationConfig)
+
+	config, err := exportConfigFromProto(req.Config)
 	if err != nil {
 		return res, err
 	}
-	exportConfig := ExportConfig{}
-	exportConfig.Integration = integrationConfig
-	exportConfig.Pinpoint.CustomerID = req.PinpointConfig.CustomerId
-	r0, err := s.Impl.Export(ctx, exportConfig)
+	_, err = s.Impl.Export(ctx, config)
 	if err != nil {
 		return res, err
 	}
-	if r0.NewConfig != nil {
-		b, err := json.Marshal(r0.NewConfig)
-		if err != nil {
-			return res, err
-		}
-		res.IntegrationNewConfigJson = b
+	return res, nil
+}
+
+func (s *IntegrationServer) ValidateConfig(ctx context.Context, req *proto.IntegrationValidateConfigReq) (res *proto.IntegrationValidateConfigResp, _ error) {
+	res = &proto.IntegrationValidateConfigResp{}
+
+	config, err := exportConfigFromProto(req.Config)
+	if err != nil {
+		return res, err
+	}
+	r0, err := s.Impl.ValidateConfig(ctx, config)
+	if err != nil {
+		return res, err
+	}
+	res.Errors = r0.Errors
+	return res, nil
+}
+
+func (s *IntegrationServer) OnboardExport(ctx context.Context, req *proto.IntegrationOnboardExportReq) (res *proto.IntegrationOnboardExportResp, _ error) {
+	res = &proto.IntegrationOnboardExportResp{}
+
+	config, err := exportConfigFromProto(req.Config)
+	if err != nil {
+		return res, err
+	}
+	kind := onboardExportTypeFromProto(req.Kind)
+	r0, err := s.Impl.OnboardExport(ctx, kind, config)
+	if err != nil {
+		return res, err
+	}
+	switch r0.Error {
+	case nil:
+		res.Error = proto.IntegrationOnboardExportResp_NONE
+	case ErrOnboardExportNotSupported:
+		res.Error = proto.IntegrationOnboardExportResp_NOT_SUPPORTED
+	default:
+		return res, r0.Error
+	}
+	res.RecordsJson, err = json.Marshal(r0.Records)
+	if err != nil {
+		return res, err
 	}
 	return res, nil
 }

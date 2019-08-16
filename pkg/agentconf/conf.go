@@ -19,7 +19,7 @@ type Config struct {
 }
 
 func Save(c Config, loc string) error {
-	err := os.Mkdir(filepath.Dir(loc), 0777)
+	err := os.MkdirAll(filepath.Dir(loc), 0777)
 	if err != nil {
 		return err
 	}

@@ -26,12 +26,13 @@ func New(opts Opts) (*JiraCommon, error) {
 	s := &JiraCommon{}
 	s.opts = opts
 	s.agent = opts.Agent
-	var err error
-	s.users, err = NewUsers(opts.CustomerID, opts.Agent)
-	if err != nil {
-		return nil, err
-	}
 	return s, nil
+}
+
+func (s *JiraCommon) SetupUsers() error {
+	var err error
+	s.users, err = NewUsers(s.opts.CustomerID, s.opts.Agent)
+	return err
 }
 
 func (s *JiraCommon) CommonQC() jiracommonapi.QueryContext {

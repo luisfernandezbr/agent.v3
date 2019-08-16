@@ -29,13 +29,13 @@ func AppendCommonInfo(event interface{}, customerID string) {
 			os := systemInfo.OS
 			val.Set(reflect.ValueOf(os))
 		} else if field.Name == "Version" {
-			version := systemInfo.Version
+			version := systemInfo.AgentVersion
 			val.Set(reflect.ValueOf(version))
 		} else if field.Name == "Hostname" {
-			hostName := systemInfo.Version
+			hostName := systemInfo.Hostname
 			val.Set(reflect.ValueOf(hostName))
 		} else if field.Name == "Distro" {
-			distro := systemInfo.Name + "_" + systemInfo.Version
+			distro := systemInfo.Name + " " + systemInfo.Version
 			val.Set(reflect.ValueOf(distro))
 		} else if field.Name == "NumCPU" {
 			numCPU := int64(systemInfo.NumCPU)
@@ -57,10 +57,8 @@ func AppendCommonInfo(event interface{}, customerID string) {
 			val.Set(reflect.ValueOf(uuid))
 		} else if field.Name == "EventDate" {
 			dt := datetime.NewDateNow()
-
 			ms2 := (reflect.New(field.Type).Elem()).Interface()
 			st2 := reflect.TypeOf(ms2)
-
 			for e := 0; e < st2.NumField(); e++ {
 				field2 := st2.Field(e)
 				val2 := val.FieldByName(field2.Name)
@@ -72,8 +70,12 @@ func AppendCommonInfo(event interface{}, customerID string) {
 					val2.Set(reflect.ValueOf(dt.Offset))
 				}
 			}
-
+		} else if field.Name == "UpdatedAt" {
+			dt := datetime.EpochNow()
+			val.Set(reflect.ValueOf(dt))
+		} else if field.Name == "Uptime" {
+			panic("uptime")
+			//val.Set(reflect.ValueOf(datetime.EpochNow() - started))
 		}
-
 	}
 }

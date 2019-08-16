@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/encrypt"
 
 	"github.com/pinpt/go-common/fileutil"
@@ -97,6 +99,9 @@ func (s *enroller) SendEvent(ctx context.Context) error {
 		Code: s.opts.Code,
 		UUID: s.opts.DeviceID,
 	}
+
+	now := time.Now()
+	date.ConvertToModel(now, &data.RequestDate)
 
 	deviceinfo.AppendCommonInfo(&data, "")
 

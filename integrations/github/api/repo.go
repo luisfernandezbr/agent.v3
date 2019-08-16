@@ -26,22 +26,21 @@ func ReposAll(qc QueryContext, res chan []Repo) error {
 	})
 }
 
-func ReposAllSlice(qc QueryContext) ([]Repo, error) {
+func ReposAllSlice(qc QueryContext) (sl []Repo, rerr error) {
 	res := make(chan []Repo)
 	go func() {
 		defer close(res)
 		err := ReposAll(qc, res)
 		if err != nil {
-			panic(err)
+			rerr = err
 		}
 	}()
-	var sl []Repo
 	for a := range res {
 		for _, sub := range a {
 			sl = append(sl, sub)
 		}
 	}
-	return sl, nil
+	return
 }
 
 func ReposPageInternal(qc QueryContext, queryParams string) (pi PageInfo, repos []Repo, _ error) {
