@@ -121,7 +121,7 @@ func flagPinpointRoot(cmd *cobra.Command) {
 func init() {
 	cmd := cmdEnroll
 	flagPinpointRoot(cmd)
-	cmd.Flags().String("channel", "dev", "Cloud channel to use.")
+	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
 	cmdRoot.AddCommand(cmd)
 }
 

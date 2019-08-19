@@ -10,6 +10,14 @@
   version = "v2.7.0"
 
 [[projects]]
+  digest = "1:ce834ee7eff3bbf47931b5f1ca7a406ae92b0448d1b26e0480ad53958c37c0a5"
+  name = "github.com/bsm/redislock"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "60529f1f500dc4067b939a981172b79be43705b2"
+  version = "v0.3.0"
+
+[[projects]]
   digest = "1:c952f10089bb57d6e6d56d8880bcbb4d444b1d40b091354cb25b10a6c23b211a"
   name = "github.com/bxcodec/faker"
   packages = [
@@ -109,6 +117,22 @@
   pruneopts = "UT"
   revision = "07c9b44f60d7ffdfb7d8efe1ad539965737836dc"
   version = "v0.4.0"
+
+[[projects]]
+  digest = "1:6bafc5f7351645dce4cd04ec4db791bdb421d43da13c3fcef8b90cca01ba7621"
+  name = "github.com/go-redis/redis"
+  packages = [
+    ".",
+    "internal",
+    "internal/consistenthash",
+    "internal/hashtag",
+    "internal/pool",
+    "internal/proto",
+    "internal/util",
+  ]
+  pruneopts = "UT"
+  revision = "c5c4ad6a4cae24f3867af1a0513709fc944a87f3"
+  version = "v6.15.4"
 
 [[projects]]
   digest = "1:586ea76dbd0374d6fb649a91d70d652b7fe0ccffb8910a77468e7702e7901f3d"
@@ -367,7 +391,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:fc058ff40532259172bed9ea5b4450fde19449dab545cf58eeab797ca6721308"
+  digest = "1:35030274c3e83c6d4b01198f77cb4d85811740191e917a705e9ad198c96bf0e6"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -391,8 +415,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "2ec2e5f1de4b600f8979657d059976b013531d8a"
-  version = "8.1.8"
+  revision = "4a23030862023229df5ae5a3ad9373a0b4d56554"
+  version = "8.2.3"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
@@ -403,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:cf1d685ede375d242b5774163f23eb05fe28a767ca03f0ab50327728c5ac2382"
+  digest = "1:89b6f404aef9c72b3921834b9d228bf94aea92ef2f7c23a1172a0e929c6b0067"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -415,8 +439,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "fb8f67501aebede42b68c7df0608cf3fad29a565"
-  version = "0.0.394"
+  revision = "bb5feabafcfba4232b932ccaeb187463afa4b5d2"
+  version = "0.0.397"
 
 [[projects]]
   digest = "1:3db456275fbaedf3c401bd81d914b98b6ac0dbff38cf9280fb3a60dca54d38cf"
@@ -664,7 +688,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:169a7286d4d9d0c2429901c1a71c25ca3296aaa1213ff582eb107bc59dafe6f3"
+  digest = "1:d42fb5f55beb1aa5a72948a49b40577ea6e1e283a3d21bc10fc12f02894fde2a"
   name = "gonum.org/v1/gonum"
   packages = [
     "blas",
@@ -691,7 +715,7 @@
     "stat/distuv",
   ]
   pruneopts = "UT"
-  revision = "0436873561a9427b05e7eaa50b362b2337cd11cd"
+  revision = "035030958a884ae1378133553856bf025150c5eb"
 
 [[projects]]
   branch = "master"
@@ -699,7 +723,7 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "UT"
-  revision = "fa694d86fc64c7654a660f8908de4e879866748d"
+  revision = "55e96fffbd486c27fc0d5b4468c497d0de3f2727"
 
 [[projects]]
   digest = "1:66eb0a8f30c52554ea9ecdd3c03cb48c9cd02d85388d21d1b3f7e93f4fd3611d"
