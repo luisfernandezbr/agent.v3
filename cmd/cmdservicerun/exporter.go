@@ -73,7 +73,7 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 
 	for _, integration := range data.Integrations {
 
-		s.logger.Info("exporting integration", "name", integration.Name)
+		s.logger.Info("exporting integration", "name", integration.Name, "len(exclusions)", len(integration.Exclusions))
 
 		conf, err := configFromEvent(integration.ToMap(), s.opts.PPEncryptionKey)
 		if err != nil {

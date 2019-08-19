@@ -230,21 +230,34 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 	if err != nil {
 		return err
 	}
+
 	{
-		excluded := map[string]bool{}
-		for _, name := range s.config.ExcludedRepos {
-			excluded[name] = true
+		all := map[string]bool{}
+		for _, repo := range repos {
+			all[repo.ID] = true
 		}
-		var filtered []api.Repo
+		excluded := map[string]bool{}
+		for _, id := range s.config.ExcludedRepos {
+			if !all[id] {
+				return fmt.Errorf("wanted to exclude non existing repo: %v", id)
+			}
+			excluded[id] = true
+		}
+
+		filtered := map[string]api.Repo{}
 		// filter excluded repos
 		for _, repo := range repos {
-			if excluded[repo.NameWithOwner] {
+			if excluded[repo.ID] {
 				continue
 			}
-			filtered = append(filtered, repo)
+			filtered[repo.ID] = repo
 		}
+
 		s.logger.Info("repos", "found", len(repos), "excluded_definition", len(s.config.ExcludedRepos), "result", len(filtered))
-		repos = filtered
+		repos = []api.Repo{}
+		for _, repo := range filtered {
+			repos = append(repos, repo)
+		}
 	}
 
 	// queue repos for processing with ripsrc

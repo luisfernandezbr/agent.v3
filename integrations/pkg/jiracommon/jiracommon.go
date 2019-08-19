@@ -10,10 +10,11 @@ import (
 )
 
 type Opts struct {
-	Logger     hclog.Logger
-	CustomerID string
-	Request    func(objPath string, params url.Values, res interface{}) error
-	Agent      rpcdef.Agent
+	Logger           hclog.Logger
+	CustomerID       string
+	Request          func(objPath string, params url.Values, res interface{}) error
+	Agent            rpcdef.Agent
+	ExcludedProjects []string
 }
 
 type JiraCommon struct {

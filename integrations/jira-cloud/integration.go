@@ -94,10 +94,11 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	}
 
 	s.common, err = jiracommon.New(jiracommon.Opts{
-		Logger:     s.logger,
-		CustomerID: config.Pinpoint.CustomerID,
-		Request:    s.qc.Request,
-		Agent:      s.agent,
+		Logger:           s.logger,
+		CustomerID:       config.Pinpoint.CustomerID,
+		Request:          s.qc.Request,
+		Agent:            s.agent,
+		ExcludedProjects: s.config.ExcludedProjects,
 	})
 	if err != nil {
 		return err
@@ -154,9 +155,17 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		fieldByID[f.RefID] = f
 	}
 
-	projects, err := s.projects(s.config.ExcludedProjects)
-	if err != nil {
-		return res, err
+	var projects []Project
+	{
+		allProjectsDetailed, err := s.projects()
+		if err != nil {
+			return res, err
+		}
+
+		projects, err = s.common.ProcessAllProjectsUsingExclusions(allProjectsDetailed)
+		if err != nil {
+			return res, err
+		}
 	}
 
 	err = s.common.IssuesAndChangelogs(projects, fieldByID)
@@ -169,45 +178,16 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 
 type Project = jiracommon.Project
 
-func (s *Integration) projects(excluded []string) (all []Project, _ error) {
-	sender := objsender.NewNotIncremental(s.agent, "work.project")
-	defer sender.Done()
-
-	excludedMap := map[string]bool{}
-	for _, id := range excluded {
-		excludedMap[id] = true
-	}
-
+func (s *Integration) projects() (all []*work.Project, _ error) {
 	return all, jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
 		pi, res, err := api.ProjectsPage(s.qc, paginationParams)
 		if err != nil {
 			return false, 0, err
 		}
-		{
-			var filtered []*work.Project
-			for _, obj := range res {
-				if excludedMap[obj.RefID] {
-					continue
-				}
-				filtered = append(filtered, obj)
-			}
-			res = filtered
+		for _, obj := range res {
+			all = append(all, obj)
 		}
 
-		for _, obj := range res {
-			p := Project{}
-			p.JiraID = obj.RefID
-			p.Key = obj.Identifier
-			all = append(all, p)
-		}
-		var res2 []objsender.Model
-		for _, obj := range res {
-			res2 = append(res2, obj)
-		}
-		err = sender.Send(res2)
-		if err != nil {
-			return false, 0, err
-		}
 		return pi.HasMore, pi.MaxResults, nil
 	})
 }
