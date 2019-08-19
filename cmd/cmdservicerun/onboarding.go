@@ -22,6 +22,8 @@ func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integ
 
 	err := s.runCommand(ctx, &res, []string{"export-onboard-data", "--agent-config-json", pjson.Stringify(agent), "--integrations-json", pjson.Stringify(integrations), "--object-type", objectType})
 
+	//s.logger.Debug("got onboard data", "res", pjson.Stringify(res))
+
 	s.logger.Info("getting onboard data completed", "success", res.Success)
 
 	if err != nil {

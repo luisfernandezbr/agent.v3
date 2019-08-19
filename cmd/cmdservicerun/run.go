@@ -134,7 +134,7 @@ func (s *runner) sendEnabled(ctx context.Context) error {
 		},
 	}
 
-	err := event.Publish(ctx, publishEvent, s.conf.Channel, s.conf.Channel)
+	err := event.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
 	if err != nil {
 		panic(err)
 	}

@@ -42,6 +42,7 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 						startCursor
 					}
 					nodes {
+						createdAt
 						updatedAt
 						id
 						name
@@ -61,6 +62,7 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 									  avatarUrl
 									}
 									committedDate
+									authoredDate
 								}
 							}
 						}
@@ -100,6 +102,7 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 										AvatarURL string `json:"avatarUrl"`
 									} `json:"author"`
 									CommittedDate time.Time `json:"committedDate"`
+									AuthoredDate  time.Time `json:"authoredDate"`
 								} `json:"target"`
 							} `json:"defaultBranchRef"`
 							IsFork     bool `json:"isFork"`
@@ -127,6 +130,7 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 		if data.UpdatedAt.Before(stopOnUpdatedAt) {
 			return PageInfo{}, repos, nil
 		}
+
 		repo := &agent.RepoResponseRepos{}
 		repo.RefType = "github"
 		//repo.CustomerID = qc.CustomerID
@@ -149,6 +153,8 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 			commit.Author.Name = cdata.Author.Name
 			commit.Author.Email = cdata.Author.Email
 			commit.Author.AvatarURL = cdata.Author.AvatarURL
+			date.ConvertToModel(cdata.AuthoredDate, &commit.CreatedDate)
+			repo.LastCommit = commit
 		}
 
 		repos = append(repos, repo)
