@@ -193,7 +193,9 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 
 		resp := &agent.IntegrationResponse{}
 		resp.RefType = integration.Name
+		resp.RefID = integration.RefID
 		resp.RequestID = req.ID
+
 		resp.UUID = s.conf.DeviceID
 		date.ConvertToModel(time.Now(), &resp.EventDate)
 		//resp.RefID = hash.Values(s.conf.DeviceID, integration.Name)
@@ -274,8 +276,11 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) error {
 			panic(err)
 		}
 		resp := &agent.UserResponse{}
-		resp.RefType = req.RefType
 		resp.Type = agent.UserResponseTypeUser
+		resp.RefType = req.RefType
+		resp.RefID = req.RefID
+		resp.RequestID = req.ID
+		resp.IntegrationID = req.Integration.ID
 
 		resp.Success = data.Success
 		if data.Error != "" {
@@ -297,8 +302,11 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) error {
 			panic(err)
 		}
 		resp := &agent.RepoResponse{}
-		resp.RefType = req.RefType
 		resp.Type = agent.RepoResponseTypeRepo
+		resp.RefType = req.RefType
+		resp.RefID = req.RefID
+		resp.RequestID = req.ID
+		resp.IntegrationID = req.Integration.ID
 
 		resp.Success = data.Success
 		if data.Error != "" {
@@ -321,8 +329,11 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) error {
 			panic(err)
 		}
 		resp := &agent.ProjectResponse{}
-		resp.RefType = req.RefType
 		resp.Type = agent.ProjectResponseTypeProject
+		resp.RefType = req.RefType
+		resp.RefID = req.RefID
+		resp.RequestID = req.ID
+		resp.IntegrationID = req.Integration.ID
 
 		resp.Success = data.Success
 		if data.Error != "" {

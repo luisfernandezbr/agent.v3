@@ -117,11 +117,12 @@ func convertConfig(in string, c1 map[string]interface{}, exclusions []string) (r
 		}
 		us, ok := c1["url"].(string)
 		if !ok {
-			panic("missing jira url in config")
+			errStr("missing jira url in config")
 		}
 		u, err := url.Parse(us)
 		if err != nil {
-			panic(fmt.Errorf("invlid jira url: %v", err))
+			rerr = fmt.Errorf("invalid jira url: %v", err)
+			return
 		}
 		integrationName = "jira-hosted"
 		if strings.HasSuffix(u.Host, ".atlassian.net") {
@@ -147,7 +148,8 @@ func convertConfig(in string, c1 map[string]interface{}, exclusions []string) (r
 		config.ExcludedProjects = exclusions
 		res, err = structmarshal.StructToMap(config)
 		if err != nil {
-			panic(err)
+			rerr = err
+			return
 		}
 
 		return

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -20,12 +21,19 @@ import (
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
-type Opts = cmdintegration.Opts
+type Opts struct {
+	cmdintegration.Opts
+	ReprocessHistorical bool `json:"reprocess_historical"`
+}
+
 type AgentConfig = cmdintegration.AgentConfig
 type Integration = cmdintegration.Integration
 
 func Run(opts Opts) error {
-	exp := newExport(opts)
+	exp, err := newExport(opts)
+	if err != nil {
+		return err
+	}
 	defer exp.Destroy()
 	return nil
 }
@@ -43,14 +51,24 @@ type export struct {
 	gitProcessingRepos chan repoProcess
 }
 
-func newExport(opts Opts) *export {
+func newExport(opts Opts) (*export, error) {
 	s := &export{}
-	s.Command = cmdintegration.NewCommand(opts)
+	s.Command = cmdintegration.NewCommand(opts.Opts)
+
+	if opts.ReprocessHistorical {
+		s.Logger.Info("ReprocessHistorical is true, discarding incrmental checkpoints")
+		err := s.discardIncrementalData()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		s.Logger.Info("ReprocessHistorical is false, will use inremental checkpoints if available")
+	}
 
 	var err error
 	s.lastProcessed, err = jsonstore.New(s.Locs.LastProcessedFile)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	s.sessions = newSessions(s.Logger, s, s.Locs.Uploads)
@@ -78,7 +96,15 @@ func newExport(opts Opts) *export {
 
 	s.printExportRes(exportRes)
 
-	return s
+	return s, nil
+}
+
+func (s *export) discardIncrementalData() error {
+	err := os.RemoveAll(s.Locs.LastProcessedFile)
+	if err != nil {
+		return err
+	}
+	return os.RemoveAll(s.Locs.RipsrcCheckpoints)
 }
 
 type repoProcess struct {

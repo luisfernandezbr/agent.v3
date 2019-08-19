@@ -56,7 +56,7 @@ func (s *exporter) Run() {
 }
 
 func (s *exporter) export(data *agent.ExportRequest) error {
-	s.logger.Info("processing export request", "upload_url", *data.UploadURL)
+	s.logger.Info("processing export request", "upload_url", *data.UploadURL, "reprocess_historical", data.ReprocessHistorical)
 
 	agentConfig := cmdexport.AgentConfig{}
 	agentConfig.CustomerID = s.opts.CustomerID
@@ -93,7 +93,7 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 		return err
 	}
 
-	err = s.execExport(ctx, agentConfig, integrations)
+	err = s.execExport(ctx, agentConfig, integrations, data.ReprocessHistorical)
 	if err != nil {
 		return err
 	}
@@ -107,8 +107,12 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 	return nil
 }
 
-func (s *exporter) execExport(ctx context.Context, agentConfig cmdexport.AgentConfig, integrations []cmdexport.Integration) error {
-	cmd := exec.CommandContext(ctx, os.Args[0], "export", "--agent-config-json", pjson.Stringify(agentConfig), "--integrations-json", pjson.Stringify(integrations))
+func (s *exporter) execExport(ctx context.Context, agentConfig cmdexport.AgentConfig, integrations []cmdexport.Integration, reprocessHistorical bool) error {
+	args := []string{"export", "--agent-config-json", pjson.Stringify(agentConfig), "--integrations-json", pjson.Stringify(integrations)}
+	if reprocessHistorical {
+		args = append(args, "--reprocess-historical=true")
+	}
+	cmd := exec.CommandContext(ctx, os.Args[0], args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

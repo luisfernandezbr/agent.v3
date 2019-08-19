@@ -179,7 +179,9 @@ var cmdExport = &cobra.Command{
 	Args:   cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := defaultLogger()
-		opts := integrationCommandOpts(logger, cmd)
+		opts := cmdexport.Opts{}
+		opts.Opts = integrationCommandOpts(logger, cmd)
+		opts.ReprocessHistorical, _ = cmd.Flags().GetBool("reprocess-historical")
 		err := cmdexport.Run(opts)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -190,6 +192,7 @@ var cmdExport = &cobra.Command{
 func init() {
 	cmd := cmdExport
 	integrationCommandFlags(cmd)
+	cmd.Flags().Bool("reprocess-historical", false, "Set to true to discard incremental checkpoint and reprocess historical instead.")
 	cmdRoot.AddCommand(cmd)
 }
 
