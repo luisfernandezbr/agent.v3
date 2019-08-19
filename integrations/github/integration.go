@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -62,9 +63,6 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	qc.PullRequestID = func(refID string) string {
 		return hash.Values("PullRequest", s.customerID, "sourcecode.PullRequest", refID)
 	}
-	qc.Organization = func() string {
-		return s.config.Org
-	}
 	s.qc = qc
 	s.requestConcurrencyChan = make(chan bool, maxRequestConcurrency)
 
@@ -75,7 +73,7 @@ type Config struct {
 	APIURL        string
 	RepoURLPrefix string
 	Token         string
-	Org           string
+	OnlyOrg       string
 	ExcludedRepos []string
 	OnlyRipsrc    bool
 }
@@ -83,9 +81,10 @@ type Config struct {
 type configDef struct {
 	URL           string   `json:"url"`
 	APIToken      string   `json:"apitoken"`
-	Organization  string   `json:"organization"`
 	ExcludedRepos []string `json:"excluded_repos"`
 	OnlyRipsrc    bool     `json:"only_ripsrc"`
+	// OnlyOrganization specifies the organization to export. By default all account organization are exported. Set this to export only one.
+	OnlyOrganization string `json:"only_organization"`
 }
 
 func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
@@ -104,13 +103,9 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	if def.APIToken == "" {
 		return rerr("apitoken is missing")
 	}
-	if def.Organization == "" {
-		return rerr("organization is missing")
-	}
-
 	var res Config
 	res.Token = def.APIToken
-	res.Org = def.Organization
+	res.OnlyOrg = def.OnlyOrganization
 	res.ExcludedRepos = def.ExcludedRepos
 	res.OnlyRipsrc = def.OnlyRipsrc
 
@@ -138,7 +133,13 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	_, err = api.ReposAllSlice(s.qc)
+	orgs, err := s.getOrgs()
+	if err != nil {
+		rerr(err)
+		return
+	}
+
+	_, err = api.ReposAllSlice(s.qc, orgs[0])
 	if err != nil {
 		rerr(err)
 		return
@@ -177,21 +178,67 @@ func (s *Integration) Export(ctx context.Context,
 	return res, nil
 }
 
-func (s *Integration) export(ctx context.Context) error {
+func (s *Integration) getOrgs() ([]api.Org, error) {
+	if s.config.OnlyOrg != "" {
+		s.logger.Info("only_organization passed", "org", s.config.OnlyOrg)
+		return []api.Org{{Login: s.config.OnlyOrg}}, nil
+	}
+	res, err := api.OrgsAll(s.qc)
+	if err != nil {
+		return nil, err
+	}
+	if len(res) == 0 {
+		return nil, errors.New("no organizations found in account")
+	}
+	var names []string
+	for _, org := range res {
+		names = append(names, org.Login)
 
-	repos, err := api.ReposAllSlice(s.qc)
+	}
+	s.logger.Info("found organizations", "orgs", res)
+	return res, nil
+}
+
+func (s *Integration) export(ctx context.Context) error {
+	orgs, err := s.getOrgs()
+	if err != nil {
+		return err
+	}
+
+	// export all users in all organization, and when later encountering new users continue export
+	s.users, err = NewUsers(s, orgs)
+	if err != nil {
+		return err
+	}
+	defer s.users.Done()
+
+	s.qc.UserLoginToRefID = s.users.LoginToRefID
+	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
+
+	for _, org := range orgs {
+		err := s.exportOrganization(ctx, org)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error {
+	s.logger.Info("exporting organization", "login", org.Login)
+	repos, err := api.ReposAllSlice(s.qc, org)
 	if err != nil {
 		return err
 	}
 	{
 		excluded := map[string]bool{}
-		for _, id := range s.config.ExcludedRepos {
-			excluded[id] = true
+		for _, name := range s.config.ExcludedRepos {
+			excluded[name] = true
 		}
 		var filtered []api.Repo
 		// filter excluded repos
 		for _, repo := range repos {
-			if excluded[repo.ID] {
+			if excluded[repo.NameWithOwner] {
 				continue
 			}
 			filtered = append(filtered, repo)
@@ -209,7 +256,7 @@ func (s *Integration) export(ctx context.Context) error {
 				return err
 			}
 			u.User = url.UserPassword(s.config.Token, "")
-			u.Path = s.config.Org + "/" + repo.Name
+			u.Path = repo.NameWithOwner
 			repoURL := u.String()
 
 			args := rpcdef.GitRepoFetch{}
@@ -224,19 +271,9 @@ func (s *Integration) export(ctx context.Context) error {
 		return nil
 	}
 
-	// export all users in organization, and when later encountering new users continue export
-	s.users, err = NewUsers(s)
-	if err != nil {
-		return err
-	}
-	defer s.users.Done()
-
-	s.qc.UserLoginToRefID = s.users.LoginToRefID
-	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
-
 	// export repos
 	{
-		err := s.exportRepos(ctx, s.config.ExcludedRepos)
+		err := s.exportRepos(ctx, org, s.config.ExcludedRepos)
 		if err != nil {
 			return err
 		}

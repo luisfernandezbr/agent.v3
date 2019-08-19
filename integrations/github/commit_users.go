@@ -51,7 +51,7 @@ func reposToChan(sl []api.Repo, maxToReturn int) chan api.Repo {
 }
 
 func (s *Integration) exportCommitsForRepoDefaultBranch(userSender *objsender.IncrementalDateBased, repo api.Repo) error {
-	s.logger.Info("exporting commits (to get users)", "repo_id", repo.ID, "repo_name", repo.Name)
+	s.logger.Info("exporting commits (to get users)", "repo_id", repo.ID, "repo_name", repo.NameWithOwner)
 
 	if repo.DefaultBranch == "" {
 		return nil
@@ -90,7 +90,7 @@ func (s *Integration) exportCommitsForRepoAllBranches(et *exportType, repoID str
 */
 
 func (s *Integration) exportCommitsForRepoBranch(userSender *objsender.IncrementalDateBased, repo api.Repo, branchName string) error {
-	s.logger.Info("exporting commits for branch", "repo_id", repo.ID, "repo_name", repo.Name)
+	s.logger.Info("exporting commits for branch", "repo_id", repo.ID, "repo_name", repo.NameWithOwner)
 
 	return api.PaginateCommits(
 		userSender.LastProcessed,

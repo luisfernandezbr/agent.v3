@@ -9,15 +9,15 @@ import (
 
 // Repo contains the data needed for exporting other resources depending on it
 type Repo struct {
-	ID   string
-	Name string
+	ID            string
+	NameWithOwner string
 	// DefaultBranch of the repo, could be empty if no commits yet. Used for getting commit_users
 	DefaultBranch string
 }
 
-func ReposAll(qc QueryContext, res chan []Repo) error {
+func ReposAll(qc QueryContext, org Org, res chan []Repo) error {
 	return PaginateRegular(func(query string) (pi PageInfo, _ error) {
-		pi, sub, err := ReposPageInternal(qc, query)
+		pi, sub, err := ReposPageInternal(qc, org, query)
 		if err != nil {
 			return pi, err
 		}
@@ -26,11 +26,11 @@ func ReposAll(qc QueryContext, res chan []Repo) error {
 	})
 }
 
-func ReposAllSlice(qc QueryContext) (sl []Repo, rerr error) {
+func ReposAllSlice(qc QueryContext, org Org) (sl []Repo, rerr error) {
 	res := make(chan []Repo)
 	go func() {
 		defer close(res)
-		err := ReposAll(qc, res)
+		err := ReposAll(qc, org, res)
 		if err != nil {
 			rerr = err
 		}
@@ -43,12 +43,12 @@ func ReposAllSlice(qc QueryContext) (sl []Repo, rerr error) {
 	return
 }
 
-func ReposPageInternal(qc QueryContext, queryParams string) (pi PageInfo, repos []Repo, _ error) {
+func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInfo, repos []Repo, _ error) {
 
 	query := `
 	query {
 		viewer {
-			organization(login:` + pjson.Stringify(qc.Organization()) + `){
+			organization(login:` + pjson.Stringify(org.Login) + `){
 				repositories(` + queryParams + `) {
 					totalCount
 					pageInfo {
@@ -59,7 +59,7 @@ func ReposPageInternal(qc QueryContext, queryParams string) (pi PageInfo, repos 
 					}
 					nodes {
 						id
-						name
+						nameWithOwner
 						defaultBranchRef {
 							name
 						}
@@ -79,7 +79,7 @@ func ReposPageInternal(qc QueryContext, queryParams string) (pi PageInfo, repos 
 						PageInfo   PageInfo `json:"pageInfo"`
 						Nodes      []struct {
 							ID               string `json:"id"`
-							Name             string `json:"name"`
+							NameWithOwner    string `json:"nameWithOwner"`
 							DefaultBranchRef struct {
 								Name string `json:"name"`
 							} `json:"defaultBranchRef"`
@@ -107,7 +107,7 @@ func ReposPageInternal(qc QueryContext, queryParams string) (pi PageInfo, repos 
 	for _, data := range repoNodes {
 		repo := Repo{}
 		repo.ID = data.ID
-		repo.Name = data.Name
+		repo.NameWithOwner = data.NameWithOwner
 		repo.DefaultBranch = data.DefaultBranchRef.Name
 		batch = append(batch, repo)
 	}
@@ -115,13 +115,13 @@ func ReposPageInternal(qc QueryContext, queryParams string) (pi PageInfo, repos 
 	return repositories.PageInfo, batch, nil
 }
 
-func ReposPage(qc QueryContext, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*sourcecode.Repo, _ error) {
+func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*sourcecode.Repo, _ error) {
 	qc.Logger.Debug("repos request", "q", queryParams)
 
 	query := `
 	query {
 		viewer {
-			organization(login:` + pjson.Stringify(qc.Organization()) + `){
+			organization(login:` + pjson.Stringify(org.Login) + `){
 				repositories(` + queryParams + `) {
 					totalCount
 					pageInfo {
@@ -150,10 +150,10 @@ func ReposPage(qc QueryContext, queryParams string, stopOnUpdatedAt time.Time) (
 						TotalCount int      `json:"totalCount"`
 						PageInfo   PageInfo `json:"pageInfo"`
 						Nodes      []struct {
-							UpdatedAt time.Time `json:"updatedAt"`
-							ID        string    `json:"id"`
-							Name      string    `json:"name"`
-							URL       string    `json:"url"`
+							UpdatedAt     time.Time `json:"updatedAt"`
+							ID            string    `json:"id"`
+							NameWithOwner string    `json:"nameWithOwner"`
+							URL           string    `json:"url"`
 						} `json:"nodes"`
 					} `json:"repositories"`
 				} `json:"organization"`
@@ -181,7 +181,7 @@ func ReposPage(qc QueryContext, queryParams string, stopOnUpdatedAt time.Time) (
 		repo.RefType = "sourcecode.Repo"
 		repo.CustomerID = qc.CustomerID
 		repo.RefID = data.ID
-		repo.Name = data.Name
+		repo.Name = data.NameWithOwner
 		repo.URL = data.URL
 		repos = append(repos, repo)
 	}

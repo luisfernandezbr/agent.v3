@@ -28,13 +28,20 @@ func (s *Integration) onboardExportUsers(ctx context.Context, config rpcdef.Expo
 		return res, err
 	}
 
+	orgs, err := s.getOrgs()
+	if err != nil {
+		return res, err
+	}
+
 	resChan := make(chan []*sourcecode.User)
 
 	go func() {
-		defer close(resChan)
-		err := api.UsersAll(s.qc, resChan)
-		if err != nil {
-			panic(err)
+		for _, org := range orgs {
+			defer close(resChan)
+			err := api.UsersAll(s.qc, org, resChan)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}()
 
@@ -62,13 +69,19 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 		return res, err
 	}
 
-	repos, err := api.ReposForOnboardAll(s.qc)
+	orgs, err := s.getOrgs()
 	if err != nil {
 		return res, err
 	}
 
-	for _, r := range repos {
-		res.Records = append(res.Records, r.ToMap())
+	for _, org := range orgs {
+		repos, err := api.ReposForOnboardAll(s.qc, org)
+		if err != nil {
+			return res, err
+		}
+		for _, r := range repos {
+			res.Records = append(res.Records, r.ToMap())
+		}
 	}
 
 	return res, nil

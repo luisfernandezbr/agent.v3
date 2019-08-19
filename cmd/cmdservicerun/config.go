@@ -1,15 +1,62 @@
 package cmdservicerun
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"strings"
 
+	"github.com/pinpt/agent.next/cmd/cmdintegration"
+
+	"github.com/pinpt/agent.next/pkg/encrypt"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 )
 
+func configFromEvent(data map[string]interface{}, encryptionKey string) (res cmdintegration.Integration, rerr error) {
+	var obj struct {
+		Name          string `json:"name"`
+		Authorization struct {
+			Authorization string `json:"authorization"`
+		} `json:"authorization"`
+		Exclusions []string `json:"exclusions"`
+	}
+	err := structmarshal.MapToStruct(data, &obj)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	authEncr := obj.Authorization.Authorization
+	if authEncr == "" {
+		rerr = errors.New("missing encrypted auth data")
+		return
+	}
+
+	auth, err := encrypt.DecryptString(authEncr, encryptionKey)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	var authObj map[string]interface{}
+	err = json.Unmarshal([]byte(auth), &authObj)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	res.Config, res.Name, err = convertConfig(obj.Name, authObj, obj.Exclusions)
+	if err != nil {
+		rerr = fmt.Errorf("config object in event is not valid: %v", err)
+		return
+	}
+
+	return
+}
+
 func convertConfig(in string, c1 map[string]interface{}, exclusions []string) (res map[string]interface{}, integrationName string, rerr error) {
+
 	errStr := func(err string) {
 		rerr = errors.New(err)
 		return
@@ -106,6 +153,6 @@ func convertConfig(in string, c1 map[string]interface{}, exclusions []string) (r
 		return
 	}
 
-	errStr("missing api_token")
+	rerr = fmt.Errorf("unsupported integration: %v", in)
 	return
 }

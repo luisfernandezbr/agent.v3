@@ -67,9 +67,9 @@ func User(qc QueryContext, login string, orgMember bool) (
 	return data.Convert(qc.CustomerID, orgMember), nil
 }
 
-func UsersAll(qc QueryContext, resChan chan []*sourcecode.User) error {
+func UsersAll(qc QueryContext, org Org, resChan chan []*sourcecode.User) error {
 	return PaginateRegular(func(query string) (pi PageInfo, _ error) {
-		pi, sub, err := UsersPage(qc, query)
+		pi, sub, err := UsersPage(qc, org, query)
 		if err != nil {
 			return pi, err
 		}
@@ -78,13 +78,13 @@ func UsersAll(qc QueryContext, resChan chan []*sourcecode.User) error {
 	})
 }
 
-func UsersPage(qc QueryContext, queryParams string) (pi PageInfo, users []*sourcecode.User, _ error) {
+func UsersPage(qc QueryContext, org Org, queryParams string) (pi PageInfo, users []*sourcecode.User, _ error) {
 	qc.Logger.Debug("users request", "q", queryParams)
 
 	query := `
 	query {
 		viewer {
-			organization(login:` + pjson.Stringify(qc.Organization()) + `){
+			organization(login:` + pjson.Stringify(org.Login) + `){
 				membersWithRole(` + queryParams + `) {
 					totalCount
 					pageInfo {

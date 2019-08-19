@@ -2,11 +2,8 @@ package cmdservicerun
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"os/exec"
-
-	"github.com/pinpt/agent.next/pkg/encrypt"
 
 	"github.com/pinpt/agent.next/cmd/cmdupload"
 
@@ -75,42 +72,15 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 	*/
 
 	for _, integration := range data.Integrations {
-		// TODO: using mock above instead
-		//continue
 
 		s.logger.Info("exporting integration", "name", integration.Name)
 
-		in := cmdexport.Integration{}
-
-		if integration.Authorization.Authorization == nil {
-			panic("missing encrypted auth data")
-		}
-
-		data, err := encrypt.DecryptString(*integration.Authorization.Authorization, s.opts.PPEncryptionKey)
+		conf, err := configFromEvent(integration.ToMap(), s.opts.PPEncryptionKey)
 		if err != nil {
 			return err
 		}
 
-		remoteConfig := map[string]interface{}{}
-		err = json.Unmarshal([]byte(data), &remoteConfig)
-		if err != nil {
-			return err
-		}
-
-		s.logger.Debug("integration export", "remote config", remoteConfig)
-
-		name2 := ""
-		in.Config, name2, err = convertConfig(integration.Name, remoteConfig, integration.Exclusions)
-		if err != nil {
-			return err
-		}
-		if name2 != "" {
-			in.Name = name2
-		} else {
-			in.Name = integration.Name
-		}
-
-		integrations = append(integrations, in)
+		integrations = append(integrations, conf)
 	}
 
 	ctx := context.Background()

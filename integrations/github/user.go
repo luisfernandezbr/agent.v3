@@ -21,7 +21,7 @@ type Users struct {
 	mu sync.Mutex
 }
 
-func NewUsers(integration *Integration) (*Users, error) {
+func NewUsers(integration *Integration, orgs []api.Org) (*Users, error) {
 	s := &Users{}
 	s.integration = integration
 	s.sender = objsender.NewNotIncremental(integration.agent, "sourcecode.user")
@@ -32,9 +32,11 @@ func NewUsers(integration *Integration) (*Users, error) {
 		return nil, err
 	}
 
-	err = s.exportOrganizationUsers()
-	if err != nil {
-		return nil, err
+	for _, org := range orgs {
+		err = s.exportOrganizationUsers(org)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return s, nil
@@ -87,12 +89,12 @@ func (s *Users) sendUsers(users []*sourcecode.User) error {
 	return s.sender.Send(batch)
 }
 
-func (s *Users) exportOrganizationUsers() error {
+func (s *Users) exportOrganizationUsers(org api.Org) error {
 	resChan := make(chan []*sourcecode.User)
 
 	go func() {
 		defer close(resChan)
-		err := api.UsersAll(s.integration.qc, resChan)
+		err := api.UsersAll(s.integration.qc, org, resChan)
 		if err != nil {
 			panic(err)
 		}

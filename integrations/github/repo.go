@@ -9,7 +9,7 @@ import (
 	"github.com/pinpt/agent.next/integrations/github/api"
 )
 
-func (s *Integration) exportRepos(ctx context.Context, excluded []string) error {
+func (s *Integration) exportRepos(ctx context.Context, org api.Org, excludedByNameWithOwner []string) error {
 	sender, err := objsender.NewIncrementalDateBased(s.agent, "sourcecode.repo")
 	if err != nil {
 		return err
@@ -17,18 +17,18 @@ func (s *Integration) exportRepos(ctx context.Context, excluded []string) error 
 	defer sender.Done()
 
 	excludedMap := map[string]bool{}
-	for _, id := range excluded {
-		excludedMap[id] = true
+	for _, no := range excludedByNameWithOwner {
+		excludedMap[no] = true
 	}
 
 	return api.PaginateNewerThan(sender.LastProcessed, func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, repos, err := api.ReposPage(s.qc, query, stopOnUpdatedAt)
+		pi, repos, err := api.ReposPage(s.qc, org, query, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
 		}
 		var batch []objsender.Model
 		for _, repo := range repos {
-			if excludedMap[repo.ID] {
+			if excludedMap[repo.Name] {
 				continue
 			}
 			batch = append(batch, repo)

@@ -9,9 +9,9 @@ import (
 	pjson "github.com/pinpt/go-common/json"
 )
 
-func ReposForOnboardAll(qc QueryContext) (res []*agent.RepoResponseRepos, _ error) {
+func ReposForOnboardAll(qc QueryContext, org Org) (res []*agent.RepoResponseRepos, _ error) {
 	err := PaginateRegular(func(query string) (pi PageInfo, _ error) {
-		pi, sub, err := ReposForOnboardPage(qc, query, time.Time{})
+		pi, sub, err := ReposForOnboardPage(qc, org, query, time.Time{})
 		if err != nil {
 			return pi, err
 		}
@@ -26,13 +26,13 @@ func ReposForOnboardAll(qc QueryContext) (res []*agent.RepoResponseRepos, _ erro
 	return res, nil
 }
 
-func ReposForOnboardPage(qc QueryContext, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*agent.RepoResponseRepos, _ error) {
+func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*agent.RepoResponseRepos, _ error) {
 	qc.Logger.Debug("repos request", "q", queryParams)
 
 	query := `
 	query {
 		viewer {
-			organization(login:` + pjson.Stringify(qc.Organization()) + `){
+			organization(login:` + pjson.Stringify(org.Login) + `){
 				repositories(` + queryParams + `) {
 					totalCount
 					pageInfo {

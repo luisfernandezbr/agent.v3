@@ -79,7 +79,9 @@ func (s *export) runExport() error {
 	}
 
 	res2 := Result{}
-	if res.Error != nil {
+	if res.Error == nil {
+		res2.Success = true
+	} else {
 		res2.Error = fmt.Sprintf("could not retrive data for onboard type: %v integration: %v err: %v", s.Opts.ExportType, s.integration.Name(), res.Error.Error())
 	}
 	res2.Records = res.Records
@@ -100,6 +102,7 @@ func (s *export) runExport() error {
 }
 
 type Result struct {
+	Success bool                     `json:"success"`
 	Error   string                   `json:"error"`
 	Records []map[string]interface{} `json:"records"`
 }

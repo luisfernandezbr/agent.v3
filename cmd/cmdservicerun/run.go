@@ -7,6 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/date"
+
+	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
+
 	"github.com/pinpt/agent.next/pkg/encrypt"
 
 	pjson "github.com/pinpt/go-common/json"
@@ -191,6 +195,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 		resp.RefType = integration.Name
 		resp.RequestID = req.ID
 		resp.UUID = s.conf.DeviceID
+		date.ConvertToModel(time.Now(), &resp.EventDate)
 		//resp.RefID = hash.Values(s.conf.DeviceID, integration.Name)
 
 		rerr := func(err error) (datamodel.ModelSendEvent, error) {
@@ -217,6 +222,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 				return rerr(err)
 			}
 
+			resp.Message = "Success. Export completed."
 			resp.Success = true
 			resp.Type = agent.IntegrationResponseTypeIntegration
 			resp.Authorization = encrAuthData
@@ -244,22 +250,91 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 func (s *runner) handleOnboardingEvents(ctx context.Context) error {
 	s.logger.Info("listening for onboarding events")
 
+	processOnboard := func(integration map[string]interface{}, objectType string) (cmdexportonboarddata.Result, error) {
+		s.logger.Info("received onboard request", "type", objectType)
+
+		ctx := context.Background()
+		conf, err := configFromEvent(integration, s.conf.PPEncryptionKey)
+		if err != nil {
+			panic(err)
+		}
+
+		data, err := s.getOnboardData(ctx, conf, objectType)
+		if err != nil {
+			panic(err)
+		}
+
+		return data, nil
+	}
+
 	cbUser := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
-		//req := instance.Object().(*agent.UserRequest)
-		s.logger.Info("received user request")
-		return nil, nil
+		req := instance.Object().(*agent.UserRequest)
+		data, err := processOnboard(req.Integration.ToMap(), "users")
+		if err != nil {
+			panic(err)
+		}
+		resp := &agent.UserResponse{}
+		resp.RefType = req.RefType
+		resp.Type = agent.UserResponseTypeUser
+
+		resp.Success = data.Success
+		if data.Error != "" {
+			resp.Error = pstrings.Pointer(data.Error)
+		}
+		for _, rec := range data.Records {
+			user := &agent.UserResponseUsers{}
+			user.FromMap(rec)
+			resp.Users = append(resp.Users, *user)
+		}
+		deviceinfo.AppendCommonInfo(resp, s.conf.CustomerID)
+		return datamodel.NewModelSendEvent(resp), nil
 	}
 
 	cbRepo := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
-		//req := instance.Object().(*agent.RepoRequest)
-		s.logger.Info("received repo request")
-		return nil, nil
+		req := instance.Object().(*agent.RepoRequest)
+		data, err := processOnboard(req.Integration.ToMap(), "repos")
+		if err != nil {
+			panic(err)
+		}
+		resp := &agent.RepoResponse{}
+		resp.RefType = req.RefType
+		resp.Type = agent.RepoResponseTypeRepo
+
+		resp.Success = data.Success
+		if data.Error != "" {
+			resp.Error = pstrings.Pointer(data.Error)
+		}
+
+		for _, rec := range data.Records {
+			repo := &agent.RepoResponseRepos{}
+			repo.FromMap(rec)
+			resp.Repos = append(resp.Repos, *repo)
+		}
+		deviceinfo.AppendCommonInfo(resp, s.conf.CustomerID)
+		return datamodel.NewModelSendEvent(resp), nil
 	}
 
 	cbProject := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
-		//req := instance.Object().(*agent.ProjectRequest)
-		s.logger.Info("received project request")
-		return nil, nil
+		req := instance.Object().(*agent.ProjectRequest)
+		data, err := processOnboard(req.Integration.ToMap(), "projects")
+		if err != nil {
+			panic(err)
+		}
+		resp := &agent.ProjectResponse{}
+		resp.RefType = req.RefType
+		resp.Type = agent.ProjectResponseTypeProject
+
+		resp.Success = data.Success
+		if data.Error != "" {
+			resp.Error = pstrings.Pointer(data.Error)
+		}
+		for _, rec := range data.Records {
+			project := &agent.ProjectResponseProjects{}
+			project.FromMap(rec)
+			resp.Projects = append(resp.Projects, *project)
+		}
+		deviceinfo.AppendCommonInfo(resp, s.conf.CustomerID)
+		return datamodel.NewModelSendEvent(resp), nil
 	}
 
 	_, err := action.Register(ctx, action.NewAction(cbUser), s.newSubConfig(agent.UserRequestTopic.String()))
@@ -330,6 +405,8 @@ func (s *runner) handleExportEvents(ctx context.Context) error {
 			Data: ev,
 		}
 
+		startDate := time.Now()
+
 		s.exporter.ExportQueue <- req
 
 		err := <-done
@@ -341,7 +418,13 @@ func (s *runner) handleExportEvents(ctx context.Context) error {
 			UUID:       s.conf.DeviceID,
 			JobID:      jobID,
 		}
-		if err != nil {
+		date.ConvertToModel(startDate, &data.StartDate)
+
+		deviceinfo.AppendCommonInfo(&data, s.conf.CustomerID)
+
+		if err == nil {
+			data.Success = true
+		} else {
 			data.Error = pstrings.Pointer(err.Error())
 		}
 
