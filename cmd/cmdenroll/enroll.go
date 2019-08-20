@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	pstrings "github.com/pinpt/go-common/strings"
+
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/encrypt"
 
@@ -30,7 +32,6 @@ type Opts struct {
 	PinpointRoot string
 	Code         string
 	Channel      string
-	DeviceID     string
 }
 
 func Run(ctx context.Context, opts Opts) error {
@@ -45,6 +46,9 @@ type enroller struct {
 	logger hclog.Logger
 	opts   Opts
 	fsconf fsconf.Locs
+
+	deviceID string
+	systemID string
 }
 
 func newEnroller(opts Opts) (*enroller, error) {
@@ -54,13 +58,13 @@ func newEnroller(opts Opts) (*enroller, error) {
 	if opts.Channel == "" {
 		return nil, errors.New("provide enroll channel")
 	}
-	if opts.Channel == "" {
-		return nil, errors.New("provide deviceID")
-	}
+
 	s := &enroller{}
 	s.logger = opts.Logger
 	s.opts = opts
 	s.fsconf = fsconf.New(opts.PinpointRoot)
+	s.deviceID = pstrings.NewUUIDV4()
+	s.systemID = deviceinfo.SystemID()
 	return s, nil
 }
 
@@ -97,18 +101,18 @@ func (s *enroller) SendEvent(ctx context.Context) error {
 
 	data := agent.EnrollRequest{
 		Code: s.opts.Code,
-		UUID: s.opts.DeviceID,
+		UUID: s.deviceID,
 	}
 
 	now := time.Now()
 	date.ConvertToModel(now, &data.RequestDate)
 
-	deviceinfo.AppendCommonInfo(&data, "")
+	deviceinfo.AppendCommonInfo(&data, "", s.deviceID, s.systemID)
 
 	reqEvent := event.PublishEvent{
 		Object: &data,
 		Headers: map[string]string{
-			"uuid": s.opts.DeviceID,
+			"uuid": s.deviceID,
 		},
 	}
 
@@ -134,13 +138,13 @@ func (s *enroller) WaitForResponse(ctx context.Context) (res agent.EnrollRespons
 	errors := make(chan error, 1)
 
 	enrollConfig := action.Config{
-		GroupID: fmt.Sprintf("agent-%v", s.opts.DeviceID),
+		GroupID: fmt.Sprintf("agent-%v", s.deviceID),
 		Channel: s.opts.Channel,
 		Factory: factory,
 		Topic:   agent.EnrollResponseTopic.String(),
 		Errors:  errors,
 		Headers: map[string]string{
-			"uuid": s.opts.DeviceID,
+			"uuid": s.deviceID,
 		},
 	}
 
@@ -190,7 +194,8 @@ func (s *enroller) ProcessResult(res agent.EnrollResponse) error {
 	conf.APIKey = res.Apikey
 	conf.CustomerID = res.CustomerID
 	conf.Channel = s.opts.Channel
-	conf.DeviceID = s.opts.DeviceID
+	conf.DeviceID = s.deviceID
+	conf.SystemID = deviceinfo.SystemID()
 	var err error
 	conf.PPEncryptionKey, err = encrypt.GenerateKey()
 	if err != nil {

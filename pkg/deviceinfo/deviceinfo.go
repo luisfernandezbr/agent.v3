@@ -4,18 +4,24 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/agentconf"
+
 	"github.com/pinpt/agent.next/pkg/sysinfo"
 	"github.com/pinpt/go-common/datetime"
 )
 
-func DeviceID() string {
+func SystemID() string {
 	return sysinfo.GetSystemInfo().ID
 }
 
 var started = time.Now()
 
+func AppendCommonInfoFromConfig(event interface{}, conf agentconf.Config) {
+	AppendCommonInfo(event, conf.CustomerID, conf.DeviceID, conf.SystemID)
+}
+
 // AppendCommonInfo append device information to event
-func AppendCommonInfo(event interface{}, customerID string) {
+func AppendCommonInfo(event interface{}, customerID string, deviceID string, systemID string) {
 
 	systemInfo := sysinfo.GetSystemInfo()
 	t := reflect.ValueOf(event).Elem()
@@ -28,6 +34,10 @@ func AppendCommonInfo(event interface{}, customerID string) {
 		val := t.FieldByName(field.Name)
 		if field.Name == "CustomerID" {
 			val.Set(reflect.ValueOf(customerID))
+		} else if field.Name == "UUID" {
+			val.Set(reflect.ValueOf(deviceID))
+		} else if field.Name == "SystemID" {
+			val.Set(reflect.ValueOf(systemID))
 		} else if field.Name == "OS" {
 			os := systemInfo.OS
 			val.Set(reflect.ValueOf(os))
@@ -55,9 +65,6 @@ func AppendCommonInfo(event interface{}, customerID string) {
 		} else if field.Name == "Memory" {
 			memory := int64(systemInfo.Memory)
 			val.Set(reflect.ValueOf(memory))
-		} else if field.Name == "UUID" {
-			uuid := systemInfo.ID
-			val.Set(reflect.ValueOf(uuid))
 		} else if field.Name == "EventDate" {
 			dt := datetime.NewDateNow()
 			ms2 := (reflect.New(field.Type).Elem()).Interface()

@@ -11,10 +11,12 @@ import (
 )
 
 type Config struct {
-	APIKey          string `json:"api_key"`
-	Channel         string `json:"channel"`
-	CustomerID      string `json:"customer_id"`
-	DeviceID        string `json:"device_id"`
+	APIKey     string `json:"api_key"`
+	Channel    string `json:"channel"`
+	CustomerID string `json:"customer_id"`
+	DeviceID   string `json:"device_id"`
+	// SystemID normally does not change across installs on the same machine. But to be safe we keep it in config as well.
+	SystemID        string `json:"system_id"`
 	PPEncryptionKey string `json:"pp_encryption_key"`
 }
 

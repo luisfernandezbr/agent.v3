@@ -391,7 +391,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:35030274c3e83c6d4b01198f77cb4d85811740191e917a705e9ad198c96bf0e6"
+  digest = "1:864917a3f6d71e3dfdbf7a343f93454f141100956254882692fafcacab80d3de"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -415,8 +415,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "4a23030862023229df5ae5a3ad9373a0b4d56554"
-  version = "8.2.3"
+  revision = "712db828fc118f926ed68184bb68f2bee8916f47"
+  version = "8.2.4"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
@@ -427,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:89b6f404aef9c72b3921834b9d228bf94aea92ef2f7c23a1172a0e929c6b0067"
+  digest = "1:1a85a34751095b11fa0d7dd8c4e0051f9d08c28ff2039adc7f62518bba2d214a"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,8 +439,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "bb5feabafcfba4232b932ccaeb187463afa4b5d2"
-  version = "0.0.397"
+  revision = "251f9ff0a5bff6aaabc328b9a813073589d3dbd0"
+  version = "0.0.398"
 
 [[projects]]
   digest = "1:3db456275fbaedf3c401bd81d914b98b6ac0dbff38cf9280fb3a60dca54d38cf"
@@ -723,7 +723,7 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "UT"
-  revision = "55e96fffbd486c27fc0d5b4468c497d0de3f2727"
+  revision = "24fa4b261c55da65468f2abfdae2b024eef27dfb"
 
 [[projects]]
   digest = "1:66eb0a8f30c52554ea9ecdd3c03cb48c9cd02d85388d21d1b3f7e93f4fd3611d"

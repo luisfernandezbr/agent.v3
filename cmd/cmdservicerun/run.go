@@ -125,7 +125,7 @@ func (s *runner) sendEnabled(ctx context.Context) error {
 	data.Success = true
 	data.Error = nil
 	data.Data = nil
-	deviceinfo.AppendCommonInfo(&data, s.conf.CustomerID)
+	deviceinfo.AppendCommonInfoFromConfig(&data, s.conf)
 
 	publishEvent := event.PublishEvent{
 		Object: &data,
@@ -187,7 +187,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 		// TODO: add connection validation
 
 		sendEvent := func(resp *agent.IntegrationResponse) (datamodel.ModelSendEvent, error) {
-			deviceinfo.AppendCommonInfo(resp, s.conf.CustomerID)
+			deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
 			return datamodel.NewModelSendEvent(resp), nil
 		}
 
@@ -291,7 +291,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) error {
 			user.FromMap(rec)
 			resp.Users = append(resp.Users, *user)
 		}
-		deviceinfo.AppendCommonInfo(resp, s.conf.CustomerID)
+		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
 		return datamodel.NewModelSendEvent(resp), nil
 	}
 
@@ -318,7 +318,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) error {
 			repo.FromMap(rec)
 			resp.Repos = append(resp.Repos, *repo)
 		}
-		deviceinfo.AppendCommonInfo(resp, s.conf.CustomerID)
+		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
 		return datamodel.NewModelSendEvent(resp), nil
 	}
 
@@ -344,7 +344,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) error {
 			project.FromMap(rec)
 			resp.Projects = append(resp.Projects, *project)
 		}
-		deviceinfo.AppendCommonInfo(resp, s.conf.CustomerID)
+		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
 		return datamodel.NewModelSendEvent(resp), nil
 	}
 
@@ -431,7 +431,7 @@ func (s *runner) handleExportEvents(ctx context.Context) error {
 		}
 		date.ConvertToModel(startDate, &data.StartDate)
 
-		deviceinfo.AppendCommonInfo(&data, s.conf.CustomerID)
+		deviceinfo.AppendCommonInfoFromConfig(&data, s.conf)
 
 		if err == nil {
 			data.Success = true
@@ -510,7 +510,7 @@ func (s *runner) sendPing(ctx context.Context) error {
 }
 
 func (s *runner) sendEvent(ctx context.Context, agentEvent datamodel.Model, jobID string, extraHeaders map[string]string) error {
-	deviceinfo.AppendCommonInfo(agentEvent, s.conf.CustomerID)
+	deviceinfo.AppendCommonInfoFromConfig(agentEvent, s.conf)
 	headers := map[string]string{
 		"uuid":        s.conf.DeviceID,
 		"customer_id": s.conf.CustomerID,

@@ -24,8 +24,6 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/fsconf"
 
-	"github.com/pinpt/agent.next/pkg/deviceinfo"
-
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/go-ps"
@@ -99,14 +97,12 @@ var cmdEnroll = &cobra.Command{
 			exitWithErr(logger, err)
 		}
 		channel, _ := cmd.Flags().GetString("channel")
-		deviceID := deviceinfo.DeviceID()
 		ctx := context.Background()
 		err = cmdenroll.Run(ctx, cmdenroll.Opts{
 			Logger:       logger,
 			PinpointRoot: pinpointRoot,
 			Code:         code,
 			Channel:      channel,
-			DeviceID:     deviceID,
 		})
 		if err != nil {
 			exitWithErr(logger, err)

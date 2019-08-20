@@ -185,9 +185,9 @@ func (s *Export) branches(ctx context.Context) error {
 			obj.Name = data.Name
 			obj.Default = data.IsDefault
 			obj.Merged = data.IsMerged
-			obj.MergeCommit = data.MergeCommit
-			obj.BranchedFromCommits = data.BranchedFromCommits
-			obj.Commits = data.Commits
+			//obj.MergeCommit = data.MergeCommit
+			//obj.BranchedFromCommits = data.BranchedFromCommits
+			//obj.Commits = data.Commits
 			obj.BehindDefaultCount = int64(data.BehindDefaultCount)
 			obj.AheadDefaultCount = int64(data.AheadDefaultCount)
 			obj.RepoID = s.opts.RepoID
