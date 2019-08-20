@@ -68,7 +68,7 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 		return err
 	}
 	if resp.StatusCode != 200 {
-		//s.logger.Info("api request failed", "body", string(b))
+		s.logger.Info("api request failed", "url", u, "body", string(b))
 		return fmt.Errorf(`jira returned invalid status code: %v`, resp.StatusCode)
 	}
 

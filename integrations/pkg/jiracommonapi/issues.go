@@ -31,7 +31,7 @@ func IssuesAndChangelogsPage(
 
 	//params.Set("maxResults", "1") // for testing
 	params.Set("validateQuery", "strict")
-	jql := "project=" + project.JiraID
+	jql := `project="` + project.JiraID + `"`
 	if !updatedSince.IsZero() {
 		s := updatedSince.Format("2006-01-02 15:04")
 		jql += fmt.Sprintf(` and (created >= "%s" or updated >= "%s")`, s, s)

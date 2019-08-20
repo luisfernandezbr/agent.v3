@@ -16,9 +16,13 @@ func WriteToTempAndRename(r io.Reader, loc string) error {
 	if err != nil {
 		return err
 	}
+	err = f.Close()
+	if err != nil {
+		return err
+	}
 	err = os.Rename(temp, loc)
 	if err != nil {
 		return err
 	}
-	return f.Close()
+	return nil
 }

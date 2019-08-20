@@ -134,7 +134,7 @@ func integrationCommandOpts(logger hclog.Logger, cmd *cobra.Command) cmdintegrat
 	if agentConfigJSON != "" {
 		err := json.Unmarshal([]byte(agentConfigJSON), &opts.AgentConfig)
 		if err != nil {
-			exitWithErr(logger, fmt.Errorf("integrations-json is not valid: %v", err))
+			exitWithErr(logger, fmt.Errorf("agent-config-json is not valid: %v", err))
 		}
 	}
 

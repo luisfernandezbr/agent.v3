@@ -73,20 +73,24 @@ func (s *export) runExport() error {
 		Integration: s.integrationConfig.Config,
 	}
 
+	cmdRes := Result{}
+
 	res, err := client.OnboardExport(ctx, s.Opts.ExportType, exportConfig)
 	if err != nil {
-		return err
-	}
-
-	res2 := Result{}
-	if res.Error == nil {
-		res2.Success = true
+		cmdRes.Error = err.Error()
 	} else {
-		res2.Error = fmt.Sprintf("could not retrive data for onboard type: %v integration: %v err: %v", s.Opts.ExportType, s.integration.Name(), res.Error.Error())
+		if res.Error != nil {
+			cmdRes.Error = fmt.Sprintf("could not retrive data for onboard type: %v integration: %v err: %v", s.Opts.ExportType, s.integration.Name(), res.Error.Error())
+		}
 	}
-	res2.Records = res.Records
 
-	b, err := json.Marshal(res2)
+	if cmdRes.Error == "" {
+		cmdRes.Success = true
+	}
+
+	cmdRes.Records = res.Records
+
+	b, err := json.Marshal(cmdRes)
 	if err != nil {
 		return err
 	}

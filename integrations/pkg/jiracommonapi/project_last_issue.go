@@ -15,7 +15,7 @@ type ProjectLastIssue struct {
 func GetProjectLastIssue(qc QueryContext, project Project) (res ProjectLastIssue, totalIssues int, rerr error) {
 
 	q := url.Values{}
-	q.Set("jql", `project=`+project.Key)
+	q.Set("jql", `project="`+project.Key+`"`)
 	q.Set("maxResults", "1")
 	//q.Set("orderBy", "-created") This does not work, but issues are sorted by deafault newest first
 	q.Set("fields", "created,creator")

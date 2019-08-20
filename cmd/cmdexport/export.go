@@ -62,7 +62,7 @@ func newExport(opts Opts) (*export, error) {
 			return nil, err
 		}
 	} else {
-		s.Logger.Info("ReprocessHistorical is false, will use inremental checkpoints if available")
+		s.Logger.Info("ReprocessHistorical is false, will use incremental checkpoints if available")
 	}
 
 	var err error

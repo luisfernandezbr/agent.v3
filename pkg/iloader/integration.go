@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"runtime"
 
 	"path/filepath"
 	"strings"
@@ -74,7 +75,11 @@ func (s *Integration) RPCClient() rpcdef.Integration {
 }
 
 func prodIntegrationCommand(fslocs fsconf.Locs, integrationName string) *exec.Cmd {
-	bin := filepath.Join(fslocs.Integrations, integrationName)
+	binName := integrationName
+	if runtime.GOOS == "windows" {
+		binName += ".exe"
+	}
+	bin := filepath.Join(fslocs.Integrations, binName)
 	return exec.Command(bin)
 }
 
