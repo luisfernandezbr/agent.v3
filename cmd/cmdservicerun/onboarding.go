@@ -8,7 +8,6 @@ import (
 
 	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
-	pjson "github.com/pinpt/go-common/json"
 )
 
 func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integration, objectType string) (res cmdexportonboarddata.Result, _ error) {
@@ -20,7 +19,19 @@ func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integ
 
 	integrations := []cmdvalidateconfig.Integration{config}
 
-	err := s.runCommand(ctx, &res, []string{"export-onboard-data", "--agent-config-json", pjson.Stringify(agent), "--integrations-json", pjson.Stringify(integrations), "--object-type", objectType})
+	args := []string{"export-onboard-data", "--object-type", objectType}
+
+	fs, err := newFsPassedParams(s.fsconf.Temp, []kv{
+		{"--agent-config-file", agent},
+		{"--integrations-file", integrations},
+	})
+	if err != nil {
+		return res, err
+	}
+	args = append(args, fs.Args()...)
+	defer fs.Clean()
+
+	err = s.runCommand(ctx, &res, args)
 
 	//s.logger.Debug("got onboard data", "res", pjson.Stringify(res))
 

@@ -436,6 +436,7 @@ func (s *runner) handleExportEvents(ctx context.Context) error {
 		if err == nil {
 			data.Success = true
 		} else {
+			s.logger.Error("failed export", "err", err)
 			data.Error = pstrings.Pointer(err.Error())
 		}
 

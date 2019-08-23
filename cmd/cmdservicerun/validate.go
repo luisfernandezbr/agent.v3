@@ -10,7 +10,6 @@ import (
 
 	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
-	pjson "github.com/pinpt/go-common/json"
 )
 
 func depointer(data map[string]interface{}) (map[string]interface{}, error) {
@@ -47,7 +46,19 @@ func (s *runner) validate(ctx context.Context, name string, config map[string]in
 
 	integrations := []cmdvalidateconfig.Integration{in}
 
-	err = s.runCommand(ctx, &res, []string{"validate-config", "--agent-config-json", pjson.Stringify(agent), "--integrations-json", pjson.Stringify(integrations)})
+	args := []string{"validate-config"}
+
+	fs, err := newFsPassedParams(s.fsconf.Temp, []kv{
+		{"--agent-config-file", agent},
+		{"--integrations-file", integrations},
+	})
+	if err != nil {
+		return res, err
+	}
+	args = append(args, fs.Args()...)
+	defer fs.Clean()
+
+	err = s.runCommand(ctx, &res, args)
 	s.logger.Info("validation completed", "success", res.Success)
 
 	if err != nil {

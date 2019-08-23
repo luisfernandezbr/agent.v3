@@ -32,10 +32,17 @@ func NewUsers(integration *Integration, orgs []api.Org) (*Users, error) {
 		return nil, err
 	}
 
-	for _, org := range orgs {
-		err = s.exportOrganizationUsers(org)
+	if integration.config.Enterprise {
+		err = s.exportInstanceUsers()
 		if err != nil {
 			return nil, err
+		}
+	} else {
+		for _, org := range orgs {
+			err = s.exportOrganizationUsers(org)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -89,19 +96,21 @@ func (s *Users) sendUsers(users []*sourcecode.User) error {
 	return s.sender.Send(batch)
 }
 
-func (s *Users) exportOrganizationUsers(org api.Org) error {
+func (s *Users) exportInstanceUsers() error {
 	resChan := make(chan []*sourcecode.User)
-
 	go func() {
 		defer close(resChan)
-		err := api.UsersAll(s.integration.qc, org, resChan)
+		err := api.UsersEnterpriseAll(s.integration.qc, resChan)
 		if err != nil {
 			panic(err)
 		}
 	}()
+	return s.exportUsersFromChan(resChan)
+}
 
+func (s *Users) exportUsersFromChan(usersChan chan []*sourcecode.User) error {
 	var batch []objsender.Model
-	for users := range resChan {
+	for users := range usersChan {
 		for _, user := range users {
 			s.loginToID[*user.Username] = user.RefID
 			batch = append(batch, user)
@@ -112,6 +121,18 @@ func (s *Users) exportOrganizationUsers(org api.Org) error {
 	}
 
 	return s.sender.Send(batch)
+}
+
+func (s *Users) exportOrganizationUsers(org api.Org) error {
+	resChan := make(chan []*sourcecode.User)
+	go func() {
+		defer close(resChan)
+		err := api.UsersAll(s.integration.qc, org, resChan)
+		if err != nil {
+			panic(err)
+		}
+	}()
+	return s.exportUsersFromChan(resChan)
 }
 
 func (s *Users) LoginToRefID(login string) (refID string, _ error) {

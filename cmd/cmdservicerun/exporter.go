@@ -2,14 +2,14 @@ package cmdservicerun
 
 import (
 	"context"
+	"encoding/json"
+	"io/ioutil"
 	"os"
 	"os/exec"
 
 	"github.com/pinpt/agent.next/cmd/cmdupload"
 
 	"github.com/pinpt/agent.next/pkg/fsconf"
-
-	pjson "github.com/pinpt/go-common/json"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/cmd/cmdexport"
@@ -108,12 +108,88 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 }
 
 func (s *exporter) execExport(ctx context.Context, agentConfig cmdexport.AgentConfig, integrations []cmdexport.Integration, reprocessHistorical bool) error {
-	args := []string{"export", "--agent-config-json", pjson.Stringify(agentConfig), "--integrations-json", pjson.Stringify(integrations)}
+	args := []string{"export"}
 	if reprocessHistorical {
 		args = append(args, "--reprocess-historical=true")
 	}
+
+	fs, err := newFsPassedParams(s.opts.FSConf.Temp, []kv{
+		{"--agent-config-file", agentConfig},
+		{"--integrations-file", integrations},
+	})
+	if err != nil {
+		return err
+	}
+	args = append(args, fs.Args()...)
+	defer fs.Clean()
+
 	cmd := exec.CommandContext(ctx, os.Args[0], args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+type kv struct {
+	K string
+	V interface{}
+}
+
+type fsPassedParams struct {
+	args    []kv
+	tempDir string
+	files   []string
+}
+
+func newFsPassedParams(tempDir string, args []kv) (*fsPassedParams, error) {
+	s := &fsPassedParams{}
+	s.args = args
+	s.tempDir = tempDir
+	for _, arg := range args {
+		loc, err := s.writeFile(arg.V)
+		if err != nil {
+			return nil, err
+		}
+		s.files = append(s.files, loc)
+	}
+	return s, nil
+}
+
+func (s *fsPassedParams) writeFile(obj interface{}) (string, error) {
+	err := os.MkdirAll(s.tempDir, 0777)
+	if err != nil {
+		return "", err
+	}
+	b, err := json.Marshal(obj)
+	if err != nil {
+		return "", err
+	}
+	f, err := ioutil.TempFile(s.tempDir, "")
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	_, err = f.Write(b)
+	if err != nil {
+		return "", err
+	}
+	return f.Name(), nil
+}
+
+func (s *fsPassedParams) Args() (res []string) {
+	for i, kv0 := range s.args {
+		k := kv0.K
+		v := s.files[i]
+		res = append(res, k, v)
+	}
+	return
+}
+
+func (s *fsPassedParams) Clean() error {
+	for _, f := range s.files {
+		err := os.Remove(f)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

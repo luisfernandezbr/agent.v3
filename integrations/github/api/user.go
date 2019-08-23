@@ -133,3 +133,62 @@ func UsersPage(qc QueryContext, org Org, queryParams string) (pi PageInfo, users
 
 	return members.PageInfo, users, nil
 }
+
+func UsersEnterpriseAll(qc QueryContext, resChan chan []*sourcecode.User) error {
+	return PaginateRegular(func(query string) (pi PageInfo, _ error) {
+		pi, sub, err := UsersEnterprisePage(qc, query)
+		if err != nil {
+			return pi, err
+		}
+		resChan <- sub
+		return pi, nil
+	})
+}
+
+func UsersEnterprisePage(qc QueryContext, queryParams string) (pi PageInfo, users []*sourcecode.User, _ error) {
+	qc.Logger.Debug("users request", "q", queryParams)
+
+	query := `
+	query {
+		users(` + queryParams + `) {
+			totalCount
+			pageInfo {
+				hasNextPage
+				endCursor
+				hasPreviousPage
+				startCursor
+			}
+			nodes ` + userGithubFields + `
+		}
+	}
+	`
+
+	var res struct {
+		Data struct {
+			Users struct {
+				TotalCount int          `json:"totalCount"`
+				PageInfo   PageInfo     `json:"pageInfo"`
+				Nodes      []userGithub `json:"nodes"`
+			} `json:"users"`
+		} `json:"data"`
+	}
+
+	err := qc.Request(query, &res)
+	if err != nil {
+		return pi, users, err
+	}
+
+	members := res.Data.Users
+	memberNodes := members.Nodes
+
+	if len(memberNodes) == 0 {
+		qc.Logger.Warn("no users found")
+	}
+
+	for _, data := range memberNodes {
+		item := data.Convert(qc.CustomerID, true)
+		users = append(users, item)
+	}
+
+	return members.PageInfo, users, nil
+}

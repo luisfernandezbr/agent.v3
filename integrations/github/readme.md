@@ -1,5 +1,14 @@
+## Tested versions
+
+- GitHub.com (2019-08-21)
+- GitHub Enterprise 2.15.9
+
+## GitHub API Docs
+https://developer.github.com/v4/
+https://developer.github.com/enterprise/2.15/
+
 ## TODO
-- export pull request commit shas
+- sourcecode.PullRequest.ClosedByRefID not implemented for GitHub Enterprise 2.15.9. timelineItems is not available need to get it another way
 
 ## How to support incremental exports?
 Since graphql doesn't support since parameter on all objects, we iterate backwards using updated at timestamp, when we get to the object which was updated before last run we stop.

@@ -11,34 +11,6 @@ import (
 )
 
 func (s *Integration) makeRequest(query string, res interface{}) error {
-	s.requestConcurrencyChan <- true
-	defer func() {
-		<-s.requestConcurrencyChan
-	}()
-	return s.makeRequestRetry(query, res, 0)
-}
-
-const maxGeneralRetries = 2
-
-func (s *Integration) makeRequestRetry(query string, res interface{}, generalRetry int) error {
-	isRetryable, err := s.makeRequestRetryThrottled(query, res, 0)
-	if err != nil {
-		if !isRetryable {
-			return err
-		}
-		if generalRetry >= maxGeneralRetries {
-			return fmt.Errorf(`can't retry request too many retries, err: %v`, err)
-		}
-		time.Sleep(time.Duration(1+generalRetry) * time.Minute)
-		return s.makeRequestRetry(query, res, generalRetry+1)
-	}
-	return nil
-}
-
-const maxThrottledRetries = 3
-
-func (s *Integration) makeRequestRetryThrottled(query string, res interface{}, retryThrottled int) (isErrorRetryable bool, rerr error) {
-
 	data := map[string]string{
 		"query": query,
 	}
@@ -48,12 +20,55 @@ func (s *Integration) makeRequestRetryThrottled(query string, res interface{}, r
 		panic(err)
 	}
 
-	req, err := http.NewRequest("POST", s.config.APIURL, bytes.NewReader(b))
+	u := s.config.APIURL
+
+	req := request{Method: "POST", URL: u, Body: b}
+
+	return s.makeRequestThrottled(req, res)
+}
+
+type request struct {
+	URL    string
+	Method string
+	Body   []byte
+}
+
+func (s *Integration) makeRequestThrottled(req request, res interface{}) error {
+	s.requestConcurrencyChan <- true
+	defer func() {
+		<-s.requestConcurrencyChan
+	}()
+	return s.makeRequestRetry(req, res, 0)
+}
+
+const maxGeneralRetries = 2
+
+func (s *Integration) makeRequestRetry(req request, res interface{}, generalRetry int) error {
+	isRetryable, err := s.makeRequestRetryThrottled(req, res, 0)
+	if err != nil {
+		if !isRetryable {
+			return err
+		}
+		if generalRetry >= maxGeneralRetries {
+			return fmt.Errorf(`can't retry request too many retries, err: %v`, err)
+		}
+		time.Sleep(time.Duration(1+generalRetry) * time.Minute)
+		return s.makeRequestRetry(req, res, generalRetry+1)
+	}
+	return nil
+}
+
+const maxThrottledRetries = 3
+
+func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{}, retryThrottled int) (isErrorRetryable bool, rerr error) {
+
+	req, err := http.NewRequest(reqDef.Method, reqDef.URL, bytes.NewReader(reqDef.Body))
 	if err != nil {
 		rerr = err
 		return
 	}
-	req.Header.Add("Authorization", "bearer "+s.config.Token)
+
+	req.Header.Set("Authorization", "bearer "+s.config.Token)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		rerr = err
@@ -62,7 +77,7 @@ func (s *Integration) makeRequestRetryThrottled(query string, res interface{}, r
 	}
 	defer resp.Body.Close()
 
-	b, err = ioutil.ReadAll(resp.Body)
+	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		rerr = err
 		isErrorRetryable = true
@@ -79,7 +94,7 @@ func (s *Integration) makeRequestRetryThrottled(query string, res interface{}, r
 		s.logger.Warn("api request failed due to throttling, will sleep for 30m and retry, this should only happen if hourly quota is used up, check here (https://developer.github.com/v4/guides/resource-limitations/#returning-a-calls-rate-limit-status)", "body", string(b), "retryThrottled", retryThrottled)
 		time.Sleep(30 * time.Minute)
 
-		return s.makeRequestRetryThrottled(query, res, retryThrottled+1)
+		return s.makeRequestRetryThrottled(reqDef, res, retryThrottled+1)
 
 	}
 
@@ -104,7 +119,7 @@ func (s *Integration) makeRequestRetryThrottled(query string, res interface{}, r
 			}
 		}
 
-		s.logger.Info("api request failed", "body", string(b), "code", resp.StatusCode)
+		s.logger.Info("api request failed", "body", string(b), "code", resp.StatusCode, "url", s.config.APIURL, "reqBody", string(reqDef.Body))
 		rerr = fmt.Errorf(`github request failed with status code %v`, resp.StatusCode)
 		isErrorRetryable = false
 		return

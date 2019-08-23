@@ -20,6 +20,25 @@ func PullRequestsPage(
 
 	qc.Logger.Debug("pull_request request", "repo", repoRefID, "q", queryParams)
 
+	useClosedEvents := !qc.IsEnterprise()
+
+	closedEventsQ := ``
+
+	if useClosedEvents {
+		closedEventsQ = `
+		# fetch the user who closed the issues
+		# this is only relevant when the state = CLOSED
+		closedEvents: timelineItems (last:1 itemTypes:CLOSED_EVENT){
+			nodes {
+				... on ClosedEvent {
+					actor {
+						login
+					}
+				}
+			}
+		}`
+	}
+
 	query := `
 	query {
 		node (id: "` + repoRefID + `") {
@@ -51,17 +70,7 @@ func PullRequestsPage(
 						reviews {
 							totalCount
 						}
-						# fetch the user who closed the issues
-						# this is only relevant when the state = CLOSED
-						closedEvents: timelineItems (last:1 itemTypes:CLOSED_EVENT){
-							nodes {
-								... on ClosedEvent {
-								actor {
-									login
-								}
-							}
-				  }
-						}
+						` + closedEventsQ + `
 					}
 				}
 			}
@@ -154,7 +163,7 @@ func PullRequestsPage(
 			panic(err)
 		}
 
-		if data.State == "CLOSED" {
+		if useClosedEvents && data.State == "CLOSED" {
 			events := data.ClosedEvents.Nodes
 			if len(events) != 0 {
 				login := events[0].Actor.Login

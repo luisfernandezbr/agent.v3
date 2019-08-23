@@ -63,6 +63,9 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	qc.PullRequestID = func(refID string) string {
 		return hash.Values("PullRequest", s.customerID, "sourcecode.PullRequest", refID)
 	}
+	qc.IsEnterprise = func() bool {
+		return s.config.Enterprise
+	}
 	s.qc = qc
 	s.requestConcurrencyChan = make(chan bool, maxRequestConcurrency)
 
@@ -71,11 +74,14 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 
 type Config struct {
 	APIURL        string
+	APIURL3       string
 	RepoURLPrefix string
 	Token         string
 	OnlyOrg       string
 	ExcludedRepos []string
 	OnlyRipsrc    bool
+	StopAfterN    int
+	Enterprise    bool
 }
 
 type configDef struct {
@@ -85,6 +91,8 @@ type configDef struct {
 	OnlyRipsrc    bool     `json:"only_ripsrc"`
 	// OnlyOrganization specifies the organization to export. By default all account organization are exported. Set this to export only one.
 	OnlyOrganization string `json:"only_organization"`
+	// StopAfterN stops exporting after N number of repos for testing and dev purposes
+	StopAfterN int `json:"stop_after_n"`
 }
 
 func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
@@ -108,15 +116,31 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	res.OnlyOrg = def.OnlyOrganization
 	res.ExcludedRepos = def.ExcludedRepos
 	res.OnlyRipsrc = def.OnlyRipsrc
+	res.StopAfterN = def.StopAfterN
 
-	apiURLBaseParsed, err := url.Parse(def.URL)
-	if err != nil {
-		return rerr("url is invalid: %v", err)
+	{
+		u, err := url.Parse(def.URL)
+		if err != nil {
+			return rerr("url is invalid: %v", err)
+		}
+		// allow both http(s)://github.com and http(s)://api.github.com
+		if u.Host == "github.com" || u.Host == "api.github.com" {
+			u, _ = url.Parse("https://api.github.com")
+		}
+		if u.Host == "api.github.com" {
+			res.APIURL = urlAppend(u.String(), "graphql")
+			res.RepoURLPrefix = "https://" + strings.TrimPrefix(u.Host, "api.")
+		} else {
+			res.APIURL = urlAppend(u.String(), "api/graphql")
+			res.APIURL3 = urlAppend(u.String(), "api/v3")
+			res.RepoURLPrefix = u.String()
+			res.Enterprise = true
+		}
+
 	}
-	res.APIURL = urlAppend(def.URL, "graphql")
-	res.RepoURLPrefix = "https://" + strings.TrimPrefix(apiURLBaseParsed.Host, "api.")
 
 	s.config = res
+
 	return nil
 }
 
@@ -160,6 +184,8 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	if err != nil {
 		return err
 	}
+	s.qc.APIURL3 = s.config.APIURL3
+
 	return nil
 }
 
@@ -178,14 +204,22 @@ func (s *Integration) Export(ctx context.Context,
 	return res, nil
 }
 
-func (s *Integration) getOrgs() ([]api.Org, error) {
+func (s *Integration) getOrgs() (res []api.Org, _ error) {
 	if s.config.OnlyOrg != "" {
 		s.logger.Info("only_organization passed", "org", s.config.OnlyOrg)
 		return []api.Org{{Login: s.config.OnlyOrg}}, nil
 	}
-	res, err := api.OrgsAll(s.qc)
-	if err != nil {
-		return nil, err
+	var err error
+	if !s.config.Enterprise {
+		res, err = api.OrgsAll(s.qc)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		res, err = api.OrgsEnterpriseAll(s.qc)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if len(res) == 0 {
 		return nil, errors.New("no organizations found in account")
@@ -195,7 +229,7 @@ func (s *Integration) getOrgs() ([]api.Org, error) {
 		names = append(names, org.Login)
 
 	}
-	s.logger.Info("found organizations", "orgs", res)
+	s.logger.Info("found organizations", "orgs", names)
 	return res, nil
 }
 
@@ -232,15 +266,15 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 	}
 
 	{
-		all := map[string]bool{}
-		for _, repo := range repos {
-			all[repo.ID] = true
-		}
+		//all := map[string]bool{}
+		//for _, repo := range repos {
+		//	all[repo.ID] = true
+		//}
 		excluded := map[string]bool{}
 		for _, id := range s.config.ExcludedRepos {
-			if !all[id] {
-				return fmt.Errorf("wanted to exclude non existing repo: %v", id)
-			}
+			//if !all[id] {
+			//	return fmt.Errorf("wanted to exclude non existing repo: %v", id)
+			//}
 			excluded[id] = true
 		}
 
@@ -258,6 +292,16 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 		for _, repo := range filtered {
 			repos = append(repos, repo)
 		}
+	}
+
+	if s.config.StopAfterN != 0 {
+		// only leave 1 repo for export
+		stopAfter := s.config.StopAfterN
+		l := len(repos)
+		if len(repos) > stopAfter {
+			repos = repos[0:stopAfter]
+		}
+		s.logger.Info("stop_after_n passed", "v", stopAfter, "repos", l, "after", len(repos))
 	}
 
 	// queue repos for processing with ripsrc

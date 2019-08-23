@@ -27,11 +27,11 @@ func ReposForOnboardAll(qc QueryContext, org Org) (res []*agent.RepoResponseRepo
 }
 
 func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*agent.RepoResponseRepos, _ error) {
-	qc.Logger.Debug("repos request", "q", queryParams)
+	qc.Logger.Debug("repos request", "q", queryParams, "org", org.Login)
 
 	query := `
 	query {
-		viewer {
+		#viewer {
 			organization(login:` + pjson.Stringify(org.Login) + `){
 				repositories(` + queryParams + `) {
 					totalCount
@@ -71,46 +71,46 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 					}
 				}
 			}
-		}
+		#}
 	}
 	`
 
 	var res struct {
 		Data struct {
-			Viewer struct {
-				Organization struct {
-					Repositories struct {
-						TotalCount int      `json:"totalCount"`
-						PageInfo   PageInfo `json:"pageInfo"`
-						Nodes      []struct {
-							CreatedAt       time.Time `json:"createdAt"`
-							UpdatedAt       time.Time `json:"updatedAt"`
-							ID              string    `json:"id"`
-							Name            string    `json:"name"`
-							Description     string    `json:"description"`
-							PrimaryLanguage struct {
-								Name string `json:"name"`
-							} `json:"primaryLanguage"`
-							DefaultBranchRef struct {
-								Target struct {
-									OID     string `json:"oid"`
-									URL     string `json:"url"`
-									Message string `json:"message"`
-									Author  struct {
-										Name      string `json:"name"`
-										Email     string `json:"email"`
-										AvatarURL string `json:"avatarUrl"`
-									} `json:"author"`
-									CommittedDate time.Time `json:"committedDate"`
-									AuthoredDate  time.Time `json:"authoredDate"`
-								} `json:"target"`
-							} `json:"defaultBranchRef"`
-							IsFork     bool `json:"isFork"`
-							IsArchived bool `json:"isArchived"`
-						} `json:"nodes"`
-					} `json:"repositories"`
-				} `json:"organization"`
-			} `json:"viewer"`
+			//Viewer struct {
+			Organization struct {
+				Repositories struct {
+					TotalCount int      `json:"totalCount"`
+					PageInfo   PageInfo `json:"pageInfo"`
+					Nodes      []struct {
+						CreatedAt       time.Time `json:"createdAt"`
+						UpdatedAt       time.Time `json:"updatedAt"`
+						ID              string    `json:"id"`
+						Name            string    `json:"name"`
+						Description     string    `json:"description"`
+						PrimaryLanguage struct {
+							Name string `json:"name"`
+						} `json:"primaryLanguage"`
+						DefaultBranchRef struct {
+							Target struct {
+								OID     string `json:"oid"`
+								URL     string `json:"url"`
+								Message string `json:"message"`
+								Author  struct {
+									Name      string `json:"name"`
+									Email     string `json:"email"`
+									AvatarURL string `json:"avatarUrl"`
+								} `json:"author"`
+								CommittedDate time.Time `json:"committedDate"`
+								AuthoredDate  time.Time `json:"authoredDate"`
+							} `json:"target"`
+						} `json:"defaultBranchRef"`
+						IsFork     bool `json:"isFork"`
+						IsArchived bool `json:"isArchived"`
+					} `json:"nodes"`
+				} `json:"repositories"`
+			} `json:"organization"`
+			//} `json:"viewer"`
 		} `json:"data"`
 	}
 
@@ -119,11 +119,11 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 		return pi, repos, err
 	}
 
-	repositories := res.Data.Viewer.Organization.Repositories
+	repositories := res.Data.Organization.Repositories
 	repoNodes := repositories.Nodes
 
 	if len(repoNodes) == 0 {
-		qc.Logger.Warn("no repos found")
+		qc.Logger.Warn("no repos found", "org", org.Login)
 	}
 
 	for _, data := range repoNodes {

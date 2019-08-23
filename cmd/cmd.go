@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
@@ -124,12 +125,27 @@ func init() {
 func integrationCommandFlags(cmd *cobra.Command) {
 	flagPinpointRoot(cmd)
 	cmd.Flags().String("agent-config-json", "", "Agent config as json")
+	cmd.Flags().String("agent-config-file", "", "Agent config json as file")
 	cmd.Flags().String("integrations-json", "", "Integrations config as json")
+	cmd.Flags().String("integrations-file", "", "Integrations config json as file")
 	cmd.Flags().String("integrations-dir", "", "Integrations dir")
 }
 
 func integrationCommandOpts(logger hclog.Logger, cmd *cobra.Command) cmdintegration.Opts {
 	opts := cmdintegration.Opts{}
+
+	agentConfigFile, _ := cmd.Flags().GetString("agent-config-file")
+	if agentConfigFile != "" {
+		b, err := ioutil.ReadFile(agentConfigFile)
+		if err != nil {
+			exitWithErr(logger, fmt.Errorf("agent-config-file does not point to a correct file, err %v", err))
+		}
+		err = json.Unmarshal(b, &opts.AgentConfig)
+		if err != nil {
+			exitWithErr(logger, fmt.Errorf("agent-config-file contains invalid json: %v", err))
+		}
+	}
+
 	agentConfigJSON, _ := cmd.Flags().GetString("agent-config-json")
 	if agentConfigJSON != "" {
 		err := json.Unmarshal([]byte(agentConfigJSON), &opts.AgentConfig)
@@ -154,14 +170,28 @@ func integrationCommandOpts(logger hclog.Logger, cmd *cobra.Command) cmdintegrat
 		}
 	}
 
-	integrationsJSON, _ := cmd.Flags().GetString("integrations-json")
-	if integrationsJSON == "" {
-		exitWithErr(logger, errors.New("missing integrations-json"))
+	integrationsFile, _ := cmd.Flags().GetString("integrations-file")
+	if integrationsFile != "" {
+		b, err := ioutil.ReadFile(integrationsFile)
+		if err != nil {
+			exitWithErr(logger, fmt.Errorf("integrations-file does not point to a correct file, err %v", err))
+		}
+		err = json.Unmarshal(b, &opts.Integrations)
+		if err != nil {
+			exitWithErr(logger, fmt.Errorf("integrations-file contains invalid json: %v", err))
+		}
 	}
 
-	err := json.Unmarshal([]byte(integrationsJSON), &opts.Integrations)
-	if err != nil {
-		exitWithErr(logger, fmt.Errorf("integrations-json is not valid: %v", err))
+	integrationsJSON, _ := cmd.Flags().GetString("integrations-json")
+	if integrationsJSON != "" {
+		err := json.Unmarshal([]byte(integrationsJSON), &opts.Integrations)
+		if err != nil {
+			exitWithErr(logger, fmt.Errorf("integrations-json is not valid: %v", err))
+		}
+	}
+
+	if len(opts.Integrations) == 0 {
+		exitWithErr(logger, errors.New("missing integrations-json"))
 	}
 
 	opts.Logger = logger
