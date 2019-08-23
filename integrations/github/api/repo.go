@@ -47,22 +47,20 @@ func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInf
 
 	query := `
 	query {
-		viewer {
-			organization(login:` + pjson.Stringify(org.Login) + `){
-				repositories(` + queryParams + `) {
-					totalCount
-					pageInfo {
-						hasNextPage
-						endCursor
-						hasPreviousPage
-						startCursor
-					}
-					nodes {
-						id
-						nameWithOwner
-						defaultBranchRef {
-							name
-						}
+		organization(login:` + pjson.Stringify(org.Login) + `){
+			repositories(` + queryParams + `) {
+				totalCount
+				pageInfo {
+					hasNextPage
+					endCursor
+					hasPreviousPage
+					startCursor
+				}
+				nodes {
+					id
+					nameWithOwner
+					defaultBranchRef {
+						name
 					}
 				}
 			}
@@ -72,21 +70,19 @@ func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInf
 
 	var res struct {
 		Data struct {
-			Viewer struct {
-				Organization struct {
-					Repositories struct {
-						TotalCount int      `json:"totalCount"`
-						PageInfo   PageInfo `json:"pageInfo"`
-						Nodes      []struct {
-							ID               string `json:"id"`
-							NameWithOwner    string `json:"nameWithOwner"`
-							DefaultBranchRef struct {
-								Name string `json:"name"`
-							} `json:"defaultBranchRef"`
-						} `json:"nodes"`
-					} `json:"repositories"`
-				} `json:"organization"`
-			} `json:"viewer"`
+			Organization struct {
+				Repositories struct {
+					TotalCount int      `json:"totalCount"`
+					PageInfo   PageInfo `json:"pageInfo"`
+					Nodes      []struct {
+						ID               string `json:"id"`
+						NameWithOwner    string `json:"nameWithOwner"`
+						DefaultBranchRef struct {
+							Name string `json:"name"`
+						} `json:"defaultBranchRef"`
+					} `json:"nodes"`
+				} `json:"repositories"`
+			} `json:"organization"`
 		} `json:"data"`
 	}
 
@@ -95,7 +91,7 @@ func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInf
 		return pi, repos, err
 	}
 
-	repositories := res.Data.Viewer.Organization.Repositories
+	repositories := res.Data.Organization.Repositories
 	repoNodes := repositories.Nodes
 
 	if len(repoNodes) == 0 {
@@ -120,22 +116,20 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 
 	query := `
 	query {
-		viewer {
-			organization(login:` + pjson.Stringify(org.Login) + `){
-				repositories(` + queryParams + `) {
-					totalCount
-					pageInfo {
-						hasNextPage
-						endCursor
-						hasPreviousPage
-						startCursor
-					}
-					nodes {
-						updatedAt
-						id
-						name
-						url						
-					}
+		organization(login:` + pjson.Stringify(org.Login) + `){
+			repositories(` + queryParams + `) {
+				totalCount
+				pageInfo {
+					hasNextPage
+					endCursor
+					hasPreviousPage
+					startCursor
+				}
+				nodes {
+					updatedAt
+					id
+					name
+					url						
 				}
 			}
 		}
@@ -144,20 +138,18 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 
 	var res struct {
 		Data struct {
-			Viewer struct {
-				Organization struct {
-					Repositories struct {
-						TotalCount int      `json:"totalCount"`
-						PageInfo   PageInfo `json:"pageInfo"`
-						Nodes      []struct {
-							UpdatedAt     time.Time `json:"updatedAt"`
-							ID            string    `json:"id"`
-							NameWithOwner string    `json:"nameWithOwner"`
-							URL           string    `json:"url"`
-						} `json:"nodes"`
-					} `json:"repositories"`
-				} `json:"organization"`
-			} `json:"viewer"`
+			Organization struct {
+				Repositories struct {
+					TotalCount int      `json:"totalCount"`
+					PageInfo   PageInfo `json:"pageInfo"`
+					Nodes      []struct {
+						UpdatedAt     time.Time `json:"updatedAt"`
+						ID            string    `json:"id"`
+						NameWithOwner string    `json:"nameWithOwner"`
+						URL           string    `json:"url"`
+					} `json:"nodes"`
+				} `json:"repositories"`
+			} `json:"organization"`
 		} `json:"data"`
 	}
 
@@ -166,7 +158,7 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 		return pi, repos, err
 	}
 
-	repositories := res.Data.Viewer.Organization.Repositories
+	repositories := res.Data.Organization.Repositories
 	repoNodes := repositories.Nodes
 
 	if len(repoNodes) == 0 {

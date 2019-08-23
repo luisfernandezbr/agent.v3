@@ -31,53 +31,50 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 
 	query := `
 	query {
-		#viewer {
-			organization(login:` + pjson.Stringify(org.Login) + `){
-				repositories(` + queryParams + `) {
-					totalCount
-					pageInfo {
-						hasNextPage
-						endCursor
-						hasPreviousPage
-						startCursor
-					}
-					nodes {
-						createdAt
-						updatedAt
-						id
+		organization(login:` + pjson.Stringify(org.Login) + `){
+			repositories(` + queryParams + `) {
+				totalCount
+				pageInfo {
+					hasNextPage
+					endCursor
+					hasPreviousPage
+					startCursor
+				}
+				nodes {
+					createdAt
+					updatedAt
+					id
+					name
+					description
+					primaryLanguage {
 						name
-						description
-						primaryLanguage {
-							name
-						}			
-						defaultBranchRef {
-							target {
-								... on Commit {
-									oid
-									url
-									message
-									author {
-									  name
-									  email
-									  avatarUrl
-									}
-									committedDate
-									authoredDate
+					}			
+					defaultBranchRef {
+						target {
+							... on Commit {
+								oid
+								url
+								message
+								author {
+									name
+									email
+									avatarUrl
 								}
+								committedDate
+								authoredDate
 							}
 						}
-						isFork
-						isArchived
 					}
+					isFork
+					isArchived
 				}
 			}
-		#}
+		}
 	}
 	`
 
 	var res struct {
 		Data struct {
-			//Viewer struct {
 			Organization struct {
 				Repositories struct {
 					TotalCount int      `json:"totalCount"`
@@ -110,7 +107,6 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 					} `json:"nodes"`
 				} `json:"repositories"`
 			} `json:"organization"`
-			//} `json:"viewer"`
 		} `json:"data"`
 	}
 

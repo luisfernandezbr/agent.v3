@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/pinpt/agent.next/pkg/objsender"
@@ -110,19 +111,41 @@ func (s *Integration) exportCommitsForRepoBranch(userSender *objsender.Increment
 			var batch []map[string]interface{}
 
 			for _, commit := range res {
+				validate := func(u CommitUser, kind string) error {
+					err := u.Validate()
+					if err != nil {
+						return fmt.Errorf("commit data does not have proper %v repo: %v commit: %v %v", kind, repo.NameWithOwner, commit.CommitHash, err)
+					}
+					return nil
+				}
+
 				author := CommitUser{}
 				author.CustomerID = s.customerID
 				author.Name = commit.AuthorName
 				author.Email = commit.AuthorEmail
 				author.SourceID = commit.AuthorRefID
-				batch = append(batch, author.ToMap())
 
 				committer := CommitUser{}
 				committer.CustomerID = s.customerID
 				committer.Name = commit.CommitterName
 				committer.Email = commit.CommitterEmail
 				committer.SourceID = commit.CommitterRefID
-				batch = append(batch, committer.ToMap())
+
+				err := validate(author, "author")
+				if err != nil {
+					// TODO: some commits don't have associated emails, but that is not an error we are logging it here to validate in more details in the future
+					// if it's all ok can remove the warning as well
+					s.logger.Warn("commit user", "err", err)
+				} else {
+					batch = append(batch, author.ToMap())
+				}
+
+				err = validate(committer, "commiter")
+				if err != nil {
+					s.logger.Warn("commit user", "err", err)
+				} else {
+					batch = append(batch, committer.ToMap())
+				}
 			}
 
 			return pi, userSender.SendMaps(batch)
@@ -134,6 +157,13 @@ type CommitUser struct {
 	Email      string
 	Name       string
 	SourceID   string
+}
+
+func (s CommitUser) Validate() error {
+	if s.CustomerID == "" || s.Email == "" || s.Name == "" {
+		return fmt.Errorf("missing required field for user: %+v", s)
+	}
+	return nil
 }
 
 func (s CommitUser) ToMap() map[string]interface{} {
