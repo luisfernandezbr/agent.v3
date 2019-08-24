@@ -34,7 +34,7 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 		}
 	}
 
-	senderSprints := objsender.NewNotIncremental(s.agent, "work.sprints")
+	senderSprints := objsender.NewNotIncremental(s.agent, "work.sprint")
 	defer senderSprints.Done()
 
 	var sprintModels []objsender.Model

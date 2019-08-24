@@ -371,7 +371,7 @@
   revision = "2e52cf6e685269ed8aefec6390f3cac3ef74e730"
 
 [[projects]]
-  digest = "1:c2d643e8b2c25cf18d6e1237233df6457729d9491bbad6fa9598cad8d01466a6"
+  digest = "1:cfcd381c8640b6dfd5a298ebbeb9e06a5e3059de6075522bde3a0d734eedc90f"
   name = "github.com/olivere/elastic"
   packages = [
     ".",
@@ -379,8 +379,8 @@
     "uritemplates",
   ]
   pruneopts = "UT"
-  revision = "8ebe6a0fc23d9d53fbd8890da8ae7ee7cea78dbe"
-  version = "v6.2.22"
+  revision = "91416a867f9a95cdf7332dd1e73264359d0d5c7e"
+  version = "v6.2.23"
 
 [[projects]]
   digest = "1:5e73b34a27d827212102605789de00bd411b2e434812133c83935fe9897c75e1"
@@ -391,7 +391,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:864917a3f6d71e3dfdbf7a343f93454f141100956254882692fafcacab80d3de"
+  digest = "1:d9f6999d585c01113bada0afe52438367b1039208f4379fc35a3abba931f5d1d"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -415,8 +415,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "712db828fc118f926ed68184bb68f2bee8916f47"
-  version = "8.2.4"
+  revision = "95aa6094cd266089e3b05a38bd6da94d476ed5c1"
+  version = "8.2.6"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
@@ -427,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:9e8115de8fa1420d29b0b383b18339f8f14092e82e919bedd7cd2d3969a97c01"
+  digest = "1:5c589fdfc2a5a244fd309ba6c925b3a59fbfb142e4b1743554b0897c7d1c711b"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,8 +439,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "4ee839f94de13b3c61e9256be1c6bffebd7f2b10"
-  version = "0.0.400"
+  revision = "9ead9829f1fd26b070048947a6a867f3320b6208"
+  version = "0.0.412"
 
 [[projects]]
   digest = "1:3db456275fbaedf3c401bd81d914b98b6ac0dbff38cf9280fb3a60dca54d38cf"
