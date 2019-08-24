@@ -170,7 +170,7 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 			return PageInfo{}, repos, nil
 		}
 		repo := &sourcecode.Repo{}
-		repo.RefType = "sourcecode.Repo"
+		repo.RefType = "github"
 		repo.CustomerID = qc.CustomerID
 		repo.RefID = data.ID
 		repo.Name = data.NameWithOwner

@@ -55,13 +55,13 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	qc.Request = s.makeRequest
 	qc.CustomerID = s.customerID
 	qc.RepoID = func(refID string) string {
-		return hash.Values("Repo", s.customerID, "sourcecode.Repo", refID)
+		return hash.Values("Repo", s.customerID, "github", refID)
 	}
 	qc.UserID = func(refID string) string {
-		return hash.Values("User", s.customerID, "sourcecode.User", refID)
+		return hash.Values("User", s.customerID, "github", refID)
 	}
 	qc.PullRequestID = func(refID string) string {
-		return hash.Values("PullRequest", s.customerID, "sourcecode.PullRequest", refID)
+		return hash.Values("PullRequest", s.customerID, "github", refID)
 	}
 	qc.IsEnterprise = func() bool {
 		return s.config.Enterprise

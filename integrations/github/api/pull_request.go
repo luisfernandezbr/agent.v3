@@ -138,7 +138,7 @@ func PullRequestsPage(
 		}
 		pr := &sourcecode.PullRequest{}
 		pr.CustomerID = qc.CustomerID
-		pr.RefType = "sourcecode.pull_request"
+		pr.RefType = "github"
 		pr.RefID = data.ID
 		pr.RepoID = qc.RepoID(repoRefID)
 		pr.Title = data.Title

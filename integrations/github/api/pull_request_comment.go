@@ -89,7 +89,7 @@ func PullRequestCommentsPage(
 	for _, data := range nodes {
 		item := &sourcecode.PullRequestComment{}
 		item.CustomerID = qc.CustomerID
-		item.RefType = "sourcecode.pull_request_comment"
+		item.RefType = "github"
 		item.RefID = data.ID
 		date.ConvertToModel(data.UpdatedAt, &item.UpdatedDate)
 		item.RepoID = qc.RepoID(data.Repository.ID)

@@ -91,7 +91,7 @@ func PullRequestReviewsPage(
 	for _, data := range nodes {
 		item := &sourcecode.PullRequestReview{}
 		item.CustomerID = qc.CustomerID
-		item.RefType = "sourcecode.pull_request_review"
+		item.RefType = "github"
 		item.RefID = data.ID
 		//item.UpdatedAt = data.UpdatedAt.Unix()
 		item.RepoID = qc.RepoID(data.Repository.ID)

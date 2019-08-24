@@ -22,15 +22,15 @@ func (s QueryContext) IssueURL(issueKey string) string {
 }
 
 func (s QueryContext) ProjectID(refID string) string {
-	return hash.Values("Project", s.CustomerID, "work.Project", refID)
+	return hash.Values("Project", s.CustomerID, "jira", refID)
 }
 
 func (s QueryContext) IssueID(refID string) string {
-	return hash.Values("Issue", s.CustomerID, "work.Issue", refID)
+	return hash.Values("Issue", s.CustomerID, "jira", refID)
 }
 
 func (s QueryContext) UserID(refID string) string {
-	return hash.Values("User", s.CustomerID, "work.User", refID)
+	return hash.Values("User", s.CustomerID, "jira", refID)
 }
 
 type PageInfo struct {
