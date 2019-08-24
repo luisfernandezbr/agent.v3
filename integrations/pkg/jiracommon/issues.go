@@ -80,6 +80,7 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 
 		sprintModels = append(sprintModels, item)
 	}
+
 	return senderSprints.Send(sprintModels)
 }
 
@@ -89,6 +90,8 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 	senderIssues *objsender.IncrementalDateBased,
 	senderChangelogs *objsender.NotIncremental,
 	sprints *Sprints) error {
+
+	s.opts.Logger.Info("processing issues and changelogs for project", "project", project.Key)
 
 	err := jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
 		pi, resIssues, resChangelogs, err := jiracommonapi.IssuesAndChangelogsPage(s.CommonQC(), project, fieldByID, senderIssues.LastProcessed, paginationParams)

@@ -32,6 +32,11 @@ func IssuesAndChangelogsPage(
 	//params.Set("maxResults", "1") // for testing
 	params.Set("validateQuery", "strict")
 	jql := `project="` + project.JiraID + `"`
+
+	// CAREFUL. pipeline right now requires specific ordering for issues
+	// Only needed for pipeline. Could remove otherwise.
+	jql += " ORDER BY created ASC"
+
 	if !updatedSince.IsZero() {
 		s := updatedSince.Format("2006-01-02 15:04")
 		jql += fmt.Sprintf(` and (created >= "%s" or updated >= "%s")`, s, s)
