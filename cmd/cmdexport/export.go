@@ -108,8 +108,9 @@ func (s *export) discardIncrementalData() error {
 }
 
 type repoProcess struct {
-	Access gitclone.AccessDetails
-	ID     string
+	Access            gitclone.AccessDetails
+	ID                string
+	CommitURLTemplate string
 }
 
 func (s *export) gitProcessing() error {
@@ -140,6 +141,8 @@ func (s *export) gitProcessing() error {
 
 			LastProcessed: s.lastProcessed,
 			RepoAccess:    repo.Access,
+
+			CommitURLTemplate: repo.CommitURLTemplate,
 		}
 		exp := exportrepo.New(opts, s.Locs)
 		err := exp.Run(ctx)

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,6 +36,10 @@ type Opts struct {
 
 	LastProcessed *jsonstore.Store
 	RepoAccess    gitclone.AccessDetails
+
+	// CommitURLTemplate is a template for building commit url
+	// https://example.com/repo1/@@@sha@@@
+	CommitURLTemplate string
 }
 
 type Export struct {
@@ -441,7 +444,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				RepoID:     hash.Values("Repo", customerID, refType, repoID),
 				Sha:        commit.SHA,
 				Message:    lastBlame.Commit.Message,
-				//URL:            buildURL(refType, getHtmlURLPrefix(urlPrefix), repoName, commit.SHA), //TODO: i don't have access to reponame
+				URL:        buildURL(s.opts.CommitURLTemplate, commit.SHA),
 				//Branch:         branch, // TODO: this field is not correct at all
 				Additions:      commitAdditions,
 				Deletions:      commitDeletions,
@@ -489,21 +492,6 @@ func statusFromRipsrc(status ripsrc.CommitStatus) sourcecode.BlameStatus {
 	return 0
 }
 
-func buildURL(refType string, prefixURL string, repoFullName string, sha string) string {
-	if refType == "bitbucket" {
-		return fmt.Sprintf("%s/%s/commits/%s", prefixURL, repoFullName, sha)
-	} else {
-		return fmt.Sprintf("%s/%s/commit/%s", prefixURL, repoFullName, sha)
-	}
-}
-
-func getHtmlURLPrefix(urlStr string) string {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		panic(err)
-	}
-
-	words := strings.Split(u.Host, ".")
-
-	return u.Scheme + "://" + strings.Join(words[len(words)-2:], ".")
+func buildURL(commitURLTemplate, sha string) string {
+	return strings.ReplaceAll(commitURLTemplate, "@@@sha@@@", sha)
 }

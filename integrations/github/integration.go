@@ -258,6 +258,10 @@ func (s *Integration) export(ctx context.Context) error {
 	return nil
 }
 
+func commitURLTemplate(repo api.Repo, repoURLPrefix string) string {
+	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/commit/@@@sha@@@"
+}
+
 func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error {
 	s.logger.Info("exporting organization", "login", org.Login)
 	repos, err := api.ReposAllSlice(s.qc, org)
@@ -319,6 +323,7 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 			args := rpcdef.GitRepoFetch{}
 			args.RepoID = s.qc.RepoID(repo.ID)
 			args.URL = repoURL
+			args.CommitURLTemplate = commitURLTemplate(repo, s.config.RepoURLPrefix)
 			s.agent.ExportGitRepo(args)
 		}
 	}

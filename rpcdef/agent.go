@@ -31,8 +31,9 @@ type ExportObj struct {
 }
 
 type GitRepoFetch struct {
-	RepoID string
-	URL    string
+	RepoID            string
+	URL               string
+	CommitURLTemplate string
 }
 
 type AgentServer struct {
@@ -101,6 +102,7 @@ func (s *AgentServer) ExportGitRepo(ctx context.Context, req *proto.ExportGitRep
 	fetch := GitRepoFetch{}
 	fetch.RepoID = req.RepoId
 	fetch.URL = req.Url
+	fetch.CommitURLTemplate = req.CommitUrlTemplate
 	s.Impl.ExportGitRepo(fetch)
 	resp := &proto.Empty{}
 	return resp, nil
@@ -155,6 +157,7 @@ func (s *AgentClient) ExportGitRepo(fetch GitRepoFetch) {
 	args := &proto.ExportGitRepoReq{}
 	args.RepoId = fetch.RepoID
 	args.Url = fetch.URL
+	args.CommitUrlTemplate = fetch.CommitURLTemplate
 	_, err := s.client.ExportGitRepo(context.Background(), args)
 	if err != nil {
 		panic(err)

@@ -34,5 +34,6 @@ func (s agentDelegate) ExportGitRepo(fetch rpcdef.GitRepoFetch) {
 	repo := repoProcess{}
 	repo.ID = fetch.RepoID
 	repo.Access.URL = fetch.URL
+	repo.CommitURLTemplate = fetch.CommitURLTemplate
 	s.export.gitProcessingRepos <- repo
 }
