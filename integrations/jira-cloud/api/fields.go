@@ -26,7 +26,7 @@ func FieldsAll(qc QueryContext) (res []*work.CustomField, rerr error) {
 		item := &work.CustomField{}
 		item.CustomerID = qc.CustomerID
 		item.RefType = "jira"
-		item.RefID = data.ID
+		item.RefID = data.Key
 		item.Key = data.Key
 		item.Name = data.Name
 		res = append(res, item)
