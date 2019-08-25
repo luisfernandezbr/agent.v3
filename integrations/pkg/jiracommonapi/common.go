@@ -17,6 +17,16 @@ type QueryContext struct {
 	ExportUser func(user User) error
 }
 
+func (s QueryContext) Validate() {
+	if s.BaseURL == "" || s.Logger == nil || s.CustomerID == "" || s.Request == nil {
+		panic("set all required fields")
+	}
+}
+
+func (s QueryContext) ProjectURL(projectKey string) string {
+	return pstrings.JoinURL(s.BaseURL, "browse", projectKey)
+}
+
 func (s QueryContext) IssueURL(issueKey string) string {
 	return pstrings.JoinURL(s.BaseURL, "browse", issueKey)
 }

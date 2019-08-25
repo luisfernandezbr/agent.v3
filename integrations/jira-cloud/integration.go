@@ -79,6 +79,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		return err
 	}
 
+	s.qc.BaseURL = s.config.URL
 	s.qc.CustomerID = config.Pinpoint.CustomerID
 	s.qc.Logger = s.logger
 
@@ -94,6 +95,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	}
 
 	s.common, err = jiracommon.New(jiracommon.Opts{
+		BaseURL:          s.config.URL,
 		Logger:           s.logger,
 		CustomerID:       config.Pinpoint.CustomerID,
 		Request:          s.qc.Request,
