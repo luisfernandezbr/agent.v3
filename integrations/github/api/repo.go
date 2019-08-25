@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"time"
 
 	pjson "github.com/pinpt/go-common/json"
@@ -111,7 +112,7 @@ func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInf
 	return repositories.PageInfo, batch, nil
 }
 
-func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*sourcecode.Repo, _ error) {
+func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*sourcecode.Repo, rerr error) {
 	qc.Logger.Debug("repos request", "q", queryParams)
 
 	query := `
@@ -128,8 +129,12 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 				nodes {
 					updatedAt
 					id
-					name
-					url						
+					nameWithOwner
+					url	
+					description			
+					primaryLanguage {
+						name
+					}
 				}
 			}
 		}
@@ -143,10 +148,14 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 					TotalCount int      `json:"totalCount"`
 					PageInfo   PageInfo `json:"pageInfo"`
 					Nodes      []struct {
-						UpdatedAt     time.Time `json:"updatedAt"`
-						ID            string    `json:"id"`
-						NameWithOwner string    `json:"nameWithOwner"`
-						URL           string    `json:"url"`
+						UpdatedAt       time.Time `json:"updatedAt"`
+						ID              string    `json:"id"`
+						NameWithOwner   string    `json:"nameWithOwner"`
+						URL             string    `json:"url"`
+						Description     string    `json:"description"`
+						PrimaryLanguage struct {
+							Name string `json:"name"`
+						} `json:"primaryLanguage"`
 					} `json:"nodes"`
 				} `json:"repositories"`
 			} `json:"organization"`
@@ -155,7 +164,8 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 
 	err := qc.Request(query, &res)
 	if err != nil {
-		return pi, repos, err
+		rerr = err
+		return
 	}
 
 	repositories := res.Data.Organization.Repositories
@@ -167,7 +177,11 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 
 	for _, data := range repoNodes {
 		if data.UpdatedAt.Before(stopOnUpdatedAt) {
-			return PageInfo{}, repos, nil
+			return
+		}
+		if data.ID == "" || data.NameWithOwner == "" || data.URL == "" {
+			rerr = fmt.Errorf("missing required data for repo %+v", data)
+			return
 		}
 		repo := &sourcecode.Repo{}
 		repo.RefType = "github"
@@ -175,6 +189,9 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 		repo.RefID = data.ID
 		repo.Name = data.NameWithOwner
 		repo.URL = data.URL
+		repo.Language = data.PrimaryLanguage.Name
+		repo.Description = data.Description
+		repo.Active = true
 		repos = append(repos, repo)
 	}
 

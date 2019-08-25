@@ -53,7 +53,6 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	qc := api.QueryContext{}
 	qc.Logger = s.logger
 	qc.Request = s.makeRequest
-	qc.CustomerID = s.customerID
 	qc.RepoID = func(refID string) string {
 		return hash.Values("Repo", s.customerID, "github", refID)
 	}
@@ -180,6 +179,7 @@ func urlAppend(p1, p2 string) string {
 
 func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	s.customerID = exportConfig.Pinpoint.CustomerID
+	s.qc.CustomerID = s.customerID
 	err := s.setIntegrationConfig(exportConfig.Integration)
 	if err != nil {
 		return err
