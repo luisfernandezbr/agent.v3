@@ -131,7 +131,8 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 					id
 					nameWithOwner
 					url	
-					description			
+					description		
+					isArchived	
 					primaryLanguage {
 						name
 					}
@@ -153,6 +154,7 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 						NameWithOwner   string    `json:"nameWithOwner"`
 						URL             string    `json:"url"`
 						Description     string    `json:"description"`
+						IsArchived      bool      `json:"isArchived"`
 						PrimaryLanguage struct {
 							Name string `json:"name"`
 						} `json:"primaryLanguage"`
@@ -191,7 +193,7 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 		repo.URL = data.URL
 		repo.Language = data.PrimaryLanguage.Name
 		repo.Description = data.Description
-		repo.Active = true
+		repo.Active = !data.IsArchived
 		repos = append(repos, repo)
 	}
 
