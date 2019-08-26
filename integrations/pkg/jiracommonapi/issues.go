@@ -247,7 +247,7 @@ func IssuesAndChangelogsPage(
 					return
 				}
 				date.ConvertToModel(createdAt, &item.CreatedDate)
-				item.UserID = qc.UserID(cl.Author.RefID())
+				item.UserID = cl.Author.RefID()
 
 				item.Field = data.Field
 				item.FieldType = data.FieldType
