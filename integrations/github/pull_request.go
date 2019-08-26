@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/objsender"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 
 	"github.com/pinpt/agent.next/integrations/github/api"
 )
@@ -13,7 +13,7 @@ func (s *Integration) exportPullRequests(
 	repos []api.Repo,
 	pullRequests chan []api.PullRequest) error {
 
-	sender, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequest.String())
+	sender, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestTable.String())
 	if err != nil {
 		return err
 	}

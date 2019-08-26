@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/pkg/objsender"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func (s *Integration) exportPullRequestReviews(pullRequests chan []api.PullRequest) error {

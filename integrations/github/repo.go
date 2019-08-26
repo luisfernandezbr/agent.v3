@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/objsender"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 
 	"github.com/pinpt/agent.next/integrations/github/api"
 )
