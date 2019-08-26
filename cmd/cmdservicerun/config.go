@@ -69,7 +69,6 @@ func convertConfig(in string, c1 map[string]interface{}, exclusions []string) (r
 		var config struct {
 			URL           string   `json:"url"`
 			APIToken      string   `json:"apitoken"`
-			Organization  string   `json:"organization"`
 			ExcludedRepos []string `json:"excluded_repos"`
 		}
 		err := structmarshal.MapToStruct(c1, &config)
@@ -77,7 +76,6 @@ func convertConfig(in string, c1 map[string]interface{}, exclusions []string) (r
 			rerr = err
 			return
 		}
-		config.Organization = "pinpt"
 		{
 			v, ok := c1["api_token"].(string)
 			if !ok {

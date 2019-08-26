@@ -40,7 +40,6 @@ func TestConfigFromEvent(t *testing.T) {
 		Config: map[string]interface{}{
 			"apitoken":       "t1",
 			"url":            "u1",
-			"organization":   "pinpt",
 			"excluded_repos": []interface{}{"e1", "e2"},
 		},
 	}
