@@ -170,7 +170,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 type Project = jiracommon.Project
 
 func (s *Integration) fields() ([]*work.CustomField, error) {
-	sender := objsender.NewNotIncremental(s.agent, "work.custom_field")
+	sender := objsender.NewNotIncremental(s.agent, work.CustomFieldTable.String())
 	defer sender.Done()
 
 	res, err := api.FieldsAll(s.qc)

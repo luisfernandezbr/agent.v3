@@ -3,10 +3,11 @@ package main
 import (
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/pkg/objsender"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func (s *Integration) exportPullRequestComments(pullRequests chan []api.PullRequest) error {
-	sender := objsender.NewNotIncremental(s.agent, "sourcecode.pull_request_comment")
+	sender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentTable.String())
 	defer sender.Done()
 
 	for prs := range pullRequests {

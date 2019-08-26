@@ -170,7 +170,7 @@ func (s *Export) ripsrcSetup(repoDir string) {
 
 func (s *Export) branches(ctx context.Context) error {
 	sessions := s.opts.Sessions
-	sessionID, _, err := sessions.NewSession("sourcecode.branch")
+	sessionID, _, err := sessions.NewSession(sourcecode.BranchTable.String())
 	if err != nil {
 		return err
 	}
@@ -252,11 +252,11 @@ func (s *Export) code(ctx context.Context) error {
 
 func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA string, _ error) {
 	sessions := s.opts.Sessions
-	blameSession, _, err := sessions.NewSession("sourcecode.blame")
+	blameSession, _, err := sessions.NewSession(sourcecode.BlameTable.String())
 	if err != nil {
 		return "", err
 	}
-	commitSession, _, err := sessions.NewSession("sourcecode.commit")
+	commitSession, _, err := sessions.NewSession(sourcecode.CommitTable.String())
 	if err != nil {
 		return "", err
 	}

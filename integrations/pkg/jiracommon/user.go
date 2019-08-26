@@ -16,7 +16,7 @@ type Users struct {
 func NewUsers(customerID string, agent rpcdef.Agent) (*Users, error) {
 	s := &Users{}
 	s.customerID = customerID
-	s.sender = objsender.NewNotIncremental(agent, "work.user")
+	s.sender = objsender.NewNotIncremental(agent, work.UserTable.String())
 	s.exported = map[string]bool{}
 	return s, nil
 }

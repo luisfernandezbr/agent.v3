@@ -3,10 +3,11 @@ package main
 import (
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/pkg/objsender"
+	"github.com/pinpt/go-datamodel/sourcecode"
 )
 
 func (s *Integration) exportPullRequestReviews(pullRequests chan []api.PullRequest) error {
-	sender := objsender.NewNotIncremental(s.agent, "sourcecode.pull_request_review")
+	sender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewTable.String())
 	defer sender.Done()
 
 	for prs := range pullRequests {

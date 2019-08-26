@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 
@@ -338,7 +339,7 @@ func (s *sessions) Write(sessionID string, objs []rpcdef.ExportObj) error {
 	modelType := s.outsession.GetModelType(id)
 	s.logger.Info("writing objects", "type", modelType, "count", len(objs))
 
-	if modelType == "sourcecode.commit_user" {
+	if modelType == commitusers.TableName {
 		var res []rpcdef.ExportObj
 		for _, obj := range objs {
 			obj2, err := s.commitUsers.Transform(obj.Data.(map[string]interface{}))

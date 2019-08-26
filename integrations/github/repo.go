@@ -5,12 +5,13 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/objsender"
+	"github.com/pinpt/go-datamodel/sourcecode"
 
 	"github.com/pinpt/agent.next/integrations/github/api"
 )
 
 func (s *Integration) exportRepos(ctx context.Context, org api.Org, excludedByNameWithOwner []string) error {
-	sender, err := objsender.NewIncrementalDateBased(s.agent, "sourcecode.repo")
+	sender, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.RepoTable.String())
 	if err != nil {
 		return err
 	}

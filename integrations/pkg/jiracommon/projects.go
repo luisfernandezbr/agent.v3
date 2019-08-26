@@ -59,7 +59,7 @@ func (s *JiraCommon) getProjectsFilterExcluded(all []Project) ([]Project, error)
 }
 
 func (s *JiraCommon) sendProjects(allProjects []*work.Project, notExcluded []Project) error {
-	sender := objsender.NewNotIncremental(s.agent, "work.project")
+	sender := objsender.NewNotIncremental(s.agent, work.ProjectTable.String())
 	defer sender.Done()
 
 	ok := map[string]bool{}

@@ -15,13 +15,13 @@ import (
 type Project = jiracommonapi.Project
 
 func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[string]*work.CustomField) error {
-	senderIssues, err := objsender.NewIncrementalDateBased(s.agent, "work.issue")
+	senderIssues, err := objsender.NewIncrementalDateBased(s.agent, work.IssueTable.String())
 	if err != nil {
 		return err
 	}
 	defer senderIssues.Done()
 
-	senderChangelogs := objsender.NewNotIncremental(s.agent, "work.changelog")
+	senderChangelogs := objsender.NewNotIncremental(s.agent, work.ChangelogTable.String())
 	defer senderChangelogs.Done()
 
 	startedSprintExport := time.Now()
@@ -34,7 +34,7 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 		}
 	}
 
-	senderSprints := objsender.NewNotIncremental(s.agent, "work.sprint")
+	senderSprints := objsender.NewNotIncremental(s.agent, work.SprintTable.String())
 	defer senderSprints.Done()
 
 	var sprintModels []objsender.Model

@@ -24,7 +24,7 @@ type Users struct {
 func NewUsers(integration *Integration, orgs []api.Org) (*Users, error) {
 	s := &Users{}
 	s.integration = integration
-	s.sender = objsender.NewNotIncremental(integration.agent, "sourcecode.user")
+	s.sender = objsender.NewNotIncremental(integration.agent, sourcecode.User.String())
 	s.loginToID = map[string]string{}
 
 	err := s.createGhost()

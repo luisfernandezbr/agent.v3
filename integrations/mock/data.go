@@ -14,7 +14,7 @@ func (s *Integration) exportAll() {
 
 func (s *Integration) exportBlames() {
 
-	sessionID, lastProcessed := s.agent.ExportStarted("sourcecode.blame")
+	sessionID, lastProcessed := s.agent.ExportStarted(sourcecode.BlameTable.String())
 	defer s.agent.ExportDone(sessionID, time.Now().Format(time.RFC3339))
 
 	s.logger.Info("exporting blames", "lastProcessed", lastProcessed)
@@ -41,7 +41,7 @@ func (s *Integration) exportBlames() {
 }
 
 func (s *Integration) exportCommits() {
-	sessionID, lastProcessed := s.agent.ExportStarted("sourcecode.commit")
+	sessionID, lastProcessed := s.agent.ExportStarted(sourcecode.CommitTable.String())
 	defer s.agent.ExportDone(sessionID, time.Now().Format(time.RFC3339))
 
 	s.logger.Info("exporting blames", "lastProcessed", lastProcessed)

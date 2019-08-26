@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/objsender"
 
 	"github.com/pinpt/agent.next/integrations/github/api"
 )
 
 func (s *Integration) exportCommitUsers(repos []api.Repo, concurrency int) error {
-	sender, err := objsender.NewIncrementalDateBased(s.agent, "sourcecode.commit_user")
+	sender, err := objsender.NewIncrementalDateBased(s.agent, commitusers.TableName)
 	if err != nil {
 		return err
 	}
