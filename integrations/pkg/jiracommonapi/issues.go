@@ -35,6 +35,8 @@ func IssuesAndChangelogsPage(
 
 	// CAREFUL. pipeline right now requires specific ordering for issues
 	// Only needed for pipeline. Could remove otherwise.
+
+	// TODO: This is not supported in hosted jira
 	jql += " ORDER BY created ASC"
 
 	if !updatedSince.IsZero() {
