@@ -67,16 +67,14 @@ func (s *JiraCommon) sendProjects(allProjects []*work.Project, notExcluded []Pro
 		ok[p.JiraID] = true
 	}
 
-	var res2 []objsender.Model
 	for _, obj := range allProjects {
 		if !ok[obj.RefID] {
 			continue
 		}
-		res2 = append(res2, obj)
-	}
-	err := sender.Send(res2)
-	if err != nil {
-		return err
+		err := sender.Send(obj)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

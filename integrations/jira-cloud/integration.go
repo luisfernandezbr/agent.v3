@@ -145,7 +145,6 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	}
 
 	s.common.SetupUsers()
-	defer s.common.ExportDone()
 
 	fields, err := s.fields()
 	if err != nil {
@@ -175,6 +174,11 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		return res, err
 	}
 
+	err = s.common.ExportDone()
+	if err != nil {
+		return res, err
+	}
+
 	return res, nil
 }
 
@@ -196,15 +200,16 @@ func (s *Integration) projects() (all []*work.Project, _ error) {
 
 func (s *Integration) fields() ([]*work.CustomField, error) {
 	sender := objsender.NewNotIncremental(s.agent, work.CustomFieldModelName.String())
-	defer sender.Done()
 
 	res, err := api.FieldsAll(s.qc)
 	if err != nil {
 		return nil, err
 	}
-	var res2 []objsender.Model
 	for _, item := range res {
-		res2 = append(res2, item)
+		err := sender.Send(item)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return res, sender.Send(res2)
+	return res, sender.Done()
 }

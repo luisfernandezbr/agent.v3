@@ -8,7 +8,6 @@ import (
 
 func (s *Integration) exportPullRequestReviews(pullRequests chan []api.PullRequest) error {
 	sender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
-	defer sender.Done()
 
 	for prs := range pullRequests {
 		for _, pr := range prs {
@@ -22,7 +21,7 @@ func (s *Integration) exportPullRequestReviews(pullRequests chan []api.PullReque
 			}
 		}
 	}
-	return nil
+	return sender.Done()
 }
 
 func (s *Integration) exportPullRequestReviewsPR(sender *objsender.NotIncremental, prID string) error {
@@ -31,13 +30,12 @@ func (s *Integration) exportPullRequestReviewsPR(sender *objsender.NotIncrementa
 		if err != nil {
 			return pi, err
 		}
-		var batch []objsender.Model
-		//var ids []string
 		for _, obj := range res {
-			//ids = append(ids, obj.ID)
-			batch = append(batch, obj)
+			err := sender.Send(obj)
+			if err != nil {
+				return pi, err
+			}
 		}
-		//resIDs <- ids
-		return pi, sender.Send(batch)
+		return pi, nil
 	})
 }

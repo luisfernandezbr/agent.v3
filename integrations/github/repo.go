@@ -15,25 +15,32 @@ func (s *Integration) exportRepos(ctx context.Context, org api.Org, excludedByNa
 	if err != nil {
 		return err
 	}
-	defer sender.Done()
 
 	excludedMap := map[string]bool{}
 	for _, no := range excludedByNameWithOwner {
 		excludedMap[no] = true
 	}
 
-	return api.PaginateNewerThan(sender.LastProcessed, func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
+	err = api.PaginateNewerThan(sender.LastProcessed, func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
 		pi, repos, err := api.ReposPage(s.qc, org, query, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
 		}
-		var batch []objsender.Model
 		for _, repo := range repos {
 			if excludedMap[repo.Name] {
 				continue
 			}
-			batch = append(batch, repo)
+			err := sender.Send(repo)
+			if err != nil {
+				return pi, err
+			}
 		}
-		return pi, sender.Send(batch)
+		return pi, nil
 	})
+
+	if err != nil {
+		return err
+	}
+
+	return sender.Done()
 }

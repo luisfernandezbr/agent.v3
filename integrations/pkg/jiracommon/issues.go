@@ -19,10 +19,7 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 	if err != nil {
 		return err
 	}
-	defer senderIssues.Done()
-
 	senderChangelogs := objsender.NewNotIncremental(s.agent, work.ChangelogModelName.String())
-	defer senderChangelogs.Done()
 
 	startedSprintExport := time.Now()
 	sprints := NewSprints()
@@ -35,9 +32,7 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 	}
 
 	senderSprints := objsender.NewNotIncremental(s.agent, work.SprintModelName.String())
-	defer senderSprints.Done()
 
-	var sprintModels []objsender.Model
 	for _, data := range sprints.SprintsWithIssues() {
 		item := &work.Sprint{}
 		item.CustomerID = s.opts.CustomerID
@@ -78,10 +73,21 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 
 		date.ConvertToModel(startedSprintExport, &item.FetchedDate)
 
-		sprintModels = append(sprintModels, item)
+		err = senderSprints.Send(item)
+		if err != nil {
+			return err
+		}
 	}
 
-	return senderSprints.Send(sprintModels)
+	err = senderIssues.Done()
+	if err != nil {
+		return err
+	}
+	err = senderChangelogs.Done()
+	if err != nil {
+		return err
+	}
+	return senderSprints.Done()
 }
 
 func (s *JiraCommon) issuesAndChangelogsForProject(
@@ -93,10 +99,11 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 
 	s.opts.Logger.Info("processing issues and changelogs for project", "project", project.Key)
 
-	err := jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
+	err := jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
 		pi, resIssues, resChangelogs, err := jiracommonapi.IssuesAndChangelogsPage(s.CommonQC(), project, fieldByID, senderIssues.LastProcessed, paginationParams)
 		if err != nil {
-			return false, 0, err
+			rerr = err
+			return
 		}
 		for _, issue := range resIssues {
 			for _, f := range issue.CustomFields {
@@ -115,22 +122,20 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 			}
 		}
 
-		var resIssues2 []objsender.Model
 		for _, obj := range resIssues {
-			resIssues2 = append(resIssues2, obj)
-		}
-		err = senderIssues.Send(resIssues2)
-		if err != nil {
-			return false, 0, err
+			err := senderIssues.Send(obj)
+			if err != nil {
+				rerr = err
+				return
+			}
 		}
 
-		var resChangelogs2 []objsender.Model
 		for _, obj := range resChangelogs {
-			resChangelogs2 = append(resChangelogs2, obj)
-		}
-		err = senderChangelogs.Send(resChangelogs2)
-		if err != nil {
-			return false, 0, err
+			err := senderChangelogs.Send(obj)
+			if err != nil {
+				rerr = err
+				return
+			}
 		}
 
 		return pi.HasMore, pi.MaxResults, nil

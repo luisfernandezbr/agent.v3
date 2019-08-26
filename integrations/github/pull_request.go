@@ -17,18 +17,13 @@ func (s *Integration) exportPullRequests(
 	if err != nil {
 		return err
 	}
-	defer sender.Done()
-
 	for _, repo := range repos {
-		//if i > 1 {
-		//	break
-		//}
 		err := s.exportPullRequestsRepo(sender, repo, pullRequests)
 		if err != nil {
 			return err
 		}
 	}
-	return nil
+	return sender.Done()
 }
 
 func (s *Integration) exportPullRequestsRepo(sender *objsender.IncrementalDateBased, repo api.Repo, pullRequests chan []api.PullRequest) error {
@@ -40,10 +35,12 @@ func (s *Integration) exportPullRequestsRepo(sender *objsender.IncrementalDateBa
 
 		pullRequests <- res
 
-		var batch []objsender.Model
 		for _, obj := range res {
-			batch = append(batch, obj)
+			err := sender.Send(obj)
+			if err != nil {
+				return pi, err
+			}
 		}
-		return pi, sender.Send(batch)
+		return pi, nil
 	})
 }

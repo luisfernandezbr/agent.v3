@@ -51,6 +51,6 @@ func (s *JiraCommon) CommonQC() jiracommonapi.QueryContext {
 	return res
 }
 
-func (s *JiraCommon) ExportDone() {
-	s.users.Done()
+func (s *JiraCommon) ExportDone() error {
+	return s.users.Done()
 }

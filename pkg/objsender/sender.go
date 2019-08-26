@@ -2,15 +2,52 @@ package objsender
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
+type batch struct {
+	batch     []rpcdef.ExportObj
+	mu        sync.Mutex
+	sessionID string
+	agent     rpcdef.Agent
+}
+
+const maxBatch = 10
+
+func (s *batch) Send(m map[string]interface{}) error {
+	s.mu.Lock()
+	s.batch = append(s.batch, rpcdef.ExportObj{Data: m})
+	if len(s.batch) > maxBatch {
+		data := s.batch
+		s.batch = []rpcdef.ExportObj{}
+		s.mu.Unlock()
+		return s.flushNoLock(data)
+	}
+	s.mu.Unlock()
+	return nil
+}
+
+func (s *batch) flushNoLock(data []rpcdef.ExportObj) error {
+	s.agent.SendExported(s.sessionID, data)
+	return nil
+}
+
+func (s *batch) Flush() error {
+	s.mu.Lock()
+	data := s.batch
+	s.batch = []rpcdef.ExportObj{}
+	s.mu.Unlock()
+	return s.flushNoLock(data)
+}
+
 type NotIncremental struct {
 	RefType   string
 	SessionID string
 	agent     rpcdef.Agent
+	batch     *batch
 }
 
 func NewNotIncremental(agent rpcdef.Agent, refType string) *NotIncremental {
@@ -21,6 +58,7 @@ func NewNotIncremental(agent rpcdef.Agent, refType string) *NotIncremental {
 	s.RefType = refType
 	s.agent = agent
 	s.SessionID, _ = s.agent.ExportStarted(s.RefType)
+	s.batch = &batch{sessionID: s.SessionID, agent: s.agent}
 	return s
 }
 
@@ -28,31 +66,19 @@ type Model interface {
 	ToMap(...bool) map[string]interface{}
 }
 
-func (s *NotIncremental) Send(objs []Model) error {
-	if len(objs) == 0 {
-		return nil
-	}
-	var objs2 []rpcdef.ExportObj
-	for _, obj := range objs {
-		objs2 = append(objs2, rpcdef.ExportObj{Data: obj.ToMap()})
-	}
-	s.agent.SendExported(s.SessionID, objs2)
-	return nil
+func (s *NotIncremental) Send(obj Model) error {
+	return s.batch.Send(obj.ToMap())
 }
 
-func (s *NotIncremental) SendMaps(data []map[string]interface{}) error {
-	if len(data) == 0 {
-		return nil
-	}
-	var objs2 []rpcdef.ExportObj
-	for _, obj := range data {
-		objs2 = append(objs2, rpcdef.ExportObj{Data: obj})
-	}
-	s.agent.SendExported(s.SessionID, objs2)
-	return nil
+func (s *NotIncremental) SendMap(m map[string]interface{}) error {
+	return s.batch.Send(m)
 }
 
 func (s *NotIncremental) Done() error {
+	err := s.batch.Flush()
+	if err != nil {
+		return err
+	}
 	s.agent.ExportDone(s.SessionID, nil)
 	return nil
 }
@@ -63,6 +89,8 @@ type IncrementalDateBased struct {
 	agent         rpcdef.Agent
 	StartTime     time.Time
 	LastProcessed time.Time
+
+	batch *batch
 }
 
 func NewIncrementalDateBased(agent rpcdef.Agent, refType string) (*IncrementalDateBased, error) {
@@ -83,33 +111,23 @@ func NewIncrementalDateBased(agent rpcdef.Agent, refType string) (*IncrementalDa
 	}
 	s.SessionID = sessionID
 	s.agent = agent
+	s.batch = &batch{sessionID: s.SessionID, agent: s.agent}
 	return s, nil
 }
 
-func (s *IncrementalDateBased) Send(objs []Model) error {
-	if len(objs) == 0 {
-		return nil
-	}
-	var objs2 []rpcdef.ExportObj
-	for _, obj := range objs {
-		objs2 = append(objs2, rpcdef.ExportObj{Data: obj.ToMap()})
-	}
-	s.agent.SendExported(s.SessionID, objs2)
-	return nil
+func (s *IncrementalDateBased) Send(obj Model) error {
+	return s.batch.Send(obj.ToMap())
 }
 
-func (s *IncrementalDateBased) SendMaps(data []map[string]interface{}) error {
-	if len(data) == 0 {
-		return nil
-	}
-	var objs2 []rpcdef.ExportObj
-	for _, obj := range data {
-		objs2 = append(objs2, rpcdef.ExportObj{Data: obj})
-	}
-	s.agent.SendExported(s.SessionID, objs2)
-	return nil
+func (s *IncrementalDateBased) SendMap(m map[string]interface{}) error {
+	return s.batch.Send(m)
 }
 
-func (s *IncrementalDateBased) Done() {
+func (s *IncrementalDateBased) Done() error {
+	err := s.batch.Flush()
+	if err != nil {
+		return err
+	}
 	s.agent.ExportDone(s.SessionID, s.StartTime.Format(time.RFC3339))
+	return nil
 }

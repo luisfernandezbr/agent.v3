@@ -15,7 +15,6 @@ func (s *Integration) exportCommitUsers(repos []api.Repo, concurrency int) error
 	if err != nil {
 		return err
 	}
-	defer sender.Done()
 
 	wg := sync.WaitGroup{}
 
@@ -32,7 +31,8 @@ func (s *Integration) exportCommitUsers(repos []api.Repo, concurrency int) error
 		}()
 	}
 	wg.Wait()
-	return nil
+
+	return sender.Done()
 }
 
 // maxToReturn useful for debugging
@@ -109,8 +109,6 @@ func (s *Integration) exportCommitsForRepoBranch(userSender *objsender.Increment
 
 			s.logger.Info("got commits page", "l", len(res))
 
-			var batch []map[string]interface{}
-
 			for _, commit := range res {
 				validate := func(u CommitUser, kind string) error {
 					err := u.Validate()
@@ -138,18 +136,24 @@ func (s *Integration) exportCommitsForRepoBranch(userSender *objsender.Increment
 					// if it's all ok can remove the warning as well
 					s.logger.Warn("commit user", "err", err)
 				} else {
-					batch = append(batch, author.ToMap())
+					err := userSender.SendMap(author.ToMap())
+					if err != nil {
+						return pi, err
+					}
 				}
 
 				err = validate(committer, "commiter")
 				if err != nil {
 					s.logger.Warn("commit user", "err", err)
 				} else {
-					batch = append(batch, committer.ToMap())
+					err := userSender.SendMap(committer.ToMap())
+					if err != nil {
+						return pi, err
+					}
 				}
 			}
 
-			return pi, userSender.SendMaps(batch)
+			return pi, nil
 		})
 }
 

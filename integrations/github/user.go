@@ -89,11 +89,13 @@ func (s *Users) sendUser(user *sourcecode.User) error {
 }
 
 func (s *Users) sendUsers(users []*sourcecode.User) error {
-	var batch []objsender.Model
 	for _, user := range users {
-		batch = append(batch, user)
+		err := s.sender.Send(user)
+		if err != nil {
+			return err
+		}
 	}
-	return s.sender.Send(batch)
+	return nil
 }
 
 func (s *Users) exportInstanceUsers() error {
@@ -113,6 +115,10 @@ func (s *Users) exportUsersFromChan(usersChan chan []*sourcecode.User) error {
 	for users := range usersChan {
 		for _, user := range users {
 			s.loginToID[*user.Username] = user.RefID
+			err := s.sender.Send(user)
+			if err != nil {
+				return err
+			}
 			batch = append(batch, user)
 		}
 	}
@@ -120,7 +126,7 @@ func (s *Users) exportUsersFromChan(usersChan chan []*sourcecode.User) error {
 		return errors.New("no users found, will not be able to map logins to ids")
 	}
 
-	return s.sender.Send(batch)
+	return nil
 }
 
 func (s *Users) exportOrganizationUsers(org api.Org) error {
@@ -165,6 +171,6 @@ func (s *Users) LoginToRefIDFromCommit(login string, email string) (refID string
 	return s.LoginToRefID(login)
 }
 
-func (s *Users) Done() {
-	s.sender.Done()
+func (s *Users) Done() error {
+	return s.sender.Done()
 }

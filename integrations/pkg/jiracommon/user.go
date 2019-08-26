@@ -54,13 +54,15 @@ func (s *Users) sendUser(user *work.User) error {
 }
 
 func (s *Users) sendUsers(users []*work.User) error {
-	var batch []objsender.Model
 	for _, user := range users {
-		batch = append(batch, user)
+		err := s.sender.Send(user)
+		if err != nil {
+			return err
+		}
 	}
-	return s.sender.Send(batch)
+	return nil
 }
 
-func (s *Users) Done() {
-	s.sender.Done()
+func (s *Users) Done() error {
+	return s.sender.Done()
 }

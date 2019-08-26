@@ -244,7 +244,6 @@ func (s *Integration) export(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer s.users.Done()
 
 	s.qc.UserLoginToRefID = s.users.LoginToRefID
 	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
@@ -255,7 +254,8 @@ func (s *Integration) export(ctx context.Context) error {
 			return err
 		}
 	}
-	return nil
+
+	return s.users.Done()
 }
 
 func commitURLTemplate(repo api.Repo, repoURLPrefix string) string {
