@@ -13,7 +13,7 @@ func (s *Integration) exportPullRequests(
 	repos []api.Repo,
 	pullRequests chan []api.PullRequest) error {
 
-	sender, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestTable.String())
+	sender, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestModelName.String())
 	if err != nil {
 		return err
 	}

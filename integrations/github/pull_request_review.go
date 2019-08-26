@@ -7,7 +7,7 @@ import (
 )
 
 func (s *Integration) exportPullRequestReviews(pullRequests chan []api.PullRequest) error {
-	sender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewTable.String())
+	sender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
 	defer sender.Done()
 
 	for prs := range pullRequests {

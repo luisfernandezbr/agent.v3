@@ -11,7 +11,7 @@ import (
 )
 
 func (s *Integration) exportRepos(ctx context.Context, org api.Org, excludedByNameWithOwner []string) error {
-	sender, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.RepoTable.String())
+	sender, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.RepoModelName.String())
 	if err != nil {
 		return err
 	}
