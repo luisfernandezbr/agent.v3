@@ -173,12 +173,12 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:7b5c6e2eeaa9ae5907c391a91c132abfd5c9e8a784a341b5625e750c67e6825d"
+  digest = "1:e62657cca9badaa308d86e7716083e4c5933bb78e30a17743fc67f50be26f6f4"
   name = "github.com/gorilla/websocket"
   packages = ["."]
   pruneopts = "UT"
-  revision = "66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d"
-  version = "v1.4.0"
+  revision = "c3e18be99d19e6b3e8f1559eea2c161a665c4b6b"
+  version = "v1.4.1"
 
 [[projects]]
   digest = "1:cf6b61e1b4c26b0c7526cee4a0cee6d8302b17798af4b2a56a90eedac0aef11a"
@@ -391,7 +391,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:d9f6999d585c01113bada0afe52438367b1039208f4379fc35a3abba931f5d1d"
+  digest = "1:76ad18e9693a4ccb7e7c34084db79e55426fae2d108c6d29a6507580cd549ffa"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -415,8 +415,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "95aa6094cd266089e3b05a38bd6da94d476ed5c1"
-  version = "8.2.6"
+  revision = "d3e9656a62fc43d075ccdb6a53200b19e844778c"
+  version = "8.2.8"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
@@ -427,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:5c589fdfc2a5a244fd309ba6c925b3a59fbfb142e4b1743554b0897c7d1c711b"
+  digest = "1:a08a2e96c6df0d4c6d98e63d01268131cf160f9d827d9d2e6e2709e50fafa630"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,8 +439,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "9ead9829f1fd26b070048947a6a867f3320b6208"
-  version = "0.0.412"
+  revision = "d18e86f32decb553404c433e871017cdd101f3f4"
+  version = "0.0.415"
 
 [[projects]]
   digest = "1:3db456275fbaedf3c401bd81d914b98b6ac0dbff38cf9280fb3a60dca54d38cf"
@@ -638,7 +638,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c83bbbd76dd1496676e9b95f1540bd77e7cf73a3ba3bbacb6e06d49f3bcb435d"
+  digest = "1:2caf4f4981fe7c13eb14c3d131dfdcbf5ffd161f359cea474659a46ad8a148db"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -650,7 +650,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "fde4db37ae7ad8191b03d30d27f258b5291ae4e3"
+  revision = "fb81701db80f1745f51259b1f286de3fe2ec80c8"
 
 [[projects]]
   digest = "1:3952dba92e6a837cf34e6a073160d31029412bf863e37274cb779f319ddbe0b4"
