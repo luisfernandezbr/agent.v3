@@ -95,6 +95,20 @@ func TestParseSprintOne(t *testing.T) {
 			},
 		},
 		{
+			`goal`,
+			`com.atlassian.greenhopper.service.sprint.Sprint@4cfd845f[id=15,rapidViewId=1,state=CLOSED,name=FE Sprint 6,startDate=2017-10-30T16:00:59.035Z,endDate=2017-11-13T17:00:00.000Z,completeDate=2017-11-13T21:36:59.267Z,sequence=15,goal=Build out secondary views and continue performance and UI improvements.]`,
+			Sprint{
+				ID:            15,
+				OriginBoardID: 1,
+				Name:          "FE Sprint 6",
+				Goal:          "Build out secondary views and continue performance and UI improvements.",
+				State:         "CLOSED",
+				StartDate:     "2017-10-30T16:00:59.035Z",
+				EndDate:       "2017-11-13T17:00:00.000Z",
+				CompleteDate:  "2017-11-13T21:36:59.267Z",
+			},
+		},
+		{
 			// sprint name is set to "Special ,startDate=" in UI
 			// not possible to parse this unambiguously
 			`special1`,
