@@ -33,16 +33,15 @@ func IssuesAndChangelogsPage(
 	params.Set("validateQuery", "strict")
 	jql := `project="` + project.JiraID + `"`
 
-	// CAREFUL. pipeline right now requires specific ordering for issues
-	// Only needed for pipeline. Could remove otherwise.
-
-	// TODO: This is not supported in hosted jira
-	jql += " ORDER BY created ASC"
-
 	if !updatedSince.IsZero() {
 		s := updatedSince.Format("2006-01-02 15:04")
 		jql += fmt.Sprintf(` and (created >= "%s" or updated >= "%s")`, s, s)
 	}
+
+	// CAREFUL. pipeline right now requires specific ordering for issues
+	// Only needed for pipeline. Could remove otherwise.
+	jql += " ORDER BY created ASC"
+
 	params.Set("jql", jql)
 	params.Add("expand", "changelog")
 
