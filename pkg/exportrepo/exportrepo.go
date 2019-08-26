@@ -70,22 +70,26 @@ func New(opts Opts, locs fsconf.Locs) *Export {
 
 var ErrRevParseFailed = errors.New("git rev-parse HEAD failed")
 
-func (s *Export) Run(ctx context.Context) error {
+func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, rerr error) {
 	err := os.MkdirAll(s.locs.Temp, 0777)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	checkoutDir, cacheDir, err := s.clone(ctx)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	if !hasHeadCommit(ctx, checkoutDir) {
-		return ErrRevParseFailed
+		rerr = ErrRevParseFailed
+		return
 	}
 
 	s.repoNameUsedInCacheDir = filepath.Base(cacheDir)
+	repoNameUsedInCacheDir = s.repoNameUsedInCacheDir
 
 	s.logger = s.logger.With("repo", s.repoNameUsedInCacheDir)
 
@@ -93,15 +97,17 @@ func (s *Export) Run(ctx context.Context) error {
 
 	err = s.branches(ctx)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	err = s.code(ctx)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
-	return nil
+	return
 }
 
 func hasHeadCommit(ctx context.Context, repoDir string) bool {
@@ -231,7 +237,7 @@ func (s *Export) code(ctx context.Context) error {
 		}
 	}()
 
-	err := s.rip.CodeByCommit(ctx, res)
+	err := s.ripsrcCodeByCommit(ctx, res)
 	if err != nil {
 		return err
 	}
@@ -250,6 +256,17 @@ func (s *Export) code(ctx context.Context) error {
 
 }
 
+func (s *Export) ripsrcCodeByCommit(ctx context.Context, res chan ripsrc.CommitCode) (rerr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.logger.Error("ripsrc failed with a panic", "panic", fmt.Sprint(r))
+			rerr = fmt.Errorf("ripsrc failed with a panic: %v", r)
+		}
+	}()
+
+	return s.rip.CodeByCommit(ctx, res)
+}
+
 func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA string, _ error) {
 	sessions := s.opts.Sessions
 	blameSession, _, err := sessions.NewSession(sourcecode.BlameModelName.String())
@@ -262,8 +279,14 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 	}
 
 	defer func() {
-		sessions.Done(blameSession, nil)
-		sessions.Done(commitSession, nil)
+		err := sessions.Done(blameSession, nil)
+		if err != nil {
+			panic(err)
+		}
+		err = sessions.Done(commitSession, nil)
+		if err != nil {
+			panic(err)
+		}
 	}()
 
 	writeBlame := func(obj sourcecode.Blame) error {
@@ -288,9 +311,8 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 	var commitComplexityCount int64
 
 	customerID := s.opts.CustomerID
-	refType := "github" //TODO: need to pass from options?
+	refType := "github" //TODO: need to pass from options
 	repoID := s.opts.RepoID
-	//urlPrefix := "http://github.com" // TODO: check how to build url below
 
 	for commit := range commits {
 		lastProcessedSHA = commit.SHA

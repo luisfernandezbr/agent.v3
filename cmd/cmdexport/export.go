@@ -128,6 +128,9 @@ func (s *export) gitProcessing() error {
 	var start time.Time
 
 	ctx := context.Background()
+
+	resErrors := map[string]error{}
+
 	for repo := range s.gitProcessingRepos {
 		if i == 0 {
 			start = time.Now()
@@ -146,13 +149,14 @@ func (s *export) gitProcessing() error {
 			CommitURLTemplate: repo.CommitURLTemplate,
 		}
 		exp := exportrepo.New(opts, s.Locs)
-		err := exp.Run(ctx)
+		repoDirName, err := exp.Run(ctx)
 		if err == exportrepo.ErrRevParseFailed {
 			reposFailedRevParse++
 			continue
 		}
 		if err != nil {
-			return err
+			s.Logger.Error("Error processing git repo", "repo", repoDirName, "err", err)
+			resErrors[repoDirName] = err
 		}
 	}
 
@@ -166,6 +170,14 @@ func (s *export) gitProcessing() error {
 	}
 
 	if i != 0 {
+		if len(resErrors) != 0 {
+			for k, err := range resErrors {
+				s.Logger.Error("Error processing git repo", "repo", k, "err", err)
+			}
+			s.Logger.Error("Finished git repo processing", "count", i, "dur", time.Since(start), "repos_failed", len(resErrors))
+
+		}
+
 		s.Logger.Info("Finished git repo processing", "count", i, "dur", time.Since(start))
 	}
 

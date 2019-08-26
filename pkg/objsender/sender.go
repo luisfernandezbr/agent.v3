@@ -20,7 +20,7 @@ const maxBatch = 10
 func (s *batch) Send(m map[string]interface{}) error {
 	s.mu.Lock()
 	s.batch = append(s.batch, rpcdef.ExportObj{Data: m})
-	if len(s.batch) > maxBatch {
+	if len(s.batch) >= maxBatch {
 		data := s.batch
 		s.batch = []rpcdef.ExportObj{}
 		s.mu.Unlock()

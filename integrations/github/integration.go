@@ -78,7 +78,7 @@ type Config struct {
 	Token         string
 	OnlyOrg       string
 	ExcludedRepos []string
-	OnlyRipsrc    bool
+	OnlyGit       bool
 	StopAfterN    int
 	Enterprise    bool
 }
@@ -87,7 +87,7 @@ type configDef struct {
 	URL           string   `json:"url"`
 	APIToken      string   `json:"apitoken"`
 	ExcludedRepos []string `json:"excluded_repos"`
-	OnlyRipsrc    bool     `json:"only_ripsrc"`
+	OnlyGit       bool     `json:"only_git"`
 	// OnlyOrganization specifies the organization to export. By default all account organization are exported. Set this to export only one.
 	OnlyOrganization string `json:"only_organization"`
 	// StopAfterN stops exporting after N number of repos for testing and dev purposes
@@ -114,7 +114,7 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	res.Token = def.APIToken
 	res.OnlyOrg = def.OnlyOrganization
 	res.ExcludedRepos = def.ExcludedRepos
-	res.OnlyRipsrc = def.OnlyRipsrc
+	res.OnlyGit = def.OnlyGit
 	res.StopAfterN = def.StopAfterN
 
 	{
@@ -328,7 +328,7 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 		}
 	}
 
-	if s.config.OnlyRipsrc {
+	if s.config.OnlyGit {
 		s.logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
 		return nil
 	}
