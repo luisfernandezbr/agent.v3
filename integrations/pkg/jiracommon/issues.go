@@ -38,7 +38,7 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 	defer senderSprints.Done()
 
 	var sprintModels []objsender.Model
-	for _, data := range sprints.data {
+	for _, data := range sprints.SprintsWithIssues() {
 		item := &work.Sprint{}
 		item.CustomerID = s.opts.CustomerID
 		item.RefType = "jira"
@@ -107,9 +107,8 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 					}
 					err := sprints.processIssueSprint(issue.RefID, f.Value)
 					if err != nil {
-						return false, 0, err
+						s.opts.Logger.Error("could not process Sprint field value", "v", f.Value, "err", err)
 					}
-
 					break
 				}
 
