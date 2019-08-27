@@ -16,6 +16,8 @@ type Opts struct {
 	Request          func(objPath string, params url.Values, res interface{}) error
 	Agent            rpcdef.Agent
 	ExcludedProjects []string
+	// Projects only process these projects by key.
+	Projects []string
 }
 
 type JiraCommon struct {

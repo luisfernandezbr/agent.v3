@@ -349,7 +349,7 @@ func (s *sessions) Write(sessionID string, objs []rpcdef.ExportObj) error {
 
 	id := idFromString(sessionID)
 	modelType := s.outsession.GetModelType(id)
-	s.logger.Info("writing objects", "type", modelType, "count", len(objs))
+	//s.logger.Info("writing objects", "type", modelType, "count", len(objs))
 
 	if modelType == commitusers.TableName {
 		var res []rpcdef.ExportObj

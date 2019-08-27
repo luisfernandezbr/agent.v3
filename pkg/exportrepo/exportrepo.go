@@ -390,7 +390,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 			{
 				cf := sourcecode.CommitFiles{
 					CommitID:          hash.Values("Commit", customerID, refType, commit.SHA),
-					RepoID:            hash.Values("Repo", customerID, refType, repoID),
+					RepoID:            repoID,
 					Status:            string(cf.Status),
 					Ordinal:           ordinal,
 					Filename:          cf.Filename,
@@ -444,7 +444,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				Filename:       blame.Filename,
 				Language:       blame.Language,
 				Sha:            blame.Commit.SHA,
-				RepoID:         hash.Values("Repo", customerID, refType, repoID),
+				RepoID:         repoID,
 				Complexity:     blame.Complexity,
 				Lines:          lines,
 			}
@@ -463,11 +463,11 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				RefType:    refType,
 				CustomerID: customerID,
 				Hashcode:   "",
-				RepoID:     hash.Values("Repo", customerID, refType, repoID),
+				RepoID:     repoID,
 				Sha:        commit.SHA,
 				Message:    lastBlame.Commit.Message,
 				URL:        buildURL(s.opts.CommitURLTemplate, commit.SHA),
-				//Branch:         branch, // TODO: this field is not correct at all
+				//Branch:         branch, // TODO: remove this from datamodel
 				Additions:      commitAdditions,
 				Deletions:      commitDeletions,
 				FilesChanged:   commitFilesCount,

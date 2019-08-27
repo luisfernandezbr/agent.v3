@@ -268,6 +268,8 @@ func IssuesAndChangelogsPage(
 }
 
 // jira format: 2019-07-12T22:32:50.376+0200
+// 2017-11-20T14:17:48.268-05:00
+
 const jiraTimeFormat = "2006-01-02T15:04:05.999Z0700"
 
 func ParseTime(ts string) (time.Time, error) {

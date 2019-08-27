@@ -16,11 +16,21 @@ func (s *JiraCommon) ProcessAllProjectsUsingExclusions(allProjectsDetailed []*wo
 		p.Key = obj.Identifier
 		allProjects = append(allProjects, p)
 	}
-	projects, err := s.getProjectsFilterExcluded(allProjects)
-	if err != nil {
-		return nil, err
+	var projects []Project
+	if len(s.opts.Projects) != 0 {
+		var err error
+		projects, err = s.getProjectsOnlySpecified(allProjects)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var err error
+		projects, err = s.getProjectsFilterExcluded(allProjects)
+		if err != nil {
+			return nil, err
+		}
 	}
-	err = s.sendProjects(allProjectsDetailed, projects)
+	err := s.sendProjects(allProjectsDetailed, projects)
 	if err != nil {
 		return nil, err
 	}
@@ -28,19 +38,35 @@ func (s *JiraCommon) ProcessAllProjectsUsingExclusions(allProjectsDetailed []*wo
 	return projects, nil
 }
 
+func (s *JiraCommon) getProjectsOnlySpecified(all []Project) (res []Project, _ error) {
+	allm := map[string]Project{}
+	for _, p := range all {
+		allm[p.Key] = p
+	}
+	for _, key := range s.opts.Projects {
+		p, ok := allm[key]
+		if !ok {
+			return nil, fmt.Errorf("wanted to process non existing project: %v", key)
+		}
+		res = append(res, p)
+	}
+	s.opts.Logger.Info("projects", "found", len(all), "directly_passed", len(s.opts.Projects))
+	return
+}
+
 func (s *JiraCommon) getProjectsFilterExcluded(all []Project) ([]Project, error) {
 	allm := map[string]bool{}
 	for _, p := range all {
 		allm[p.JiraID] = true
 	}
+
 	excluded := map[string]bool{}
 	for _, id := range s.opts.ExcludedProjects {
 		if !allm[id] {
-			return nil, fmt.Errorf("wanted to exclude non existing repo: %v", id)
+			return nil, fmt.Errorf("wanted to exclude non existing project: %v", id)
 		}
 		excluded[id] = true
 	}
-
 	filtered := map[string]Project{}
 	for _, p := range all {
 		if excluded[p.JiraID] {

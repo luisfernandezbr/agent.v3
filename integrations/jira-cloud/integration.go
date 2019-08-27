@@ -49,6 +49,8 @@ type Config struct {
 	Username         string   `json:"username"`
 	Password         string   `json:"password"`
 	ExcludedProjects []string `json:"excluded_projects"`
+	// Projects specifies a specific projects to process. Ignores excluded_projects in this case. Specify projects using jira key. For example: DE.
+	Projects []string `json:"projects"`
 }
 
 func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
@@ -101,6 +103,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		Request:          s.qc.Request,
 		Agent:            s.agent,
 		ExcludedProjects: s.config.ExcludedProjects,
+		Projects:         s.config.Projects,
 	})
 	if err != nil {
 		return err
