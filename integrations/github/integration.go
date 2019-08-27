@@ -62,6 +62,10 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	qc.PullRequestID = func(refID string) string {
 		return hash.Values("PullRequest", s.customerID, "github", refID)
 	}
+	qc.BranchID = func(repoRefID string, branchName string) string {
+		repoID := qc.RepoID(repoRefID)
+		return hash.Values(branchName, repoID)
+	}
 	qc.IsEnterprise = func() bool {
 		return s.config.Enterprise
 	}
@@ -76,20 +80,30 @@ type Config struct {
 	APIURL3       string
 	RepoURLPrefix string
 	Token         string
-	OnlyOrg       string
+	Organization  string
 	ExcludedRepos []string
 	OnlyGit       bool
 	StopAfterN    int
 	Enterprise    bool
+	Repos         []string
 }
 
 type configDef struct {
-	URL           string   `json:"url"`
-	APIToken      string   `json:"apitoken"`
+	URL      string `json:"url"`
+	APIToken string `json:"apitoken"`
+
+	// ExcludedRepos are the repos to exclude from processing. This is based on github repo id.
 	ExcludedRepos []string `json:"excluded_repos"`
 	OnlyGit       bool     `json:"only_git"`
-	// OnlyOrganization specifies the organization to export. By default all account organization are exported. Set this to export only one.
-	OnlyOrganization string `json:"only_organization"`
+
+	// Organization specifies the organization to export. By default all account organization are exported. Set this to export only one.
+	Organization string `json:"organization"`
+
+	// Repos specifies the repos to export. By default all repos are exported not including the ones from ExcludedRepos. This option overrides this.
+	// Use github nameWithOwner for this field.
+	// Example: user1/repo1
+	Repos []string `json:"repos"`
+
 	// StopAfterN stops exporting after N number of repos for testing and dev purposes
 	StopAfterN int `json:"stop_after_n"`
 }
@@ -112,8 +126,9 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	}
 	var res Config
 	res.Token = def.APIToken
-	res.OnlyOrg = def.OnlyOrganization
+	res.Organization = def.Organization
 	res.ExcludedRepos = def.ExcludedRepos
+	res.Repos = def.Repos
 	res.OnlyGit = def.OnlyGit
 	res.StopAfterN = def.StopAfterN
 
@@ -205,9 +220,9 @@ func (s *Integration) Export(ctx context.Context,
 }
 
 func (s *Integration) getOrgs() (res []api.Org, _ error) {
-	if s.config.OnlyOrg != "" {
-		s.logger.Info("only_organization passed", "org", s.config.OnlyOrg)
-		return []api.Org{{Login: s.config.OnlyOrg}}, nil
+	if s.config.Organization != "" {
+		s.logger.Info("only_organization passed", "org", s.config.Organization)
+		return []api.Org{{Login: s.config.Organization}}, nil
 	}
 	var err error
 	if !s.config.Enterprise {
@@ -262,41 +277,61 @@ func commitURLTemplate(repo api.Repo, repoURLPrefix string) string {
 	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/commit/@@@sha@@@"
 }
 
+func (s *Integration) filterRepos(logger hclog.Logger, repos []api.Repo) (res []api.Repo) {
+	if len(s.config.Repos) != 0 {
+		ok := map[string]bool{}
+		for _, nameWithOwner := range s.config.Repos {
+			ok[nameWithOwner] = true
+		}
+		for _, repo := range repos {
+			if !ok[repo.NameWithOwner] {
+				continue
+			}
+			res = append(res, repo)
+		}
+		logger.Info("repos", "found", len(repos), "repos_specified", len(s.config.Repos), "result", len(res))
+		return
+	}
+
+	//all := map[string]bool{}
+	//for _, repo := range repos {
+	//	all[repo.ID] = true
+	//}
+	excluded := map[string]bool{}
+	for _, id := range s.config.ExcludedRepos {
+		// This does not work because we pass excluded repos for all orgs. But filterRepos is called separately per org.
+		//if !all[id] {
+		//	return fmt.Errorf("wanted to exclude non existing repo: %v", id)
+		//}
+		excluded[id] = true
+	}
+
+	filtered := map[string]api.Repo{}
+	// filter excluded repos
+	for _, repo := range repos {
+		if excluded[repo.ID] {
+			continue
+		}
+		filtered[repo.ID] = repo
+	}
+
+	logger.Info("repos", "found", len(repos), "excluded_definition", len(s.config.ExcludedRepos), "result", len(filtered))
+	for _, repo := range filtered {
+		res = append(res, repo)
+	}
+	return
+}
+
 func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error {
 	s.logger.Info("exporting organization", "login", org.Login)
-	repos, err := api.ReposAllSlice(s.qc, org)
+	logger := s.logger.With("org", org.Login)
+
+	repos, err := api.ReposAllSlice(s.qc.WithLogger(logger), org)
 	if err != nil {
 		return err
 	}
 
-	{
-		//all := map[string]bool{}
-		//for _, repo := range repos {
-		//	all[repo.ID] = true
-		//}
-		excluded := map[string]bool{}
-		for _, id := range s.config.ExcludedRepos {
-			//if !all[id] {
-			//	return fmt.Errorf("wanted to exclude non existing repo: %v", id)
-			//}
-			excluded[id] = true
-		}
-
-		filtered := map[string]api.Repo{}
-		// filter excluded repos
-		for _, repo := range repos {
-			if excluded[repo.ID] {
-				continue
-			}
-			filtered[repo.ID] = repo
-		}
-
-		s.logger.Info("repos", "found", len(repos), "excluded_definition", len(s.config.ExcludedRepos), "result", len(filtered))
-		repos = []api.Repo{}
-		for _, repo := range filtered {
-			repos = append(repos, repo)
-		}
-	}
+	repos = s.filterRepos(logger, repos)
 
 	if s.config.StopAfterN != 0 {
 		// only leave 1 repo for export
@@ -305,7 +340,7 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 		if len(repos) > stopAfter {
 			repos = repos[0:stopAfter]
 		}
-		s.logger.Info("stop_after_n passed", "v", stopAfter, "repos", l, "after", len(repos))
+		logger.Info("stop_after_n passed", "v", stopAfter, "repos", l, "after", len(repos))
 	}
 
 	// queue repos for processing with ripsrc
@@ -329,13 +364,13 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 	}
 
 	if s.config.OnlyGit {
-		s.logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
+		logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
 		return nil
 	}
 
 	// export repos
 	{
-		err := s.exportRepos(ctx, org, s.config.ExcludedRepos)
+		err := s.exportRepos(ctx, logger, org, repos)
 		if err != nil {
 			return err
 		}
@@ -348,7 +383,7 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 		// higher concurrency does not make any real difference
 		commitConcurrency := 1
 
-		err := s.exportCommitUsers(repos, commitConcurrency)
+		err := s.exportCommitUsers(logger, repos, commitConcurrency)
 		if err != nil {
 			return err
 		}
@@ -358,7 +393,7 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 	pullRequests := make(chan []api.PullRequest, 10)
 	go func() {
 		defer close(pullRequests)
-		err := s.exportPullRequests(repos, pullRequests)
+		err := s.exportPullRequests(logger, repos, pullRequests)
 		if err != nil {
 			panic(err)
 		}
@@ -386,7 +421,7 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 	// at the same time, export all comments for updated pull requests
 	go func() {
 		defer wg.Done()
-		err := s.exportPullRequestComments(pullRequestsForComments)
+		err := s.exportPullRequestComments(logger, pullRequestsForComments)
 		if err != nil {
 			panic(err)
 		}
@@ -394,7 +429,7 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 	// at the same time, export all reviews for updated pull requests
 	go func() {
 		defer wg.Done()
-		err := s.exportPullRequestReviews(pullRequestsForReviews)
+		err := s.exportPullRequestReviews(logger, pullRequestsForReviews)
 		if err != nil {
 			panic(err)
 		}

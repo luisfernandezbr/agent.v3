@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/objsender"
 
 	"github.com/pinpt/agent.next/integrations/github/api"
 )
 
-func (s *Integration) exportCommitUsers(repos []api.Repo, concurrency int) error {
+func (s *Integration) exportCommitUsers(logger hclog.Logger, repos []api.Repo, concurrency int) error {
 	sender, err := objsender.NewIncrementalDateBased(s.agent, commitusers.TableName)
 	if err != nil {
 		return err
@@ -23,7 +24,7 @@ func (s *Integration) exportCommitUsers(repos []api.Repo, concurrency int) error
 		go func() {
 			defer wg.Done()
 			for repo := range reposToChan(repos, 0) {
-				err := s.exportCommitsForRepoDefaultBranch(sender, repo)
+				err := s.exportCommitsForRepoDefaultBranch(logger, sender, repo)
 				if err != nil {
 					panic(err)
 				}
@@ -52,14 +53,14 @@ func reposToChan(sl []api.Repo, maxToReturn int) chan api.Repo {
 	return res
 }
 
-func (s *Integration) exportCommitsForRepoDefaultBranch(userSender *objsender.IncrementalDateBased, repo api.Repo) error {
-	s.logger.Info("exporting commits (to get users)", "repo_id", repo.ID, "repo_name", repo.NameWithOwner)
+func (s *Integration) exportCommitsForRepoDefaultBranch(logger hclog.Logger, userSender *objsender.IncrementalDateBased, repo api.Repo) error {
+	logger.Info("exporting commits (to get users)", "repo_id", repo.ID, "repo_name", repo.NameWithOwner)
 
 	if repo.DefaultBranch == "" {
 		return nil
 	}
 
-	err := s.exportCommitsForRepoBranch(userSender, repo, repo.DefaultBranch)
+	err := s.exportCommitsForRepoBranch(logger, userSender, repo, repo.DefaultBranch)
 	if err != nil {
 		return err
 	}
@@ -91,14 +92,14 @@ func (s *Integration) exportCommitsForRepoAllBranches(et *exportType, repoID str
 }
 */
 
-func (s *Integration) exportCommitsForRepoBranch(userSender *objsender.IncrementalDateBased, repo api.Repo, branchName string) error {
-	s.logger.Info("exporting commits for branch", "repo_id", repo.ID, "repo_name", repo.NameWithOwner)
+func (s *Integration) exportCommitsForRepoBranch(logger hclog.Logger, userSender *objsender.IncrementalDateBased, repo api.Repo, branchName string) error {
+	logger.Info("exporting commits for branch", "repo_id", repo.ID, "repo_name", repo.NameWithOwner)
 
 	return api.PaginateCommits(
 		userSender.LastProcessed,
 		func(query string) (api.PageInfo, error) {
 
-			pi, res, err := api.CommitsPage(s.qc,
+			pi, res, err := api.CommitsPage(s.qc.WithLogger(logger),
 				repo.ID,
 				branchName,
 				query,
@@ -107,7 +108,7 @@ func (s *Integration) exportCommitsForRepoBranch(userSender *objsender.Increment
 				return pi, err
 			}
 
-			s.logger.Info("got commits page", "l", len(res))
+			logger.Info("got commits page", "l", len(res))
 
 			for _, commit := range res {
 				validate := func(u CommitUser, kind string) error {

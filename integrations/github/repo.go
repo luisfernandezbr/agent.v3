@@ -4,30 +4,33 @@ import (
 	"context"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/integration-sdk/sourcecode"
 
 	"github.com/pinpt/agent.next/integrations/github/api"
 )
 
-func (s *Integration) exportRepos(ctx context.Context, org api.Org, excludedByNameWithOwner []string) error {
+func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, org api.Org, onlyInclude []api.Repo) error {
 	sender, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.RepoModelName.String())
 	if err != nil {
 		return err
 	}
 
-	excludedMap := map[string]bool{}
-	for _, no := range excludedByNameWithOwner {
-		excludedMap[no] = true
+	// map[nameWithOwner]shouldInclude
+	shouldInclude := map[string]bool{}
+	for _, repo := range onlyInclude {
+		shouldInclude[repo.NameWithOwner] = true
 	}
 
 	err = api.PaginateNewerThan(sender.LastProcessed, func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, repos, err := api.ReposPage(s.qc, org, query, stopOnUpdatedAt)
+		pi, repos, err := api.ReposPage(s.qc.WithLogger(logger), org, query, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
 		}
 		for _, repo := range repos {
-			if excludedMap[repo.Name] {
+			// sourcecode.Repo.Name == api.Repo.NameWithOwner
+			if !shouldInclude[repo.Name] {
 				continue
 			}
 			err := sender.Send(repo)

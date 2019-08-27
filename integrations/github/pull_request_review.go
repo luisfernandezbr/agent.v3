@@ -1,12 +1,13 @@
 package main
 
 import (
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportPullRequestReviews(pullRequests chan []api.PullRequest) error {
+func (s *Integration) exportPullRequestReviews(logger hclog.Logger, pullRequests chan []api.PullRequest) error {
 	sender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
 
 	for prs := range pullRequests {
@@ -15,7 +16,7 @@ func (s *Integration) exportPullRequestReviews(pullRequests chan []api.PullReque
 				// perf optimization
 				continue
 			}
-			err := s.exportPullRequestReviewsPR(sender, pr.RefID)
+			err := s.exportPullRequestReviewsPR(logger, sender, pr.RefID)
 			if err != nil {
 				return err
 			}
@@ -24,7 +25,7 @@ func (s *Integration) exportPullRequestReviews(pullRequests chan []api.PullReque
 	return sender.Done()
 }
 
-func (s *Integration) exportPullRequestReviewsPR(sender *objsender.NotIncremental, prID string) error {
+func (s *Integration) exportPullRequestReviewsPR(logger hclog.Logger, sender *objsender.NotIncremental, prID string) error {
 	return api.PaginateRegular(func(query string) (api.PageInfo, error) {
 		pi, res, err := api.PullRequestReviewsPage(s.qc, prID, query)
 		if err != nil {

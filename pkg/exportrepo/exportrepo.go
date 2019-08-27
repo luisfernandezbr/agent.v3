@@ -188,7 +188,7 @@ func (s *Export) branches(ctx context.Context) error {
 	go func() {
 		for data := range res {
 			obj := sourcecode.Branch{}
-			obj.RefID = ""
+			obj.RefID = data.Name
 			obj.RefType = "git"
 			obj.CustomerID = s.opts.CustomerID
 			obj.Name = data.Name
@@ -237,7 +237,7 @@ func (s *Export) code(ctx context.Context) error {
 		}
 	}()
 
-	err := s.ripsrcCodeByCommit(ctx, res)
+	err := s.rip.CodeByCommit(ctx, res)
 	if err != nil {
 		return err
 	}
@@ -254,17 +254,6 @@ func (s *Export) code(ctx context.Context) error {
 
 	return nil
 
-}
-
-func (s *Export) ripsrcCodeByCommit(ctx context.Context, res chan ripsrc.CommitCode) (rerr error) {
-	defer func() {
-		if r := recover(); r != nil {
-			s.logger.Error("ripsrc failed with a panic", "panic", fmt.Sprint(r))
-			rerr = fmt.Errorf("ripsrc failed with a panic: %v", r)
-		}
-	}()
-
-	return s.rip.CodeByCommit(ctx, res)
 }
 
 func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA string, _ error) {

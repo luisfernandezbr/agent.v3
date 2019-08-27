@@ -23,9 +23,16 @@ type QueryContext struct {
 	RepoID        func(ref string) string
 	UserID        func(ref string) string
 	PullRequestID func(ref string) string
+	BranchID      func(repoRef, branchName string) string
 
 	UserLoginToRefID           func(login string) (refID string, _ error)
 	UserLoginToRefIDFromCommit func(login, email string) (refID string, _ error)
 
 	IsEnterprise func() bool
+}
+
+func (s QueryContext) WithLogger(logger hclog.Logger) QueryContext {
+	res := s
+	res.Logger = logger
+	return res
 }

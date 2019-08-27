@@ -427,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:ae8e115c1849aad93576be5a6ea5fed8437bcb25833bdf2a817dc06e82a20866"
+  digest = "1:6e6d2dfd63d46b7925385e4c24f592ee60e52ced6d5881d83b525747d05ff31b"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,11 +439,12 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "f60dbabd6466bc072acdc320909ee3585c5c5f51"
-  version = "0.0.422"
+  revision = "cf3dbd9bd511224e3095fb1299bb817b66ddf717"
+  version = "0.0.424"
 
 [[projects]]
-  digest = "1:3db456275fbaedf3c401bd81d914b98b6ac0dbff38cf9280fb3a60dca54d38cf"
+  branch = "master"
+  digest = "1:947514fe19b3cb37a88409ffa0dca824239938419bd1ea61ae35a3bcc0c222b8"
   name = "github.com/pinpt/ripsrc"
   packages = [
     "ripsrc",
@@ -464,8 +465,7 @@
     "ripsrc/pkg/logger",
   ]
   pruneopts = "UT"
-  revision = "ae2c2ec6617b68ab695b5596e324e3434dd3d3bd"
-  version = "6.1.0"
+  revision = "e02239deeb856fa316254eef3408c94473405054"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"

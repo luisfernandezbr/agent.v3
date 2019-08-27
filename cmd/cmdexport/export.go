@@ -75,16 +75,15 @@ func newExport(opts Opts) (*export, error) {
 	s.sessions = newSessions(s.Logger, s, s.Locs.Uploads)
 
 	s.gitProcessingRepos = make(chan repoProcess, 100000)
+
 	gitProcessingDone := make(chan bool)
 
 	go func() {
-		defer func() {
-			gitProcessingDone <- true
-		}()
-		err = s.gitProcessing()
+		hadErrors, err := s.gitProcessing()
 		if err != nil {
 			panic(err)
 		}
+		gitProcessingDone <- hadErrors
 	}()
 
 	s.SetupIntegrations(agentDelegate{export: s})
@@ -93,9 +92,9 @@ func newExport(opts Opts) (*export, error) {
 	close(s.gitProcessingRepos)
 
 	s.Logger.Info("Waiting for git repo processing to complete")
-	<-gitProcessingDone
+	hadErrors := <-gitProcessingDone
 
-	s.printExportRes(exportRes)
+	s.printExportRes(exportRes, hadErrors)
 
 	return s, nil
 }
@@ -114,13 +113,13 @@ type repoProcess struct {
 	CommitURLTemplate string
 }
 
-func (s *export) gitProcessing() error {
+func (s *export) gitProcessing() (hadErrors bool, _ error) {
 	if s.Opts.AgentConfig.SkipGit {
 		s.Logger.Warn("SkipGit is true, skipping git clone and ripsrc for all repos")
 		for range s.gitProcessingRepos {
 
 		}
-		return nil
+		return false, nil
 	}
 
 	i := 0
@@ -162,26 +161,24 @@ func (s *export) gitProcessing() error {
 
 	if i == 0 {
 		s.Logger.Warn("Finished git repo processing: No git repos found")
-		return nil
+		return false, nil
 	}
 
 	if reposFailedRevParse != 0 {
 		s.Logger.Warn("Skipped ripsrc on empty repos", "repos", reposFailedRevParse)
 	}
 
-	if i != 0 {
-		if len(resErrors) != 0 {
-			for k, err := range resErrors {
-				s.Logger.Error("Error processing git repo", "repo", k, "err", err)
-			}
-			s.Logger.Error("Finished git repo processing", "count", i, "dur", time.Since(start), "repos_failed", len(resErrors))
-
+	if len(resErrors) != 0 {
+		for k, err := range resErrors {
+			s.Logger.Error("Error processing git repo", "repo", k, "err", err)
 		}
+		s.Logger.Error("Error in git repo processing", "count", i, "dur", time.Since(start), "repos_failed", len(resErrors))
+		return true, nil
 
-		s.Logger.Info("Finished git repo processing", "count", i, "dur", time.Since(start))
 	}
 
-	return nil
+	s.Logger.Info("Finished git repo processing", "count", i, "dur", time.Since(start))
+	return false, nil
 }
 
 type runResult struct {
@@ -245,12 +242,12 @@ func (s *export) runExports() map[string]runResult {
 	}
 	wg.Wait()
 
-	s.printExportRes(res)
+	s.printExportRes(res, false)
 
 	return res
 }
 
-func (s *export) printExportRes(res map[string]runResult) {
+func (s *export) printExportRes(res map[string]runResult, gitHadErrors bool) {
 	var successNames []string
 	var failedNames []string
 
@@ -275,6 +272,10 @@ func (s *export) printExportRes(res map[string]runResult) {
 	}
 
 	dur := time.Since(s.StartTime)
+
+	if gitHadErrors {
+		failedNames = append(failedNames, "git")
+	}
 
 	if len(failedNames) > 0 {
 		s.Logger.Error("Some exports failed", "failed", failedNames, "succeded", successNames, "dur", dur)

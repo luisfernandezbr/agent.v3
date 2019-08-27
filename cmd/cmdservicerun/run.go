@@ -401,7 +401,7 @@ func (s *runner) handleExportEvents(ctx context.Context) error {
 		Errors:  errors,
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,
-			//"uuid":        agentOpts.DeviceID, //NOTE: eventmachine does not send uuid
+			"uuid":        s.conf.DeviceID,
 		},
 	}
 

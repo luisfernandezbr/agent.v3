@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/integration-sdk/sourcecode"
 
@@ -10,6 +11,7 @@ import (
 )
 
 func (s *Integration) exportPullRequests(
+	logger hclog.Logger,
 	repos []api.Repo,
 	pullRequests chan []api.PullRequest) error {
 
@@ -18,7 +20,7 @@ func (s *Integration) exportPullRequests(
 		return err
 	}
 	for _, repo := range repos {
-		err := s.exportPullRequestsRepo(sender, repo, pullRequests)
+		err := s.exportPullRequestsRepo(logger, sender, repo, pullRequests)
 		if err != nil {
 			return err
 		}
@@ -26,7 +28,7 @@ func (s *Integration) exportPullRequests(
 	return sender.Done()
 }
 
-func (s *Integration) exportPullRequestsRepo(sender *objsender.IncrementalDateBased, repo api.Repo, pullRequests chan []api.PullRequest) error {
+func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, sender *objsender.IncrementalDateBased, repo api.Repo, pullRequests chan []api.PullRequest) error {
 	return api.PaginateNewerThan(sender.LastProcessed, func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
 		pi, res, err := api.PullRequestsPage(s.qc, repo.ID, query, stopOnUpdatedAt)
 		if err != nil {
