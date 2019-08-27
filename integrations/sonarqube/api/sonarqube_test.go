@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var url = "https://sonar.dev.pinpt.io/api"
-var authToken = "d00f14d26595dbfd7366258025ffb2ac0c47cffd"
+var url = ""
+var authToken = ""
 
 var metricsArray = []string{
 	"complexity", "code_smells", "new_code_smells", "sqale_rating", "reliability_rating", "security_rating", "coverage", "new_coverage", "test_success_density", "new_technical_debt",
