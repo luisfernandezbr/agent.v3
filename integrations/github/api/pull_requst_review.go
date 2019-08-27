@@ -96,7 +96,19 @@ func PullRequestReviewsPage(
 		//item.UpdatedAt = data.UpdatedAt.Unix()
 		item.RepoID = qc.RepoID(data.Repository.ID)
 		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)
-		item.State = data.State
+
+		switch data.State {
+		case "PENDING":
+			item.State = sourcecode.PullRequestReviewStatePending
+		case "COMMENTED":
+			item.State = sourcecode.PullRequestReviewStateCommented
+		case "APPROVED":
+			item.State = sourcecode.PullRequestReviewStateApproved
+		case "CHANGES_REQUESTED":
+			item.State = sourcecode.PullRequestReviewStateChangesRequested
+		case "DISMISSED":
+			item.State = sourcecode.PullRequestReviewStateDismissed
+		}
 
 		date.ConvertToModel(data.CreatedAt, &item.CreatedDate)
 

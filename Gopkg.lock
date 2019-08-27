@@ -427,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:a08a2e96c6df0d4c6d98e63d01268131cf160f9d827d9d2e6e2709e50fafa630"
+  digest = "1:ae8e115c1849aad93576be5a6ea5fed8437bcb25833bdf2a817dc06e82a20866"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,8 +439,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "d18e86f32decb553404c433e871017cdd101f3f4"
-  version = "0.0.415"
+  revision = "f60dbabd6466bc072acdc320909ee3585c5c5f51"
+  version = "0.0.422"
 
 [[projects]]
   digest = "1:3db456275fbaedf3c401bd81d914b98b6ac0dbff38cf9280fb3a60dca54d38cf"
@@ -620,7 +620,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f4d906bc978ce99348e6ceca8cdf8875b25e8d21fd92a457350c725f73a8ad5a"
+  digest = "1:59397a5febd65e538eaf7283131a23df1a56d01ec96cf38e54f95606bf11750a"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -634,11 +634,11 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "74dc4d7220e7acc4e100824340f3e66577424772"
+  revision = "ba9fcec4b297b415637633c5a6e8fa592e4a16c3"
 
 [[projects]]
   branch = "master"
-  digest = "1:2caf4f4981fe7c13eb14c3d131dfdcbf5ffd161f359cea474659a46ad8a148db"
+  digest = "1:cfb8a631f909a928a1ef64f1ac962ae683f2fe17c914bcaa8c47ec3da9fe4cc9"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -650,7 +650,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "fb81701db80f1745f51259b1f286de3fe2ec80c8"
+  revision = "c7b8b68b14567162c6602a7c5659ee0f26417c18"
 
 [[projects]]
   digest = "1:3952dba92e6a837cf34e6a073160d31029412bf863e37274cb779f319ddbe0b4"
