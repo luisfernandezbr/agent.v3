@@ -2,15 +2,22 @@ package main
 
 import (
 	"context"
-	"os"
 
+	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/integrations/sonarqube/api"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/rpcdef"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-plugin"
 )
+
+var defaultMetrics = []string{
+	"complexity", "code_smells",
+	"new_code_smells", "sqale_rating",
+	"reliability_rating", "security_rating",
+	"coverage", "new_coverage",
+	"test_success_density", "new_technical_debt",
+}
 
 type Integration struct {
 	logger     hclog.Logger
@@ -39,7 +46,7 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 	s.initConfig(ctx, config)
 	valid, err := s.api.Validate()
 	if !valid {
-		res.Errors = append(res.Errors, "example validation error")
+		res.Errors = append(res.Errors, "Sonarqube validation failed")
 		return res, nil
 	}
 	if err != nil {
@@ -51,50 +58,35 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 }
 
 func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.OnboardExportType, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
-	s.initConfig(ctx, config)
-	// TODO:
-	return res, nil
+	res.Error = rpcdef.ErrOnboardExportNotSupported
+	return
 }
 
 func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig) error {
-	var m map[string]interface{}
-	var err error
-	if m, err = structmarshal.StructToMap(config.Integration); err != nil {
-		return err
-	}
 	var conf struct {
 		URL       string   `json:"url"`
 		AuthToken string   `json:"api_token"`
 		Metrics   []string `json:"metrics"`
 	}
-	if err = structmarshal.MapToStruct(m, &conf); err != nil {
+	if err := structmarshal.MapToStruct(config.Integration, &conf); err != nil {
 		return err
+	}
+	if len(conf.Metrics) == 0 {
+		conf.Metrics = defaultMetrics
 	}
 	s.api = api.NewSonarqubeAPI(ctx, conf.URL, conf.AuthToken, conf.Metrics)
 	s.customerID = config.Pinpoint.CustomerID
 	return nil
 }
 
+func NewIntegration(logger hclog.Logger) *Integration {
+	s := &Integration{}
+	s.logger = logger
+	return s
+}
+
 func main() {
-	logger := hclog.New(&hclog.LoggerOptions{
-		Level:      hclog.Debug,
-		Output:     os.Stderr,
-		JSONFormat: true,
-	})
-
-	integration := &Integration{
-		logger: logger,
-	}
-
-	var pluginMap = map[string]plugin.Plugin{
-		"integration": &rpcdef.IntegrationPlugin{Impl: integration},
-	}
-
-	logger.Info("loading Sonarqube integration")
-
-	plugin.Serve(&plugin.ServeConfig{
-		HandshakeConfig: rpcdef.Handshake,
-		Plugins:         pluginMap,
-		GRPCServer:      plugin.DefaultGRPCServer,
+	ibase.MainFunc(func(logger hclog.Logger) rpcdef.Integration {
+		return NewIntegration(logger)
 	})
 }

@@ -53,15 +53,16 @@ func (s *Integration) exportMetrics(projects []*api.Project) error {
 	}
 	metrics, err := s.api.FetchAllMetrics(projects, sender.LastProcessed)
 	for _, metric := range metrics {
-		var metr codequality.Metric
-		metr.CustomerID = s.customerID
-		metr.Name = metric.Metric
-		metr.ProjectID = metric.ProjectID
-		metr.RefID = metric.ID
-		metr.RefType = "sonarqube"
-		metr.Value = metric.Value
+		metr := &codequality.Metric{
+			CustomerID: s.customerID,
+			Name:       metric.Metric,
+			ProjectID:  metric.ProjectID,
+			RefID:      metric.ID,
+			RefType:    "sonarqube",
+			Value:      metric.Value,
+		}
 		date.ConvertToModel(metric.Date, &metr.CreatedDate)
-		sender.SendMap(metr.ToMap())
+		sender.Send(metr)
 	}
 	return sender.Done()
 }
