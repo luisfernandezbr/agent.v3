@@ -52,6 +52,9 @@ func (s *Integration) exportMetrics(projects []*api.Project) error {
 		return err
 	}
 	metrics, err := s.api.FetchAllMetrics(projects, sender.LastProcessed)
+	if err != nil {
+		return err
+	}
 	for _, metric := range metrics {
 		metr := &codequality.Metric{
 			CustomerID: s.customerID,
