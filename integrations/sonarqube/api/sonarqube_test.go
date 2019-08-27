@@ -27,7 +27,7 @@ func init() {
 	}
 }
 func skipTests(t *testing.T) bool {
-	if os.Getenv("PP_TEST_SONARQUBE_URL") == "" {
+	if os.Getenv("PP_TEST_SONARQUBE") == "" {
 		t.Skip("skipping sonarqube tests")
 		return true
 	}
