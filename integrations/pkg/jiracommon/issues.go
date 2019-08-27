@@ -42,23 +42,9 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 		item.Goal = data.Goal
 		item.Name = data.Name
 
-		startDate, err := jiracommonapi.ParseTime(data.StartDate)
-		if err != nil {
-			return fmt.Errorf("could not parse startdate for sprint: %v err: %v", data.Name, err)
-		}
-		date.ConvertToModel(startDate, &item.StartedDate)
-
-		endDate, err := jiracommonapi.ParseTime(data.EndDate)
-		if err != nil {
-			return fmt.Errorf("could not parse enddata for sprint: %v err: %v", data.Name, err)
-		}
-		date.ConvertToModel(endDate, &item.EndedDate)
-
-		completeDate, err := jiracommonapi.ParseTime(data.CompleteDate)
-		if err != nil {
-			return fmt.Errorf("could not parse completed for sprint: %v err: %v", data.Name, err)
-		}
-		date.ConvertToModel(completeDate, &item.CompletedDate)
+		date.ConvertToModel(data.StartDate, &item.StartedDate)
+		date.ConvertToModel(data.EndDate, &item.EndedDate)
+		date.ConvertToModel(data.CompleteDate, &item.CompletedDate)
 
 		switch data.State {
 		case "CLOSED":

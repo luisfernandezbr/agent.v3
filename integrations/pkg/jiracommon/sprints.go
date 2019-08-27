@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // NOTE: this is a bit of hack since the current 3LO OAuth API from JIRA only supports JIRA cloud API
@@ -73,9 +74,9 @@ type Sprint struct {
 	Name          string
 	Goal          string
 	State         string
-	StartDate     string
-	EndDate       string
-	CompleteDate  string
+	StartDate     time.Time
+	EndDate       time.Time
+	CompleteDate  time.Time
 	OriginBoardID int
 }
 
@@ -115,9 +116,18 @@ func parseSprint(data string) (res Sprint, _ error) {
 	res.Name = m["name"]
 	res.Goal = m["goal"]
 	res.State = m["state"]
-	res.StartDate = m["startDate"]
-	res.EndDate = m["endDate"]
-	res.CompleteDate = m["completeDate"]
+	res.StartDate, err = parseSprintTime(m["startDate"])
+	if err != nil {
+		return res, fmt.Errorf("can't parse startDate %v", err)
+	}
+	res.EndDate, err = parseSprintTime(m["endDate"])
+	if err != nil {
+		return res, fmt.Errorf("can't parse endDate %v", err)
+	}
+	res.CompleteDate, err = parseSprintTime(m["completeDate"])
+	if err != nil {
+		return res, fmt.Errorf("can't parse completeDate %v", err)
+	}
 	if m["rapidViewId"] != "" {
 		res.OriginBoardID, err = strconv.Atoi(m["rapidViewId"])
 		if err != nil {
@@ -164,4 +174,11 @@ func init() {
 	for _, f := range []string{"id", "rapidViewId", "state", "name", "startDate", "endDate", "completeDate", "sequence", "goal"} {
 		sprintREs[f] = regexp.MustCompile(f + "=([^,]*)")
 	}
+}
+
+func parseSprintTime(ts string) (time.Time, error) {
+	if ts == "" {
+		return time.Time{}, nil
+	}
+	return time.Parse(time.RFC3339, ts)
 }

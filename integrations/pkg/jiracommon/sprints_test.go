@@ -2,11 +2,24 @@ package jiracommon
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
+func testParsePrintTime(t *testing.T, ts string) time.Time {
+	t.Helper()
+	got, err := parseSprintTime(ts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got
+
+}
+
 func TestParseSprints(t *testing.T) {
+
+	parseTime := testParsePrintTime
 
 	cases := []struct {
 		Label string
@@ -28,9 +41,8 @@ func TestParseSprints(t *testing.T) {
 					Name:          "my Sprint 1",
 					Goal:          "",
 					State:         "ACTIVE",
-					StartDate:     "2019-07-17T14:57:50.444Z",
-					EndDate:       "2019-07-31T14:57:00.000Z",
-					CompleteDate:  "",
+					StartDate:     parseTime(t, "2019-07-17T14:57:50.444Z"),
+					EndDate:       parseTime(t, "2019-07-31T14:57:00.000Z"),
 				},
 			},
 		},
@@ -44,9 +56,8 @@ func TestParseSprints(t *testing.T) {
 					Name:          "Sample Sprint 2",
 					Goal:          "",
 					State:         "ACTIVE",
-					StartDate:     "2019-07-15T07:57:56.277Z",
-					EndDate:       "2019-07-29T08:17:56.277Z",
-					CompleteDate:  "",
+					StartDate:     parseTime(t, "2019-07-15T07:57:56.277Z"),
+					EndDate:       parseTime(t, "2019-07-29T08:17:56.277Z"),
 				},
 				{
 					ID:            2,
@@ -54,9 +65,9 @@ func TestParseSprints(t *testing.T) {
 					Name:          "Sample Sprint 1",
 					Goal:          "",
 					State:         "CLOSED",
-					StartDate:     "2019-07-01T06:47:58.074Z",
-					EndDate:       "2019-07-15T06:47:58.075Z",
-					CompleteDate:  "2019-07-15T05:27:58.074Z",
+					StartDate:     parseTime(t, "2019-07-01T06:47:58.074Z"),
+					EndDate:       parseTime(t, "2019-07-15T06:47:58.075Z"),
+					CompleteDate:  parseTime(t, "2019-07-15T05:27:58.074Z"),
 				},
 			},
 		},
@@ -75,6 +86,8 @@ func TestParseSprints(t *testing.T) {
 
 func TestParseSprintOne(t *testing.T) {
 
+	parseTime := testParsePrintTime
+
 	cases := []struct {
 		Label string
 		Data  string
@@ -89,9 +102,8 @@ func TestParseSprintOne(t *testing.T) {
 				Name:          "my Sprint 1",
 				Goal:          "",
 				State:         "ACTIVE",
-				StartDate:     "2019-07-17T14:57:50.444Z",
-				EndDate:       "2019-07-31T14:57:00.000Z",
-				CompleteDate:  "",
+				StartDate:     parseTime(t, "2019-07-17T14:57:50.444Z"),
+				EndDate:       parseTime(t, "2019-07-31T14:57:00.000Z"),
 			},
 		},
 		{
@@ -103,9 +115,9 @@ func TestParseSprintOne(t *testing.T) {
 				Name:          "FE Sprint 6",
 				Goal:          "Build out secondary views and continue performance and UI improvements.",
 				State:         "CLOSED",
-				StartDate:     "2017-10-30T16:00:59.035Z",
-				EndDate:       "2017-11-13T17:00:00.000Z",
-				CompleteDate:  "2017-11-13T21:36:59.267Z",
+				StartDate:     parseTime(t, "2017-10-30T16:00:59.035Z"),
+				EndDate:       parseTime(t, "2017-11-13T17:00:00.000Z"),
+				CompleteDate:  parseTime(t, "2017-11-13T21:36:59.267Z"),
 			},
 		},
 		{
@@ -123,9 +135,8 @@ func TestParseSprintOne(t *testing.T) {
 				State: "CLOSED",
 				// BUG: we wanted the below, but because of startDate in the name it wasn't parsed properly
 				//StartDate:    "2019-07-15T07:57:56.277Z",
-				StartDate:    "",
-				EndDate:      "2019-07-29T08:17:56.277Z",
-				CompleteDate: "2019-08-26T17:10:43.425Z",
+				EndDate:      parseTime(t, "2019-07-29T08:17:56.277Z"),
+				CompleteDate: parseTime(t, "2019-08-26T17:10:43.425Z"),
 			},
 		},
 	}
@@ -174,5 +185,44 @@ func TestParseSprintsErrors(t *testing.T) {
 				t.Log(err)
 			}
 		})
+	}
+}
+
+func TestParseSprintTime(t *testing.T) {
+	cases := []struct {
+		In   string
+		Want string
+	}{
+		{
+			"2019-08-26T17:10:43.425Z",
+			"2019-08-26T17:10:43.425Z",
+		},
+		{
+			"2019-05-06T10:14:52.527-04:00",
+			"2019-05-06T10:14:52.527-04:00",
+		},
+	}
+	for _, c := range cases {
+		got, err := parseSprintTime(c.In)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want, err := time.Parse(time.RFC3339, c.Want)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !got.Equal(want) {
+			t.Errorf("wanted time parsed as %v, got %v", want, got)
+		}
+	}
+}
+
+func TestParseSprintTimeEmpty(t *testing.T) {
+	res, err := parseSprintTime("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.IsZero() {
+		t.Fatal("wanted zero time")
 	}
 }

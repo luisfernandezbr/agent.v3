@@ -9,6 +9,9 @@ import (
 
 // ConvertToModel will fill dateModel based on passed time
 func ConvertToModel(ts time.Time, dateModel interface{}) {
+	if ts.IsZero() {
+		return
+	}
 
 	date, err := datetime.NewDateWithTime(ts)
 	if err != nil {
