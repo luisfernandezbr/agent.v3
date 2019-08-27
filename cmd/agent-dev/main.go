@@ -107,7 +107,7 @@ var cmdExportRepo = &cobra.Command{
 		}
 
 		exp := exportrepo.New(opts, locs)
-		err = exp.Run(ctx)
+		_, err = exp.Run(ctx)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
