@@ -56,10 +56,13 @@ func (a *SonarqubeAPI) FetchMetrics(project *codequality.Project, fromDate time.
 }
 
 // FetchAllMetrics _
-func (a *SonarqubeAPI) FetchAllMetrics(fromDate time.Time) ([]*codequality.Metric, error) {
-	projects, err := a.FetchProjects(time.Time{})
-	if err != nil {
-		return nil, err
+func (a *SonarqubeAPI) FetchAllMetrics(projects []*codequality.Project, fromDate time.Time) ([]*codequality.Metric, error) {
+	if projects == nil {
+		var err error
+		projects, err = a.FetchProjects()
+		if err != nil {
+			return nil, err
+		}
 	}
 	var res []*codequality.Metric
 	for _, proj := range projects {

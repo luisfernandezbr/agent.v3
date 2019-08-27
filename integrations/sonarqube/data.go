@@ -9,43 +9,39 @@ func (s *Integration) validate() (bool, error) {
 	return s.api.Validate()
 }
 
-func (s *Integration) exportAll() error {
-	var err error
-	if err = s.exportProjects(); err != nil {
-		return err
+func (s *Integration) exportAll() (err error) {
+	var projects []*codequality.Project
+	if projects, err = s.exportProjects(); err != nil {
+		return
 	}
-	if err = s.exportMetrics(); err != nil {
-		return err
+	if err = s.exportMetrics(projects); err != nil {
+		return
 	}
-	return nil
+	return
 }
 
-func (s *Integration) exportProjects() error {
-	sender, err := objsender.NewIncrementalDateBased(s.agent, codequality.ProjectModelName.String())
+func (s *Integration) exportProjects() (projects []*codequality.Project, err error) {
+	sender := objsender.NewNotIncremental(s.agent, codequality.ProjectModelName.String())
+	projects, err = s.api.FetchProjects()
 	if err != nil {
-		return err
-	}
-	projects, err := s.api.FetchProjects(sender.LastProcessed)
-	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, project := range projects {
 		project.CustomerID = s.customerID
 		if err := sender.Send(project); err != nil {
-			return err
+			return nil, err
 		}
 	}
-
-	return sender.Done()
+	return projects, sender.Done()
 }
 
-func (s *Integration) exportMetrics() error {
+func (s *Integration) exportMetrics(projects []*codequality.Project) error {
 	sender, err := objsender.NewIncrementalDateBased(s.agent, codequality.MetricModelName.String())
 	if err != nil {
 		return err
 	}
-	metrics, err := s.api.FetchAllMetrics(sender.LastProcessed)
+	metrics, err := s.api.FetchAllMetrics(projects, sender.LastProcessed)
 	if err != nil {
 		return err
 	}

@@ -18,10 +18,10 @@ type projectsResponse struct {
 }
 
 // FetchProjects ...
-func (a *SonarqubeAPI) FetchProjects(fromDate time.Time) ([]*codequality.Project, error) {
+func (a *SonarqubeAPI) FetchProjects() ([]*codequality.Project, error) {
 
 	val := projectsResponse{}
-	err := a.doRequest("GET", "/components/search?p=1&ps=500&qualifiers=TRK", fromDate, &val)
+	err := a.doRequest("GET", "/components/search?p=1&ps=500&qualifiers=TRK", time.Time{}, &val)
 	if err != nil {
 		return nil, err
 	}

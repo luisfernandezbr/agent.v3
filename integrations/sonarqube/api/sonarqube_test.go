@@ -38,7 +38,7 @@ func TestFetchProjects(t *testing.T) {
 		return
 	}
 	sonarapi := NewSonarqubeAPI(context.Background(), hclog.NewNullLogger(), url, authToken, metricsArray)
-	projects, err := sonarapi.FetchProjects(time.Time{})
+	projects, err := sonarapi.FetchProjects()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, projects)
 }
@@ -70,7 +70,7 @@ func TestFetchAllMetrics(t *testing.T) {
 		return
 	}
 	sonarapi := NewSonarqubeAPI(context.Background(), hclog.NewNullLogger(), url, authToken, metricsArray)
-	metrics, err := sonarapi.FetchAllMetrics(time.Time{})
+	metrics, err := sonarapi.FetchAllMetrics(nil, time.Time{})
 	assert.NoError(t, err)
 	assert.NotEmpty(t, metrics)
 }
