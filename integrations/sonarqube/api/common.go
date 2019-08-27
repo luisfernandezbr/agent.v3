@@ -112,7 +112,6 @@ func (a *SonarqubeAPI) doRequest(method string, endPoint string, fromDate time.T
 	}
 	b = bytes.TrimSuffix(b, []byte(","))
 	if err := json.Unmarshal(b, &obj); err != nil {
-		a.logger.Info("-=-=-=-=-=-=-=-=-=-", "error", err, "json", string(b))
 		return err
 	}
 	return nil
