@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 
@@ -110,8 +111,17 @@ func (a *SonarqubeAPI) doRequest(method string, endPoint string, fromDate time.T
 	if len(b) == 0 {
 		return nil
 	}
+	// TODO: Fix this in github.com/pinpt/httpclient
+	// these next few lines are workaround for a bug in httpclient
 	b = bytes.TrimSuffix(b, []byte(","))
+	if reflect.Zero(reflect.ValueOf(obj).Elem().Type()).Kind() == reflect.Slice {
+		if !bytes.HasPrefix(b, []byte("[")) {
+			b = append(b, ']')
+			b = append([]byte("["), b...)
+		}
+	}
 	if err := json.Unmarshal(b, &obj); err != nil {
+		a.logger.Error("error parsing response", "error", string(b))
 		return err
 	}
 	return nil
