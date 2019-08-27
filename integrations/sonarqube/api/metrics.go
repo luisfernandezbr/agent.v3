@@ -4,76 +4,70 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/go-common/hash"
+	"github.com/pinpt/integration-sdk/codequality"
 )
 
+type metricsResponse struct {
+	Measures []*struct {
+		Metric  string `json:"metric"`
+		History []*struct {
+			Date  string `json:"date"`
+			Value string `json:"value"`
+		} `json:"history"`
+	} `json:"measures"`
+}
+
 // FetchMetrics _
-func (a *SonarqubeAPI) FetchMetrics(componentID string, fromDate time.Time) ([]*Measure, error) {
-
-	type metricsResponse struct {
-		Measures []*Measure `json:"measures"`
-	}
-
+func (a *SonarqubeAPI) FetchMetrics(project *codequality.Project, fromDate time.Time) ([]*codequality.Metric, error) {
+	project.ToMap(false) // need to call setDefaults so that ID is set
 	metricKeys := strings.Join(a.metrics, ",")
-	ur := "/measures/search_history?p=1&ps=500&component=" + componentID + "&metrics=" + metricKeys
+	ur := "/measures/search_history?p=1&ps=500&component=" + project.Identifier + "&metrics=" + metricKeys
 	val := metricsResponse{}
 	err := a.doRequest("GET", ur, fromDate, &val)
 	if err != nil {
 		return nil, err
 	}
 
-	// Remove metrics that have empty value
-	for _, m := range val.Measures {
-		r := []*RawMetric{}
-		for i := range m.History {
-			h := m.History[i]
-			if h.Value != "" {
-				r = append(r, h)
-			}
-		}
-		m.History = r
-	}
-
-	var measures []*Measure
-	for _, w := range val.Measures {
-		measures = append(measures, w)
-	}
-	return measures, nil
-}
-
-// FetchAllMetrics _
-func (a *SonarqubeAPI) FetchAllMetrics(projects []*Project, fromDate time.Time) ([]*Metric, error) {
-	if projects == nil {
-		pro, err := a.FetchProjects(time.Time{})
-		if err != nil {
-			return nil, err
-		}
-		projects = pro
-	}
-	all := []*Metric{}
-	for _, proj := range projects {
-		mt, err := a.FetchMetrics(proj.Key, fromDate)
-		if err != nil {
-			return nil, err
-		}
-		for _, m := range mt {
-			for _, h := range m.History {
-
-				date, err := time.Parse("2006-01-02T15:04:05-0700", h.Date)
+	var res []*codequality.Metric
+	for _, measure := range val.Measures {
+		for _, metric := range measure.History {
+			if metric.Value != "" {
+				created, err := time.Parse("2006-01-02T15:04:05-0700", metric.Date)
 				if err != nil {
 					return nil, err
 				}
-
-				all = append(all, &Metric{
-					ProjectID:  proj.ID,
-					ProjectKey: proj.Key,
-					ID:         hash.Values(proj.ID, h.Date, m.Metric),
-					Date:       date,
-					Metric:     m.Metric,
-					Value:      h.Value,
-				})
+				metr := &codequality.Metric{
+					Name:      measure.Metric,
+					Value:     metric.Value,
+					RefID:     hash.Values(project.ID, metric.Date, measure.Metric),
+					RefType:   "sonarqube",
+					ProjectID: project.ID,
+				}
+				date.ConvertToModel(created, &metr.CreatedDate)
+				res = append(res, metr)
 			}
 		}
 	}
-	return all, nil
+	return res, nil
+}
+
+// FetchAllMetrics _
+func (a *SonarqubeAPI) FetchAllMetrics(fromDate time.Time) ([]*codequality.Metric, error) {
+	projects, err := a.FetchProjects(time.Time{})
+	if err != nil {
+		return nil, err
+	}
+	var res []*codequality.Metric
+	for _, proj := range projects {
+		metrs, err := a.FetchMetrics(proj, fromDate)
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range metrs {
+			res = append(res, m)
+		}
+	}
+	return res, nil
 }

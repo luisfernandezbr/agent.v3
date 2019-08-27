@@ -45,14 +45,14 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
 	s.initConfig(ctx, config)
 	valid, err := s.api.Validate()
-	if !valid {
-		res.Errors = append(res.Errors, "Sonarqube validation failed")
+	if err != nil {
+		res.Errors = append(res.Errors, "Sonarqube validation failed. Error: "+err.Error())
 		return res, nil
 	}
-	if err != nil {
-		res.Errors = append(res.Errors, err.Error())
+	// we might have an invalid validation without an error
+	if !valid {
+		res.Errors = append(res.Errors, "Sonarqube validation failed, probably wrong api token or url")
 		return res, nil
-
 	}
 	return res, nil
 }
@@ -74,7 +74,7 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 	if len(conf.Metrics) == 0 {
 		conf.Metrics = defaultMetrics
 	}
-	s.api = api.NewSonarqubeAPI(ctx, conf.URL, conf.AuthToken, conf.Metrics)
+	s.api = api.NewSonarqubeAPI(ctx, s.logger, conf.URL, conf.AuthToken, conf.Metrics)
 	s.customerID = config.Pinpoint.CustomerID
 	return nil
 }

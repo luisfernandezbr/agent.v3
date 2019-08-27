@@ -1,50 +1,21 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/httpdefaults"
 	pstring "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/httpclient"
 )
-
-// Project is the project detail
-type Project struct {
-	ID           string `json:"id"`
-	Key          string `json:"key"`
-	Name         string `json:"name"`
-	Organization string `json:"organization"`
-	Qualifier    string `json:"qualifier"`
-	Project      string `json:"project"`
-}
-
-// RawMetric is the Metric detail
-type RawMetric struct {
-	Date  string `json:"date"`
-	Value string `json:"value"`
-}
-
-// Measure is the measure detail
-type Measure struct {
-	Metric  string       `json:"metric"`
-	History []*RawMetric `json:"history"`
-}
-
-// Metric full metric object composed with project data
-type Metric struct {
-	ProjectID  string    `json:"projectId"`
-	ProjectKey string    `json:"projectKey"`
-	ID         string    `json:"id"`
-	Date       time.Time `json:"date"`
-	Metric     string    `json:"metric"`
-	Value      string    `json:"value"`
-}
 
 // SonarqubeAPI ...
 type SonarqubeAPI struct {
@@ -52,9 +23,10 @@ type SonarqubeAPI struct {
 	authToken string
 	metrics   []string
 	client    *httpclient.HTTPClient
+	logger    hclog.Logger
 }
 
-func NewSonarqubeAPI(ctx context.Context, url string, authToken string, metrics []string) *SonarqubeAPI {
+func NewSonarqubeAPI(ctx context.Context, logger hclog.Logger, url string, authToken string, metrics []string) *SonarqubeAPI {
 
 	transport := httpdefaults.DefaultTransport()
 	if !strings.Contains(url, "sonarcloud.io") {
@@ -76,6 +48,7 @@ func NewSonarqubeAPI(ctx context.Context, url string, authToken string, metrics 
 		authToken: authToken,
 		metrics:   metrics,
 		client:    httpclient.NewHTTPClient(ctx, hcConfig, client),
+		logger:    logger,
 	}
 	return a
 }
@@ -131,8 +104,17 @@ func (a *SonarqubeAPI) doRequest(method string, endPoint string, fromDate time.T
 	if err != nil {
 		return err
 	}
+	b, _ := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
-	if err := json.NewDecoder(res.Body).Decode(&obj); err != nil {
+	// weird bug where the end of the json might have a comma
+	if bytes.HasSuffix(b, []byte(",")) {
+		b = b[:len(b)-1]
+	}
+	if len(b) == 0 {
+		return nil
+	}
+	if err := json.Unmarshal(b, &obj); err != nil {
+		a.logger.Info("-=-=-=-=-=-=-=-=-=-", "error", err, "json", string(b))
 		return err
 	}
 	return nil

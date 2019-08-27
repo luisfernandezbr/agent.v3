@@ -1,8 +1,6 @@
 package main
 
 import (
-	"github.com/pinpt/agent.next/integrations/sonarqube/api"
-	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/integration-sdk/codequality"
 )
@@ -12,60 +10,50 @@ func (s *Integration) validate() (bool, error) {
 }
 
 func (s *Integration) exportAll() error {
-	var projects []*api.Project
 	var err error
-	if projects, err = s.exportProjects(); err != nil {
+	if err = s.exportProjects(); err != nil {
 		return err
 	}
-	if err = s.exportMetrics(projects); err != nil {
+	if err = s.exportMetrics(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Integration) exportProjects() ([]*api.Project, error) {
+func (s *Integration) exportProjects() error {
 	sender, err := objsender.NewIncrementalDateBased(s.agent, codequality.ProjectModelName.String())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	projects, err := s.api.FetchProjects(sender.LastProcessed)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, project := range projects {
-		var proj codequality.Project
-		proj.CustomerID = s.customerID
-		proj.Identifier = project.Key
-		proj.Name = project.Name
-		proj.RefID = project.ID
-		proj.RefType = "sonarqube"
-		sender.SendMap(proj.ToMap())
+		project.CustomerID = s.customerID
+		if err := sender.Send(project); err != nil {
+			return err
+		}
 	}
 
-	return projects, sender.Done()
+	return sender.Done()
 }
 
-func (s *Integration) exportMetrics(projects []*api.Project) error {
+func (s *Integration) exportMetrics() error {
 	sender, err := objsender.NewIncrementalDateBased(s.agent, codequality.MetricModelName.String())
 	if err != nil {
 		return err
 	}
-	metrics, err := s.api.FetchAllMetrics(projects, sender.LastProcessed)
+	metrics, err := s.api.FetchAllMetrics(sender.LastProcessed)
 	if err != nil {
 		return err
 	}
 	for _, metric := range metrics {
-		metr := &codequality.Metric{
-			CustomerID: s.customerID,
-			Name:       metric.Metric,
-			ProjectID:  metric.ProjectID,
-			RefID:      metric.ID,
-			RefType:    "sonarqube",
-			Value:      metric.Value,
+		metric.CustomerID = s.customerID
+		if err := sender.Send(metric); err != nil {
+			return err
 		}
-		date.ConvertToModel(metric.Date, &metr.CreatedDate)
-		sender.Send(metr)
 	}
 	return sender.Done()
 }
