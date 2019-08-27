@@ -107,12 +107,10 @@ func (a *SonarqubeAPI) doRequest(method string, endPoint string, fromDate time.T
 	b, _ := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
 	// weird bug where the end of the json might have a comma
-	if bytes.HasSuffix(b, []byte(",")) {
-		b = b[:len(b)-1]
-	}
 	if len(b) == 0 {
 		return nil
 	}
+	bytes.TrimSuffix(b, []byte(","))
 	if err := json.Unmarshal(b, &obj); err != nil {
 		a.logger.Info("-=-=-=-=-=-=-=-=-=-", "error", err, "json", string(b))
 		return err
