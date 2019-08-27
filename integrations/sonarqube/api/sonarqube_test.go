@@ -18,6 +18,14 @@ var metricsArray = []string{
 	"complexity", "code_smells", "new_code_smells", "sqale_rating", "reliability_rating", "security_rating", "coverage", "new_coverage", "test_success_density", "new_technical_debt",
 }
 
+func init() {
+	if url == "" {
+		url = os.Getenv("PP_TEST_SONARQUBE_URL")
+	}
+	if authToken == "" {
+		authToken = os.Getenv("PP_TEST_SONARQUBE_APIKEY")
+	}
+}
 func skipTests(t *testing.T) bool {
 	if os.Getenv("PP_TEST_SONARQUBE_URL") == "" {
 		t.Skip("skipping sonarqube tests")
