@@ -64,7 +64,7 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	}
 	qc.BranchID = func(repoRefID string, branchName string) string {
 		repoID := qc.RepoID(repoRefID)
-		return hash.Values(branchName, repoID)
+		return hash.Values("github", repoID, s.customerID, branchName)
 	}
 	qc.IsEnterprise = func() bool {
 		return s.config.Enterprise

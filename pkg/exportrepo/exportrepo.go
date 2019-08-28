@@ -52,6 +52,9 @@ type Export struct {
 	lastProcessedKey       []string
 
 	rip *ripsrc.Ripsrc
+
+	// TODO: pass from options
+	refType string
 }
 
 func New(opts Opts, locs fsconf.Locs) *Export {
@@ -65,6 +68,7 @@ func New(opts Opts, locs fsconf.Locs) *Export {
 	s.opts = opts
 	s.logger = opts.Logger.Named("exportrepo")
 	s.locs = locs
+	s.refType = "github"
 	return s
 }
 
@@ -189,7 +193,7 @@ func (s *Export) branches(ctx context.Context) error {
 		for data := range res {
 			obj := sourcecode.Branch{}
 			obj.RefID = data.Name
-			obj.RefType = "git"
+			obj.RefType = s.refType
 			obj.CustomerID = s.opts.CustomerID
 			obj.Name = data.Name
 			obj.Default = data.IsDefault
@@ -300,7 +304,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 	var commitComplexityCount int64
 
 	customerID := s.opts.CustomerID
-	refType := "github" //TODO: need to pass from options
+
 	repoID := s.opts.RepoID
 
 	for commit := range commits {
@@ -378,7 +382,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 
 			{
 				cf := sourcecode.CommitFiles{
-					CommitID:          hash.Values("Commit", customerID, refType, commit.SHA),
+					CommitID:          hash.Values("Commit", customerID, s.refType, commit.SHA),
 					RepoID:            repoID,
 					Status:            string(cf.Status),
 					Ordinal:           ordinal,
@@ -420,9 +424,9 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				License:        &lic,
 				Excluded:       blame.Skipped != "",
 				ExcludedReason: blame.Skipped,
-				CommitID:       hash.Values("Commit", customerID, refType, blame.Commit.SHA),
+				CommitID:       hash.Values("Commit", customerID, s.refType, blame.Commit.SHA),
 				RefID:          blame.Commit.SHA,
-				RefType:        refType,
+				RefType:        s.refType,
 				CustomerID:     customerID,
 				Hashcode:       "",
 				Size:           blame.Size,
@@ -449,7 +453,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 		if lastBlame != nil {
 			c := sourcecode.Commit{
 				RefID:      commit.SHA,
-				RefType:    refType,
+				RefType:    s.refType,
 				CustomerID: customerID,
 				Hashcode:   "",
 				RepoID:     repoID,
