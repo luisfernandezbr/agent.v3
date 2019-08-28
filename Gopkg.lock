@@ -427,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:6e6d2dfd63d46b7925385e4c24f592ee60e52ced6d5881d83b525747d05ff31b"
+  digest = "1:ff20f9730a4b715bd3b15e58aed35f8691afbda966bd81db8fdf6e5b63ef54f2"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,8 +439,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "cf3dbd9bd511224e3095fb1299bb817b66ddf717"
-  version = "0.0.424"
+  revision = "de335d3fdc5f7c15b3696f068b0d596f168316cb"
+  version = "0.0.426"
 
 [[projects]]
   branch = "master"
@@ -958,8 +958,10 @@
     "github.com/pinpt/go-common/log",
     "github.com/pinpt/go-common/os",
     "github.com/pinpt/go-common/strings",
+    "github.com/pinpt/httpclient",
     "github.com/pinpt/integration-sdk",
     "github.com/pinpt/integration-sdk/agent",
+    "github.com/pinpt/integration-sdk/codequality",
     "github.com/pinpt/integration-sdk/sourcecode",
     "github.com/pinpt/integration-sdk/work",
     "github.com/pinpt/ripsrc/ripsrc",
