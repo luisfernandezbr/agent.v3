@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,8 @@ type Sprints struct {
 	sprints map[int]Sprint
 	// map[sprintID]map[issueID]exists
 	sprintIssues map[int]map[string]bool
+
+	mu sync.Mutex
 }
 
 func NewSprints() *Sprints {
@@ -29,7 +32,7 @@ func NewSprints() *Sprints {
 	return s
 }
 
-// not safe for concurrent use
+// safe for concurrent use
 func (s *Sprints) processIssueSprint(issueID string, value string) error {
 	if value == "" {
 		return nil
@@ -38,6 +41,8 @@ func (s *Sprints) processIssueSprint(issueID string, value string) error {
 	if err != nil {
 		return err
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	for _, sp := range data {
 		if _, ok := s.sprints[sp.ID]; !ok {
 			s.sprints[sp.ID] = sp
