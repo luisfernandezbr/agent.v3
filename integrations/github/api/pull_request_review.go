@@ -13,7 +13,7 @@ func PullRequestReviewsPage(
 	queryParams string) (pi PageInfo, res []*sourcecode.PullRequestReview, _ error) {
 
 	if pullRequestRefID == "" {
-		panic("mussing pr id")
+		panic("missing pr id")
 	}
 
 	qc.Logger.Debug("pull_request_reviews request", "pr", pullRequestRefID, "q", queryParams)
