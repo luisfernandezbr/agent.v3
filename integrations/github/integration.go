@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -37,6 +38,8 @@ type Integration struct {
 	config Config
 
 	requestConcurrencyChan chan bool
+
+	refType string
 }
 
 func NewIntegration(logger hclog.Logger) *Integration {
@@ -51,22 +54,23 @@ const maxRequestConcurrency = 1
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
 	s.agent = agent
+	s.refType = "github"
 
 	qc := api.QueryContext{}
 	qc.Logger = s.logger
 	qc.Request = s.makeRequest
 	qc.RepoID = func(refID string) string {
-		return hash.Values("Repo", s.customerID, "github", refID)
+		return hash.Values("Repo", s.customerID, s.refType, refID)
 	}
 	qc.UserID = func(refID string) string {
-		return hash.Values("User", s.customerID, "github", refID)
+		return hash.Values("User", s.customerID, s.refType, refID)
 	}
 	qc.PullRequestID = func(refID string) string {
-		return hash.Values("PullRequest", s.customerID, "github", refID)
+		return hash.Values("PullRequest", s.customerID, s.refType, refID)
 	}
 	qc.BranchID = func(repoRefID string, branchName string) string {
 		repoID := qc.RepoID(repoRefID)
-		return hash.Values("github", repoID, s.customerID, branchName)
+		return hash.Values(s.refType, repoID, s.customerID, branchName)
 	}
 	qc.IsEnterprise = func() bool {
 		return s.config.Enterprise
@@ -405,7 +409,7 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 	}
 
 	for _, repo := range repos {
-		err := s.exportDataForRepo(logger, repo, pullRequestSender, pullRequestCommentsSender, pullRequestReviewsSender)
+		err := s.exportPullRequestsForRepo(logger, repo, pullRequestSender, pullRequestCommentsSender, pullRequestReviewsSender)
 		if err != nil {
 			return err
 		}
@@ -427,7 +431,7 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 	return nil
 }
 
-func (s *Integration) exportDataForRepo(logger hclog.Logger, repo api.Repo,
+func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Repo,
 	pullRequestSender *objsender.IncrementalDateBased,
 	commentsSender *objsender.NotIncremental,
 	reviewSender *objsender.NotIncremental) (rerr error) {
@@ -512,7 +516,10 @@ func (s *Integration) exportDataForRepo(logger hclog.Logger, repo api.Repo,
 					setErr(err)
 					return
 				}
-				pr.CommitIds = commits
+				for _, sha := range commits {
+					id := ids.SourcecodeCommitID(s.qc.CustomerID, s.refType, sha)
+					pr.CommitIds = append(pr.CommitIds, id)
+				}
 				err = pullRequestSender.Send(pr)
 				if err != nil {
 					setErr(err)

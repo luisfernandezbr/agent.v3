@@ -21,6 +21,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/gitclone"
+	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
 	"github.com/pinpt/agent.next/pkg/outsession"
 	"github.com/pinpt/ripsrc/ripsrc"
@@ -200,7 +201,10 @@ func (s *Export) branches(ctx context.Context) error {
 			obj.Merged = data.IsMerged
 			obj.MergeCommitID = data.MergeCommit
 			obj.BranchedFromCommitIds = data.BranchedFromCommits
-			obj.CommitIds = data.Commits
+			for _, sha := range data.Commits {
+				id := ids.SourcecodeCommitID(s.opts.CustomerID, s.refType, sha)
+				obj.CommitIds = append(obj.CommitIds, id)
+			}
 			obj.BehindDefaultCount = int64(data.BehindDefaultCount)
 			obj.AheadDefaultCount = int64(data.AheadDefaultCount)
 			obj.RepoID = s.opts.RepoID
@@ -382,7 +386,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 
 			{
 				cf := sourcecode.CommitFiles{
-					CommitID:          hash.Values("Commit", customerID, s.refType, commit.SHA),
+					CommitID:          ids.SourcecodeCommitID(customerID, s.refType, commit.SHA),
 					RepoID:            repoID,
 					Status:            string(cf.Status),
 					Ordinal:           ordinal,
@@ -424,7 +428,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				License:        &lic,
 				Excluded:       blame.Skipped != "",
 				ExcludedReason: blame.Skipped,
-				CommitID:       hash.Values("Commit", customerID, s.refType, blame.Commit.SHA),
+				CommitID:       ids.SourcecodeCommitID(customerID, s.refType, blame.Commit.SHA),
 				RefID:          blame.Commit.SHA,
 				RefType:        s.refType,
 				CustomerID:     customerID,
