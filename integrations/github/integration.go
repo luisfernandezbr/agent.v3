@@ -454,9 +454,10 @@ func (s *Integration) exportDataForRepo(logger hclog.Logger, repo api.Repo,
 
 	var errMu sync.Mutex
 	setErr := func(err error) {
+		logger.Error("failed repo export", "e", err)
 		errMu.Lock()
 		defer errMu.Unlock()
-		if rerr != nil {
+		if rerr == nil {
 			rerr = err
 		}
 		// drain all pull requests on error
@@ -509,17 +510,18 @@ func (s *Integration) exportDataForRepo(logger hclog.Logger, repo api.Repo,
 			for _, pr := range prs {
 				commits, err := s.exportPullRequestCommits(logger, pr.RefID)
 				if err != nil {
-					panic(err)
+					setErr(err)
+					return
 				}
-				logger.Info("commits received", "c", commits)
-				//pr.Commits = commits
+				pr.CommitIds = commits
 				err = pullRequestSender.Send(pr)
 				if err != nil {
 					setErr(err)
+					return
 				}
 			}
 		}
 	}()
 	wg.Wait()
-	return nil
+	return
 }
