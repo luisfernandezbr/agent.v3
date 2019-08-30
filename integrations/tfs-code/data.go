@@ -40,9 +40,7 @@ func (s *Integration) exportReposAndRipSrc() (refids []string, err error) {
 		if err := sender.Send(repo); err != nil {
 			return nil, err
 		}
-		// workaround for itexico server
-		ur := strings.Replace(repo.URL, "itxwin04:8080", "itxwin04.itexico.com:8080", 1)
-
+		ur := repo.URL
 		u, e := url.Parse(ur)
 		if e != nil {
 			return nil, e
