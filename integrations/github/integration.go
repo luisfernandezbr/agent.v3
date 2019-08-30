@@ -378,19 +378,18 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 		}
 	}
 
-	/*
-		// export a link between commit and github user
-		// This is much slower than the rest
-		// for pinpoint takes 3.5m for initial, 47s for incremental
-		{
-			// higher concurrency does not make any real difference
-			commitConcurrency := 1
+	// export a link between commit and github user
+	// This is much slower than the rest
+	// for pinpoint takes 3.5m for initial, 47s for incremental
+	{
+		// higher concurrency does not make any real difference
+		commitConcurrency := 1
 
-			err := s.exportCommitUsers(logger, repos, commitConcurrency)
-			if err != nil {
-				return err
-			}
-		}*/
+		err := s.exportCommitUsers(logger, repos, commitConcurrency)
+		if err != nil {
+			return err
+		}
+	}
 
 	pullRequestSender, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestModelName.String())
 	if err != nil {
