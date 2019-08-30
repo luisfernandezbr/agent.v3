@@ -198,7 +198,6 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 
 		resp.UUID = s.conf.DeviceID
 		date.ConvertToModel(time.Now(), &resp.EventDate)
-		//resp.RefID = hash.Values(s.conf.DeviceID, integration.Name)
 
 		rerr := func(err error) (datamodel.ModelSendEvent, error) {
 			// error for everything else

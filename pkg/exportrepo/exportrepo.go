@@ -202,7 +202,7 @@ func (s *Export) branches(ctx context.Context) error {
 			obj.MergeCommitID = data.MergeCommit
 			obj.BranchedFromCommitIds = data.BranchedFromCommits
 			for _, sha := range data.Commits {
-				id := ids.SourcecodeCommitID(s.opts.CustomerID, s.refType, sha)
+				id := ids.CodeCommit(s.opts.CustomerID, s.refType, sha)
 				obj.CommitIds = append(obj.CommitIds, id)
 			}
 			obj.BehindDefaultCount = int64(data.BehindDefaultCount)
@@ -386,7 +386,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 
 			{
 				cf := sourcecode.CommitFiles{
-					CommitID:          ids.SourcecodeCommitID(customerID, s.refType, commit.SHA),
+					CommitID:          ids.CodeCommit(customerID, s.refType, commit.SHA),
 					RepoID:            repoID,
 					Status:            string(cf.Status),
 					Ordinal:           ordinal,
@@ -428,7 +428,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				License:        &lic,
 				Excluded:       blame.Skipped != "",
 				ExcludedReason: blame.Skipped,
-				CommitID:       ids.SourcecodeCommitID(customerID, s.refType, blame.Commit.SHA),
+				CommitID:       ids.CodeCommit(customerID, s.refType, blame.Commit.SHA),
 				RefID:          blame.Commit.SHA,
 				RefType:        s.refType,
 				CustomerID:     customerID,

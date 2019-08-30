@@ -13,8 +13,6 @@ import (
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/integration-sdk/sourcecode"
 
-	"github.com/pinpt/go-common/hash"
-
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
@@ -60,17 +58,16 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	qc.Logger = s.logger
 	qc.Request = s.makeRequest
 	qc.RepoID = func(refID string) string {
-		return hash.Values("Repo", s.customerID, s.refType, refID)
+		return ids.CodeRepo(s.customerID, s.refType, refID)
 	}
 	qc.UserID = func(refID string) string {
-		return hash.Values("User", s.customerID, s.refType, refID)
+		return ids.CodeUser(s.customerID, s.refType, refID)
 	}
 	qc.PullRequestID = func(refID string) string {
-		return hash.Values("PullRequest", s.customerID, s.refType, refID)
+		return ids.CodePullRequest(s.customerID, s.refType, refID)
 	}
 	qc.BranchID = func(repoRefID string, branchName string) string {
-		repoID := qc.RepoID(repoRefID)
-		return hash.Values(s.refType, repoID, s.customerID, branchName)
+		return ids.CodeBranch(s.customerID, s.refType, repoRefID, branchName)
 	}
 	qc.IsEnterprise = func() bool {
 		return s.config.Enterprise
@@ -517,7 +514,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 					return
 				}
 				for _, sha := range commits {
-					id := ids.SourcecodeCommitID(s.qc.CustomerID, s.refType, sha)
+					id := ids.CodeCommit(s.qc.CustomerID, s.refType, sha)
 					pr.CommitIds = append(pr.CommitIds, id)
 				}
 				err = pullRequestSender.Send(pr)
