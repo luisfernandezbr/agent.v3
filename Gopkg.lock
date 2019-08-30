@@ -391,7 +391,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:76ad18e9693a4ccb7e7c34084db79e55426fae2d108c6d29a6507580cd549ffa"
+  digest = "1:9dc2151c75fe4dea84891629425797bbafb06954df9cb8b07b7fdd7f0cfedf94"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -415,8 +415,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "d3e9656a62fc43d075ccdb6a53200b19e844778c"
-  version = "8.2.8"
+  revision = "7c04a1c4d0e5f21803ac062523be3c4053b9804f"
+  version = "8.2.11"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
@@ -427,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:ff20f9730a4b715bd3b15e58aed35f8691afbda966bd81db8fdf6e5b63ef54f2"
+  digest = "1:42550ef2bc22000b5a129a79cea39bbf1e32642af52fe2b7f01277edb8488b3e"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,8 +439,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "de335d3fdc5f7c15b3696f068b0d596f168316cb"
-  version = "0.0.426"
+  revision = "5286f256854aa1bee334e4d25931d8a775605efb"
+  version = "0.0.440"
 
 [[projects]]
   branch = "master"
@@ -608,7 +608,7 @@
     "ssh/knownhosts",
   ]
   pruneopts = "UT"
-  revision = "60c769a6c58655dab1b9adac0d58967dd517cfba"
+  revision = "9756ffdc24725223350eb3266ffb92590d28f278"
 
 [[projects]]
   branch = "master"
@@ -616,7 +616,7 @@
   name = "golang.org/x/exp"
   packages = ["rand"]
   pruneopts = "UT"
-  revision = "ec7cb31e5a562f5e9e31b300128d2f530f55d127"
+  revision = "c13cbed26979984b7dddd468b78daf72f8b4b473"
 
 [[projects]]
   branch = "master"
@@ -638,7 +638,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:cfb8a631f909a928a1ef64f1ac962ae683f2fe17c914bcaa8c47ec3da9fe4cc9"
+  digest = "1:2bcb4cbe1c9cb5297e870f16d028d7f206802f5e0586210c0885d595f017d9b8"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -650,7 +650,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "c7b8b68b14567162c6602a7c5659ee0f26417c18"
+  revision = "08d80c9d36de4cf3f0843a021c300dd67a5e47dc"
 
 [[projects]]
   digest = "1:3952dba92e6a837cf34e6a073160d31029412bf863e37274cb779f319ddbe0b4"
