@@ -427,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:c7857c9487e09715dc155a18b943a054bedd47316b9b69c6f830a8913df8943d"
+  digest = "1:0876fc04480ef71ca8e4cd28a5cd936dbf3dc4a432c0338f83c08d2df0a15c22"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,8 +439,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "53c710b39b992daf8ac088a619960e6fd8c0eba7"
-  version = "0.0.442"
+  revision = "7bcbc25f6167c2b9e2771ac086e598b2047a6675"
+  version = "0.0.455"
 
 [[projects]]
   branch = "master"
@@ -688,7 +688,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ab6f878376bfafcf13044fdf67fbeeb29f9ef6475d0f160751ef7b18c65e2bc4"
+  digest = "1:4a475a9ddf1954704e7e6e5be6fb16d22869eabeb6ae99b114df4087d4bbb3ef"
   name = "gonum.org/v1/gonum"
   packages = [
     "blas",
@@ -715,7 +715,7 @@
     "stat/distuv",
   ]
   pruneopts = "UT"
-  revision = "d61003946d0d62fea7df4d9f9dee3c729ff97c9e"
+  revision = "43865b531bee9d28dccf2cf831db9eef686ca8c6"
 
 [[projects]]
   branch = "master"
