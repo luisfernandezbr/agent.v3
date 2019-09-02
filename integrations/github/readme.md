@@ -10,6 +10,9 @@ https://developer.github.com/enterprise/2.15/
 ## TODO
 - sourcecode.PullRequest.ClosedByRefID not implemented for GitHub Enterprise 2.15.9. timelineItems is not available need to get it another way
 
+## Datamodel notes
+github.PullRequestComment does not include comments created from review, these go to github.PullRequestReview. We do not currently store the text of those.
+
 ## How to support incremental exports?
 Since graphql doesn't support since parameter on all objects, we iterate backwards using updated at timestamp, when we get to the object which was updated before last run we stop.
 

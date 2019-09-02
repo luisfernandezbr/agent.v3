@@ -5,7 +5,6 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/date"
 
-	"github.com/pinpt/agent.next/integrations/pkg/jiracommon"
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
 
 	"github.com/pinpt/integration-sdk/agent"
@@ -90,7 +89,8 @@ func ProjectsOnboardPage(
 
 		item.TotalIssues = int64(totalIssues)
 
-		item.Active = jiracommon.ProjectIsActive(lastIssue.CreatedDate, data.Category.Name)
+		// we decide if project is active on backend TODO: this flag can be removed from datamodel
+		item.Active = true
 
 		res = append(res, item)
 
