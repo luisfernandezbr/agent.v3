@@ -150,7 +150,8 @@ func PullRequestsPage(
 		pr.RefType = "github"
 		pr.RefID = data.ID
 		pr.RepoID = qc.RepoID(repoRefID)
-		pr.BranchID = qc.BranchID(repoRefID, data.HeadRefName)
+		pr.BranchName = data.HeadRefName
+		pr.BranchID = qc.BranchID(repoRefID, pr.BranchName)
 		pr.Title = data.Title
 		pr.Description = data.BodyText
 		pr.URL = data.URL
