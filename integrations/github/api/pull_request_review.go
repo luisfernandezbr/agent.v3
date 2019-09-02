@@ -33,6 +33,7 @@ func PullRequestReviewsPage(
 					nodes {
 						updatedAt
 						id
+						url
 						pullRequest {
 							id
 						}
@@ -60,6 +61,7 @@ func PullRequestReviewsPage(
 					Nodes      []struct {
 						UpdatedAt   time.Time `json:"updatedAt"`
 						ID          string    `json:"id"`
+						URL         string    `json:"url"`
 						PullRequest struct {
 							ID string `json:"id"`
 						} `json:"pullRequest"`
@@ -87,12 +89,13 @@ func PullRequestReviewsPage(
 
 	nodesContainer := requestRes.Data.Node.Reviews
 	nodes := nodesContainer.Nodes
-	//qc.Logger.Info("got comments", "n", len(nodes))
+	//qc.Logger.Info("got reviews", "n", len(nodes))
 	for _, data := range nodes {
 		item := &sourcecode.PullRequestReview{}
 		item.CustomerID = qc.CustomerID
 		item.RefType = "github"
 		item.RefID = data.ID
+		item.URL = data.URL
 		//item.UpdatedAt = data.UpdatedAt.Unix()
 		item.RepoID = qc.RepoID(data.Repository.ID)
 		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)

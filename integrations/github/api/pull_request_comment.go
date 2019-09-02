@@ -33,6 +33,7 @@ func PullRequestCommentsPage(
 					nodes {
 						updatedAt
 						id
+						url
 						pullRequest {
 							id
 						}
@@ -60,6 +61,7 @@ func PullRequestCommentsPage(
 					Nodes      []struct {
 						UpdatedAt   time.Time `json:"updatedAt"`
 						ID          string    `json:"id"`
+						URL         string    `json:"url"`
 						PullRequest struct {
 							ID string `json:"id"`
 						} `json:"pullRequest"`
@@ -91,6 +93,7 @@ func PullRequestCommentsPage(
 		item.CustomerID = qc.CustomerID
 		item.RefType = "github"
 		item.RefID = data.ID
+		item.URL = data.URL
 		date.ConvertToModel(data.UpdatedAt, &item.UpdatedDate)
 		item.RepoID = qc.RepoID(data.Repository.ID)
 		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)

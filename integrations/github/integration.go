@@ -280,6 +280,10 @@ func commitURLTemplate(repo api.Repo, repoURLPrefix string) string {
 	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/commit/@@@sha@@@"
 }
 
+func branchURLTemplate(repo api.Repo, repoURLPrefix string) string {
+	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/tree/@@@branch@@@"
+}
+
 func (s *Integration) filterRepos(logger hclog.Logger, repos []api.Repo) (res []api.Repo) {
 	if len(s.config.Repos) != 0 {
 		ok := map[string]bool{}
@@ -362,7 +366,11 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 			args.RepoID = s.qc.RepoID(repo.ID)
 			args.URL = repoURL
 			args.CommitURLTemplate = commitURLTemplate(repo, s.config.RepoURLPrefix)
-			s.agent.ExportGitRepo(args)
+			args.BranchURLTemplate = branchURLTemplate(repo, s.config.RepoURLPrefix)
+			err = s.agent.ExportGitRepo(args)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -438,10 +446,10 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 
 	// export changed pull requests
 	var pullRequestsErr error
-	pullRequests := make(chan []api.PullRequest)
+	pullRequestsInitial := make(chan []api.PullRequest)
 	go func() {
-		defer close(pullRequests)
-		err := s.exportPullRequestsRepo(logger, repo, pullRequests, pullRequestSender.LastProcessed)
+		defer close(pullRequestsInitial)
+		err := s.exportPullRequestsRepo(logger, repo, pullRequestsInitial, pullRequestSender.LastProcessed)
 		if err != nil {
 			pullRequestsErr = err
 		}
@@ -470,7 +478,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 	}
 
 	go func() {
-		for item := range pullRequests {
+		for item := range pullRequestsInitial {
 			pullRequestsForComments <- item
 			pullRequestsForReviews <- item
 			pullRequestsForCommits <- item
@@ -506,7 +514,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for prs := range pullRequests {
+		for prs := range pullRequestsForCommits {
 			for _, pr := range prs {
 				commits, err := s.exportPullRequestCommits(logger, pr.RefID)
 				if err != nil {

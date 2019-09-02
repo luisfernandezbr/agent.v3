@@ -20,6 +20,6 @@ func (s agentDelegate) SendExported(sessionID string, objs []rpcdef.ExportObj) {
 	panic("not implemented in validate")
 }
 
-func (s agentDelegate) ExportGitRepo(fetch rpcdef.GitRepoFetch) {
+func (s agentDelegate) ExportGitRepo(fetch rpcdef.GitRepoFetch) error {
 	panic("not implemented in validate")
 }

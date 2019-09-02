@@ -3,6 +3,7 @@ package rpcdef
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/pinpt/agent.next/rpcdef/proto"
 )
@@ -23,7 +24,7 @@ type Agent interface {
 		objs []ExportObj)
 
 	// Integration can ask agent to download and process git repo using ripsrc.
-	ExportGitRepo(fetch GitRepoFetch)
+	ExportGitRepo(fetch GitRepoFetch) error
 }
 
 type ExportObj struct {
@@ -34,6 +35,14 @@ type GitRepoFetch struct {
 	RepoID            string
 	URL               string
 	CommitURLTemplate string
+	BranchURLTemplate string
+}
+
+func (s GitRepoFetch) Validate() error {
+	if s.RepoID == "" || s.URL == "" || s.CommitURLTemplate == "" || s.BranchURLTemplate == "" {
+		return errors.New("missing required param for GitRepoFetch")
+	}
+	return nil
 }
 
 type AgentServer struct {
@@ -98,14 +107,18 @@ func (s *AgentServer) SendExported(ctx context.Context, req *proto.SendExportedR
 	return &proto.Empty{}, nil
 }
 
-func (s *AgentServer) ExportGitRepo(ctx context.Context, req *proto.ExportGitRepoReq) (*proto.Empty, error) {
+func (s *AgentServer) ExportGitRepo(ctx context.Context, req *proto.ExportGitRepoReq) (resp *proto.Empty, _ error) {
+	resp = &proto.Empty{}
 	fetch := GitRepoFetch{}
 	fetch.RepoID = req.RepoId
 	fetch.URL = req.Url
 	fetch.CommitURLTemplate = req.CommitUrlTemplate
-	s.Impl.ExportGitRepo(fetch)
-	resp := &proto.Empty{}
-	return resp, nil
+	fetch.BranchURLTemplate = req.BranchUrlTemplate
+	err := s.Impl.ExportGitRepo(fetch)
+	if err != nil {
+		return resp, err
+	}
+	return
 }
 
 type AgentClient struct {
@@ -153,13 +166,19 @@ func (s *AgentClient) SendExported(sessionID string, objs []ExportObj) {
 	}
 }
 
-func (s *AgentClient) ExportGitRepo(fetch GitRepoFetch) {
+func (s *AgentClient) ExportGitRepo(fetch GitRepoFetch) error {
+	err := fetch.Validate()
+	if err != nil {
+		return err
+	}
 	args := &proto.ExportGitRepoReq{}
 	args.RepoId = fetch.RepoID
 	args.Url = fetch.URL
 	args.CommitUrlTemplate = fetch.CommitURLTemplate
-	_, err := s.client.ExportGitRepo(context.Background(), args)
+	args.BranchUrlTemplate = fetch.BranchURLTemplate
+	_, err = s.client.ExportGitRepo(context.Background(), args)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }

@@ -59,7 +59,7 @@ SendExported(
 		objs []ExportObj)
 
 // Integration can ask agent to download and process git repo using ripsrc.
-ExportGitRepo(fetch GitRepoFetch)
+ExportGitRepo(fetch GitRepoFetch) error
 
 }
 

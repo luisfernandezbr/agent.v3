@@ -41,6 +41,9 @@ type Opts struct {
 	// CommitURLTemplate is a template for building commit url
 	// https://example.com/repo1/@@@sha@@@
 	CommitURLTemplate string
+	// BranchURLTemplate is a template for building branch url
+	// https://example.com/repo1/@@@branch@@@
+	BranchURLTemplate string
 }
 
 type Export struct {
@@ -59,11 +62,8 @@ type Export struct {
 }
 
 func New(opts Opts, locs fsconf.Locs) *Export {
-	if opts.CustomerID == "" {
-		panic("provide CustomerID")
-	}
-	if opts.RepoID == "" {
-		panic("provide RepoID")
+	if opts.Logger == nil || opts.CustomerID == "" || opts.RepoID == "" || opts.Sessions == nil || opts.LastProcessed == nil || opts.RepoAccess.URL == "" || opts.CommitURLTemplate == "" || opts.BranchURLTemplate == "" {
+		panic("provide all params")
 	}
 	s := &Export{}
 	s.opts = opts
@@ -197,6 +197,7 @@ func (s *Export) branches(ctx context.Context) error {
 			obj.RefType = s.refType
 			obj.CustomerID = s.opts.CustomerID
 			obj.Name = data.Name
+			obj.URL = branchURL(s.opts.BranchURLTemplate, data.Name)
 			obj.Default = data.IsDefault
 			obj.Merged = data.IsMerged
 			obj.MergeCommitID = data.MergeCommit
@@ -463,7 +464,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				RepoID:     repoID,
 				Sha:        commit.SHA,
 				Message:    lastBlame.Commit.Message,
-				URL:        buildURL(s.opts.CommitURLTemplate, commit.SHA),
+				URL:        commitURL(s.opts.CommitURLTemplate, commit.SHA),
 				//Branch:         branch, // TODO: remove this from datamodel
 				Additions:      commitAdditions,
 				Deletions:      commitDeletions,
@@ -511,6 +512,10 @@ func statusFromRipsrc(status ripsrc.CommitStatus) sourcecode.BlameStatus {
 	return 0
 }
 
-func buildURL(commitURLTemplate, sha string) string {
+func commitURL(commitURLTemplate, sha string) string {
 	return strings.ReplaceAll(commitURLTemplate, "@@@sha@@@", sha)
+}
+
+func branchURL(branchURLTemplate, branchName string) string {
+	return strings.ReplaceAll(branchURLTemplate, "@@@branch@@@", branchName)
 }
