@@ -200,9 +200,12 @@ func (s *Export) branches(ctx context.Context) error {
 			obj.URL = branchURL(s.opts.BranchURLTemplate, data.Name)
 			obj.Default = data.IsDefault
 			obj.Merged = data.IsMerged
-			obj.MergeCommitID = s.commitID(data.MergeCommit)
-			obj.BranchedFromCommitIds = s.commitIDs(data.BranchedFromCommits)
-			obj.CommitIds = s.commitIDs(data.Commits)
+			obj.MergeCommitSha = data.MergeCommit
+			obj.MergeCommitID = s.commitID(obj.MergeCommitSha)
+			obj.BranchedFromCommitShas = data.BranchedFromCommits
+			obj.BranchedFromCommitIds = s.commitIDs(obj.BranchedFromCommitShas)
+			obj.CommitShas = data.Commits
+			obj.CommitIds = s.commitIDs(obj.CommitShas)
 			obj.BehindDefaultCount = int64(data.BehindDefaultCount)
 			obj.AheadDefaultCount = int64(data.AheadDefaultCount)
 			obj.RepoID = s.opts.RepoID

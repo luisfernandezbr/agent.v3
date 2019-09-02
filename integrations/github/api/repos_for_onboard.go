@@ -145,7 +145,8 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 		cdata := data.DefaultBranchRef.Target
 		if cdata.OID != "" {
 			commit := agent.RepoResponseReposLastCommit{}
-			commit.CommitID = ids.CodeCommit(qc.CustomerID, "github", cdata.OID)
+			commit.CommitSha = cdata.OID
+			commit.CommitID = ids.CodeCommit(qc.CustomerID, "github", commit.CommitSha)
 			commit.URL = cdata.URL
 			commit.Message = cdata.Message
 			commit.Author.Name = cdata.Author.Name

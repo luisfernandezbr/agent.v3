@@ -521,10 +521,8 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 					setErr(err)
 					return
 				}
-				for _, sha := range commits {
-					id := ids.CodeCommit(s.qc.CustomerID, s.refType, sha)
-					pr.CommitIds = append(pr.CommitIds, id)
-				}
+				pr.CommitShas = commits
+				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, commits)
 				err = pullRequestSender.Send(pr)
 				if err != nil {
 					setErr(err)

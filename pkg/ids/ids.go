@@ -22,6 +22,13 @@ func CodeCommit(customerID string, refType string, commitSHA string) string {
 	return hash.Values("Commit", customerID, refType, commitSHA)
 }
 
+func CodeCommits(customerID string, refType string, commitSHAs []string) (res []string) {
+	for _, sha := range commitSHAs {
+		res = append(res, CodeCommit(customerID, refType, sha))
+	}
+	return
+}
+
 func CodeBranch(customerID string, refType string, repoRefID string, branchName string) string {
 	repoID := CodeRepo(customerID, refType, repoRefID)
 	return hash.Values(refType, repoID, customerID, branchName)
