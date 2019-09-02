@@ -2,6 +2,7 @@
 
 Agent is run continuosly on the target machine. All actions are driven from a backend.
 
+
 User installs agent using enroll command, which ensures that service is on the the system startup.
 
 Service waits for commands from a backend to validate integrations, start export or get users, repos, projects for use in admin web interface. All these actions are started as a separate process. To implement this we have the following hidden commands which accept json as params.
