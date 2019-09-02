@@ -200,12 +200,9 @@ func (s *Export) branches(ctx context.Context) error {
 			obj.URL = branchURL(s.opts.BranchURLTemplate, data.Name)
 			obj.Default = data.IsDefault
 			obj.Merged = data.IsMerged
-			obj.MergeCommitID = data.MergeCommit
-			obj.BranchedFromCommitIds = data.BranchedFromCommits
-			for _, sha := range data.Commits {
-				id := ids.CodeCommit(s.opts.CustomerID, s.refType, sha)
-				obj.CommitIds = append(obj.CommitIds, id)
-			}
+			obj.MergeCommitID = s.commitID(data.MergeCommit)
+			obj.BranchedFromCommitIds = s.commitIDs(data.BranchedFromCommits)
+			obj.CommitIds = s.commitIDs(data.Commits)
 			obj.BehindDefaultCount = int64(data.BehindDefaultCount)
 			obj.AheadDefaultCount = int64(data.AheadDefaultCount)
 			obj.RepoID = s.opts.RepoID
@@ -228,6 +225,20 @@ func (s *Export) branches(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *Export) commitID(sha string) string {
+	if sha == "" {
+		return ""
+	}
+	return ids.CodeCommit(s.opts.CustomerID, s.refType, sha)
+}
+
+func (s *Export) commitIDs(shas []string) (res []string) {
+	for _, sha := range shas {
+		res = append(res, s.commitID(sha))
+	}
+	return
 }
 
 func (s *Export) code(ctx context.Context) error {
