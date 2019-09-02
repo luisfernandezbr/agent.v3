@@ -56,7 +56,7 @@ func PullRequestsPage(
 						updatedAt
 						id
 						repository { id }
-						baseRefName
+						headRefName
 						title
 						bodyText
 						url
@@ -93,7 +93,7 @@ func PullRequestsPage(
 						Repository struct {
 							ID string `json:"id"`
 						}
-						BaseRefName string `json:"baseRefName"`
+						HeadRefName string `json:"headRefName"`
 						Title       string `json:"title"`
 						BodyText    string `json:"bodyText"`
 
@@ -150,7 +150,7 @@ func PullRequestsPage(
 		pr.RefType = "github"
 		pr.RefID = data.ID
 		pr.RepoID = qc.RepoID(repoRefID)
-		pr.BranchID = qc.BranchID(repoRefID, data.BaseRefName)
+		pr.BranchID = qc.BranchID(repoRefID, data.HeadRefName)
 		pr.Title = data.Title
 		pr.Description = data.BodyText
 		pr.URL = data.URL
