@@ -206,31 +206,27 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 			return sendEvent(resp)
 		}
 
-		if integration.Name == "jira" || integration.Name == "github" {
-			auth := integration.Authorization.ToMap()
+		auth := integration.Authorization.ToMap()
 
-			res, err := s.validate(ctx, integration.Name, auth)
-			if err != nil {
-				return rerr(err)
-			}
-
-			if !res.Success {
-				return rerr(errors.New(strings.Join(res.Errors, ", ")))
-			}
-
-			encrAuthData, err := encrypt.EncryptString(pjson.Stringify(auth), s.conf.PPEncryptionKey)
-			if err != nil {
-				return rerr(err)
-			}
-
-			resp.Message = "Success. Export completed."
-			resp.Success = true
-			resp.Type = agent.IntegrationResponseTypeIntegration
-			resp.Authorization = encrAuthData
-			return sendEvent(resp)
+		res, err := s.validate(ctx, integration.Name, auth)
+		if err != nil {
+			return rerr(err)
 		}
 
-		return rerr(errors.New("Only jira and github integrations are supported"))
+		if !res.Success {
+			return rerr(errors.New(strings.Join(res.Errors, ", ")))
+		}
+
+		encrAuthData, err := encrypt.EncryptString(pjson.Stringify(auth), s.conf.PPEncryptionKey)
+		if err != nil {
+			return rerr(err)
+		}
+
+		resp.Message = "Success. Export completed."
+		resp.Success = true
+		resp.Type = agent.IntegrationResponseTypeIntegration
+		resp.Authorization = encrAuthData
+		return sendEvent(resp)
 	}
 
 	go func() {
