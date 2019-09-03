@@ -401,8 +401,9 @@ func (s *runner) handleExportEvents(ctx context.Context) error {
 	}
 
 	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
-		s.logger.Info("received export request")
+
 		ev := instance.Object().(*agent.ExportRequest)
+		s.logger.Info("received export request", "id", ev.ID, "uuid", ev.UUID, "request_date", ev.RequestDate.Rfc3339)
 
 		done := make(chan error)
 
