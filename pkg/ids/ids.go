@@ -1,47 +1,46 @@
 package ids
 
-import "github.com/pinpt/go-common/hash"
-
-func basicID(kind string, customerID string, refType string, refID string) string {
-	return hash.Values(kind, customerID, refType, refID)
-}
+import (
+	"github.com/pinpt/integration-sdk/sourcecode"
+	"github.com/pinpt/integration-sdk/work"
+)
 
 func CodeRepo(customerID string, refType string, refID string) string {
-	return basicID("Repo", customerID, refType, refID)
+	return sourcecode.NewRepoID(customerID, refType, refID)
 }
 
 func CodeUser(customerID string, refType string, refID string) string {
-	return basicID("User", customerID, refType, refID)
+	return sourcecode.NewUserID(customerID, refType, refID)
 }
 
-func CodePullRequest(customerID string, refType string, refID string) string {
-	return basicID("PullRequest", customerID, refType, refID)
+func CodePullRequest(customerID string, refType string, repoID string, refID string) string {
+	return sourcecode.NewPullRequestID(customerID, refID, refType, repoID)
 }
 
-func CodeCommit(customerID string, refType string, commitSHA string) string {
-	return hash.Values("Commit", customerID, refType, commitSHA)
+func CodeCommit(customerID string, refType string, repoID string, commitSHA string) string {
+	return sourcecode.NewCommitID(customerID, commitSHA, refType, repoID)
 }
 
-func CodeCommits(customerID string, refType string, commitSHAs []string) (res []string) {
+func CodeCommits(customerID string, refType string, repoID string, commitSHAs []string) (res []string) {
 	for _, sha := range commitSHAs {
-		res = append(res, CodeCommit(customerID, refType, sha))
+		res = append(res, CodeCommit(customerID, repoID, refType, sha))
 	}
 	return
 }
 
-func CodeBranch(customerID string, refType string, repoRefID string, branchName string) string {
-	repoID := CodeRepo(customerID, refType, repoRefID)
-	return hash.Values(refType, repoID, customerID, branchName)
+func CodeBranch(customerID string, refType string, repoID string, branchName string, firstCommitSHA string) string {
+	firstCommitID := CodeCommit(customerID, refType, repoID, firstCommitSHA)
+	return sourcecode.NewBranchID(refType, repoID, customerID, branchName, firstCommitID)
 }
 
 func WorkProject(customerID string, refType string, refID string) string {
-	return basicID("Project", customerID, refType, refID)
+	return work.NewProjectID(customerID, refType, refID)
 }
 
 func WorkIssue(customerID string, refType string, refID string) string {
-	return basicID("Issue", customerID, refType, refID)
+	return work.NewIssueID(customerID, refType, refID)
 }
 
 func WorkUser(customerID string, refType string, refID string) string {
-	return basicID("User", customerID, refType, refID)
+	return work.NewUserID(customerID, refType, refID)
 }

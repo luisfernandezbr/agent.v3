@@ -96,7 +96,7 @@ func PullRequestCommentsPage(
 		item.URL = data.URL
 		date.ConvertToModel(data.UpdatedAt, &item.UpdatedDate)
 		item.RepoID = qc.RepoID(data.Repository.ID)
-		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)
+		item.PullRequestID = qc.PullRequestID(item.RepoID, data.PullRequest.ID)
 		item.Body = data.BodyText
 		date.ConvertToModel(data.CreatedAt, &item.CreatedDate)
 

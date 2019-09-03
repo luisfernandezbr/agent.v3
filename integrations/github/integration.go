@@ -57,18 +57,6 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	qc := api.QueryContext{}
 	qc.Logger = s.logger
 	qc.Request = s.makeRequest
-	qc.RepoID = func(refID string) string {
-		return ids.CodeRepo(s.customerID, s.refType, refID)
-	}
-	qc.UserID = func(refID string) string {
-		return ids.CodeUser(s.customerID, s.refType, refID)
-	}
-	qc.PullRequestID = func(refID string) string {
-		return ids.CodePullRequest(s.customerID, s.refType, refID)
-	}
-	qc.BranchID = func(repoRefID string, branchName string) string {
-		return ids.CodeBranch(s.customerID, s.refType, repoRefID, branchName)
-	}
 	qc.IsEnterprise = func() bool {
 		return s.config.Enterprise
 	}
@@ -522,7 +510,11 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 					return
 				}
 				pr.CommitShas = commits
-				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, commits)
+				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, commits)
+				if len(pr.CommitShas) == 0 {
+					panic("no commits found in pr, github does not allow you to create empty pr so this should not be possible")
+				}
+				pr.BranchID = s.qc.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
 				err = pullRequestSender.Send(pr)
 				if err != nil {
 					setErr(err)

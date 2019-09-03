@@ -234,14 +234,11 @@ func (s *Export) commitID(sha string) string {
 	if sha == "" {
 		return ""
 	}
-	return ids.CodeCommit(s.opts.CustomerID, s.refType, sha)
+	return ids.CodeCommit(s.opts.CustomerID, s.refType, s.opts.RepoID, sha)
 }
 
 func (s *Export) commitIDs(shas []string) (res []string) {
-	for _, sha := range shas {
-		res = append(res, s.commitID(sha))
-	}
-	return
+	return ids.CodeCommits(s.opts.CustomerID, s.refType, s.opts.RepoID, shas)
 }
 
 func (s *Export) code(ctx context.Context) error {
@@ -401,7 +398,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 
 			{
 				cf := sourcecode.CommitFiles{
-					CommitID:          ids.CodeCommit(customerID, s.refType, commit.SHA),
+					CommitID:          s.commitID(commit.SHA),
 					RepoID:            repoID,
 					Status:            string(cf.Status),
 					Ordinal:           ordinal,
@@ -443,7 +440,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				License:        &lic,
 				Excluded:       blame.Skipped != "",
 				ExcludedReason: blame.Skipped,
-				CommitID:       ids.CodeCommit(customerID, s.refType, blame.Commit.SHA),
+				CommitID:       s.commitID(blame.Commit.SHA),
 				RefID:          blame.Commit.SHA,
 				RefType:        s.refType,
 				CustomerID:     customerID,

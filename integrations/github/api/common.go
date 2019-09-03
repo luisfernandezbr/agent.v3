@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/ids"
 )
 
 type PageInfo struct {
@@ -19,11 +20,8 @@ type QueryContext struct {
 
 	APIURL3 string
 
-	CustomerID    string
-	RepoID        func(ref string) string
-	UserID        func(ref string) string
-	PullRequestID func(ref string) string
-	BranchID      func(repoRef, branchName string) string
+	CustomerID string
+	RefType    string
 
 	UserLoginToRefID           func(login string) (refID string, _ error)
 	UserLoginToRefIDFromCommit func(login, email string) (refID string, _ error)
@@ -35,4 +33,20 @@ func (s QueryContext) WithLogger(logger hclog.Logger) QueryContext {
 	res := s
 	res.Logger = logger
 	return res
+}
+
+func (s QueryContext) RepoID(refID string) string {
+	return ids.CodeRepo(s.CustomerID, s.RefType, refID)
+}
+
+func (s QueryContext) UserID(refID string) string {
+	return ids.CodeUser(s.CustomerID, s.RefType, refID)
+}
+
+func (s QueryContext) PullRequestID(repoID, refID string) string {
+	return ids.CodePullRequest(s.CustomerID, s.RefType, repoID, refID)
+}
+
+func (s QueryContext) BranchID(repoID, branchName, firstCommitSHA string) string {
+	return ids.CodeBranch(s.CustomerID, s.RefType, repoID, branchName, firstCommitSHA)
 }

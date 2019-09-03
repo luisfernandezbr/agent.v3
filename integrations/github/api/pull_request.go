@@ -152,7 +152,6 @@ func PullRequestsPage(
 		pr.RefID = data.ID
 		pr.RepoID = qc.RepoID(repoRefID)
 		pr.BranchName = data.HeadRefName
-		pr.BranchID = qc.BranchID(repoRefID, pr.BranchName)
 		pr.Title = data.Title
 		pr.Description = data.BodyText
 		pr.URL = data.URL
@@ -194,7 +193,7 @@ func PullRequestsPage(
 
 		if data.State == "MERGED" {
 			pr.MergeSha = data.MergeCommit.OID
-			pr.MergeCommitID = ids.CodeCommit(qc.CustomerID, "github", pr.MergeSha)
+			pr.MergeCommitID = ids.CodeCommit(qc.CustomerID, qc.RefType, pr.RepoID, pr.MergeSha)
 			login := data.MergedBy.Login
 			if login == "" {
 				qc.Logger.Error("empty login for mergedBy field")

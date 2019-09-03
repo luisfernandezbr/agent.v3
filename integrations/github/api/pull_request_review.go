@@ -98,7 +98,7 @@ func PullRequestReviewsPage(
 		item.URL = data.URL
 		//item.UpdatedAt = data.UpdatedAt.Unix()
 		item.RepoID = qc.RepoID(data.Repository.ID)
-		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)
+		item.PullRequestID = qc.PullRequestID(item.RepoID, data.PullRequest.ID)
 
 		switch data.State {
 		case "PENDING":
