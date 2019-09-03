@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -23,15 +24,19 @@ func (s *Integration) export() error {
 	if err != nil {
 		return err
 	}
-	s.exportCommitUsers(repoids)
-	s.exportPullRequestData(repoids)
+	if err = s.exportCommitUsers(repoids); err != nil {
+		return err
+	}
+	if err = s.exportPullRequestData(repoids); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (s *Integration) exportReposAndRipSrc() (refids []string, err error) {
 	sender := objsender.NewNotIncremental(s.agent, sourcecode.RepoModelName.String())
-	repos, err := s.api.FetchRepos()
-	s.logger.Info("Fetched repos", "cound", len(repos))
+	repos, err := s.api.FetchRepos(s.repos, s.excluded)
+	s.logger.Info("Fetched repos", "count", len(repos))
 	if err != nil {
 		return
 	}
@@ -40,16 +45,20 @@ func (s *Integration) exportReposAndRipSrc() (refids []string, err error) {
 		if err := sender.Send(repo); err != nil {
 			return nil, err
 		}
-		ur := repo.URL
-		u, e := url.Parse(ur)
+
+		s.logger.Info("git repo url", "url", repo.URL)
+		// workaround for itexico server
+		// ur := strings.Replace(repo.URL, "itxwin04:8080", "itxwin04.itexico.com:8080", 1)
+
+		u, e := url.Parse(repo.URL)
 		if e != nil {
 			return nil, e
 		}
-		u.User = url.UserPassword(s.conf.Username, s.conf.Password)
+		u.User = url.UserPassword(s.creds.Username, s.creds.Password)
 		args := rpcdef.GitRepoFetch{}
 		args.RepoID = s.api.RepoID(repo.RefID)
-		args.URL = ur
-		args.CommitURLTemplate = commitURLTemplate(repo.Name, s.conf.URL)
+		args.URL = repo.URL
+		args.CommitURLTemplate = commitURLTemplate(repo.Name, s.creds.URL)
 		s.agent.ExportGitRepo(args)
 	}
 	return refids, sender.Done()
@@ -60,61 +69,61 @@ func (s *Integration) exportCommitUsers(repoids []string) error {
 	if err != nil {
 		return err
 	}
+	usermap := make(map[string]*sourcecode.User)
 	for _, repoid := range repoids {
-		usrs, err := s.api.FetchCommitUsers(repoid, sender.LastProcessed)
-		if err != nil {
-			return err
-		}
-		for _, u := range usrs {
-			sender.Send(u)
+		if err := s.api.FetchCommitUsers(repoid, usermap, sender.LastProcessed); err != nil {
+			return fmt.Errorf("error fetching users. err: %v", err)
 		}
 	}
+	for _, u := range usermap {
+		if err := sender.Send(u); err != nil {
+			return fmt.Errorf("error sending users. err: %v", err)
+		}
+	}
+
 	return sender.Done()
 }
 
 func (s *Integration) exportPullRequestData(repoids []string) error {
-	var prs []*sourcecode.PullRequest
-	var prrs []*sourcecode.PullRequestReview
-	var prc []*sourcecode.PullRequestComment
+
+	prsender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestModelName.String())
+	prrsender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
+	prcsender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
 
 	for _, repoid := range repoids {
-		pr, prr, err := s.api.FetchPullRequests(repoid)
+		prs, prrs, err := s.api.FetchPullRequests(repoid)
 		if err != nil {
-			return err
+			return fmt.Errorf("error fetching pull requests and reviews. err: %v", err)
 		}
-		for _, p := range pr {
-			cmts, err := s.api.FetchPullRequestComments(repoid, p.RefID)
-			if err != nil {
-				return err
+		for _, pr := range prs {
+			if err := prsender.Send(pr); err != nil {
+				return fmt.Errorf("error sending pull requests. err: %v", err)
 			}
-			prc = append(prc, cmts...)
+			cmts, err := s.api.FetchPullRequestComments(repoid, pr.RefID)
+			if err != nil {
+				return fmt.Errorf("error fetching pull requests comments. err: %v", err)
+			}
+			for _, prc := range cmts {
+				if err := prcsender.Send(prc); err != nil {
+					return fmt.Errorf("error sending pull requests comments. err: %v", err)
+				}
+			}
 		}
-		prs = append(prs, pr...)
-		prrs = append(prrs, prr...)
+		for _, prr := range prrs {
+			if err := prrsender.Send(prr); err != nil {
+				return fmt.Errorf("error sending pull request reviews comments. err: %v", err)
+			}
+		}
 	}
 
-	var sender *objsender.NotIncremental
-	// Send pull requests
-	sender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestModelName.String())
-	for _, pr := range prs {
-		sender.Send(pr)
-	}
-	if err := sender.Done(); err != nil {
+	if err := prsender.Done(); err != nil {
 		return err
 	}
-	// Send pull request reviews
-	sender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
-	for _, prr := range prrs {
-		sender.Send(prr)
-	}
-	if err := sender.Done(); err != nil {
+	if err := prcsender.Done(); err != nil {
 		return err
 	}
-	// Send pull request comments
-	sender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
-	for _, c := range prc {
-		sender.Send(c)
+	if err := prrsender.Done(); err != nil {
+		return err
 	}
-
-	return sender.Done()
+	return nil
 }

@@ -17,9 +17,12 @@ type Integration struct {
 	logger     hclog.Logger
 	agent      rpcdef.Agent
 	api        *api.TFSAPI
-	conf       *api.Creds
+	creds      *api.Creds
 	customerid string
 	reftype    string
+	excluded   []string // excluded repo ids - this comes from the admin ui
+
+	repos []string // repo_names - this is for debug and develop only
 }
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
@@ -43,29 +46,39 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 }
 
 func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig) error {
-	var conf api.Creds
+	var creds api.Creds
+	var conf struct {
+		Excluded []string `json:"excluded_repo_ids"`
+		Repos    []string `json:"repo_names"`
+	}
+	if err := structmarshal.MapToStruct(config.Integration, &creds); err != nil {
+		return err
+	}
 	if err := structmarshal.MapToStruct(config.Integration, &conf); err != nil {
 		return err
 	}
-	if conf.Collection == "" {
-		conf.Collection = "DefaultCollection"
+	if creds.Collection == "" {
+		creds.Collection = "DefaultCollection"
 	}
-	if conf.URL == "" {
+	if creds.URL == "" {
 		return fmt.Errorf("missing url")
 	}
-	if conf.Username == "" {
+	if creds.Username == "" {
 		return fmt.Errorf("missing username")
 	}
-	if conf.Password == "" {
+	if creds.Password == "" {
 		return fmt.Errorf("missing password")
 	}
-	if conf.APIKey == "" {
+	if creds.APIKey == "" {
 		return fmt.Errorf("missing api_key")
 	}
+
 	s.customerid = config.Pinpoint.CustomerID
 	s.reftype = "tfs"
-	s.conf = &conf
-	s.api = api.NewTFSAPI(ctx, s.logger, s.customerid, s.reftype, &conf)
+	s.creds = &creds
+	s.excluded = conf.Excluded
+	s.repos = conf.Repos
+	s.api = api.NewTFSAPI(ctx, s.logger, s.customerid, s.reftype, &creds)
 	s.api.RepoID = func(refID string) string {
 		return hash.Values("Repo", s.customerid, s.reftype, refID)
 	}

@@ -21,14 +21,13 @@ type commitUser struct {
 }
 
 // FetchCommitUsers calls the commits api to get user information and returns a list of unique sourcecode.User
-func (a *TFSAPI) FetchCommitUsers(repoid string, fromdate time.Time) (usrs []*sourcecode.User, err error) {
+func (a *TFSAPI) FetchCommitUsers(repoid string, usermap map[string]*sourcecode.User, fromdate time.Time) error {
 
 	url := fmt.Sprintf(`_apis/git/repositories/%s/commits`, purl.PathEscape(repoid))
 	var res []commitUser
-	if err = a.doRequest(url, nil, fromdate, &res); err != nil {
-		return
+	if err := a.doRequest(url, nil, fromdate, &res); err != nil {
+		return err
 	}
-	usermap := make(map[string]*sourcecode.User)
 	for _, user := range res {
 		authoremail := user.Author.Email
 		if authoremail != "" {
@@ -57,8 +56,5 @@ func (a *TFSAPI) FetchCommitUsers(repoid string, fromdate time.Time) (usrs []*so
 			}
 		}
 	}
-	for _, u := range usermap {
-		usrs = append(usrs, u)
-	}
-	return
+	return nil
 }

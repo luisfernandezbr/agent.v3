@@ -127,3 +127,12 @@ func urlWithParams(url string, jobj params) string {
 	url += strings.Join(parts, "&")
 	return url
 }
+
+func exists(what string, array []string) bool {
+	for _, each := range array {
+		if what == each {
+			return true
+		}
+	}
+	return false
+}

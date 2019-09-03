@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pinpt/go-common/hash"
+	"github.com/pinpt/integration-sdk/sourcecode"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/hashicorp/go-hclog"
@@ -38,7 +39,7 @@ func TestFetchRepos(t *testing.T) {
 		return
 	}
 	a := NewTFSAPI(context.Background(), hclog.NewNullLogger(), "1234567890", "tfs", &conf)
-	repos, err := a.FetchRepos()
+	repos, err := a.FetchRepos([]string{}, []string{})
 	assert.NoError(t, err)
 	assert.NotEmpty(t, repos)
 }
@@ -48,11 +49,12 @@ func TestFetchCommitUsers(t *testing.T) {
 		return
 	}
 	a := NewTFSAPI(context.Background(), hclog.NewNullLogger(), "1234567890", "tfs", &conf)
-	repos, err := a.FetchRepos()
+	repos, err := a.FetchRepos([]string{}, []string{})
 	assert.NoError(t, err)
 	for _, repo := range repos {
 		a := NewTFSAPI(context.Background(), hclog.NewNullLogger(), "1234567890", "tfs", &conf)
-		_, err := a.FetchCommitUsers(repo.RefID, time.Time{})
+		usermap := make(map[string]*sourcecode.User)
+		err := a.FetchCommitUsers(repo.RefID, usermap, time.Time{})
 		assert.NoError(t, err)
 	}
 }
@@ -72,7 +74,7 @@ func TestFetchPullRequests(t *testing.T) {
 	a.PullRequestID = func(refID string) string {
 		return hash.Values("PullRequest", "1234567890", "tfs", refID)
 	}
-	repos, err := a.FetchRepos()
+	repos, err := a.FetchRepos([]string{}, []string{})
 	assert.NoError(t, err)
 	for _, repo := range repos {
 		_, _, err := a.FetchPullRequests(repo.RefID)
@@ -95,7 +97,7 @@ func TestFetchPullRequestComments(t *testing.T) {
 	a.PullRequestID = func(refID string) string {
 		return hash.Values("PullRequest", "1234567890", "tfs", refID)
 	}
-	repos, err := a.FetchRepos()
+	repos, err := a.FetchRepos([]string{}, []string{})
 	assert.NoError(t, err)
 	for _, repo := range repos {
 		prs, _, err := a.FetchPullRequests(repo.RefID)
