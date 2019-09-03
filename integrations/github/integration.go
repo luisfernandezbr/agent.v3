@@ -513,7 +513,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 				pr.CommitShas = commits
 				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, commits)
 				if len(pr.CommitShas) == 0 {
-					logger.Error("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.title", pr.Title)
+					logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
 					continue
 				}
 				pr.BranchID = s.qc.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
