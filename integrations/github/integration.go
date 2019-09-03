@@ -186,6 +186,7 @@ func urlAppend(p1, p2 string) string {
 func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	s.customerID = exportConfig.Pinpoint.CustomerID
 	s.qc.CustomerID = s.customerID
+	s.qc.RefType = "github"
 	err := s.setIntegrationConfig(exportConfig.Integration)
 	if err != nil {
 		return err
