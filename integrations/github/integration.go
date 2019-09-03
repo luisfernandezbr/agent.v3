@@ -513,7 +513,8 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 				pr.CommitShas = commits
 				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, commits)
 				if len(pr.CommitShas) == 0 {
-					panic("no commits found in pr, github does not allow you to create empty pr so this should not be possible")
+					logger.Error("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.title", pr.Title)
+					continue
 				}
 				pr.BranchID = s.qc.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
 				err = pullRequestSender.Send(pr)
