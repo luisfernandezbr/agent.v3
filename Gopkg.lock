@@ -427,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:9d8c93850d0dc5586314fc79710e8e903e1dddcc65f052d53d32e273f29bd245"
+  digest = "1:2554f9be3669c3138ecd06618f062a118f7cf772573a599f431fe9322ab39884"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,8 +439,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "dc1a356c2d61d5cf704fc59e0e3838c459c19b0a"
-  version = "0.0.461"
+  revision = "b6a971856e77ddef7f06c4ead6e56c868d9283e1"
+  version = "0.0.465"
 
 [[projects]]
   branch = "master"
@@ -650,7 +650,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "9109b7679e13aa34a54834cfb4949cac4b96e576"
+  revision = "1f305c863dab438568b4750723b2b7b237a469bb"
 
 [[projects]]
   digest = "1:3952dba92e6a837cf34e6a073160d31029412bf863e37274cb779f319ddbe0b4"
