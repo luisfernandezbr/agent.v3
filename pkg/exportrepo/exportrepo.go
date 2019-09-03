@@ -192,6 +192,11 @@ func (s *Export) branches(ctx context.Context) error {
 
 	go func() {
 		for data := range res {
+			if len(data.Commits) == 0 {
+				// we do not export branches with no commits, especially since branch id depends on first commit
+				continue
+			}
+
 			obj := sourcecode.Branch{}
 			obj.RefID = data.Name
 			obj.RefType = s.refType
@@ -204,8 +209,16 @@ func (s *Export) branches(ctx context.Context) error {
 			obj.MergeCommitID = s.commitID(obj.MergeCommitSha)
 			obj.BranchedFromCommitShas = data.BranchedFromCommits
 			obj.BranchedFromCommitIds = s.commitIDs(obj.BranchedFromCommitShas)
+			if len(obj.BranchedFromCommitShas) != 0 {
+				// this aren't really used in the pipeline
+				// TODO: remove from datamodel and pipeline
+				obj.FirstBranchedFromCommitSha = obj.BranchedFromCommitShas[0]
+				obj.FirstBranchedFromCommitID = obj.BranchedFromCommitIds[0]
+			}
 			obj.CommitShas = data.Commits
 			obj.CommitIds = s.commitIDs(obj.CommitShas)
+			obj.FirstCommitSha = obj.CommitShas[0]
+			obj.FirstCommitID = obj.CommitIds[0]
 			obj.BehindDefaultCount = int64(data.BehindDefaultCount)
 			obj.AheadDefaultCount = int64(data.AheadDefaultCount)
 			obj.RepoID = s.opts.RepoID
