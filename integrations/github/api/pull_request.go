@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
@@ -193,6 +194,7 @@ func PullRequestsPage(
 
 		if data.State == "MERGED" {
 			pr.MergeSha = data.MergeCommit.OID
+			pr.MergeCommitID = ids.CodeCommit(qc.CustomerID, "github", pr.MergeSha)
 			login := data.MergedBy.Login
 			if login == "" {
 				qc.Logger.Error("empty login for mergedBy field")

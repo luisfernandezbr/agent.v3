@@ -119,7 +119,7 @@
   version = "v0.4.0"
 
 [[projects]]
-  digest = "1:6bafc5f7351645dce4cd04ec4db791bdb421d43da13c3fcef8b90cca01ba7621"
+  digest = "1:61a8ca58fee5891ccd5e9e0503d3cb0636fe15505a7b758d51fe38d38bfce32f"
   name = "github.com/go-redis/redis"
   packages = [
     ".",
@@ -131,8 +131,8 @@
     "internal/util",
   ]
   pruneopts = "UT"
-  revision = "c5c4ad6a4cae24f3867af1a0513709fc944a87f3"
-  version = "v6.15.4"
+  revision = "17c058513b3e03c5e23136c18582fdd8ac8a3645"
+  version = "v6.15.5"
 
 [[projects]]
   digest = "1:586ea76dbd0374d6fb649a91d70d652b7fe0ccffb8910a77468e7702e7901f3d"
@@ -427,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:55fa1a541d709707cf9908a64e8c07c3d510c55b49b3e14c6687ec572ec27736"
+  digest = "1:9d8c93850d0dc5586314fc79710e8e903e1dddcc65f052d53d32e273f29bd245"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,8 +439,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "965fd30dc6311dc993a9dc3cbb0109a67a743f77"
-  version = "0.0.459"
+  revision = "dc1a356c2d61d5cf704fc59e0e3838c459c19b0a"
+  version = "0.0.461"
 
 [[projects]]
   branch = "master"
