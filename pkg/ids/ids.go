@@ -23,7 +23,7 @@ func CodeCommit(customerID string, refType string, repoID string, commitSHA stri
 
 func CodeCommits(customerID string, refType string, repoID string, commitSHAs []string) (res []string) {
 	for _, sha := range commitSHAs {
-		res = append(res, CodeCommit(customerID, repoID, refType, sha))
+		res = append(res, CodeCommit(customerID, refType, repoID, sha))
 	}
 	return
 }
