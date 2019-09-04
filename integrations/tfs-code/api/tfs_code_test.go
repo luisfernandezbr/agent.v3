@@ -77,10 +77,14 @@ func TestFetchPullRequests(t *testing.T) {
 	repos, err := a.FetchRepos([]string{}, []string{})
 	assert.NoError(t, err)
 	for _, repo := range repos {
-		_, _, err := a.FetchPullRequests(repo.RefID)
-		assert.NoError(t, err)
+		if strings.Contains(repo.Name, "agent") {
+			_, _, err := a.FetchPullRequests(repo.RefID, time.Time{})
+			assert.NoError(t, err)
+			// check any PRs created after now, should be 0
+			prs, _, err := a.FetchPullRequests(repo.RefID, time.Now())
+			assert.Len(t, prs, 0)
+		}
 	}
-
 }
 func TestFetchPullRequestComments(t *testing.T) {
 	if skipTests(t) {
@@ -100,7 +104,7 @@ func TestFetchPullRequestComments(t *testing.T) {
 	repos, err := a.FetchRepos([]string{}, []string{})
 	assert.NoError(t, err)
 	for _, repo := range repos {
-		prs, _, err := a.FetchPullRequests(repo.RefID)
+		prs, _, err := a.FetchPullRequests(repo.RefID, time.Time{})
 		assert.NoError(t, err)
 		for _, p := range prs {
 			_, err := a.FetchPullRequestComments(repo.RefID, p.RefID)

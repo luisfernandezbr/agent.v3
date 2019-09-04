@@ -3,11 +3,9 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
-	purl "net/url"
-	"regexp"
+	"strconv"
 
 	"github.com/pinpt/httpclient"
 )
@@ -19,7 +17,8 @@ type tfsPaginator struct {
 var _ httpclient.Paginator = (*tfsPaginator)(nil)
 
 func (tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) (bool, *http.Request) {
-
+	var skippaging bool
+	var err error
 	var mapBody struct {
 		Count int64         `json:"count"`
 		Value []interface{} `json:"value"`
@@ -33,21 +32,20 @@ func (tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) (b
 		return false, nil
 	}
 	body, _ := json.Marshal(mapBody.Value)
+	// special case, pull requests
+	skippaging, body, err = paginatePullRequest(req.URL, body)
+
 	body = bytes.TrimPrefix(body, []byte("["))
 	body = bytes.TrimSuffix(body, []byte("]"))
 	if page > 1 {
 		body = append([]byte{','}, body...)
 	}
 	resp.Body = ioutil.NopCloser(bytes.NewReader(body))
-	if mapBody.Count == int64(maxResults) {
-		url := req.URL.String()
-		skipreg := regexp.MustCompile(fmt.Sprintf(`([\&|\?]\%s)([\d]+)`, purl.QueryEscape(`$skip`)+`=`))
-		url = skipreg.ReplaceAllString(url, "")
-		jobj := params{
-			"$skip": maxResults * page,
-		}
-		url = urlWithParams(url, jobj)
-		newreq, _ := http.NewRequest(req.Method, url, nil)
+	if !skippaging && mapBody.Count == int64(maxResults) {
+		urlquery := req.URL.Query()
+		urlquery.Set("$skip", strconv.Itoa(maxResults*page))
+		req.URL.RawPath = urlquery.Encode()
+		newreq, _ := http.NewRequest(req.Method, req.URL.String(), nil)
 		if user, pass, ok := req.BasicAuth(); ok {
 			newreq.SetBasicAuth(user, pass)
 		}

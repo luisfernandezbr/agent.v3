@@ -1,8 +1,11 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/url"
 	purl "net/url"
+	"strings"
 	"time"
 
 	"github.com/pinpt/go-common/datetime"
@@ -38,12 +41,10 @@ type pullRequestResponse struct {
 }
 
 // FetchPullRequests calls the pull request api returns a list of sourcecode.PullRequest and sourcecode.PullRequestReview
-func (a *TFSAPI) FetchPullRequests(repoid string) (prs []*sourcecode.PullRequest, prrs []*sourcecode.PullRequestReview, err error) {
+func (a *TFSAPI) FetchPullRequests(repoid string, fromDate time.Time) (prs []*sourcecode.PullRequest, prrs []*sourcecode.PullRequestReview, err error) {
 	url := fmt.Sprintf(`_apis/git/repositories/%s/pullRequests`, purl.PathEscape(repoid))
 	var res []pullRequestResponse
-	if err = a.doRequest(url, params{
-		"searchCriteria.status": "all",
-	}, time.Time{}, &res); err != nil {
+	if err = a.doRequest(url, params{"searchCriteria.status": "all"}, fromDate, &res); err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -116,4 +117,30 @@ func (a *TFSAPI) FetchPullRequests(repoid string) (prs []*sourcecode.PullRequest
 		prs = append(prs, pr)
 	}
 	return
+}
+
+func paginatePullRequest(ur *url.URL, body []byte) (bool, []byte, error) {
+	if !strings.HasSuffix(ur.Path, "/pullRequests") {
+		return false, body, nil
+	}
+	if fromDate := ur.Query().Get("searchCriteria.fromDate"); fromDate != "" {
+		maxdate, _ := time.Parse(time.RFC3339, fromDate)
+		var prs []pullRequestResponse
+		json.Unmarshal(body, &prs)
+		var newprs []pullRequestResponse
+		for _, pr := range prs {
+			currentdate, _ := time.Parse(time.RFC3339, pr.CreationDate)
+			if maxdate.After(currentdate) {
+				var newbody []byte
+				var err error
+				if len(newprs) > 0 {
+					newbody, err = json.Marshal(newprs)
+				}
+				return true, newbody, err
+			}
+			newprs = append(newprs, pr)
+		}
+	}
+	return false, body, nil
+
 }

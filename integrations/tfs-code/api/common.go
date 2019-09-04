@@ -8,8 +8,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	purl "net/url"
-	"strings"
+	"net/url"
+	"strconv"
 
 	"time"
 
@@ -22,7 +22,7 @@ import (
 const maxResults int = 300
 const apiVersion string = "3.0"
 
-type params map[string]interface{}
+type params map[string]string
 
 // Creds a credentials object, all properties are required
 type Creds struct {
@@ -70,26 +70,30 @@ func NewTFSAPI(ctx context.Context, logger hclog.Logger, customerid, reftype str
 
 func (a *TFSAPI) doRequest(endPoint string, jobj params, fromdate time.Time, out interface{}) error {
 
-	url := pstring.JoinURL(a.creds.URL, a.creds.Collection, endPoint)
+	rawurl := pstring.JoinURL(a.creds.URL, a.creds.Collection, endPoint)
 	var reader io.Reader
 	if jobj == nil {
 		jobj = params{}
 	}
-	jobj["$top"] = maxResults
-	jobj["$skip"] = 0
-	jobj["api-version"] = apiVersion
+	u, _ := url.Parse(rawurl)
+	vals := u.Query()
+	vals.Add("$top", strconv.Itoa(maxResults))
+	vals.Add("$skip", "0")
+	vals.Add("api-version", apiVersion)
 	if !fromdate.IsZero() {
-		jobj["searchCriteria.fromDate"] = fromdate.Format(time.RFC3339)
+		vals.Add("searchCriteria.fromDate", fromdate.Format(time.RFC3339))
 	}
-
-	url = urlWithParams(url, jobj)
-	req, err := http.NewRequest(http.MethodGet, url, reader)
+	for k, v := range jobj {
+		vals.Add(k, v)
+	}
+	u.RawQuery = vals.Encode()
+	req, err := http.NewRequest(http.MethodGet, u.String(), reader)
 	if err != nil {
 		panic(err)
 	}
-	req.Header.Set("Content-Type", "application/json")
 	encToken := base64.StdEncoding.EncodeToString([]byte(":" + a.creds.APIKey))
 	req.Header.Set("Authorization", "Basic "+encToken)
+	req.Header.Set("Content-Type", "application/json")
 	res, err := a.client.Do(req)
 	if err != nil {
 		return err
@@ -105,27 +109,6 @@ func (a *TFSAPI) doRequest(endPoint string, jobj params, fromdate time.Time, out
 		return json.Unmarshal(b, &out)
 	}
 	return fmt.Errorf("response code: %v request url: %v", res.StatusCode, res.Request.URL)
-}
-
-func urlWithParams(url string, jobj params) string {
-	var parts []string
-	for k, v := range jobj {
-		var str string
-		var ok bool
-		str, ok = v.(string)
-		if !ok {
-			b, _ := json.Marshal(v)
-			str = string(b)
-		}
-		parts = append(parts, purl.QueryEscape(k)+"="+purl.QueryEscape(str))
-	}
-	if strings.Contains(url, "?") {
-		url += "&"
-	} else {
-		url += "?"
-	}
-	url += strings.Join(parts, "&")
-	return url
 }
 
 func exists(what string, array []string) bool {

@@ -87,12 +87,15 @@ func (s *Integration) exportCommitUsers(repoids []string) error {
 
 func (s *Integration) exportPullRequestData(repoids []string) error {
 
-	prsender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestModelName.String())
+	prsender, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestModelName.String())
+	if err != nil {
+		return err
+	}
 	prrsender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
 	prcsender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
 
 	for _, repoid := range repoids {
-		prs, prrs, err := s.api.FetchPullRequests(repoid)
+		prs, prrs, err := s.api.FetchPullRequests(repoid, prsender.LastProcessed)
 		if err != nil {
 			// log error and skip
 			s.logger.Error(fmt.Errorf("error fetching pull requests and reviews. err: %v", err).Error())
