@@ -56,7 +56,7 @@ func (s *exporter) Run() {
 }
 
 func (s *exporter) export(data *agent.ExportRequest) error {
-	s.logger.Info("processing export request", "upload_url", *data.UploadURL, "reprocess_historical", data.ReprocessHistorical)
+	s.logger.Info("processing export request", "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
 
 	agentConfig := cmdexport.AgentConfig{}
 	agentConfig.CustomerID = s.opts.CustomerID
@@ -74,6 +74,8 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 	for _, integration := range data.Integrations {
 
 		s.logger.Info("exporting integration", "name", integration.Name, "len(exclusions)", len(integration.Exclusions))
+
+		//s.logger.Debug("integration data", "data", integration.ToMap())
 
 		conf, err := configFromEvent(integration.ToMap(), s.opts.PPEncryptionKey)
 		if err != nil {

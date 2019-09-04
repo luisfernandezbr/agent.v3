@@ -39,6 +39,8 @@ func configFromEvent(data map[string]interface{}, encryptionKey string) (res cmd
 		return
 	}
 
+	fmt.Println("authdata", auth)
+
 	var authObj map[string]interface{}
 	err = json.Unmarshal([]byte(auth), &authObj)
 	if err != nil {
