@@ -14,8 +14,9 @@ import (
 )
 
 type OtherConfig struct {
-	Excluded []string `json:"excluded_repo_ids"` // excluded repo ids - this comes from the admin ui
-	Repos    []string `json:"repo_names"`        // repo_names - this is for debug and develop only
+	Excluded            []string `json:"excluded_repo_ids"` // excluded repo ids - this comes from the admin ui
+	Repos               []string `json:"repo_names"`        // repo_names - this is for debug and develop only
+	OverrideGitHostName string   `json:"git_host_name"`
 
 	customerid string
 	reftype    string

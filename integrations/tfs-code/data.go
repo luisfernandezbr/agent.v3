@@ -47,13 +47,16 @@ func (s *Integration) exportReposAndRipSrc() (refids []string, err error) {
 			return nil, err
 		}
 		u, e := url.Parse(repo.URL)
+		if s.conf.OverrideGitHostName != "" {
+			u.Host = s.conf.OverrideGitHostName
+		}
 		if e != nil {
 			return nil, e
 		}
 		u.User = url.UserPassword(s.creds.Username, s.creds.Password)
 		args := rpcdef.GitRepoFetch{}
 		args.RepoID = s.api.RepoID(repo.RefID)
-		args.URL = repo.URL
+		args.URL = u.String()
 		args.CommitURLTemplate = commitURLTemplate(repo.Name, s.creds.URL)
 		s.agent.ExportGitRepo(args)
 	}
