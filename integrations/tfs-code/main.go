@@ -13,16 +13,20 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-type Integration struct {
-	logger     hclog.Logger
-	agent      rpcdef.Agent
-	api        *api.TFSAPI
-	creds      *api.Creds
+type OtherConfig struct {
+	Excluded []string `json:"excluded_repo_ids"` // excluded repo ids - this comes from the admin ui
+	Repos    []string `json:"repo_names"`        // repo_names - this is for debug and develop only
+
 	customerid string
 	reftype    string
-	excluded   []string // excluded repo ids - this comes from the admin ui
+}
 
-	repos []string // repo_names - this is for debug and develop only
+type Integration struct {
+	logger hclog.Logger
+	agent  rpcdef.Agent
+	api    *api.TFSAPI
+	creds  *api.Creds
+	conf   *OtherConfig
 }
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
@@ -47,10 +51,7 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 
 func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig) error {
 	var creds api.Creds
-	var conf struct {
-		Excluded []string `json:"excluded_repo_ids"`
-		Repos    []string `json:"repo_names"`
-	}
+	var conf OtherConfig
 	if err := structmarshal.MapToStruct(config.Integration, &creds); err != nil {
 		return err
 	}
@@ -73,24 +74,24 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 		return fmt.Errorf("missing api_key")
 	}
 
-	s.customerid = config.Pinpoint.CustomerID
-	s.reftype = "tfs"
+	s.conf = &conf
+	s.conf.customerid = config.Pinpoint.CustomerID
+	s.conf.reftype = "tfs"
 	s.creds = &creds
-	s.excluded = conf.Excluded
-	s.repos = conf.Repos
-	s.api = api.NewTFSAPI(ctx, s.logger, s.customerid, s.reftype, &creds)
+
+	s.api = api.NewTFSAPI(ctx, s.logger, s.conf.customerid, s.conf.reftype, &creds)
 	s.api.RepoID = func(refID string) string {
-		return hash.Values("Repo", s.customerid, s.reftype, refID)
+		return hash.Values("Repo", s.conf.customerid, s.conf.reftype, refID)
 	}
 	s.api.UserID = func(refID string) string {
-		return hash.Values("User", s.customerid, s.reftype, refID)
+		return hash.Values("User", s.conf.customerid, s.conf.reftype, refID)
 	}
 	s.api.PullRequestID = func(refID string) string {
-		return hash.Values("PullRequest", s.customerid, s.reftype, refID)
+		return hash.Values("PullRequest", s.conf.customerid, s.conf.reftype, refID)
 	}
 	s.api.BranchID = func(repoRefID string, branchName string) string {
 		repoID := s.api.RepoID(repoRefID)
-		return hash.Values(s.reftype, repoID, s.customerid, branchName)
+		return hash.Values(s.conf.reftype, repoID, s.conf.customerid, branchName)
 	}
 
 	return nil

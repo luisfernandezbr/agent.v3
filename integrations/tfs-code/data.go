@@ -34,22 +34,18 @@ func (s *Integration) export() error {
 }
 
 func (s *Integration) exportReposAndRipSrc() (refids []string, err error) {
+
 	sender := objsender.NewNotIncremental(s.agent, sourcecode.RepoModelName.String())
-	repos, err := s.api.FetchRepos(s.repos, s.excluded)
-	s.logger.Info("Fetched repos", "count", len(repos))
+	repos, err := s.api.FetchRepos(s.conf.Repos, s.conf.Excluded)
 	if err != nil {
 		return
 	}
+	s.logger.Info("fetched repos", "count", len(repos))
 	for _, repo := range repos {
 		refids = append(refids, repo.RefID)
 		if err := sender.Send(repo); err != nil {
 			return nil, err
 		}
-
-		s.logger.Info("git repo url", "url", repo.URL)
-		// workaround for itexico server
-		// ur := strings.Replace(repo.URL, "itxwin04:8080", "itxwin04.itexico.com:8080", 1)
-
 		u, e := url.Parse(repo.URL)
 		if e != nil {
 			return nil, e
@@ -72,7 +68,9 @@ func (s *Integration) exportCommitUsers(repoids []string) error {
 	usermap := make(map[string]*sourcecode.User)
 	for _, repoid := range repoids {
 		if err := s.api.FetchCommitUsers(repoid, usermap, sender.LastProcessed); err != nil {
-			return fmt.Errorf("error fetching users. err: %v", err)
+			// log error and skip
+			s.logger.Error(fmt.Errorf("error fetching users. err: %v", err).Error())
+			continue
 		}
 	}
 	for _, u := range usermap {
@@ -93,7 +91,9 @@ func (s *Integration) exportPullRequestData(repoids []string) error {
 	for _, repoid := range repoids {
 		prs, prrs, err := s.api.FetchPullRequests(repoid)
 		if err != nil {
-			return fmt.Errorf("error fetching pull requests and reviews. err: %v", err)
+			// log error and skip
+			s.logger.Error(fmt.Errorf("error fetching pull requests and reviews. err: %v", err).Error())
+			continue
 		}
 		for _, pr := range prs {
 			if err := prsender.Send(pr); err != nil {
@@ -101,7 +101,9 @@ func (s *Integration) exportPullRequestData(repoids []string) error {
 			}
 			cmts, err := s.api.FetchPullRequestComments(repoid, pr.RefID)
 			if err != nil {
-				return fmt.Errorf("error fetching pull requests comments. err: %v", err)
+				// log error and skip
+				s.logger.Error(fmt.Errorf("error fetching pull requests comments. err: %v", err).Error())
+				continue
 			}
 			for _, prc := range cmts {
 				if err := prcsender.Send(prc); err != nil {

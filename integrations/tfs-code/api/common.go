@@ -27,7 +27,7 @@ type params map[string]interface{}
 // Creds a credentials object, all properties are required
 type Creds struct {
 	URL        string `json:"url"`
-	Collection string `json:"org"`
+	Collection string `json:"collection"`
 	Username   string `json:"username"`
 	Password   string `json:"password"`
 	APIKey     string `json:"api_key"` // https://your_url/tfs/DefaultCollection/_details/security/tokens
@@ -104,7 +104,7 @@ func (a *TFSAPI) doRequest(endPoint string, jobj params, fromdate time.Time, out
 	if res.StatusCode == http.StatusOK {
 		return json.Unmarshal(b, &out)
 	}
-	return fmt.Errorf("response error %v", res.StatusCode)
+	return fmt.Errorf("response code: %v request url: %v", res.StatusCode, res.Request.URL)
 }
 
 func urlWithParams(url string, jobj params) string {
