@@ -85,6 +85,9 @@ func (s *Manager) Done(id ID, lastProcessed interface{}) error {
 	defer s.sessionsMu.Unlock()
 
 	sess := s.get(id)
+	if sess == nil {
+		panic("could not find session by id")
+	}
 	modelType := sess.modelType
 
 	err := sess.stream.Close()

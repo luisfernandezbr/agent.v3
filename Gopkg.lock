@@ -119,7 +119,7 @@
   version = "v0.4.0"
 
 [[projects]]
-  digest = "1:6bafc5f7351645dce4cd04ec4db791bdb421d43da13c3fcef8b90cca01ba7621"
+  digest = "1:61a8ca58fee5891ccd5e9e0503d3cb0636fe15505a7b758d51fe38d38bfce32f"
   name = "github.com/go-redis/redis"
   packages = [
     ".",
@@ -131,8 +131,8 @@
     "internal/util",
   ]
   pruneopts = "UT"
-  revision = "c5c4ad6a4cae24f3867af1a0513709fc944a87f3"
-  version = "v6.15.4"
+  revision = "17c058513b3e03c5e23136c18582fdd8ac8a3645"
+  version = "v6.15.5"
 
 [[projects]]
   digest = "1:586ea76dbd0374d6fb649a91d70d652b7fe0ccffb8910a77468e7702e7901f3d"
@@ -391,7 +391,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:76ad18e9693a4ccb7e7c34084db79e55426fae2d108c6d29a6507580cd549ffa"
+  digest = "1:9dc2151c75fe4dea84891629425797bbafb06954df9cb8b07b7fdd7f0cfedf94"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -415,8 +415,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "d3e9656a62fc43d075ccdb6a53200b19e844778c"
-  version = "8.2.8"
+  revision = "7c04a1c4d0e5f21803ac062523be3c4053b9804f"
+  version = "8.2.11"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
@@ -427,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:ff20f9730a4b715bd3b15e58aed35f8691afbda966bd81db8fdf6e5b63ef54f2"
+  digest = "1:2554f9be3669c3138ecd06618f062a118f7cf772573a599f431fe9322ab39884"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,8 +439,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "de335d3fdc5f7c15b3696f068b0d596f168316cb"
-  version = "0.0.426"
+  revision = "b6a971856e77ddef7f06c4ead6e56c868d9283e1"
+  version = "0.0.465"
 
 [[projects]]
   branch = "master"
@@ -608,7 +608,7 @@
     "ssh/knownhosts",
   ]
   pruneopts = "UT"
-  revision = "60c769a6c58655dab1b9adac0d58967dd517cfba"
+  revision = "9756ffdc24725223350eb3266ffb92590d28f278"
 
 [[projects]]
   branch = "master"
@@ -616,7 +616,7 @@
   name = "golang.org/x/exp"
   packages = ["rand"]
   pruneopts = "UT"
-  revision = "ec7cb31e5a562f5e9e31b300128d2f530f55d127"
+  revision = "c13cbed26979984b7dddd468b78daf72f8b4b473"
 
 [[projects]]
   branch = "master"
@@ -638,7 +638,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:cfb8a631f909a928a1ef64f1ac962ae683f2fe17c914bcaa8c47ec3da9fe4cc9"
+  digest = "1:91282199749d8acf6074ed0bbab2a6c0bc6a6528b438d7d82a9b494b4291a04b"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -650,7 +650,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "c7b8b68b14567162c6602a7c5659ee0f26417c18"
+  revision = "1f305c863dab438568b4750723b2b7b237a469bb"
 
 [[projects]]
   digest = "1:3952dba92e6a837cf34e6a073160d31029412bf863e37274cb779f319ddbe0b4"
@@ -688,7 +688,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ab6f878376bfafcf13044fdf67fbeeb29f9ef6475d0f160751ef7b18c65e2bc4"
+  digest = "1:4a475a9ddf1954704e7e6e5be6fb16d22869eabeb6ae99b114df4087d4bbb3ef"
   name = "gonum.org/v1/gonum"
   packages = [
     "blas",
@@ -715,7 +715,7 @@
     "stat/distuv",
   ]
   pruneopts = "UT"
-  revision = "d61003946d0d62fea7df4d9f9dee3c729ff97c9e"
+  revision = "43865b531bee9d28dccf2cf831db9eef686ca8c6"
 
 [[projects]]
   branch = "master"

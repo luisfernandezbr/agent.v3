@@ -10,6 +10,20 @@ Service waits for commands from a backend to validate integrations, start export
 - validate-config - Validates the configuration by making a test connection.
 - export-onboard-data - Exports users, repos or projects based on param for a specified integration. Saves that data into provided file.
 
+### Testing integrations without backend
+
+```
+Windows powershell
+Export
+.\agent-next.exe export 2>&1 > logs.txt --% --agent-config-json="{\"customer_id\":\"c1\"}" --integrations-json="[{\"name\":\"mock\", \"config\":{\"k\":\"v\"}}]" --pinpoint-root=.
+
+Onboarding data
+.\agent-next.exe export-onboard-data 2>&1 > logs.txt --% --agent-config-json="{\"customer_id\":\"c1\",\"skip_git\":true}" --integrations-json="[{\"name\":\"jira-hosted\", \"config\":{\"username\":\"XXX\", \"password\":\"XXX\", \"url\":\"https://xxxxxxxxxxxxxx\"}}]" --pinpoint-root=. --object-type=projects
+
+Getting logs
+Get-Content .\logs.txt -Wait -Tail 10
+```
+
 ### Using separate processes for executing commands in service
 We have a long running service that accepts commands from the backend, such as export, validation, getting users and similar. We could run these directly or as a separate processes.
 
@@ -59,7 +73,7 @@ SendExported(
 		objs []ExportObj)
 
 // Integration can ask agent to download and process git repo using ripsrc.
-ExportGitRepo(fetch GitRepoFetch)
+ExportGitRepo(fetch GitRepoFetch) error
 
 }
 

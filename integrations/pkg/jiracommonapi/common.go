@@ -4,8 +4,8 @@ import (
 	"net/url"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/go-common/hash"
 
+	"github.com/pinpt/agent.next/pkg/ids"
 	pstrings "github.com/pinpt/go-common/strings"
 )
 
@@ -32,15 +32,15 @@ func (s QueryContext) IssueURL(issueKey string) string {
 }
 
 func (s QueryContext) ProjectID(refID string) string {
-	return hash.Values("Project", s.CustomerID, "jira", refID)
+	return ids.WorkProject(s.CustomerID, "jira", refID)
 }
 
 func (s QueryContext) IssueID(refID string) string {
-	return hash.Values("Issue", s.CustomerID, "jira", refID)
+	return ids.WorkIssue(s.CustomerID, "jira", refID)
 }
 
 func (s QueryContext) UserID(refID string) string {
-	return hash.Values("User", s.CustomerID, "jira", refID)
+	return ids.WorkUser(s.CustomerID, "jira", refID)
 }
 
 type PageInfo struct {

@@ -64,9 +64,9 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 
 func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig) error {
 	var conf struct {
-		URL       string   `json:"url"`
-		AuthToken string   `json:"api_token"`
-		Metrics   []string `json:"metrics"`
+		URL      string   `json:"url"`
+		APIToken string   `json:"apitoken"`
+		Metrics  []string `json:"metrics"`
 	}
 	if err := structmarshal.MapToStruct(config.Integration, &conf); err != nil {
 		return err
@@ -74,7 +74,7 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 	if len(conf.Metrics) == 0 {
 		conf.Metrics = defaultMetrics
 	}
-	s.api = api.NewSonarqubeAPI(ctx, s.logger, conf.URL, conf.AuthToken, conf.Metrics)
+	s.api = api.NewSonarqubeAPI(ctx, s.logger, conf.URL, conf.APIToken, conf.Metrics)
 	s.customerID = config.Pinpoint.CustomerID
 	return nil
 }

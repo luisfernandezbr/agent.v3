@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
@@ -13,6 +14,19 @@ import (
 )
 
 type Project = jiracommonapi.Project
+
+const issuesAndChangelogsProjectConcurrency = 10
+
+func projectsToChan(projects []Project) chan Project {
+	res := make(chan Project)
+	go func() {
+		for _, p := range projects {
+			res <- p
+		}
+		close(res)
+	}()
+	return res
+}
 
 func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[string]*work.CustomField) error {
 	senderIssues, err := objsender.NewIncrementalDateBased(s.agent, work.IssueModelName.String())
@@ -24,11 +38,39 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 	startedSprintExport := time.Now()
 	sprints := NewSprints()
 
-	for _, p := range projects {
-		err := s.issuesAndChangelogsForProject(p, fieldByID, senderIssues, senderChangelogs, sprints)
-		if err != nil {
-			return err
-		}
+	projectsChan := projectsToChan(projects)
+	wg := sync.WaitGroup{}
+	var pErr error
+	var errMu sync.Mutex
+
+	for i := 0; i < issuesAndChangelogsProjectConcurrency; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for p := range projectsChan {
+				errMu.Lock()
+				err := pErr
+				errMu.Unlock()
+				if err != nil {
+					return
+				}
+				// p is defined above
+				// fieldByID is read-only
+				// senderIssues and senderChangelogs are sender which support concurrency
+				// sprints support concurrency for processIssueSprint
+				err = s.issuesAndChangelogsForProject(p, fieldByID, senderIssues, senderChangelogs, sprints)
+				if err != nil {
+					errMu.Lock()
+					pErr = err
+					errMu.Unlock()
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	if pErr != nil {
+		return pErr
 	}
 
 	senderSprints := objsender.NewNotIncremental(s.agent, work.SprintModelName.String())

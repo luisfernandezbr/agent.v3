@@ -4,28 +4,25 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/pkg/objsender"
-	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportPullRequestComments(logger hclog.Logger, pullRequests chan []api.PullRequest) error {
-	sender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
-
+func (s *Integration) exportPullRequestsComments(logger hclog.Logger, sender *objsender.NotIncremental, pullRequests chan []api.PullRequest) error {
 	for prs := range pullRequests {
 		for _, pr := range prs {
 			if !pr.HasComments {
 				// perf optimization
 				continue
 			}
-			err := s.exportPullRequestCommentsPR(logger, sender, pr.RefID)
+			err := s.exportPullRequestComments(logger, sender, pr.RefID)
 			if err != nil {
 				return err
 			}
 		}
 	}
-	return sender.Done()
+	return nil
 }
 
-func (s *Integration) exportPullRequestCommentsPR(logger hclog.Logger, sender *objsender.NotIncremental, prID string) error {
+func (s *Integration) exportPullRequestComments(logger hclog.Logger, sender *objsender.NotIncremental, prID string) error {
 	return api.PaginateRegular(func(query string) (api.PageInfo, error) {
 		pi, res, err := api.PullRequestCommentsPage(s.qc, prID, query)
 		if err != nil {

@@ -10,6 +10,45 @@ https://developer.github.com/enterprise/2.15/
 ## TODO
 - sourcecode.PullRequest.ClosedByRefID not implemented for GitHub Enterprise 2.15.9. timelineItems is not available need to get it another way
 
+## API call examples
+
+curl -H "Authorization: bearer $PP_GITHUB_TOKEN" -X POST -d '{"query":"query { viewer { login }}"}' https://api.github.com/graphql
+
+## Development commands
+
+```
+Minimal required args
+go run . export --agent-config-json='{"customer_id":"c1"}' --integrations-json='[{"name":"github", "config":{"url":"https://api.github.com", "apitoken":"XXX"}}]'
+```
+
+```
+All args
+go run . export --agent-config-json='{"customer_id":"c1", "skip_git":false}' --integrations-json='[{"name":"github", "config":{"url":"https://api.github.com", "apitoken":"XXX", "excluded_repos":[],"only_git":false,"organization":"", repos:["pinpt/test_repo"], "stop_after_n":1}}]'
+```
+
+```
+URL      string `json:"url"`
+APIToken string `json:"apitoken"`
+
+// ExcludedRepos are the repos to exclude from processing. This is based on github repo id.
+ExcludedRepos []string `json:"excluded_repos"`
+OnlyGit       bool     `json:"only_git"`
+
+// Organization specifies the organization to export. By default all account organization are exported. Set this to export only one.
+Organization string `json:"organization"`
+
+// Repos specifies the repos to export. By default all repos are exported not including the ones from ExcludedRepos. This option overrides this.
+// Use github nameWithOwner for this field.
+// Example: user1/repo1
+Repos []string `json:"repos"`
+
+// StopAfterN stops exporting after N number of repos for testing and dev purposes
+StopAfterN int `json:"stop_after_n"`
+```    
+
+## Datamodel notes
+github.PullRequestComment does not include comments created from review, these go to github.PullRequestReview. We do not currently store the text of those.
+
 ## How to support incremental exports?
 Since graphql doesn't support since parameter on all objects, we iterate backwards using updated at timestamp, when we get to the object which was updated before last run we stop.
 

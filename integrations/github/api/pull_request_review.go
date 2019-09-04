@@ -13,7 +13,7 @@ func PullRequestReviewsPage(
 	queryParams string) (pi PageInfo, res []*sourcecode.PullRequestReview, _ error) {
 
 	if pullRequestRefID == "" {
-		panic("mussing pr id")
+		panic("missing pr id")
 	}
 
 	qc.Logger.Debug("pull_request_reviews request", "pr", pullRequestRefID, "q", queryParams)
@@ -33,6 +33,7 @@ func PullRequestReviewsPage(
 					nodes {
 						updatedAt
 						id
+						url
 						pullRequest {
 							id
 						}
@@ -60,6 +61,7 @@ func PullRequestReviewsPage(
 					Nodes      []struct {
 						UpdatedAt   time.Time `json:"updatedAt"`
 						ID          string    `json:"id"`
+						URL         string    `json:"url"`
 						PullRequest struct {
 							ID string `json:"id"`
 						} `json:"pullRequest"`
@@ -87,15 +89,16 @@ func PullRequestReviewsPage(
 
 	nodesContainer := requestRes.Data.Node.Reviews
 	nodes := nodesContainer.Nodes
-	//qc.Logger.Info("got comments", "n", len(nodes))
+	//qc.Logger.Info("got reviews", "n", len(nodes))
 	for _, data := range nodes {
 		item := &sourcecode.PullRequestReview{}
 		item.CustomerID = qc.CustomerID
 		item.RefType = "github"
 		item.RefID = data.ID
+		item.URL = data.URL
 		//item.UpdatedAt = data.UpdatedAt.Unix()
 		item.RepoID = qc.RepoID(data.Repository.ID)
-		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)
+		item.PullRequestID = qc.PullRequestID(item.RepoID, data.PullRequest.ID)
 
 		switch data.State {
 		case "PENDING":

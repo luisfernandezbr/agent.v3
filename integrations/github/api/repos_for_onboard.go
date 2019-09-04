@@ -3,6 +3,8 @@ package api
 import (
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/ids"
+
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/integration-sdk/agent"
 
@@ -128,7 +130,9 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 		}
 
 		repo := &agent.RepoResponseRepos{}
-		repo.RefType = "github"
+		repoID := ids.CodeRepo(qc.CustomerID, qc.RefType, data.ID)
+
+		repo.RefType = qc.RefType
 		//repo.CustomerID = qc.CustomerID
 		repo.RefID = data.ID
 		repo.Name = data.Name
@@ -143,7 +147,8 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 		cdata := data.DefaultBranchRef.Target
 		if cdata.OID != "" {
 			commit := agent.RepoResponseReposLastCommit{}
-			commit.CommitID = cdata.OID
+			commit.CommitSha = cdata.OID
+			commit.CommitID = ids.CodeCommit(qc.CustomerID, qc.RefType, repoID, commit.CommitSha)
 			commit.URL = cdata.URL
 			commit.Message = cdata.Message
 			commit.Author.Name = cdata.Author.Name

@@ -49,7 +49,7 @@ type export struct {
 
 	lastProcessed *jsonstore.Store
 
-	gitProcessingRepos chan repoProcess
+	gitProcessingRepos chan rpcdef.GitRepoFetch
 }
 
 func newExport(opts Opts) (*export, error) {
@@ -74,7 +74,7 @@ func newExport(opts Opts) (*export, error) {
 
 	s.sessions = newSessions(s.Logger, s, s.Locs.Uploads)
 
-	s.gitProcessingRepos = make(chan repoProcess, 100000)
+	s.gitProcessingRepos = make(chan rpcdef.GitRepoFetch, 100000)
 
 	gitProcessingDone := make(chan bool)
 
@@ -107,12 +107,6 @@ func (s *export) discardIncrementalData() error {
 	return os.RemoveAll(s.Locs.RipsrcCheckpoints)
 }
 
-type repoProcess struct {
-	Access            gitclone.AccessDetails
-	ID                string
-	CommitURLTemplate string
-}
-
 func (s *export) gitProcessing() (hadErrors bool, _ error) {
 	if s.Opts.AgentConfig.SkipGit {
 		s.Logger.Warn("SkipGit is true, skipping git clone and ripsrc for all repos")
@@ -130,22 +124,26 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 
 	resErrors := map[string]error{}
 
-	for repo := range s.gitProcessingRepos {
+	for fetch := range s.gitProcessingRepos {
 		if i == 0 {
 			start = time.Now()
 		}
 		i++
+		access := gitclone.AccessDetails{}
+		access.URL = fetch.URL
+
 		opts := exportrepo.Opts{
 			Logger:     s.Logger.With("c", i),
 			CustomerID: s.Opts.AgentConfig.CustomerID,
-			RepoID:     repo.ID,
+			RepoID:     fetch.RepoID,
 
 			Sessions: s.sessions.outsession,
 
 			LastProcessed: s.lastProcessed,
-			RepoAccess:    repo.Access,
+			RepoAccess:    access,
 
-			CommitURLTemplate: repo.CommitURLTemplate,
+			CommitURLTemplate: fetch.CommitURLTemplate,
+			BranchURLTemplate: fetch.BranchURLTemplate,
 		}
 		exp := exportrepo.New(opts, s.Locs)
 		repoDirName, err := exp.Run(ctx)

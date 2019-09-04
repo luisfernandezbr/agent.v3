@@ -55,7 +55,28 @@ func configFromEvent(data map[string]interface{}, encryptionKey string) (res cmd
 	return
 }
 
-func convertConfig(in string, c1 map[string]interface{}, exclusions []string) (res map[string]interface{}, integrationName string, rerr error) {
+func convertConfig(integrationNameBackend string, configBackend map[string]interface{}, exclusions []string) (configAgent map[string]interface{}, integrationNameAgent string, rerr error) {
+	switch integrationNameBackend {
+
+	case "github":
+		configAgent, integrationNameAgent, rerr = convertConfigGithub(integrationNameBackend, configBackend, exclusions)
+	case "jira":
+		configAgent, integrationNameAgent, rerr = convertConfigJira(integrationNameBackend, configBackend, exclusions)
+	case "sonarqube":
+		configAgent, integrationNameAgent, rerr = convertConfigSonarqube(integrationNameBackend, configBackend, exclusions)
+	default:
+		rerr = fmt.Errorf("unsupported integration: %v", integrationNameBackend)
+		return
+	}
+
+	if integrationNameAgent == "" {
+		integrationNameAgent = integrationNameBackend
+	}
+
+	return
+}
+
+func convertConfigGithub(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
 
 	errStr := func(err string) {
 		rerr = errors.New(err)
@@ -63,96 +84,149 @@ func convertConfig(in string, c1 map[string]interface{}, exclusions []string) (r
 	}
 
 	res = map[string]interface{}{}
-	integrationName = in
 
-	if in == "github" {
-		var config struct {
-			URL           string   `json:"url"`
-			APIToken      string   `json:"apitoken"`
-			ExcludedRepos []string `json:"excluded_repos"`
-		}
-		err := structmarshal.MapToStruct(c1, &config)
-		if err != nil {
-			rerr = err
-			return
-		}
-		{
-			v, ok := c1["api_token"].(string)
-			if !ok {
-				errStr("missing api_token")
-				return
-			}
-			config.APIToken = v
-		}
-		{
-			v, ok := c1["url"].(string)
-			if !ok {
-				errStr("missing url")
-				return
-			}
-			config.URL = v
-		}
-		config.ExcludedRepos = exclusions
-		res, err = structmarshal.StructToMap(config)
+	var config struct {
+		URL           string   `json:"url"`
+		APIToken      string   `json:"apitoken"`
+		ExcludedRepos []string `json:"excluded_repos"`
+	}
 
-		if err != nil {
-			rerr = err
-			return
-		}
-
-		return
-
-	} else if in == "jira" {
-		var config struct {
-			URL              string   `json:"url"`
-			Username         string   `json:"username"`
-			Password         string   `json:"password"`
-			ExcludedProjects []string `json:"excluded_projects"`
-		}
-		err := structmarshal.MapToStruct(c1, &config)
-		if err != nil {
-			panic(err)
-		}
-		us, ok := c1["url"].(string)
-		if !ok {
-			errStr("missing jira url in config")
-		}
-		u, err := url.Parse(us)
-		if err != nil {
-			rerr = fmt.Errorf("invalid jira url: %v", err)
-			return
-		}
-		integrationName = "jira-hosted"
-		if strings.HasSuffix(u.Host, ".atlassian.net") {
-			integrationName = "jira-cloud"
-		}
-		config.URL = us
-		{
-			v, ok := c1["username"].(string)
-			if !ok {
-				errStr("missing username")
-				return
-			}
-			config.Username = v
-		}
-		{
-			v, ok := c1["password"].(string)
-			if !ok {
-				errStr("missing password")
-				return
-			}
-			config.Password = v
-		}
-		config.ExcludedProjects = exclusions
-		res, err = structmarshal.StructToMap(config)
-		if err != nil {
-			rerr = err
-			return
-		}
-
+	err := structmarshal.MapToStruct(cb, &config)
+	if err != nil {
+		rerr = err
 		return
 	}
 
-	rerr = fmt.Errorf("unsupported integration: %v", in)
+	{
+		v, ok := cb["api_token"].(string)
+		if !ok {
+			errStr("missing api_token")
+			return
+		}
+		config.APIToken = v
+	}
+
+	{
+		v, ok := cb["url"].(string)
+		if !ok {
+			errStr("missing url")
+			return
+		}
+		config.URL = v
+	}
+
+	config.ExcludedRepos = exclusions
+	res, err = structmarshal.StructToMap(config)
+
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	return
+}
+
+func convertConfigJira(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+	errStr := func(err string) {
+		rerr = errors.New(err)
+		return
+	}
+
+	res = map[string]interface{}{}
+
+	var config struct {
+		URL              string   `json:"url"`
+		Username         string   `json:"username"`
+		Password         string   `json:"password"`
+		ExcludedProjects []string `json:"excluded_projects"`
+	}
+	err := structmarshal.MapToStruct(cb, &config)
+	if err != nil {
+		panic(err)
+	}
+	us, ok := cb["url"].(string)
+	if !ok {
+		errStr("missing jira url in config")
+	}
+	u, err := url.Parse(us)
+	if err != nil {
+		rerr = fmt.Errorf("invalid jira url: %v", err)
+		return
+	}
+	inameAgent = "jira-hosted"
+	if strings.HasSuffix(u.Host, ".atlassian.net") {
+		inameAgent = "jira-cloud"
+	}
+	config.URL = us
+	{
+		v, ok := cb["username"].(string)
+		if !ok {
+			errStr("missing username")
+			return
+		}
+		config.Username = v
+	}
+	{
+		v, ok := cb["password"].(string)
+		if !ok {
+			errStr("missing password")
+			return
+		}
+		config.Password = v
+	}
+	config.ExcludedProjects = exclusions
+	res, err = structmarshal.StructToMap(config)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	return
+}
+
+func convertConfigSonarqube(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+	errStr := func(err string) {
+		rerr = errors.New(err)
+		return
+	}
+
+	res = map[string]interface{}{}
+
+	var config struct {
+		URL      string `json:"url"`
+		APIToken string `json:"apitoken"`
+	}
+
+	err := structmarshal.MapToStruct(cb, &config)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	{
+		v, ok := cb["api_token"].(string)
+		if !ok {
+			errStr("missing api_token")
+			return
+		}
+		config.APIToken = v
+	}
+
+	{
+		v, ok := cb["url"].(string)
+		if !ok {
+			errStr("missing url")
+			return
+		}
+		config.URL = v
+	}
+
+	res, err = structmarshal.StructToMap(config)
+
+	if err != nil {
+		rerr = err
+		return
+	}
+
 	return
 }

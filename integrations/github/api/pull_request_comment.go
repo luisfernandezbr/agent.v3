@@ -13,7 +13,7 @@ func PullRequestCommentsPage(
 	queryParams string) (pi PageInfo, res []*sourcecode.PullRequestComment, _ error) {
 
 	if pullRequestRefID == "" {
-		panic("mussing pr id")
+		panic("missing pr id")
 	}
 
 	qc.Logger.Debug("pull_request_comments request", "pr", pullRequestRefID, "q", queryParams)
@@ -33,6 +33,7 @@ func PullRequestCommentsPage(
 					nodes {
 						updatedAt
 						id
+						url
 						pullRequest {
 							id
 						}
@@ -60,6 +61,7 @@ func PullRequestCommentsPage(
 					Nodes      []struct {
 						UpdatedAt   time.Time `json:"updatedAt"`
 						ID          string    `json:"id"`
+						URL         string    `json:"url"`
 						PullRequest struct {
 							ID string `json:"id"`
 						} `json:"pullRequest"`
@@ -91,9 +93,10 @@ func PullRequestCommentsPage(
 		item.CustomerID = qc.CustomerID
 		item.RefType = "github"
 		item.RefID = data.ID
+		item.URL = data.URL
 		date.ConvertToModel(data.UpdatedAt, &item.UpdatedDate)
 		item.RepoID = qc.RepoID(data.Repository.ID)
-		item.PullRequestID = qc.PullRequestID(data.PullRequest.ID)
+		item.PullRequestID = qc.PullRequestID(item.RepoID, data.PullRequest.ID)
 		item.Body = data.BodyText
 		date.ConvertToModel(data.CreatedAt, &item.CreatedDate)
 

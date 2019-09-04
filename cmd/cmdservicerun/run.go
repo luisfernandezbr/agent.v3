@@ -198,7 +198,6 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 
 		resp.UUID = s.conf.DeviceID
 		date.ConvertToModel(time.Now(), &resp.EventDate)
-		//resp.RefID = hash.Values(s.conf.DeviceID, integration.Name)
 
 		rerr := func(err error) (datamodel.ModelSendEvent, error) {
 			// error for everything else
@@ -207,31 +206,27 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 			return sendEvent(resp)
 		}
 
-		if integration.Name == "jira" || integration.Name == "github" {
-			auth := integration.Authorization.ToMap()
+		auth := integration.Authorization.ToMap()
 
-			res, err := s.validate(ctx, integration.Name, auth)
-			if err != nil {
-				return rerr(err)
-			}
-
-			if !res.Success {
-				return rerr(errors.New(strings.Join(res.Errors, ", ")))
-			}
-
-			encrAuthData, err := encrypt.EncryptString(pjson.Stringify(auth), s.conf.PPEncryptionKey)
-			if err != nil {
-				return rerr(err)
-			}
-
-			resp.Message = "Success. Export completed."
-			resp.Success = true
-			resp.Type = agent.IntegrationResponseTypeIntegration
-			resp.Authorization = encrAuthData
-			return sendEvent(resp)
+		res, err := s.validate(ctx, integration.Name, auth)
+		if err != nil {
+			return rerr(err)
 		}
 
-		return rerr(errors.New("Only jira and github integrations are supported"))
+		if !res.Success {
+			return rerr(errors.New(strings.Join(res.Errors, ", ")))
+		}
+
+		encrAuthData, err := encrypt.EncryptString(pjson.Stringify(auth), s.conf.PPEncryptionKey)
+		if err != nil {
+			return rerr(err)
+		}
+
+		resp.Message = "Success. Export completed."
+		resp.Success = true
+		resp.Type = agent.IntegrationResponseTypeIntegration
+		resp.Authorization = encrAuthData
+		return sendEvent(resp)
 	}
 
 	go func() {
@@ -406,8 +401,9 @@ func (s *runner) handleExportEvents(ctx context.Context) error {
 	}
 
 	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
-		s.logger.Info("received export request")
+
 		ev := instance.Object().(*agent.ExportRequest)
+		s.logger.Info("received export request", "id", ev.ID, "uuid", ev.UUID, "request_date", ev.RequestDate.Rfc3339)
 
 		done := make(chan error)
 

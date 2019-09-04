@@ -165,7 +165,7 @@ func (s *enroller) WaitForResponse(ctx context.Context) (res agent.EnrollRespons
 		return nil, nil
 	}
 
-	s.logger.Info("registering enroll")
+	s.logger.Info("registering enroll, waiting for response")
 
 	sub, err := action.Register(ctx, action.NewAction(cb), enrollConfig)
 	if err != nil {

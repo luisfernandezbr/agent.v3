@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
@@ -26,7 +27,7 @@ func PullRequestsPage(
 
 	if useClosedEvents {
 		closedEventsQ = `
-		# fetch the user who closed the issues
+		# fetch the user who closed the pull request
 		# this is only relevant when the state = CLOSED
 		closedEvents: timelineItems (last:1 itemTypes:CLOSED_EVENT){
 			nodes {
@@ -36,7 +37,8 @@ func PullRequestsPage(
 					}
 				}
 			}
-		}`
+		}
+		`
 	}
 
 	query := `
@@ -55,7 +57,7 @@ func PullRequestsPage(
 						updatedAt
 						id
 						repository { id }
-						baseRefName
+						headRefName
 						title
 						bodyText
 						url
@@ -64,7 +66,9 @@ func PullRequestsPage(
 						closedAt
 						# OPEN, CLOSED or MERGED
 						state
-						author { login }
+						author { login }						
+						mergedBy { login }
+						mergeCommit { oid }
 						comments {
 							totalCount
 						}
@@ -90,7 +94,7 @@ func PullRequestsPage(
 						Repository struct {
 							ID string `json:"id"`
 						}
-						BaseRefName string `json:"baseRefName"`
+						HeadRefName string `json:"headRefName"`
 						Title       string `json:"title"`
 						BodyText    string `json:"bodyText"`
 
@@ -103,6 +107,12 @@ func PullRequestsPage(
 						Author    struct {
 							Login string `json:"login"`
 						} `json:"author"`
+						MergedBy struct {
+							Login string `json:"login"`
+						} `json:"mergedBy"`
+						MergeCommit struct {
+							OID string `json:"oid"`
+						} `json:"mergeCommit"`
 						Comments struct {
 							TotalCount int `json:"totalCount"`
 						} `json:"comments"`
@@ -121,8 +131,6 @@ func PullRequestsPage(
 			} `json:"node"`
 		} `json:"data"`
 	}
-
-	// TODO: why don't we have merged_by?
 
 	err := qc.Request(query, &requestRes)
 	if err != nil {
@@ -143,7 +151,7 @@ func PullRequestsPage(
 		pr.RefType = "github"
 		pr.RefID = data.ID
 		pr.RepoID = qc.RepoID(repoRefID)
-		pr.BranchID = qc.BranchID(repoRefID, data.BaseRefName)
+		pr.BranchName = data.HeadRefName
 		pr.Title = data.Title
 		pr.Description = data.BodyText
 		pr.URL = data.URL
@@ -171,14 +179,29 @@ func PullRequestsPage(
 			if len(events) != 0 {
 				login := events[0].Actor.Login
 				if login == "" {
-					qc.Logger.Error("empty login")
-				}
-				pr.ClosedByRefID, err = qc.UserLoginToRefID(login)
-				if err != nil {
-					panic(err)
+					qc.Logger.Error("empty login for closed by author")
+				} else {
+					pr.ClosedByRefID, err = qc.UserLoginToRefID(login)
+					if err != nil {
+						panic(err)
+					}
 				}
 			} else {
 				qc.Logger.Error("pr status is CLOSED, but no closed events found, can't set ClosedBy")
+			}
+		}
+
+		if data.State == "MERGED" {
+			pr.MergeSha = data.MergeCommit.OID
+			pr.MergeCommitID = ids.CodeCommit(qc.CustomerID, qc.RefType, pr.RepoID, pr.MergeSha)
+			login := data.MergedBy.Login
+			if login == "" {
+				qc.Logger.Error("empty login for mergedBy field")
+			} else {
+				pr.MergedByRefID, err = qc.UserLoginToRefID(login)
+				if err != nil {
+					panic(err)
+				}
 			}
 		}
 
