@@ -1,4 +1,0 @@
-{"@level":"info","@message":"example plugin log message","@timestamp":"2019-09-04T11:35:22.426520-05:00"}
-{"@level":"debug","@message":"plugin address","@timestamp":"2019-09-04T11:35:22.427800-05:00","address":"/var/folders/8n/ngdb3cc16qj5fvt2cwbw6gvh0000gn/T/plugin460056486","network":"unix"}
-{"@level":"info","@message":"exporting blames","@timestamp":"2019-09-04T11:35:22.431425-05:00","lastProcessed":"2019-09-04T11:34:54-05:00"}
-{"@level":"info","@message":"exporting blames","@timestamp":"2019-09-04T11:35:22.443259-05:00","lastProcessed":"2019-09-04T11:34:54-05:00"}
