@@ -44,7 +44,11 @@ The following workaround works for fish shell:
 # in ./sourcecode.Branch
 # zcatall | less
 function zcatall
-  rm /tmp/out; for f in *.json.gz; zcat < $f | jq . >> /tmp/out; end; cat /tmp/out
+	if test -e ./zcatall
+		cat ./zcatall
+	else
+		for f in *.json.gz; zcat < $f | jq . >> ./zcatall; end; cat ./zcatall
+	end
 end
 ```
 
