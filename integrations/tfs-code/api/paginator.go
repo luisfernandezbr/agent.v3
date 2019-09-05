@@ -7,16 +7,18 @@ import (
 	"net/http"
 	"strconv"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/httpclient"
 )
 
 type tfsPaginator struct {
+	logger hclog.Logger
 }
 
 // make sure it implements the interface
 var _ httpclient.Paginator = (*tfsPaginator)(nil)
 
-func (tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) (bool, *http.Request) {
+func (p tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) (bool, *http.Request) {
 	var skippaging bool
 	var err error
 	var mapBody struct {
@@ -32,9 +34,6 @@ func (tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) (b
 		return false, nil
 	}
 	body, _ := json.Marshal(mapBody.Value)
-	// special case, pull requests
-	skippaging, body, err = paginatePullRequest(req.URL, body)
-
 	body = bytes.TrimPrefix(body, []byte("["))
 	body = bytes.TrimSuffix(body, []byte("]"))
 	if page > 1 {
@@ -44,7 +43,7 @@ func (tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) (b
 	if !skippaging && mapBody.Count == int64(maxResults) {
 		urlquery := req.URL.Query()
 		urlquery.Set("$skip", strconv.Itoa(maxResults*page))
-		req.URL.RawPath = urlquery.Encode()
+		req.URL.RawQuery = urlquery.Encode()
 		newreq, _ := http.NewRequest(req.Method, req.URL.String(), nil)
 		if user, pass, ok := req.BasicAuth(); ok {
 			newreq.SetBasicAuth(user, pass)

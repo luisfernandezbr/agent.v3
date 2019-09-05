@@ -36,6 +36,9 @@ PP_TEST_TFS_CODE_URL=https://api-url PP_TEST_TFS_CODE_APIKEY=1234567890 PP_TEST_
     Calls `/_apis/git/repositories` and grabs all the repos from the collection.
     If the collection name is not passed in when running export, it will use the default collection `DefaultCollection`
     Once the api comes back with all the repos, it will filter out the `excluded_repo_ids`
+    - `sourcecode.Repo` missing properties:
+        - `Language`
+        - `Description`
 
 - FetchPullRequests
     Calls `_apis/git/repositories/{repo_id}/pullRequests`
@@ -52,7 +55,8 @@ PP_TEST_TFS_CODE_URL=https://api-url PP_TEST_TFS_CODE_APIKEY=1234567890 PP_TEST_
 - FetchPullRequestComments
     Calls `_apis/git/repositories/{repo_id}/pullRequests/{pull_request_id}/threads`
     Returns the comments from each pull request, filtering out the automatic comments by looking for `commentType: "text"`
-
+    Missing url
+    
 - FetchCommitUsers:
     Calls `_apis/git/repositories/{repo_id}/commits` to fetch the user information
     Pass in a map of user_id and users to make sure we don't have duplicates

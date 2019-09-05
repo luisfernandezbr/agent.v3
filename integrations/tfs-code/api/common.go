@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/go-common/httpdefaults"
 	pstring "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/httpclient"
@@ -30,7 +30,7 @@ type Creds struct {
 	Collection string `json:"collection"`
 	Username   string `json:"username"`
 	Password   string `json:"password"`
-	APIKey     string `json:"api_key"` // https://your_url/tfs/DefaultCollection/_details/security/tokens
+	APIKey     string `json:"apitoken"` // https://your_url/tfs/DefaultCollection/_details/security/tokens
 }
 
 // TFSAPI the api object for fts
@@ -41,12 +41,22 @@ type TFSAPI struct {
 
 	client *httpclient.HTTPClient
 	logger hclog.Logger
+}
 
-	// must implement these to match the ids in the datamodel
-	RepoID        func(ref string) string
-	UserID        func(ref string) string
-	PullRequestID func(ref string) string
-	BranchID      func(repoRef, branchName string) string
+func (s *TFSAPI) RepoID(refid string) string {
+	return ids.CodeRepo(s.customerid, s.reftype, refid)
+}
+
+func (s *TFSAPI) UserID(refid string) string {
+	return ids.CodeUser(s.customerid, s.reftype, refid)
+}
+
+func (s *TFSAPI) PullRequestID(repoid, refid string) string {
+	return ids.CodePullRequest(s.customerid, s.reftype, repoid, refid)
+}
+
+func (s *TFSAPI) BranchID(repoid, branchname, firstsha string) string {
+	return ids.CodeBranch(s.customerid, s.reftype, repoid, branchname, firstsha)
 }
 
 // NewTFSAPI initializer
@@ -56,7 +66,9 @@ func NewTFSAPI(ctx context.Context, logger hclog.Logger, customerid, reftype str
 		Timeout:   10 * time.Minute,
 	}
 	conf := &httpclient.Config{
-		Paginator: tfsPaginator{},
+		Paginator: tfsPaginator{
+			logger: logger,
+		},
 		Retryable: httpclient.NewBackoffRetry(10*time.Millisecond, 100*time.Millisecond, 60*time.Second, 2.0),
 	}
 	return &TFSAPI{
@@ -91,8 +103,7 @@ func (a *TFSAPI) doRequest(endPoint string, jobj params, fromdate time.Time, out
 	if err != nil {
 		panic(err)
 	}
-	encToken := base64.StdEncoding.EncodeToString([]byte(":" + a.creds.APIKey))
-	req.Header.Set("Authorization", "Basic "+encToken)
+	req.SetBasicAuth("", a.creds.APIKey)
 	req.Header.Set("Content-Type", "application/json")
 	res, err := a.client.Do(req)
 	if err != nil {

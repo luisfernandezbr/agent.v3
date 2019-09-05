@@ -1,15 +1,16 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/url"
 	purl "net/url"
-	"strings"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/go-common/hash"
+	pjson "github.com/pinpt/go-common/json"
+
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
@@ -19,11 +20,17 @@ type pullRequestResponse struct {
 		DisplayName string `json:"displayName"`
 		ID          string `json:"id"`
 	} `json:"createdBy"`
-	CreationDate string `json:"creationDate"`
-	ClosedDate   string `json:"closedDate"`
-	Description  string `json:"description"`
-	MergeStatus  string `json:"mergeStatus"`
-	Repository   struct {
+	CreationDate          string `json:"creationDate"`
+	ClosedDate            string `json:"closedDate"`
+	Description           string `json:"description"`
+	MergeStatus           string `json:"mergeStatus"`
+	LastMergeSourceCommit struct {
+		CommidID string `json:"commitId"`
+	} `json:"lastMergeSourceCommit"`
+	LastMergeCommit struct {
+		CommidID string `json:"commitId"`
+	} `json:"lastMergeCommit"`
+	Repository struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
 	}
@@ -40,36 +47,58 @@ type pullRequestResponse struct {
 	URL          string `json:"url"`
 }
 
+type pullRequestCommitsResponse struct {
+	CommitID string `json:"commitId"`
+}
+
+func (a *TFSAPI) fetchPullRequestCommits(repoid string, prid int64) (shas []string, err error) {
+	url := fmt.Sprintf(`_apis/git/repositories/%s/pullRequests/%d/commits`, purl.PathEscape(repoid), prid)
+	var res []pullRequestCommitsResponse
+	err = a.doRequest(url, nil, time.Now(), &res)
+	for _, c := range res {
+		shas = append(shas, c.CommitID)
+	}
+	return
+}
+
 // FetchPullRequests calls the pull request api returns a list of sourcecode.PullRequest and sourcecode.PullRequestReview
-func (a *TFSAPI) FetchPullRequests(repoid string, fromDate time.Time) (prs []*sourcecode.PullRequest, prrs []*sourcecode.PullRequestReview, err error) {
+func (a *TFSAPI) FetchPullRequests(repoid string) (prs []*sourcecode.PullRequest, prrs []*sourcecode.PullRequestReview, err error) {
 	url := fmt.Sprintf(`_apis/git/repositories/%s/pullRequests`, purl.PathEscape(repoid))
 	var res []pullRequestResponse
-	if err = a.doRequest(url, params{"searchCriteria.status": "all"}, fromDate, &res); err != nil {
+	if err = a.doRequest(url, params{"status": "all"}, time.Time{}, &res); err != nil {
 		fmt.Println(err)
 		return
 	}
 	for _, p := range res {
+		commits, err := a.fetchPullRequestCommits(repoid, p.ID)
+		if err != nil {
+			return nil, nil, err
+		}
 		pr := &sourcecode.PullRequest{
-			BranchID:       a.BranchID(repoid, p.SourceBranch),
+			BranchID:       a.BranchID(repoid, p.SourceBranch, p.LastMergeSourceCommit.CommidID),
 			CreatedByRefID: p.CreatedBy.ID,
 			Description:    p.Description,
+			BranchName:     p.SourceBranch,
 			RefID:          fmt.Sprintf("%d", p.ID),
 			RefType:        a.reftype,
 			CustomerID:     a.customerid,
 			RepoID:         a.RepoID(p.Repository.ID),
 			Title:          p.Title,
 			URL:            p.URL,
+			CommitShas:     commits,
 		}
+		pr.CommitIds = ids.CodeCommits(a.customerid, a.reftype, pr.RepoID, commits)
 		switch p.Status {
 		case "completed":
 			pr.Status = sourcecode.PullRequestStatusMerged
+			pr.MergeSha = p.LastMergeCommit.CommidID
+			pr.MergeCommitID = ids.CodeCommit(a.customerid, a.reftype, pr.RepoID, pr.MergeSha)
 		case "active":
 			pr.Status = sourcecode.PullRequestStatusOpen
 		case "abandoned":
 			pr.Status = sourcecode.PullRequestStatusClosed
 		}
 		for i, r := range p.Reviewers {
-
 			var state sourcecode.PullRequestReviewState
 			switch r.Vote {
 			case -10:
@@ -85,62 +114,33 @@ func (a *TFSAPI) FetchPullRequests(repoid string, fromDate time.Time) (prs []*so
 				pr.MergedByRefID = r.ID
 				state = sourcecode.PullRequestReviewStateApproved
 			}
+			refid := hash.Values(i, r.ID)
 			prrs = append(prrs, &sourcecode.PullRequestReview{
-				RefID:         hash.Values(i, r.ID), // this id is from the person, there are no "ids" for reviews
+				RefID:         refid, // this id is from the person, there are no "ids" for reviews
 				RefType:       a.reftype,
 				CustomerID:    a.customerid,
 				RepoID:        a.RepoID(repoid),
 				State:         state,
-				UserRefID:     r.UniqueName,
-				PullRequestID: a.PullRequestID(fmt.Sprintf("%d", p.ID)),
+				UserRefID:     r.ID,
+				PullRequestID: a.PullRequestID(fmt.Sprintf("%d", p.ID), refid),
 			})
 		}
 		if p.ClosedDate != "" {
-			d, e := datetime.NewDate(p.ClosedDate)
-			if e != nil {
-				a.logger.Warn("error converting date in tfs-code FetchPullRequests 1")
+			if d, err := datetime.ISODateToTime(p.ClosedDate); err != nil {
+				a.logger.Error("error converting date in tfs-code FetchPullRequests 1")
 			} else {
-
+				date.ConvertToModel(d, &pr.ClosedDate)
 			}
-			pr.ClosedDate = sourcecode.PullRequestClosedDate(*d)
 		}
 		if p.CreationDate != "" {
-			d, e := datetime.NewDate(p.CreationDate)
-			if e != nil {
-				a.logger.Warn("error converting date in tfs-code FetchPullRequests 1")
+			if d, err := datetime.ISODateToTime(p.CreationDate); err != nil {
+				a.logger.Error("error converting date in tfs-code FetchPullRequests 1")
 			} else {
-
+				date.ConvertToModel(d, &pr.CreatedDate)
 			}
-			pr.CreatedDate = sourcecode.PullRequestCreatedDate(*d)
-
 		}
 		prs = append(prs, pr)
 	}
+	fmt.Println(pjson.Stringify(prs))
 	return
-}
-
-func paginatePullRequest(ur *url.URL, body []byte) (bool, []byte, error) {
-	if !strings.HasSuffix(ur.Path, "/pullRequests") {
-		return false, body, nil
-	}
-	if fromDate := ur.Query().Get("searchCriteria.fromDate"); fromDate != "" {
-		maxdate, _ := time.Parse(time.RFC3339, fromDate)
-		var prs []pullRequestResponse
-		json.Unmarshal(body, &prs)
-		var newprs []pullRequestResponse
-		for _, pr := range prs {
-			currentdate, _ := time.Parse(time.RFC3339, pr.CreationDate)
-			if maxdate.After(currentdate) {
-				var newbody []byte
-				var err error
-				if len(newprs) > 0 {
-					newbody, err = json.Marshal(newprs)
-				}
-				return true, newbody, err
-			}
-			newprs = append(newprs, pr)
-		}
-	}
-	return false, body, nil
-
 }

@@ -4,11 +4,12 @@ import (
 	"fmt"
 	purl "net/url"
 	"time"
-
-	"github.com/pinpt/go-common/hash"
-	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
+type RawCommitUser struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
 type commitUser struct {
 	Author struct {
 		Name  string `json:"name"`
@@ -21,7 +22,7 @@ type commitUser struct {
 }
 
 // FetchCommitUsers calls the commits api to get user information and returns a list of unique sourcecode.User
-func (a *TFSAPI) FetchCommitUsers(repoid string, usermap map[string]*sourcecode.User, fromdate time.Time) error {
+func (a *TFSAPI) FetchCommitUsers(repoid string, usermap map[string]*RawCommitUser, fromdate time.Time) error {
 
 	url := fmt.Sprintf(`_apis/git/repositories/%s/commits`, purl.PathEscape(repoid))
 	var res []commitUser
@@ -29,29 +30,23 @@ func (a *TFSAPI) FetchCommitUsers(repoid string, usermap map[string]*sourcecode.
 		return err
 	}
 	for _, user := range res {
+		authorname := user.Author.Name
 		authoremail := user.Author.Email
-		if authoremail != "" {
-			authorname := user.Author.Name
-			if usermap[authoremail] == nil {
-				usermap[authoremail] = &sourcecode.User{
-					Email:      &authoremail,
-					Name:       user.Author.Name,
-					RefType:    a.reftype,
-					RefID:      hash.Values(authorname, authoremail),
-					CustomerID: a.customerid,
+		if authorname != "" && authoremail != "" {
+			if usermap[authorname] == nil {
+				usermap[authorname] = &RawCommitUser{
+					Name:  authorname,
+					Email: authoremail,
 				}
 			}
 		}
+		committername := user.Committer.Name
 		committeremail := user.Committer.Email
-		if committeremail != "" {
-			committername := user.Committer.Name
-			if authoremail != committeremail && usermap[committeremail] == nil {
-				usermap[committeremail] = &sourcecode.User{
-					Email:      &committeremail,
-					Name:       user.Committer.Name,
-					RefType:    a.reftype,
-					RefID:      hash.Values(committername, authoremail),
-					CustomerID: a.customerid,
+		if committername != "" && committeremail != "" {
+			if authorname != committername && usermap[committername] == nil {
+				usermap[committername] = &RawCommitUser{
+					Name:  committername,
+					Email: user.Committer.Email,
 				}
 			}
 		}

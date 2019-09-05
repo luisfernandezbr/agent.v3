@@ -8,7 +8,6 @@ import (
 	"github.com/pinpt/agent.next/integrations/tfs-code/api"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/rpcdef"
-	"github.com/pinpt/go-common/hash"
 
 	"github.com/hashicorp/go-hclog"
 )
@@ -81,19 +80,6 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 	s.creds = &creds
 
 	s.api = api.NewTFSAPI(ctx, s.logger, s.conf.customerid, s.conf.reftype, &creds)
-	s.api.RepoID = func(refID string) string {
-		return hash.Values("Repo", s.conf.customerid, s.conf.reftype, refID)
-	}
-	s.api.UserID = func(refID string) string {
-		return hash.Values("User", s.conf.customerid, s.conf.reftype, refID)
-	}
-	s.api.PullRequestID = func(refID string) string {
-		return hash.Values("PullRequest", s.conf.customerid, s.conf.reftype, refID)
-	}
-	s.api.BranchID = func(repoRefID string, branchName string) string {
-		repoID := s.api.RepoID(repoRefID)
-		return hash.Values(s.conf.reftype, repoID, s.conf.customerid, branchName)
-	}
 
 	return nil
 }

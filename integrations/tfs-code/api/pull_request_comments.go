@@ -5,6 +5,7 @@ import (
 	purl "net/url"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
@@ -36,24 +37,26 @@ func (a *TFSAPI) FetchPullRequestComments(repoid string, prid string) (cmts []*s
 			if e.CommentType != "text" {
 				continue
 			}
+			refid := fmt.Sprintf("%d_%d", cm.ID, e.ID)
 			c := &sourcecode.PullRequestComment{
 				Body:          e.Content,
-				PullRequestID: a.PullRequestID(prid),
-				RefID:         fmt.Sprintf("%d_%d", cm.ID, e.ID), // maybe hash?  hash.Values(cm.ID, e.ID),
+				PullRequestID: a.PullRequestID(prid, refid),
+				RefID:         refid,
 				RefType:       a.reftype,
 				CustomerID:    a.customerid,
 				RepoID:        a.RepoID(repoid),
 				UserRefID:     e.Author.ID,
 			}
-			if d, er := datetime.NewDate(e.PublishedDate); er != nil {
-				a.logger.Warn("error converting date in tfs-code FetchPullRequestComments 1", "raw date", e.PublishedDate, "err", er)
+
+			if d, err := datetime.ISODateToTime(e.PublishedDate); err != nil {
+				a.logger.Warn("error converting date in tfs-code FetchPullRequestComments 1", "raw date", e.PublishedDate, "err", err)
 			} else {
-				c.CreatedDate = sourcecode.PullRequestCommentCreatedDate(*d)
+				date.ConvertToModel(d, &c.CreatedDate)
 			}
-			if d, er := datetime.NewDate(e.LastUpdatedDate); er != nil {
-				a.logger.Warn("error converting date in tfs-code FetchPullRequestComments 2", "raw date", e.LastUpdatedDate, "err", er)
+			if d, err := datetime.ISODateToTime(e.LastUpdatedDate); err != nil {
+				a.logger.Warn("error converting date in tfs-code FetchPullRequestComments 2", "raw date", e.LastUpdatedDate, "err", err)
 			} else {
-				c.UpdatedDate = sourcecode.PullRequestCommentUpdatedDate(*d)
+				date.ConvertToModel(d, &c.UpdatedDate)
 			}
 			cmts = append(cmts, c)
 		}
