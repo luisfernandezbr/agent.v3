@@ -338,6 +338,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 
 	for commit := range commits {
 		lastProcessedSHA = commit.SHA
+
 		commitAdditions = 0
 		commitDeletions = 0
 		commitCommentsCount = 0
@@ -346,22 +347,17 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 		commitLocCount = 0
 		commitBlanksCount = 0
 		commitComplexityCount = 0
+
 		ordinal := datetime.EpochNow()
-		var lastBlame *ripsrc.BlameResult
 		commitFiles := []sourcecode.CommitFiles{}
 		var excludedFilesCount int64
-		for blame := range commit.Files {
-			lastBlame = &blame
-			if blame.Commit.SHA == "" {
-				panic(`blame.Commit.SHA == ""`)
-			}
+		for blame := range commit.Blames {
 			//var license string
 			var licenseConfidence float32
 			if blame.License != nil {
 				//license = fmt.Sprintf("%v (%.0f%%)", blame.License.Name, 100*blame.License.Confidence)
 				licenseConfidence = blame.License.Confidence
 			}
-			//s.logger.Debug(fmt.Sprintf("[%s] %s language=%s,license=%v,loc=%v,sloc=%v,comments=%v,blanks=%v,complexity=%v,skipped=%v", blame.Commit.SHA[0:8], blame.Filename, blame.Language, license, blame.Loc, blame.Sloc, blame.Comments, blame.Comments, blame.Complexity, blame.Skipped))
 			lines := []sourcecode.BlameLines{}
 			var sloc, loc, comments, blanks int64
 			for _, line := range blame.Lines {
@@ -393,7 +389,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 			commitLocCount += loc
 			commitBlanksCount += blanks
 
-			cf := blame.Commit.Files[blame.Filename]
+			cf := commit.Files[blame.Filename]
 			if blame.Language == "" {
 				blame.Language = unknownLanguage
 			}
@@ -434,7 +430,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 					Blanks:            blame.Blanks,
 					Complexity:        blame.Complexity,
 				}
-				date.ConvertToModel(blame.Commit.Date, &cf.CreatedDate)
+				date.ConvertToModel(commit.Date, &cf.CreatedDate)
 				commitFiles = append(commitFiles, cf)
 			}
 
@@ -453,8 +449,8 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				License:        &lic,
 				Excluded:       blame.Skipped != "",
 				ExcludedReason: blame.Skipped,
-				CommitID:       s.commitID(blame.Commit.SHA),
-				RefID:          blame.Commit.SHA,
+				CommitID:       s.commitID(commit.SHA),
+				RefID:          commit.SHA,
 				RefType:        s.refType,
 				CustomerID:     customerID,
 				Hashcode:       "",
@@ -465,12 +461,12 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				Comments:       int64(comments),
 				Filename:       blame.Filename,
 				Language:       blame.Language,
-				Sha:            blame.Commit.SHA,
+				Sha:            commit.SHA,
 				RepoID:         repoID,
 				Complexity:     blame.Complexity,
 				Lines:          lines,
 			}
-			date.ConvertToModel(blame.Commit.Date, &bl.ChangeDate)
+			date.ConvertToModel(commit.Date, &bl.ChangeDate)
 
 			err := writeBlame(bl)
 			if err != nil {
@@ -479,39 +475,37 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 			ordinal++
 		}
 
-		if lastBlame != nil {
-			c := sourcecode.Commit{
-				RefID:      commit.SHA,
-				RefType:    s.refType,
-				CustomerID: customerID,
-				Hashcode:   "",
-				RepoID:     repoID,
-				Sha:        commit.SHA,
-				Message:    lastBlame.Commit.Message,
-				URL:        commitURL(s.opts.CommitURLTemplate, commit.SHA),
-				//Branch:         branch, // TODO: remove this from datamodel
-				Additions:      commitAdditions,
-				Deletions:      commitDeletions,
-				FilesChanged:   commitFilesCount,
-				AuthorRefID:    hash.Values(customerID, lastBlame.Commit.AuthorEmail),
-				CommitterRefID: hash.Values(customerID, lastBlame.Commit.CommitterEmail),
-				Ordinal:        lastBlame.Commit.Ordinal,
-				Loc:            commitLocCount,
-				Sloc:           commitSlocCount,
-				Comments:       commitCommentsCount,
-				Blanks:         commitBlanksCount,
-				Size:           commitSize,
-				Complexity:     commitComplexityCount,
-				GpgSigned:      lastBlame.Commit.Signed,
-				Excluded:       excludedFilesCount == commitFilesCount,
-				Files:          commitFiles,
-			}
-			date.ConvertToModel(lastBlame.Commit.Date, &c.CreatedDate)
+		c := sourcecode.Commit{
+			RefID:      commit.SHA,
+			RefType:    s.refType,
+			CustomerID: customerID,
+			RepoID:     repoID,
+			Sha:        commit.SHA,
+			Message:    commit.Message,
+			URL:        commitURL(s.opts.CommitURLTemplate, commit.SHA),
+			//Branch:         branch, // TODO: remove this from datamodel
+			Additions:      commitAdditions,
+			Deletions:      commitDeletions,
+			FilesChanged:   commitFilesCount,
+			AuthorRefID:    hash.Values(customerID, commit.AuthorEmail),
+			CommitterRefID: hash.Values(customerID, commit.CommitterEmail),
+			Ordinal:        commit.Ordinal,
+			Loc:            commitLocCount,
+			Sloc:           commitSlocCount,
+			Comments:       commitCommentsCount,
+			Blanks:         commitBlanksCount,
+			Size:           commitSize,
+			Complexity:     commitComplexityCount,
+			GpgSigned:      commit.Signed,
+			Excluded:       excludedFilesCount == commitFilesCount,
+			Files:          commitFiles,
+		}
 
-			err := writeCommit(c)
-			if err != nil {
-				return "", err
-			}
+		date.ConvertToModel(commit.Date, &c.CreatedDate)
+
+		err := writeCommit(c)
+		if err != nil {
+			return "", err
 		}
 
 	}
