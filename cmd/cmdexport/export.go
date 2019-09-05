@@ -24,7 +24,7 @@ import (
 
 type Opts struct {
 	cmdintegration.Opts
-	ReprocessHistorical bool `json:"reprocess_historical"`
+	ReprocessHistorical bool
 }
 
 type AgentConfig = cmdintegration.AgentConfig
