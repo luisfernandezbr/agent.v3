@@ -35,18 +35,39 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 }
 
 func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, err error) {
-	s.initConfig(ctx, config)
-	err = s.export()
+	if err = s.initConfig(ctx, config); err != nil {
+		return
+	}
+	if err = s.export(); err != nil {
+		return
+	}
 	return
 }
 
 func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
+	if err := s.initConfig(ctx, config); err != nil {
+		return res, err
+	}
+	if _, _, err := s.fetcfReposAndProjectIDs(); err != nil {
+		res.Errors = append(res.Errors)
+	}
 	return res, nil
 }
 
-func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.OnboardExportType, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
-	res.Error = rpcdef.ErrOnboardExportNotSupported
-	return
+func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.OnboardExportType, config rpcdef.ExportConfig) (rpcdef.OnboardExportResult, error) {
+	var res rpcdef.OnboardExportResult
+	if err := s.initConfig(ctx, config); err != nil {
+		return res, err
+	}
+	switch objectType {
+	case rpcdef.OnboardExportTypeUsers:
+		return s.onboardExportUsers(ctx, config)
+	case rpcdef.OnboardExportTypeRepos:
+		return s.onboardExportRepos(ctx, config)
+	default:
+		res.Error = rpcdef.ErrOnboardExportNotSupported
+	}
+	return res, nil
 }
 
 func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig) error {

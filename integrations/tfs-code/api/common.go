@@ -96,7 +96,7 @@ func (a *TFSAPI) doRequest(endPoint string, jobj params, fromdate time.Time, out
 		vals.Add("searchCriteria.fromDate", fromdate.Format(time.RFC3339))
 	}
 	for k, v := range jobj {
-		vals.Add(k, v)
+		vals.Set(k, v)
 	}
 	u.RawQuery = vals.Encode()
 	req, err := http.NewRequest(http.MethodGet, u.String(), reader)

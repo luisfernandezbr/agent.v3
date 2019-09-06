@@ -1,16 +1,22 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
+
+	pjson "github.com/pinpt/go-common/json"
 
 	"github.com/pinpt/go-common/datetime"
 
 	"github.com/pinpt/agent.next/integrations/tfs-code/api"
 	"github.com/pinpt/agent.next/pkg/commitusers"
+	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/integration-sdk/agent"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
@@ -20,6 +26,10 @@ func urlAppend(p1, p2 string) string {
 
 func commitURLTemplate(reponame, repoURLPrefix string) string {
 	return urlAppend(repoURLPrefix, reponame) + "/commit/@@@sha@@@"
+}
+
+func branchURLTemplate(reponame, repoURLPrefix string) string {
+	return urlAppend(repoURLPrefix, reponame) + "/tree/@@@branch@@@"
 }
 
 func (s *Integration) export() error {
@@ -37,10 +47,14 @@ func (s *Integration) export() error {
 	return nil
 }
 
+func (s *Integration) fetcfReposAndProjectIDs() ([]*sourcecode.Repo, []string, error) {
+	return s.api.FetchRepos(s.conf.Repos, s.conf.Excluded)
+}
+
 func (s *Integration) exportReposAndRipSrc() (repoids []string, projids []string, err error) {
 
 	sender := objsender.NewNotIncremental(s.agent, sourcecode.RepoModelName.String())
-	repos, projids, err := s.api.FetchRepos(s.conf.Repos, s.conf.Excluded)
+	repos, projids, err := s.fetcfReposAndProjectIDs()
 	if err != nil {
 		return
 	}
@@ -60,21 +74,29 @@ func (s *Integration) exportReposAndRipSrc() (repoids []string, projids []string
 		args := rpcdef.GitRepoFetch{}
 		args.RepoID = s.api.RepoID(repo.RefID)
 		args.URL = u.String()
+		args.BranchURLTemplate = branchURLTemplate(repo.Name, s.creds.URL)
 		args.CommitURLTemplate = commitURLTemplate(repo.Name, s.creds.URL)
-		s.agent.ExportGitRepo(args)
+		if err = s.agent.ExportGitRepo(args); err != nil {
+			panic(err)
+		}
 	}
 	return repoids, projids, sender.Done()
 }
 
-func (s *Integration) exportUsers(projids []string, repoids []string) error {
-
-	sender := objsender.NewNotIncremental(s.agent, sourcecode.UserTable.String())
+func (s *Integration) fetchAllUsers(projids []string, repoids []string) map[string]*sourcecode.User {
 	usermap := make(map[string]*sourcecode.User)
 	for _, proj := range projids {
 		if err := s.api.FetchUsers(proj, usermap); err != nil {
 			s.logger.Error("error fetching users", "err", err)
 		}
 	}
+	return usermap
+}
+
+func (s *Integration) exportUsers(projids []string, repoids []string) error {
+
+	sender := objsender.NewNotIncremental(s.agent, sourcecode.UserTable.String())
+	usermap := s.fetchAllUsers(projids, repoids)
 	for _, user := range usermap {
 		sender.Send(user)
 	}
@@ -90,7 +112,7 @@ func (s *Integration) exportCommitUsers(repoids []string, usermap map[string]*so
 		return err
 	}
 	// Get a list of all the users in the commits
-	// using a map we make sure we only get unique users
+	// using a map to make sure we only get unique users
 	rawusers := make(map[string]*api.RawCommitUser)
 	for _, repoid := range repoids {
 		if err := s.api.FetchCommitUsers(repoid, rawusers, sender.LastProcessed); err != nil {
@@ -139,8 +161,8 @@ func (s *Integration) exportPullRequestData(repoids []string) error {
 					return fmt.Errorf("error sending pull requests. err: %v", err)
 				}
 			}
-			// incremental, only send if this pr is still opened or was closed after the last processed date
-			if !incremental || (pr.Status == sourcecode.PullRequestStatusOpen || (pr.ClosedDate.Epoch > 0 && closed.After(prsender.LastProcessed))) {
+			// incremental, only fetch comments if this pr is still opened or was closed after the last processed date
+			if !incremental || (pr.Status == sourcecode.PullRequestStatusOpen || (incremental && closed.After(prsender.LastProcessed))) {
 				cmts, err := s.api.FetchPullRequestComments(repoid, pr.RefID)
 				if err != nil {
 					// log error and skip
@@ -174,4 +196,74 @@ func (s *Integration) exportPullRequestData(repoids []string) error {
 		return err
 	}
 	return nil
+}
+
+func (s *Integration) onboardExportUsers(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
+	repos, projids, err := s.fetcfReposAndProjectIDs()
+	if err != nil {
+		s.logger.Error("error fetching repos for onboard export users")
+		return
+	}
+	var repoids []string
+	for _, repo := range repos {
+		repoids = append(repoids, repo.RefID)
+	}
+	usermap := s.fetchAllUsers(projids, repoids)
+	for _, user := range usermap {
+		u := agent.UserResponseUsers{
+			RefType:    user.RefType,
+			RefID:      user.RefID,
+			CustomerID: user.CustomerID,
+			AvatarURL:  user.AvatarURL,
+			Name:       user.Name,
+		}
+		if user.Email != nil {
+			u.Emails = []string{*user.Email}
+		}
+		s.logger.Info("fetched user", "user", pjson.Stringify(u))
+		res.Records = append(res.Records, u.ToMap())
+	}
+	return res, nil
+}
+
+func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
+	repos, _, err := s.fetcfReposAndProjectIDs()
+	if err != nil {
+		s.logger.Error("error fetching repos for onboard export repos")
+		return
+	}
+	for _, repo := range repos {
+		rawcommit, err := s.api.FetchLastCommit(repo.RefID)
+		if err != nil {
+			s.logger.Error("error fetching last commit for onboard, skipping", "repo ref_id", repo.RefID)
+			continue
+		}
+		r := &agent.RepoResponseRepos{
+			Active:      repo.Active,
+			Description: repo.Description,
+			Language:    repo.Language,
+			LastCommit: agent.RepoResponseReposLastCommit{
+				Author: agent.RepoResponseReposLastCommitAuthor{
+					Name:  rawcommit.Author.Name,
+					Email: rawcommit.Author.Email,
+				},
+				CommitSha: rawcommit.CommitID,
+				CommitID:  ids.CodeCommit(s.conf.customerid, s.conf.reftype, repo.ID, rawcommit.CommitID),
+				URL:       rawcommit.RemoteURL,
+				Message:   rawcommit.Comment,
+			},
+			Name:    repo.Name,
+			RefID:   repo.RefID,
+			RefType: repo.RefType,
+		}
+		if rawcommit.Author.Date != "" {
+			if d, err := datetime.ISODateToTime(rawcommit.Author.Date); err != nil {
+				s.logger.Error("error converting date in tfs-code onboardExportRepos")
+			} else {
+				date.ConvertToModel(d, &r.LastCommit.CreatedDate)
+			}
+		}
+		res.Records = append(res.Records, r.ToMap())
+	}
+	return
 }
