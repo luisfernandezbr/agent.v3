@@ -29,7 +29,6 @@ func (a *TFSAPI) FetchPullRequestComments(repoid string, prid string) (cmts []*s
 	url := fmt.Sprintf(`_apis/git/repositories/%s/pullRequests/%s/threads`, purl.PathEscape(repoid), prid)
 	var res []commentsReponse
 	if err = a.doRequest(url, nil, time.Time{}, &res); err != nil {
-		fmt.Println(err)
 		return
 	}
 	for _, cm := range res {

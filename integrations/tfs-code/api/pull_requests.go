@@ -9,7 +9,6 @@ import (
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/go-common/hash"
-	pjson "github.com/pinpt/go-common/json"
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
@@ -66,7 +65,6 @@ func (a *TFSAPI) FetchPullRequests(repoid string) (prs []*sourcecode.PullRequest
 	url := fmt.Sprintf(`_apis/git/repositories/%s/pullRequests`, purl.PathEscape(repoid))
 	var res []pullRequestResponse
 	if err = a.doRequest(url, params{"status": "all"}, time.Time{}, &res); err != nil {
-		fmt.Println(err)
 		return
 	}
 	for _, p := range res {
@@ -141,6 +139,6 @@ func (a *TFSAPI) FetchPullRequests(repoid string) (prs []*sourcecode.PullRequest
 		}
 		prs = append(prs, pr)
 	}
-	fmt.Println(pjson.Stringify(prs))
+
 	return
 }

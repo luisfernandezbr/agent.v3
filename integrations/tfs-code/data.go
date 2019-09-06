@@ -94,49 +94,54 @@ func (s *Integration) fetchAllUsers(projids []string, repoids []string) map[stri
 }
 
 func (s *Integration) exportUsers(projids []string, repoids []string) error {
-
-	sender := objsender.NewNotIncremental(s.agent, sourcecode.UserTable.String())
-	usermap := s.fetchAllUsers(projids, repoids)
-	for _, user := range usermap {
-		sender.Send(user)
-	}
-	if err := sender.Done(); err != nil {
-		return err
-	}
-	return s.exportCommitUsers(repoids, usermap)
-}
-
-func (s *Integration) exportCommitUsers(repoids []string, usermap map[string]*sourcecode.User) error {
-	sender, err := objsender.NewIncrementalDateBased(s.agent, commitusers.TableName)
+	srcsender := objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
+	commitsender, err := objsender.NewIncrementalDateBased(s.agent, commitusers.TableName)
 	if err != nil {
 		return err
 	}
-	// Get a list of all the users in the commits
-	// using a map to make sure we only get unique users
+	defer func() {
+		if err := srcsender.Done(); err != nil {
+			s.logger.Error("error in srcsender", "err", err)
+		}
+		if err := commitsender.Done(); err != nil {
+			s.logger.Error("error in commitsender", "err", err)
+		}
+	}()
 	rawusers := make(map[string]*api.RawCommitUser)
 	for _, repoid := range repoids {
-		if err := s.api.FetchCommitUsers(repoid, rawusers, sender.LastProcessed); err != nil {
+		if err := s.api.FetchCommitUsers(repoid, rawusers, commitsender.LastProcessed); err != nil {
 			// log error and skip
 			s.logger.Error("error fetching users", "err", err)
 			continue
 		}
 	}
-	// iterate through all the users and look for commit users which contain email addresses
-	for _, u := range usermap {
-		// if we have a match, set the email and send it to the agent
-		if raw, ok := rawusers[u.Name]; ok {
-			u.Email = &raw.Email
-			if err := sender.Send(u); err != nil {
-				return fmt.Errorf("error sending users. err: %v", err)
-			}
+	usermap := s.fetchAllUsers(projids, repoids)
+	for _, user := range usermap {
+		if raw, ok := rawusers[user.Name]; ok {
+			user.Email = &raw.Email
+			delete(rawusers, user.Name)
+		}
+		if err := srcsender.Send(user); err != nil {
+			return fmt.Errorf("error sending users. err: %v", err)
 		}
 	}
-
-	return sender.Done()
+	for _, user := range rawusers {
+		usr := commitusers.CommitUser{}
+		usr.CustomerID = s.conf.customerid
+		usr.Name = user.Name
+		usr.Email = user.Email
+		usr.SourceID = ""
+		if err := usr.Validate(); err != nil {
+			s.logger.Error("commit user is invalid", "user", pjson.Stringify(usr))
+		}
+		if err := commitsender.SendMap(usr.ToMap()); err != nil {
+			return fmt.Errorf("error sending users. err: %v", err)
+		}
+	}
+	return nil
 }
 
 func (s *Integration) exportPullRequestData(repoids []string) error {
-
 	prsender, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestModelName.String())
 	if err != nil {
 		return err
@@ -144,6 +149,17 @@ func (s *Integration) exportPullRequestData(repoids []string) error {
 	prrsender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
 	prcsender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
 
+	defer func() {
+		if err := prsender.Done(); err != nil {
+			s.logger.Error("error with prsender", "err", err)
+		}
+		if err := prcsender.Done(); err != nil {
+			s.logger.Error("error with prcsender", "err", err)
+		}
+		if err := prrsender.Done(); err != nil {
+			s.logger.Error("error with prrsender", "err", err)
+		}
+	}()
 	incremental := !prsender.LastProcessed.IsZero()
 	for _, repoid := range repoids {
 		prs, prrs, err := s.api.FetchPullRequests(repoid)
@@ -186,15 +202,6 @@ func (s *Integration) exportPullRequestData(repoids []string) error {
 		}
 	}
 
-	if err := prsender.Done(); err != nil {
-		return err
-	}
-	if err := prcsender.Done(); err != nil {
-		return err
-	}
-	if err := prrsender.Done(); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -220,7 +227,6 @@ func (s *Integration) onboardExportUsers(ctx context.Context, config rpcdef.Expo
 		if user.Email != nil {
 			u.Emails = []string{*user.Email}
 		}
-		s.logger.Info("fetched user", "user", pjson.Stringify(u))
 		res.Records = append(res.Records, u.ToMap())
 	}
 	return res, nil
