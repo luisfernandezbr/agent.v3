@@ -2,12 +2,12 @@
 
 
 [[projects]]
-  digest = "1:3c6c5dbdc0d6826dc858387966e661aa93eb2cc1b1d0b5f2b4f13f39654a6063"
+  digest = "1:d5e57477e56171579614125a45af9561e0534068600863aa7c1c6f10bd34e500"
   name = "github.com/boyter/scc"
   packages = ["processor"]
   pruneopts = "UT"
-  revision = "ee0ede363a7e96bac5c97e47ee6d989e269d053e"
-  version = "v2.7.0"
+  revision = "20c82a1e689782c6a4d7b7b82095cf4f72cee71c"
+  version = "v2.8.0"
 
 [[projects]]
   digest = "1:ce834ee7eff3bbf47931b5f1ca7a406ae92b0448d1b26e0480ad53958c37c0a5"
@@ -29,12 +29,12 @@
   version = "v2.0.1"
 
 [[projects]]
-  digest = "1:998cf998358a303ac2430c386ba3fd3398477d6013153d3c6e11432765cc9ae6"
+  digest = "1:47056e6fe3a3524238d48ddcb6d38bfcfa6db346a11d73d83f1620a8cbf69793"
   name = "github.com/cespare/xxhash"
   packages = ["."]
   pruneopts = "UT"
-  revision = "3b82fb7d186719faeedd0c2864f868c74fbf79a1"
-  version = "v2.0.0"
+  revision = "de209a9ffae3256185a6bb135d1a0ada7b2b5f09"
+  version = "v2.1.0"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -391,7 +391,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:9dc2151c75fe4dea84891629425797bbafb06954df9cb8b07b7fdd7f0cfedf94"
+  digest = "1:d79916706ff7e9d3197ae2cf37ffa38eb9e91c47e83afb95d8066f81aee2a7b9"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -415,8 +415,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "7c04a1c4d0e5f21803ac062523be3c4053b9804f"
-  version = "8.2.11"
+  revision = "b010b77e2adba9c49714eda99e516d83cefdea0a"
+  version = "8.2.13"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
@@ -427,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:2554f9be3669c3138ecd06618f062a118f7cf772573a599f431fe9322ab39884"
+  digest = "1:914e495c822414071ec9caa4be43be812b7441c0e7c7111fe90be1af128820c0"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,12 +439,12 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "b6a971856e77ddef7f06c4ead6e56c868d9283e1"
-  version = "0.0.465"
+  revision = "1d8a15cb1959c9c4966a9ed391160dbd4a0289a4"
+  version = "0.0.470"
 
 [[projects]]
   branch = "master"
-  digest = "1:947514fe19b3cb37a88409ffa0dca824239938419bd1ea61ae35a3bcc0c222b8"
+  digest = "1:732b9e87d0a65ca2b23a015807751e2005c96e6ac1faaf00975b1de5b3aa5bc4"
   name = "github.com/pinpt/ripsrc"
   packages = [
     "ripsrc",
@@ -465,7 +465,7 @@
     "ripsrc/pkg/logger",
   ]
   pruneopts = "UT"
-  revision = "e02239deeb856fa316254eef3408c94473405054"
+  revision = "2bf2b4e7403772fa8571a4a7599315da476b9cd4"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
@@ -638,7 +638,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:91282199749d8acf6074ed0bbab2a6c0bc6a6528b438d7d82a9b494b4291a04b"
+  digest = "1:e567cc6b1fda35284b5d50829c0c7b7e94c8262d529159dfd07a380049c435b7"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -650,7 +650,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "1f305c863dab438568b4750723b2b7b237a469bb"
+  revision = "749cb33beabd9aa6d3178e3de05bcc914f70b2bf"
 
 [[projects]]
   digest = "1:3952dba92e6a837cf34e6a073160d31029412bf863e37274cb779f319ddbe0b4"
@@ -715,7 +715,7 @@
     "stat/distuv",
   ]
   pruneopts = "UT"
-  revision = "43865b531bee9d28dccf2cf831db9eef686ca8c6"
+  revision = "2065cbd6b42a9fb208b81bf55f7188b127e9e42b"
 
 [[projects]]
   branch = "master"
@@ -723,7 +723,7 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "UT"
-  revision = "24fa4b261c55da65468f2abfdae2b024eef27dfb"
+  revision = "92dd089d5514cecde7a465f807541f83dfd486d5"
 
 [[projects]]
   digest = "1:66eb0a8f30c52554ea9ecdd3c03cb48c9cd02d85388d21d1b3f7e93f4fd3611d"

@@ -46,7 +46,7 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 					createdAt
 					updatedAt
 					id
-					name
+					nameWithOwner
 					description
 					primaryLanguage {
 						name
@@ -85,7 +85,7 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 						CreatedAt       time.Time `json:"createdAt"`
 						UpdatedAt       time.Time `json:"updatedAt"`
 						ID              string    `json:"id"`
-						Name            string    `json:"name"`
+						NameWithOwner   string    `json:"nameWithOwner"`
 						Description     string    `json:"description"`
 						PrimaryLanguage struct {
 							Name string `json:"name"`
@@ -135,7 +135,7 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 		repo.RefType = qc.RefType
 		//repo.CustomerID = qc.CustomerID
 		repo.RefID = data.ID
-		repo.Name = data.Name
+		repo.Name = data.NameWithOwner
 		repo.Description = data.Description
 		repo.Language = data.PrimaryLanguage.Name
 

@@ -353,6 +353,7 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 
 			args := rpcdef.GitRepoFetch{}
 			args.RepoID = s.qc.RepoID(repo.ID)
+			args.RefType = s.refType
 			args.URL = repoURL
 			args.CommitURLTemplate = commitURLTemplate(repo, s.config.RepoURLPrefix)
 			args.BranchURLTemplate = branchURLTemplate(repo, s.config.RepoURLPrefix)
