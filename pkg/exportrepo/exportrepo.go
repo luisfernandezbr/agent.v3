@@ -33,7 +33,13 @@ type Opts struct {
 	Logger     hclog.Logger
 	CustomerID string
 	RepoID     string
-	Sessions   *outsession.Manager
+
+	// RefType to use when creating objects.
+	// For example:
+	// github, tfs
+	RefType string
+
+	Sessions *outsession.Manager
 
 	LastProcessed *jsonstore.Store
 	RepoAccess    gitclone.AccessDetails
@@ -57,19 +63,17 @@ type Export struct {
 
 	rip *ripsrc.Ripsrc
 
-	// TODO: pass from options
 	refType string
 }
 
 func New(opts Opts, locs fsconf.Locs) *Export {
-	if opts.Logger == nil || opts.CustomerID == "" || opts.RepoID == "" || opts.Sessions == nil || opts.LastProcessed == nil || opts.RepoAccess.URL == "" || opts.CommitURLTemplate == "" || opts.BranchURLTemplate == "" {
+	if opts.Logger == nil || opts.CustomerID == "" || opts.RepoID == "" || opts.RefType == "" || opts.Sessions == nil || opts.LastProcessed == nil || opts.RepoAccess.URL == "" || opts.CommitURLTemplate == "" || opts.BranchURLTemplate == "" {
 		panic("provide all params")
 	}
 	s := &Export{}
 	s.opts = opts
 	s.logger = opts.Logger.Named("exportrepo")
 	s.locs = locs
-	s.refType = "github"
 	return s
 }
 
@@ -199,7 +203,7 @@ func (s *Export) branches(ctx context.Context) error {
 
 			obj := sourcecode.Branch{}
 			obj.RefID = data.Name
-			obj.RefType = s.refType
+			obj.RefType = s.opts.RefType
 			obj.CustomerID = s.opts.CustomerID
 			obj.Name = data.Name
 			obj.URL = branchURL(s.opts.BranchURLTemplate, data.Name)
@@ -247,11 +251,11 @@ func (s *Export) commitID(sha string) string {
 	if sha == "" {
 		return ""
 	}
-	return ids.CodeCommit(s.opts.CustomerID, s.refType, s.opts.RepoID, sha)
+	return ids.CodeCommit(s.opts.CustomerID, s.opts.RefType, s.opts.RepoID, sha)
 }
 
 func (s *Export) commitIDs(shas []string) (res []string) {
-	return ids.CodeCommits(s.opts.CustomerID, s.refType, s.opts.RepoID, shas)
+	return ids.CodeCommits(s.opts.CustomerID, s.opts.RefType, s.opts.RepoID, shas)
 }
 
 func (s *Export) code(ctx context.Context) error {
@@ -451,7 +455,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				ExcludedReason: blame.Skipped,
 				CommitID:       s.commitID(commit.SHA),
 				RefID:          commit.SHA,
-				RefType:        s.refType,
+				RefType:        s.opts.RefType,
 				CustomerID:     customerID,
 				Hashcode:       "",
 				Size:           blame.Size,
@@ -477,7 +481,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 
 		c := sourcecode.Commit{
 			RefID:      commit.SHA,
-			RefType:    s.refType,
+			RefType:    s.opts.RefType,
 			CustomerID: customerID,
 			RepoID:     repoID,
 			Sha:        commit.SHA,

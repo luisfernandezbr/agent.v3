@@ -136,6 +136,7 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 			Logger:     s.Logger.With("c", i),
 			CustomerID: s.Opts.AgentConfig.CustomerID,
 			RepoID:     fetch.RepoID,
+			RefType:    fetch.RefType,
 
 			Sessions: s.sessions.outsession,
 
