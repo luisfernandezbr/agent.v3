@@ -65,3 +65,50 @@ PP_TEST_TFS_CODE_URL=https://api-url PP_TEST_TFS_CODE_APIKEY=1234567890 PP_TEST_
     Calls `_apis/git/repositories/{repo_id}/commits` to fetch the user information
     Pass in a map of user_id and users to make sure we don't have duplicates
     
+## Incrementals
+In incremental processing, we have special handling for pull request comments. We re-fetch all comments for pull requests which are open or were closed since last processing. All PullRequestReviews are re-fetched every time.
+
+TODO: incrementals for commits
+
+## Missing data
+
+Onboarding
+
+```
+Repos
+language
+last_commit.author.avatar_url
+last_commit.author.email    
+
+Users
+emails
+id !critical
+username !critical
+```
+
+Export
+
+```
+Repo
+language
+description
+
+Users
+email
+
+CommitUser
+associated_ref_id !critical
+
+PullRequest
+All fields there
+
+PullRequestComment
+url
+
+PullRequestReview
+There is no history of reviews, only latest !critical
+created_date
+updated_date
+url
+
+```
