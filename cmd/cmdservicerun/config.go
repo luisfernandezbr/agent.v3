@@ -240,11 +240,12 @@ func convertConfigFTS(inameBackend string, cb map[string]interface{}, exclusions
 	}
 	inameAgent = "tfs-code"
 	var config struct {
-		URL      string `json:"url"`
-		APIToken string `json:"apitoken"`
-		Username string `json:"username"`
-		Password string `json:"password"`
-		Hostname string `json:"git_host_name"`
+		URL        string `json:"url"`
+		APIToken   string `json:"api_token"`
+		Username   string `json:"username"`
+		Password   string `json:"password"`
+		Collection string `json:"collection"`
+		Hostname   string `json:"hostname"`
 	}
 	err := structmarshal.MapToStruct(cb, &config)
 	if err != nil {
@@ -266,6 +267,9 @@ func convertConfigFTS(inameBackend string, cb map[string]interface{}, exclusions
 	if config.Password == "" {
 		errStr("missing  password")
 		return
+	}
+	if config.Collection == "" {
+		config.Collection = "DefaultCollection"
 	}
 	if config.Hostname == "" {
 		errStr("missing  git_host_name")
