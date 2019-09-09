@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/httpdefaults"
@@ -14,9 +15,10 @@ import (
 )
 
 type RequesterOpts struct {
-	Logger   hclog.Logger
-	APIURL   string
-	APIToken string
+	Logger     hclog.Logger
+	APIURL     string
+	APIToken   string
+	APIGraphQL string
 }
 
 type Requester struct {
@@ -41,38 +43,78 @@ func NewRequester(opts RequesterOpts) *Requester {
 	return s
 }
 
-func (s *Requester) Request(objPath string, params url.Values, res interface{}) error {
+func (s *Requester) Request(objPath string, params url.Values, res interface{}) (page PageInfo, err error) {
 
 	u := pstrings.JoinURL(s.opts.APIURL, objPath)
 
 	if len(params) != 0 {
 		u += "?" + params.Encode()
 	}
+
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
-		return err
+		return page, err
 	}
 	req.Header.Set("Private-Token", s.opts.APIToken)
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return err
+		return page, err
 	}
 	defer resp.Body.Close()
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return page, err
 	}
 	if resp.StatusCode != 200 {
 		s.logger.Info("api request failed", "url", u, "body", string(b))
-		return fmt.Errorf(`gitlab returned invalid status code: %v`, resp.StatusCode)
+		return page, fmt.Errorf(`gitlab returned invalid status code: %v`, resp.StatusCode)
 	}
 
-	//s.logger.Info("res", "body", string(b))
 	err = json.Unmarshal(b, &res)
+	if err != nil {
+		return page, err
+	}
+
+	rawPageSize := resp.Header.Get("X-Per-Page")
+
+	var pageSize int
+	if rawPageSize != "" {
+		pageSize, err = strconv.Atoi(rawPageSize)
+		if err != nil {
+			return page, err
+		}
+	}
+
+	return PageInfo{
+		PageSize:   pageSize,
+		NextPage:   resp.Header.Get("X-Next-Page"),
+		Page:       resp.Header.Get("X-Page"),
+		TotalPages: resp.Header.Get("X-Total-Pages"),
+	}, nil
+}
+
+// RequestGraphQL ...
+func (s *Requester) RequestGraphQL(query string, res interface{}) error {
+
+	body := "query{ " + query + " }"
+
+	req, err := http.NewRequest(http.MethodPost, s.opts.APIGraphQL+"?query="+url.QueryEscape(body), nil)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	req.Header.Set("Private-Token", s.opts.APIToken)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(b, &res)
 }

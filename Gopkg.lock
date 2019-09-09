@@ -327,8 +327,8 @@
     "strings",
     "term"
   ]
-  revision = "7c04a1c4d0e5f21803ac062523be3c4053b9804f"
-  version = "8.2.11"
+  revision = "b010b77e2adba9c49714eda99e516d83cefdea0a"
+  version = "8.2.13"
 
 [[projects]]
   name = "github.com/pinpt/httpclient"

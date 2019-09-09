@@ -45,11 +45,11 @@ func NewIntegration(logger hclog.Logger) *Integration {
 }
 func (s *Integration) Init(agent rpcdef.Agent) error {
 	s.agent = agent
-	s.refType = "github"
+	s.refType = "gitlab"
 
-	qc := api.QueryContext{}
-	qc.Logger = s.logger
-	s.qc = qc
+	s.qc = api.QueryContext{
+		Logger: s.logger,
+	}
 
 	return nil
 }
@@ -101,15 +101,18 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	s.qc.BaseURL = s.config.URL
 	s.qc.CustomerID = config.Pinpoint.CustomerID
 	s.qc.Logger = s.logger
+	s.qc.RefType = s.refType
 
 	{
 		opts := api.RequesterOpts{}
 		opts.Logger = s.logger
-		opts.APIURL = s.config.URL
+		opts.APIURL = s.config.URL + "/api/v4"
+		opts.APIGraphQL = s.config.URL + "/api/graphql"
 		opts.APIToken = s.config.APIToken
 		requester := api.NewRequester(opts)
 
 		s.qc.Request = requester.Request
+		s.qc.RequestGraphQL = requester.RequestGraphQL
 	}
 
 	return nil
