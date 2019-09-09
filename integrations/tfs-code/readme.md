@@ -70,7 +70,7 @@ In incremental processing, we have special handling for pull request comments. W
 
 Commits (used for users) in incrementals are retrieved based on date (fromDate).
 
-No incrementals for pull request commits.
+No incrementals for pull request commits. No from date or from commit available in the API.
 
 ## Missing data
 
