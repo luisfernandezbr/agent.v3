@@ -36,6 +36,7 @@ PP_TEST_TFS_CODE_URL=https://api-url PP_TEST_TFS_CODE_APIKEY=1234567890 PP_TEST_
     Calls `/_apis/git/repositories` and grabs all the repos from the collection.
     If the collection name is not passed in when running export, it will use the default collection `DefaultCollection`
     Once the api comes back with all the repos, it will filter out the `excluded_repo_ids`
+    This API does not support incrementals, all repos will be fetched
     - `sourcecode.Repo` missing properties:
         - `Language`
         - `Description`
@@ -43,6 +44,7 @@ PP_TEST_TFS_CODE_URL=https://api-url PP_TEST_TFS_CODE_APIKEY=1234567890 PP_TEST_
 - FetchPullRequests
     Calls `_apis/git/repositories/{repo_id}/pullRequests`
     Returns a list of all the pull requests and pull request reviews objects:
+    This API does not support incrementals, all pull requests will be fetched by the api and then filtered in code by date when running an incremental export
     - `sourcecode.PullRequest`
         There are three statuses for the pull requests, mapped this way
             - "completed" = sourcecode.PullRequestStatusMerged
@@ -55,7 +57,9 @@ PP_TEST_TFS_CODE_URL=https://api-url PP_TEST_TFS_CODE_APIKEY=1234567890 PP_TEST_
 - FetchPullRequestComments
     Calls `_apis/git/repositories/{repo_id}/pullRequests/{pull_request_id}/threads`
     Returns the comments from each pull request, filtering out the automatic comments by looking for `commentType: "text"`
-    Missing url
+    This API does not support incrementals, all comments will be fetched by the api and then filtered in code by date when running an incremental export
+    - `sourcecode.PullRequestComment`
+        Missing URL
     
 - FetchCommitUsers:
     Calls `_apis/git/repositories/{repo_id}/commits` to fetch the user information
