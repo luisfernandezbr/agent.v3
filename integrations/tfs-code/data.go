@@ -68,6 +68,7 @@ func (s *Integration) exportReposAndRipSrc() (repoids []string, projids []string
 		}
 		u.User = url.UserPassword(s.creds.Username, s.creds.Password)
 		args := rpcdef.GitRepoFetch{}
+		args.RefType = s.conf.reftype
 		args.RepoID = s.api.RepoID(repo.RefID)
 		args.URL = u.String()
 		args.BranchURLTemplate = branchURLTemplate(repo.Name, s.creds.URL)
