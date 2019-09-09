@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/integrations/tfs-code/api"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/rpcdef"
-
-	"github.com/hashicorp/go-hclog"
 )
 
 type OtherConfig struct {
@@ -92,7 +91,7 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 		return fmt.Errorf("missing password")
 	}
 	if creds.APIKey == "" {
-		return fmt.Errorf("missing api_key")
+		return fmt.Errorf("missing apitoken")
 	}
 
 	s.conf = &conf

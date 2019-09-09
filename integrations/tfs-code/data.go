@@ -6,12 +6,8 @@ import (
 	"net/url"
 	"strings"
 
-	pjson "github.com/pinpt/go-common/json"
-
 	"github.com/pinpt/go-common/datetime"
 
-	"github.com/pinpt/agent.next/integrations/tfs-code/api"
-	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/objsender"
@@ -95,46 +91,14 @@ func (s *Integration) fetchAllUsers(projids []string, repoids []string) map[stri
 
 func (s *Integration) exportUsers(projids []string, repoids []string) error {
 	srcsender := objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
-	commitsender, err := objsender.NewIncrementalDateBased(s.agent, commitusers.TableName)
-	if err != nil {
-		return err
-	}
 	defer func() {
 		if err := srcsender.Done(); err != nil {
 			s.logger.Error("error in srcsender", "err", err)
 		}
-		if err := commitsender.Done(); err != nil {
-			s.logger.Error("error in commitsender", "err", err)
-		}
 	}()
-	rawusers := make(map[string]*api.RawCommitUser)
-	for _, repoid := range repoids {
-		if err := s.api.FetchCommitUsers(repoid, rawusers, commitsender.LastProcessed); err != nil {
-			// log error and skip
-			s.logger.Error("error fetching users", "err", err)
-			continue
-		}
-	}
 	usermap := s.fetchAllUsers(projids, repoids)
 	for _, user := range usermap {
-		if raw, ok := rawusers[user.Name]; ok {
-			user.Email = &raw.Email
-			delete(rawusers, user.Name)
-		}
 		if err := srcsender.Send(user); err != nil {
-			return fmt.Errorf("error sending users. err: %v", err)
-		}
-	}
-	for _, user := range rawusers {
-		usr := commitusers.CommitUser{}
-		usr.CustomerID = s.conf.customerid
-		usr.Name = user.Name
-		usr.Email = user.Email
-		usr.SourceID = ""
-		if err := usr.Validate(); err != nil {
-			s.logger.Error("commit user is invalid", "user", pjson.Stringify(usr))
-		}
-		if err := commitsender.SendMap(usr.ToMap()); err != nil {
 			return fmt.Errorf("error sending users. err: %v", err)
 		}
 	}
@@ -223,6 +187,8 @@ func (s *Integration) onboardExportUsers(ctx context.Context, config rpcdef.Expo
 			CustomerID: user.CustomerID,
 			AvatarURL:  user.AvatarURL,
 			Name:       user.Name,
+			Username:   *user.Username,
+			Active:     true,
 		}
 		if user.Email != nil {
 			u.Emails = []string{*user.Email}

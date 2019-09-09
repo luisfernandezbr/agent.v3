@@ -30,7 +30,7 @@ type Creds struct {
 	Collection string `json:"collection"`
 	Username   string `json:"username"`
 	Password   string `json:"password"`
-	APIKey     string `json:"apitoken"` // https://your_url/tfs/DefaultCollection/_details/security/tokens
+	APIKey     string `json:"api_key"` // https://your_url/tfs/DefaultCollection/_details/security/tokens
 }
 
 // TFSAPI the api object for fts

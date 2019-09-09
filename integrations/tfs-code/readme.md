@@ -72,6 +72,11 @@ Commits (used for users) in incrementals are retrieved based on date (fromDate).
 
 No incrementals for pull request commits. No from date or from commit available in the API.
 
+## TFS does not have commit user link
+
+When fetching users with the commit api we only get the same data as in git log. [docs](https://docs.microsoft.com/en-us/azure/devops/integrate/previous-apis/git/commits?view=azure-devops-2019)
+Note: I changed the email address of the TFS user from empty to an email, created a new commit in the UI, and when looking at the commit history this user was not linked to this commit, although this user was still linked to previous commits. We will probably have to match users manually for TFS code.
+
 ## Missing data
 
 Onboarding

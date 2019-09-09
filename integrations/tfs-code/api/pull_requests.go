@@ -73,7 +73,6 @@ func (a *TFSAPI) FetchPullRequests(repoid string) (prs []*sourcecode.PullRequest
 			return nil, nil, err
 		}
 		pr := &sourcecode.PullRequest{
-			BranchID:       a.BranchID(repoid, p.SourceBranch, p.LastMergeSourceCommit.CommidID),
 			CreatedByRefID: p.CreatedBy.ID,
 			Description:    p.Description,
 			BranchName:     p.SourceBranch,
@@ -85,7 +84,11 @@ func (a *TFSAPI) FetchPullRequests(repoid string) (prs []*sourcecode.PullRequest
 			URL:            p.URL,
 			CommitShas:     commits,
 		}
+		if len(commits) != 0 {
+			pr.BranchID = a.BranchID(repoid, p.SourceBranch, commits[0])
+		}
 		pr.CommitIds = ids.CodeCommits(a.customerid, a.reftype, pr.RepoID, commits)
+
 		switch p.Status {
 		case "completed":
 			pr.Status = sourcecode.PullRequestStatusMerged
