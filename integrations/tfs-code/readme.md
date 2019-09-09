@@ -68,7 +68,9 @@ PP_TEST_TFS_CODE_URL=https://api-url PP_TEST_TFS_CODE_APIKEY=1234567890 PP_TEST_
 ## Incrementals
 In incremental processing, we have special handling for pull request comments. We re-fetch all comments for pull requests which are open or were closed since last processing. All PullRequestReviews are re-fetched every time.
 
-TODO: incrementals for commits
+Commits (used for users) in incrementals are retrieved based on date (fromDate).
+
+No incrementals for pull request commits.
 
 ## Missing data
 
