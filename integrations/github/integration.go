@@ -38,6 +38,10 @@ type Integration struct {
 	requestConcurrencyChan chan bool
 
 	refType string
+
+	pullRequestSender         *objsender.IncrementalDateBased
+	pullRequestCommentsSender *objsender.NotIncremental
+	pullRequestReviewsSender  *objsender.NotIncremental
 }
 
 func NewIntegration(logger hclog.Logger) *Integration {
@@ -255,6 +259,13 @@ func (s *Integration) export(ctx context.Context) error {
 	s.qc.UserLoginToRefID = s.users.LoginToRefID
 	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
 
+	s.pullRequestSender, err = objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestModelName.String())
+	if err != nil {
+		return err
+	}
+	s.pullRequestCommentsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
+	s.pullRequestReviewsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
+
 	for _, org := range orgs {
 		err := s.exportOrganization(ctx, org)
 		if err != nil {
@@ -262,7 +273,24 @@ func (s *Integration) export(ctx context.Context) error {
 		}
 	}
 
-	return s.users.Done()
+	err = s.users.Done()
+	if err != nil {
+		return err
+	}
+	err = s.pullRequestSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.pullRequestCommentsSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.pullRequestReviewsSender.Done()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func commitURLTemplate(repo api.Repo, repoURLPrefix string) string {
@@ -390,37 +418,11 @@ func (s *Integration) exportOrganization(ctx context.Context, org api.Org) error
 		}
 	}
 
-	pullRequestSender, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestModelName.String())
-	if err != nil {
-		return err
-	}
-	pullRequestCommentsSender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
-	if err != nil {
-		return err
-	}
-	pullRequestReviewsSender := objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
-	if err != nil {
-		return err
-	}
-
 	for _, repo := range repos {
-		err := s.exportPullRequestsForRepo(logger, repo, pullRequestSender, pullRequestCommentsSender, pullRequestReviewsSender)
+		err := s.exportPullRequestsForRepo(logger, repo, s.pullRequestSender, s.pullRequestCommentsSender, s.pullRequestReviewsSender)
 		if err != nil {
 			return err
 		}
-	}
-
-	err = pullRequestSender.Done()
-	if err != nil {
-		return err
-	}
-	err = pullRequestCommentsSender.Done()
-	if err != nil {
-		return err
-	}
-	err = pullRequestReviewsSender.Done()
-	if err != nil {
-		return err
 	}
 
 	return nil
