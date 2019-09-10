@@ -57,7 +57,7 @@ func newExport(opts Opts) (*export, error) {
 	s.Command = cmdintegration.NewCommand(opts.Opts)
 
 	if opts.ReprocessHistorical {
-		s.Logger.Info("ReprocessHistorical is true, discarding incrmental checkpoints")
+		s.Logger.Info("ReprocessHistorical is true, discarding incremental checkpoints")
 		err := s.discardIncrementalData()
 		if err != nil {
 			return nil, err
