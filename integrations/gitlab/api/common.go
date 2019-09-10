@@ -4,6 +4,7 @@ import (
 	"net/url"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/ids"
 )
 
 type QueryContext struct {
@@ -14,6 +15,8 @@ type QueryContext struct {
 
 	CustomerID string
 	RefType    string
+
+	UserEmailMap map[string]string
 }
 
 type PageInfo struct {
@@ -21,4 +24,8 @@ type PageInfo struct {
 	NextPage   string
 	Page       string
 	TotalPages string
+}
+
+func (s QueryContext) RepoID(refID string) string {
+	return ids.CodeRepo(s.CustomerID, s.RefType, refID)
 }

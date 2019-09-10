@@ -7,12 +7,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/go-common/datetime"
+
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/ids"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/agent"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func AvatarURL(qc QueryContext, email string) (string, error) {
@@ -174,7 +177,7 @@ func ReposOnboardPageGraphQL(qc QueryContext, groupName, pageSize, after string)
 			  cursor
 			  node{
 				id
-				nameWithNamespace
+				fullPath
 				description
 				createdAt
 				repository{
@@ -258,6 +261,52 @@ func ReposOnboardPageGraphQL(qc QueryContext, groupName, pageSize, after string)
 	return
 }
 
+func ReposPageREST(qc QueryContext, groupID string, params url.Values, stopOnUpdatedAt time.Time) (page PageInfo, repos []*sourcecode.Repo, err error) {
+	qc.Logger.Debug("repos request", "group", groupID)
+
+	objectPath := pstrings.JoinURL("groups", groupID, "projects")
+
+	var rr []struct {
+		CreatedAt   time.Time `json:"created_at"`
+		UpdatedAt   time.Time `json:"last_activity_at"`
+		ID          int64     `json:"id"`
+		FullName    string    `json:"path_with_namespace,omitempty"`
+		Description string    `json:"description,omitempty"`
+		WebURL      string    `json:"web_url,omitempty"`
+	}
+
+	page, err = qc.Request(objectPath, params, &rr)
+	if err != nil {
+		return
+	}
+
+	for _, repo := range rr {
+		if repo.UpdatedAt.Before(stopOnUpdatedAt) {
+			return
+		}
+		ID := fmt.Sprint(repo.ID)
+		repo := &sourcecode.Repo{
+			RefID:       ID,
+			RefType:     qc.RefType,
+			CustomerID:  qc.CustomerID,
+			Name:        repo.FullName,
+			URL:         repo.WebURL,
+			Description: repo.Description,
+			UpdatedAt:   datetime.TimeToEpoch(repo.UpdatedAt),
+			Active:      true,
+		}
+
+		repo.Language, err = RepoLanguage(qc, ID)
+		if err != nil {
+			return
+		}
+
+		repos = append(repos, repo)
+	}
+
+	return
+}
+
 func getRepoID(gID string) string {
 	tokens := strings.Split(gID, "/")
 	return tokens[len(tokens)-1]
@@ -302,4 +351,48 @@ func PaginateGraphQL(log hclog.Logger, fn PaginateGraphQLStartAtFn) error {
 	}
 
 	return nil
+}
+
+type PaginateNewerThanFn func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (PageInfo, error)
+
+func PaginateNewerThan(log hclog.Logger, lastProcessed time.Time, fn PaginateNewerThanFn) error {
+	pageOffset := 0
+	nextPage := "1"
+
+	if lastProcessed.IsZero() {
+		for {
+			p := url.Values{}
+			p.Add("page", nextPage)
+			pageInfo, err := fn(log, p, lastProcessed)
+			if err != nil {
+				return err
+			}
+			if pageInfo.PageSize == 0 {
+				return errors.New("pageSize is 0")
+			}
+			if pageInfo.Page == pageInfo.TotalPages {
+				return nil
+			}
+			nextPage = pageInfo.NextPage
+			pageOffset += pageInfo.PageSize
+		}
+	}
+
+	for {
+		p := url.Values{}
+		p.Add("page", nextPage)
+		p.Add("order_by", "last_activity_at")
+		pageInfo, err := fn(log, p, lastProcessed)
+		if err != nil {
+			return err
+		}
+		if pageInfo.PageSize == 0 {
+			return errors.New("pageSize is 0")
+		}
+		if pageInfo.Page == pageInfo.TotalPages {
+			return nil
+		}
+		nextPage = pageInfo.NextPage
+		pageOffset += pageInfo.PageSize
+	}
 }

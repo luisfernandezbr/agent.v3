@@ -4,9 +4,15 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/hashicorp/go-hclog"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/agent"
 )
+
+type User struct {
+	Email    string
+	Username string
+}
 
 func GroupUsers(qc QueryContext, group string) (users []*agent.UserResponseUsers, err error) {
 	qc.Logger.Debug("fetching users", "group", group)
@@ -113,4 +119,53 @@ func UsersOnboardPage(qc QueryContext, params url.Values) (page PageInfo, users 
 	}
 
 	return
+}
+
+func UsersEmailsMap(qc QueryContext, params url.Values) (page PageInfo, users []User, err error) {
+	qc.Logger.Debug("users request")
+
+	objectPath := pstrings.JoinURL("/users")
+
+	var rawUsers []struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+	}
+
+	params.Set("membership", "true")
+	params.Set("per_page", "100")
+
+	page, err = qc.Request(objectPath, params, &rawUsers)
+	if err != nil {
+		return
+	}
+
+	for _, user := range rawUsers {
+		nUser := User{
+			Email:    user.Email,
+			Username: user.Username,
+		}
+
+		users = append(users, nUser)
+
+	}
+
+	return
+}
+
+// UserEmailMap ...
+func UserEmailMap(qc QueryContext) (m map[string]string, e error) {
+	m = make(map[string]string)
+	e = PaginateStartAt(qc.Logger, func(log hclog.Logger, paginationParams url.Values) (page PageInfo, _ error) {
+		page, users, err := UsersEmailsMap(qc, paginationParams)
+		if err != nil {
+			return page, err
+		}
+		for _, user := range users {
+			m[user.Email] = user.Username
+		}
+		return page, nil
+	})
+
+	return
+
 }
