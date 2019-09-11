@@ -1,6 +1,6 @@
-## TFS git integration
+## TFS integration
 
-Supports Microsoft Team Foundation Server. Microsoft renamed hosted version to Azure DevOps Server in 2019 and cloud version to Azure DevOps Services.
+This is an integration handling sourcecode for Microsoft Team Foundation Server. Microsoft renamed hosted version to Azure DevOps Server in 2019 and cloud version to Azure DevOps Services.
 
 Tested with TFS 2017 and TFS 2018.
 
