@@ -12,10 +12,7 @@ import (
 )
 
 func (s *Integration) exportCommitUsers(logger hclog.Logger, repos []api.Repo, concurrency int) error {
-	sender, err := objsender.NewIncrementalDateBased(s.agent, commitusers.TableName)
-	if err != nil {
-		return err
-	}
+	sender := s.commitUserSender
 
 	wg := sync.WaitGroup{}
 
@@ -33,7 +30,7 @@ func (s *Integration) exportCommitUsers(logger hclog.Logger, repos []api.Repo, c
 	}
 	wg.Wait()
 
-	return sender.Done()
+	return nil
 }
 
 // maxToReturn useful for debugging
