@@ -3,7 +3,8 @@ package rpcdef
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/pinpt/agent.next/rpcdef/proto"
 )
@@ -41,7 +42,20 @@ type GitRepoFetch struct {
 
 func (s GitRepoFetch) Validate() error {
 	if s.RepoID == "" || s.URL == "" || s.CommitURLTemplate == "" || s.BranchURLTemplate == "" {
-		return errors.New("missing required param for GitRepoFetch")
+		var missing []string
+		if s.RepoID == "" {
+			missing = append(missing, "RepoID")
+		}
+		if s.URL == "" {
+			missing = append(missing, "URL")
+		}
+		if s.CommitURLTemplate == "" {
+			missing = append(missing, "CommitURLTemplate")
+		}
+		if s.BranchURLTemplate == "" {
+			missing = append(missing, "BranchURLTemplate")
+		}
+		return fmt.Errorf("missing required param for GitRepoFetch: %s", strings.Join(missing, ", "))
 	}
 	return nil
 }

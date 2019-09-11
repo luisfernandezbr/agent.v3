@@ -111,7 +111,7 @@ func (s *Integration) exportCommitsForRepoBranch(logger hclog.Logger, userSender
 			logger.Info("got commits page", "l", len(res))
 
 			for _, commit := range res {
-				validate := func(u CommitUser, kind string) error {
+				validate := func(u commitusers.CommitUser, kind string) error {
 					err := u.Validate()
 					if err != nil {
 						return fmt.Errorf("commit data does not have proper %v repo: %v commit: %v %v", kind, repo.NameWithOwner, commit.CommitHash, err)
@@ -119,13 +119,13 @@ func (s *Integration) exportCommitsForRepoBranch(logger hclog.Logger, userSender
 					return nil
 				}
 
-				author := CommitUser{}
+				author := commitusers.CommitUser{}
 				author.CustomerID = s.customerID
 				author.Name = commit.AuthorName
 				author.Email = commit.AuthorEmail
 				author.SourceID = commit.AuthorRefID
 
-				committer := CommitUser{}
+				committer := commitusers.CommitUser{}
 				committer.CustomerID = s.customerID
 				committer.Name = commit.CommitterName
 				committer.Email = commit.CommitterEmail
@@ -156,27 +156,4 @@ func (s *Integration) exportCommitsForRepoBranch(logger hclog.Logger, userSender
 
 			return pi, nil
 		})
-}
-
-type CommitUser struct {
-	CustomerID string
-	Email      string
-	Name       string
-	SourceID   string
-}
-
-func (s CommitUser) Validate() error {
-	if s.CustomerID == "" || s.Email == "" || s.Name == "" {
-		return fmt.Errorf("missing required field for user: %+v", s)
-	}
-	return nil
-}
-
-func (s CommitUser) ToMap() map[string]interface{} {
-	res := map[string]interface{}{}
-	res["customer_id"] = s.CustomerID
-	res["email"] = s.Email
-	res["name"] = s.Name
-	res["source_id"] = s.SourceID
-	return res
 }
