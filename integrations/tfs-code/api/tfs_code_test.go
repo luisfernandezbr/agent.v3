@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 	"github.com/stretchr/testify/assert"
@@ -42,21 +41,6 @@ func TestFetchRepos(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, repos)
 	assert.NotEmpty(t, projids)
-}
-
-func TestFetchCommitUsers(t *testing.T) {
-	if skipTests(t) {
-		return
-	}
-	a := NewTFSAPI(context.Background(), hclog.NewNullLogger(), "1234567890", "tfs", &conf)
-	repos, _, err := a.FetchRepos([]string{}, []string{})
-	assert.NoError(t, err)
-	for _, repo := range repos {
-		usermap := make(map[string]*RawCommitUser)
-		err := a.FetchCommitUsers(repo.RefID, usermap, time.Time{})
-		assert.NoError(t, err)
-		assert.NotEmpty(t, usermap)
-	}
 }
 
 func TestFetchProjectUsers(t *testing.T) {
