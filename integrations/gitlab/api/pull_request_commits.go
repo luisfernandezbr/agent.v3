@@ -6,7 +6,6 @@ import (
 	pstrings "github.com/pinpt/go-common/strings"
 )
 
-// PullRequestCommitsPage ...
 func PullRequestCommitsPage(
 	qc QueryContext,
 	repoRefID string,

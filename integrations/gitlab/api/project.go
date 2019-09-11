@@ -35,7 +35,7 @@ func AvatarURL(qc QueryContext, email string) (string, error) {
 	return avatarResponse["avatar_url"], nil
 }
 
-func RepoLastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (agent.RepoResponseReposLastCommit, error) {
+func RepoLastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (lastCommit agent.RepoResponseReposLastCommit, err error) {
 	qc.Logger.Debug("last commit request", "repo", repo.Name)
 
 	objectPath := pstrings.JoinURL("projects", repo.RefID, "repository", "commits")
@@ -51,21 +51,21 @@ func RepoLastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (agent.RepoR
 		AuthorEmail string    `json:"author_email"`
 	}
 
-	_, err := qc.Request(objectPath, params, &commits)
+	_, err = qc.Request(objectPath, params, &commits)
 	if err != nil {
-		return agent.RepoResponseReposLastCommit{}, err
+		return lastCommit, err
 	}
 
 	if len(commits) == 0 {
-		return agent.RepoResponseReposLastCommit{}, nil
+		return lastCommit, nil
 	}
 
 	lastCommitSource := commits[0]
 	url, err := url.Parse(qc.BaseURL)
 	if err != nil {
-		return agent.RepoResponseReposLastCommit{}, err
+		return lastCommit, err
 	}
-	lastCommit := agent.RepoResponseReposLastCommit{
+	lastCommit = agent.RepoResponseReposLastCommit{
 		Message:   lastCommitSource.Message,
 		URL:       url.Scheme + "://" + url.Hostname() + "/" + repo.Name + "/commit/" + lastCommitSource.ID,
 		CommitSha: lastCommitSource.ID,
@@ -81,7 +81,7 @@ func RepoLastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (agent.RepoR
 
 	date.ConvertToModel(lastCommitSource.CreatedAt, &lastCommit.CreatedDate)
 
-	return lastCommit, nil
+	return
 }
 
 func RepoLanguage(qc QueryContext, repoID string) (string, error) {
@@ -157,7 +157,6 @@ func ReposOnboardPage(qc QueryContext, params url.Values) (page PageInfo, repos 
 	return
 }
 
-// ReposOnboardPageGraphQL ...
 func ReposOnboardPageGraphQL(qc QueryContext, groupName, pageSize, after string) (afterCursor string, repos []*agent.RepoResponseRepos, err error) {
 	qc.Logger.Debug("repos request")
 
@@ -172,26 +171,26 @@ func ReposOnboardPageGraphQL(qc QueryContext, groupName, pageSize, after string)
 
 	query := `
 		group(fullPath:"` + groupName + `"){
-		  projects(` + projectParams + `){
-			edges{
-			  cursor
-			  node{
-				id
-				fullPath
-				description
-				createdAt
-				repository{
-				  tree{
-					lastCommit{
-					  author{
-						avatarUrl
-					  }
+			projects(` + projectParams + `){
+				edges{
+			  		cursor
+			  		node{
+						id
+						fullPath
+						description
+						createdAt
+						repository{
+				  			tree{
+								lastCommit{
+					  				author{
+										avatarUrl
+					  				}
+								}
+				  			}
+						}
 					}
-				  }
 				}
-			  }
 			}
-		  }
 		}
 	`
 
@@ -235,7 +234,7 @@ func ReposOnboardPageGraphQL(qc QueryContext, groupName, pageSize, after string)
 		ID := getRepoID(r.ID)
 		repo := &agent.RepoResponseRepos{
 			RefID:       ID,
-			RefType:     "gitlab",
+			RefType:     qc.RefType,
 			Name:        r.FullName,
 			Description: r.Description,
 			Active:      true,
@@ -368,11 +367,11 @@ func PaginateNewerThan(log hclog.Logger, lastProcessed time.Time, fn PaginateNew
 			if err != nil {
 				return err
 			}
-			if pageInfo.PageSize == 0 {
-				return errors.New("pageSize is 0")
-			}
 			if pageInfo.Page == pageInfo.TotalPages {
 				return nil
+			}
+			if pageInfo.PageSize == 0 {
+				return errors.New("pageSize is 0")
 			}
 			nextPage = pageInfo.NextPage
 			pageOffset += pageInfo.PageSize
@@ -387,11 +386,11 @@ func PaginateNewerThan(log hclog.Logger, lastProcessed time.Time, fn PaginateNew
 		if err != nil {
 			return err
 		}
-		if pageInfo.PageSize == 0 {
-			return errors.New("pageSize is 0")
-		}
 		if pageInfo.Page == pageInfo.TotalPages {
 			return nil
+		}
+		if pageInfo.PageSize == 0 {
+			return errors.New("pageSize is 0")
 		}
 		nextPage = pageInfo.NextPage
 		pageOffset += pageInfo.PageSize

@@ -28,8 +28,6 @@ func PullRequestPage(
 	params.Set("scope", "all")
 	params.Set("state", "all")
 
-	// params.Set("ref_name", branchName)
-
 	var rprs []struct {
 		ID           int64     `json:"id"`
 		IID          int64     `json:"iid"`

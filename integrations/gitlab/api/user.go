@@ -152,7 +152,6 @@ func UsersEmailsMap(qc QueryContext, params url.Values) (page PageInfo, users []
 	return
 }
 
-// UserEmailMap ...
 func UserEmailMap(qc QueryContext) (m map[string]string, e error) {
 	m = make(map[string]string)
 	e = PaginateStartAt(qc.Logger, func(log hclog.Logger, paginationParams url.Values) (page PageInfo, _ error) {

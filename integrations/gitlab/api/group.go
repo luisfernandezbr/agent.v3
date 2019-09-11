@@ -13,7 +13,7 @@ func Groups(qc QueryContext) (groupNames []string, err error) {
 	params.Set("per_page", "100")
 
 	var groups []struct {
-		Name string `json:"name,omitempty"`
+		Name string `json:"name"`
 	}
 
 	_, err = qc.Request(objectPath, params, &groups)

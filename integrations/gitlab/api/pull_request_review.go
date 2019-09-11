@@ -10,7 +10,6 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-// PullRequestCommentsPage ...
 func PullRequestReviewsPage(
 	qc QueryContext,
 	repo Repo,

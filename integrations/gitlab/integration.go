@@ -20,12 +20,13 @@ import (
 )
 
 type Config struct {
-	URL           string   `json:"url"`
-	APIToken      string   `json:"api_token"`
-	ExcludedRepos []string `json:"excluded_repos"`
-	Repos         []string `json:"repos"`
-	StopAfterN    int      `json:"stop_after_n"`
-	OnlyGit       bool     `json:"only_git"`
+	URL                string   `json:"url"`
+	APIToken           string   `json:"apitoken"`
+	ExcludedRepos      []string `json:"excluded_repos"`
+	Repos              []string `json:"repos"`
+	StopAfterN         int      `json:"stop_after_n"`
+	OnlyGit            bool     `json:"only_git"`
+	InsecureSkipVerify bool     `json:"insecure_skip_verify"`
 }
 
 type Integration struct {
@@ -126,6 +127,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.APIURL = s.config.URL + "/api/v4"
 		opts.APIGraphQL = s.config.URL + "/api/graphql"
 		opts.APIToken = s.config.APIToken
+		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
 		requester := api.NewRequester(opts)
 
 		s.qc.Request = requester.Request

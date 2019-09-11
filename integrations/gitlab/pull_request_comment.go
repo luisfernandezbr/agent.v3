@@ -11,10 +11,6 @@ import (
 func (s *Integration) exportPullRequestsComments(logger hclog.Logger, sender *objsender.NotIncremental, repo api.Repo, pullRequests chan []api.PullRequest) error {
 	for prs := range pullRequests {
 		for _, pr := range prs {
-			// if !pr.HasComments {
-			// 	// perf optimization
-			// 	continue
-			// }
 			err := s.exportPullRequestComments(logger, sender, repo, pr)
 			if err != nil {
 				return err

@@ -8,31 +8,9 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/gitlab/api"
+	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/objsender"
 )
-
-type CommitUser struct {
-	CustomerID string
-	Email      string
-	Name       string
-	SourceID   string
-}
-
-func (s CommitUser) Validate() error {
-	if s.CustomerID == "" || s.Email == "" || s.Name == "" {
-		return fmt.Errorf("missing required field for user: %+v", s)
-	}
-	return nil
-}
-
-func (s CommitUser) ToMap() map[string]interface{} {
-	res := map[string]interface{}{}
-	res["customer_id"] = s.CustomerID
-	res["email"] = s.Email
-	res["name"] = s.Name
-	res["source_id"] = s.SourceID
-	return res
-}
 
 func (s *Integration) exportCommitUsers(logger hclog.Logger, repos []api.Repo, concurrency int) error {
 
@@ -55,7 +33,6 @@ func (s *Integration) exportCommitUsers(logger hclog.Logger, repos []api.Repo, c
 	return nil
 }
 
-// maxToReturn useful for debugging
 func reposToChan(sl []api.Repo, maxToReturn int) chan api.Repo {
 	res := make(chan api.Repo)
 	go func() {
@@ -103,7 +80,7 @@ func (s *Integration) exportCommitsForRepoBranch(logger hclog.Logger, userSender
 		logger.Info("got commits page", "repo", repo.ID, "l", len(res))
 
 		for _, commit := range res {
-			validate := func(u CommitUser, kind string) error {
+			validate := func(u commitusers.CommitUser, kind string) error {
 				err := u.Validate()
 				if err != nil {
 					return fmt.Errorf("commit data does not have proper %v repo: %v commit: %v %v", kind, repo.NameWithOwner, commit.CommitHash, err)
@@ -111,13 +88,13 @@ func (s *Integration) exportCommitsForRepoBranch(logger hclog.Logger, userSender
 				return nil
 			}
 
-			author := CommitUser{}
+			author := commitusers.CommitUser{}
 			author.CustomerID = s.customerID
 			author.Name = commit.AuthorName
 			author.Email = commit.AuthorEmail
 			author.SourceID = s.qc.UserEmailMap[author.Email]
 
-			committer := CommitUser{}
+			committer := commitusers.CommitUser{}
 			committer.CustomerID = s.customerID
 			committer.Name = commit.CommitterName
 			committer.Email = commit.CommitterEmail

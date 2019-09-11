@@ -15,10 +15,11 @@ import (
 )
 
 type RequesterOpts struct {
-	Logger     hclog.Logger
-	APIURL     string
-	APIToken   string
-	APIGraphQL string
+	Logger             hclog.Logger
+	APIURL             string
+	APIToken           string
+	APIGraphQL         string
+	InsecureSkipVerify bool
 }
 
 type Requester struct {
@@ -35,7 +36,7 @@ func NewRequester(opts RequesterOpts) *Requester {
 	{
 		c := &http.Client{}
 		transport := httpdefaults.DefaultTransport()
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: opts.InsecureSkipVerify}
 		c.Transport = transport
 		s.httpClient = c
 	}
@@ -94,7 +95,6 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 	}, nil
 }
 
-// RequestGraphQL ...
 func (s *Requester) RequestGraphQL(query string, res interface{}) error {
 
 	body := "query{ " + query + " }"
