@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/integration-sdk/sourcecode"
 	"github.com/stretchr/testify/assert"
 
@@ -39,9 +38,10 @@ func TestFetchRepos(t *testing.T) {
 		return
 	}
 	a := NewTFSAPI(context.Background(), hclog.NewNullLogger(), "1234567890", "tfs", &conf)
-	repos, err := a.FetchRepos([]string{}, []string{})
+	repos, projids, err := a.FetchRepos([]string{}, []string{})
 	assert.NoError(t, err)
 	assert.NotEmpty(t, repos)
+	assert.NotEmpty(t, projids)
 }
 
 func TestFetchCommitUsers(t *testing.T) {
@@ -49,13 +49,28 @@ func TestFetchCommitUsers(t *testing.T) {
 		return
 	}
 	a := NewTFSAPI(context.Background(), hclog.NewNullLogger(), "1234567890", "tfs", &conf)
-	repos, err := a.FetchRepos([]string{}, []string{})
+	repos, _, err := a.FetchRepos([]string{}, []string{})
 	assert.NoError(t, err)
 	for _, repo := range repos {
-		a := NewTFSAPI(context.Background(), hclog.NewNullLogger(), "1234567890", "tfs", &conf)
-		usermap := make(map[string]*sourcecode.User)
+		usermap := make(map[string]*RawCommitUser)
 		err := a.FetchCommitUsers(repo.RefID, usermap, time.Time{})
 		assert.NoError(t, err)
+		assert.NotEmpty(t, usermap)
+	}
+}
+
+func TestFetchProjectUsers(t *testing.T) {
+	if skipTests(t) {
+		return
+	}
+	a := NewTFSAPI(context.Background(), hclog.NewNullLogger(), "1234567890", "tfs", &conf)
+	_, projids, err := a.FetchRepos([]string{}, []string{})
+	assert.NoError(t, err)
+	for _, id := range projids {
+		usermap := make(map[string]*sourcecode.User)
+		err := a.FetchUsers(id, usermap)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, usermap)
 	}
 }
 
@@ -64,26 +79,11 @@ func TestFetchPullRequests(t *testing.T) {
 		return
 	}
 	a := NewTFSAPI(context.Background(), hclog.NewNullLogger(), "1234567890", "tfs", &conf)
-	a.RepoID = func(refid string) string {
-		return hash.Values("Repo", "customer_id", "tfs", refid)
-	}
-	a.BranchID = func(repoRefID string, branchName string) string {
-		repoID := a.RepoID(repoRefID)
-		return hash.Values("tfs", repoID, "1234567890", branchName)
-	}
-	a.PullRequestID = func(refID string) string {
-		return hash.Values("PullRequest", "1234567890", "tfs", refID)
-	}
-	repos, err := a.FetchRepos([]string{}, []string{})
+	repos, _, err := a.FetchRepos([]string{}, []string{})
 	assert.NoError(t, err)
 	for _, repo := range repos {
-		if strings.Contains(repo.Name, "agent") {
-			_, _, err := a.FetchPullRequests(repo.RefID, time.Time{})
-			assert.NoError(t, err)
-			// check any PRs created after now, should be 0
-			prs, _, err := a.FetchPullRequests(repo.RefID, time.Now())
-			assert.Len(t, prs, 0)
-		}
+		_, _, err := a.FetchPullRequests(repo.RefID)
+		assert.NoError(t, err)
 	}
 }
 func TestFetchPullRequestComments(t *testing.T) {
@@ -91,20 +91,10 @@ func TestFetchPullRequestComments(t *testing.T) {
 		return
 	}
 	a := NewTFSAPI(context.Background(), hclog.NewNullLogger(), "1234567890", "tfs", &conf)
-	a.RepoID = func(refid string) string {
-		return hash.Values("Repo", "customer_id", "tfs", refid)
-	}
-	a.BranchID = func(repoRefID string, branchName string) string {
-		repoID := a.RepoID(repoRefID)
-		return hash.Values("tfs", repoID, "1234567890", branchName)
-	}
-	a.PullRequestID = func(refID string) string {
-		return hash.Values("PullRequest", "1234567890", "tfs", refID)
-	}
-	repos, err := a.FetchRepos([]string{}, []string{})
+	repos, _, err := a.FetchRepos([]string{}, []string{})
 	assert.NoError(t, err)
 	for _, repo := range repos {
-		prs, _, err := a.FetchPullRequests(repo.RefID, time.Time{})
+		prs, _, err := a.FetchPullRequests(repo.RefID)
 		assert.NoError(t, err)
 		for _, p := range prs {
 			_, err := a.FetchPullRequestComments(repo.RefID, p.RefID)
