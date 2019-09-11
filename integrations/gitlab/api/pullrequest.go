@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/url"
 	"time"
 
@@ -30,8 +31,8 @@ func PullRequestPage(
 	// params.Set("ref_name", branchName)
 
 	var rprs []struct {
-		ID           string    `json:"id"`
-		IID          string    `json:"iid"`
+		ID           int64     `json:"id"`
+		IID          int64     `json:"iid"`
 		UpdatedAt    time.Time `json:"updated_at"`
 		CreatedAt    time.Time `json:"created_at"`
 		ClosedAt     time.Time `json:"closed_at"`
@@ -65,7 +66,7 @@ func PullRequestPage(
 		pr := &sourcecode.PullRequest{}
 		pr.CustomerID = qc.CustomerID
 		pr.RefType = qc.RefType
-		pr.RefID = rpr.ID
+		pr.RefID = fmt.Sprint(rpr.ID)
 		pr.RepoID = qc.RepoID(repoRefID)
 		pr.BranchName = rpr.SourceBranch
 		pr.Title = rpr.Title
@@ -98,7 +99,7 @@ func PullRequestPage(
 		}
 
 		spr := PullRequest{}
-		spr.IID = rpr.IID
+		spr.IID = fmt.Sprint(rpr.IID)
 		spr.PullRequest = pr
 		res = append(res, spr)
 	}

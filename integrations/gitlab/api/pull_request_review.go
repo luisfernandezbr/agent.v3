@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/url"
 	"time"
 
@@ -20,8 +21,8 @@ func PullRequestReviewsPage(
 
 	objectPath := pstrings.JoinURL("projects", repo.ID, "merge_requests", pr.IID, "approvals")
 
-	var rreviews []struct {
-		ID         string `json:"id"`
+	var rreview struct {
+		ID         int64 `json:"id"`
 		ApprovedBy []struct {
 			Username string `json:"username"`
 		} `json:"approved_by"`
@@ -35,46 +36,43 @@ func PullRequestReviewsPage(
 		UpdatedAt time.Time `json:"updated_at"`
 	}
 
-	pi, err = qc.Request(objectPath, params, &rreviews)
+	pi, err = qc.Request(objectPath, params, &rreview)
 	if err != nil {
 		return
 	}
 
-	for _, rreview := range rreviews {
-		for _, a := range rreview.ApprovedBy {
-			item := &sourcecode.PullRequestReview{}
-			item.CustomerID = qc.CustomerID
-			item.RefType = qc.RefType
-			item.RefID = rreview.ID
-			item.UpdatedAt = rreview.UpdatedAt.Unix()
-			item.RepoID = qc.RepoID(repo.ID)
-			item.PullRequestID = qc.PullRequestID(item.RepoID, pr.ID)
-			item.State = sourcecode.PullRequestReviewStateApproved
+	for _, a := range rreview.ApprovedBy {
+		item := &sourcecode.PullRequestReview{}
+		item.CustomerID = qc.CustomerID
+		item.RefType = qc.RefType
+		item.RefID = fmt.Sprint(rreview.ID)
+		item.UpdatedAt = rreview.UpdatedAt.Unix()
+		item.RepoID = qc.RepoID(repo.ID)
+		item.PullRequestID = qc.PullRequestID(item.RepoID, pr.ID)
+		item.State = sourcecode.PullRequestReviewStateApproved
 
-			date.ConvertToModel(rreview.CreatedAt, &item.CreatedDate)
+		date.ConvertToModel(rreview.CreatedAt, &item.CreatedDate)
 
-			item.UserRefID = a.Username
+		item.UserRefID = a.Username
 
-			res = append(res, item)
-		}
+		res = append(res, item)
+	}
 
-		for _, a := range rreview.SuggestedApprovers {
-			item := &sourcecode.PullRequestReview{}
-			item.CustomerID = qc.CustomerID
-			item.RefType = qc.RefType
-			item.RefID = rreview.ID
-			item.UpdatedAt = rreview.UpdatedAt.Unix()
-			item.RepoID = qc.RepoID(repo.ID)
-			item.PullRequestID = qc.PullRequestID(item.RepoID, pr.ID)
-			item.State = sourcecode.PullRequestReviewStatePending
+	for _, a := range rreview.SuggestedApprovers {
+		item := &sourcecode.PullRequestReview{}
+		item.CustomerID = qc.CustomerID
+		item.RefType = qc.RefType
+		item.RefID = fmt.Sprint(rreview.ID)
+		item.UpdatedAt = rreview.UpdatedAt.Unix()
+		item.RepoID = qc.RepoID(repo.ID)
+		item.PullRequestID = qc.PullRequestID(item.RepoID, pr.ID)
+		item.State = sourcecode.PullRequestReviewStatePending
 
-			date.ConvertToModel(rreview.CreatedAt, &item.CreatedDate)
+		date.ConvertToModel(rreview.CreatedAt, &item.CreatedDate)
 
-			item.UserRefID = a.Username
+		item.UserRefID = a.Username
 
-			res = append(res, item)
-		}
-
+		res = append(res, item)
 	}
 
 	return

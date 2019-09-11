@@ -316,7 +316,7 @@ type PaginateStartAtFn func(log hclog.Logger, paginationParams url.Values) (page
 
 func PaginateStartAt(log hclog.Logger, fn PaginateStartAtFn) error {
 	pageOffset := 0
-	var nextPage string
+	nextPage := "1"
 	for {
 		q := url.Values{}
 		q.Add("page", nextPage)
@@ -324,12 +324,13 @@ func PaginateStartAt(log hclog.Logger, fn PaginateStartAtFn) error {
 		if err != nil {
 			return err
 		}
-		if pageInfo.PageSize == 0 {
-			return errors.New("pageSize is 0")
-		}
 		if pageInfo.Page == pageInfo.TotalPages {
 			return nil
 		}
+		if pageInfo.PageSize == 0 {
+			return errors.New("pageSize is 0")
+		}
+
 		nextPage = pageInfo.NextPage
 		pageOffset += pageInfo.PageSize
 	}

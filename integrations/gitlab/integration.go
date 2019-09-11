@@ -183,7 +183,7 @@ func (s *Integration) export(ctx context.Context) (err error) {
 
 	for _, groupName := range groupNames {
 		if err := s.exportGroup(ctx, groupName); err != nil {
-			return nil
+			return err
 		}
 	}
 
@@ -245,6 +245,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 			repoURL := u.String()
 
 			args := rpcdef.GitRepoFetch{}
+			args.RefType = s.refType
 			args.RepoID = s.qc.RepoID(repo.ID)
 			args.URL = repoURL
 			args.CommitURLTemplate = commitURLTemplate(repo, s.config.URL)
@@ -444,7 +445,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 		defer wg.Done()
 		err := s.exportPullRequestsComments(logger, commentsSender, repo, pullRequestsForComments)
 		if err != nil {
-			setErr(err)
+			setErr(fmt.Errorf("error getting comments %s", err))
 		}
 	}()
 	wg.Add(1)
@@ -452,7 +453,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 		defer wg.Done()
 		err := s.exportPullRequestsReviews(logger, reviewSender, repo, pullRequestsForReviews)
 		if err != nil {
-			setErr(err)
+			setErr(fmt.Errorf("error getting reviews %s", err))
 		}
 	}()
 
@@ -464,7 +465,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 			for _, pr := range prs {
 				commits, err := s.exportPullRequestCommits(logger, repo.ID, pr.IID)
 				if err != nil {
-					setErr(err)
+					setErr(fmt.Errorf("error getting commits %s", err))
 					return
 				}
 				pr.CommitShas = commits

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/url"
 	"time"
 
@@ -21,7 +22,7 @@ func PullRequestCommentsPage(
 	objectPath := pstrings.JoinURL("projects", url.QueryEscape(repo.ID), "merge_requests", pr.IID, "notes")
 
 	var rcomments []struct {
-		ID     string `json:"id"`
+		ID     int64 `json:"id"`
 		Author struct {
 			Username string `json:"username"`
 		}
@@ -44,7 +45,7 @@ func PullRequestCommentsPage(
 		item := &sourcecode.PullRequestComment{}
 		item.CustomerID = qc.CustomerID
 		item.RefType = qc.RefType
-		item.RefID = rcomment.ID
+		item.RefID = fmt.Sprint(rcomment.ID)
 		item.URL = pstrings.JoinURL(u.Scheme, "://", u.Hostname(), repo.NameWithOwner, "merge_requests", pr.IID)
 		date.ConvertToModel(rcomment.UpdatedAt, &item.UpdatedDate)
 		item.RepoID = qc.RepoID(repo.ID)
