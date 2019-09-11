@@ -59,12 +59,12 @@ func (s *Integration) exportReposAndRipSrc() (repoids []string, projids []string
 		if err := sender.Send(repo); err != nil {
 			return nil, nil, err
 		}
-		u, e := url.Parse(repo.URL)
+		u, err := url.Parse(repo.URL)
+		if err != nil {
+			return nil, nil, err
+		}
 		if s.conf.OverrideGitHostName != "" {
 			u.Host = s.conf.OverrideGitHostName
-		}
-		if e != nil {
-			return nil, nil, e
 		}
 		u.User = url.UserPassword(s.creds.Username, s.creds.Password)
 		args := rpcdef.GitRepoFetch{}
