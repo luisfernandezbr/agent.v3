@@ -1,5 +1,16 @@
 ## TFS git integration
 
+Supports Microsoft Team Foundation Server. Microsoft renamed hosted version to Azure DevOps Server in 2019 and cloud version to Azure DevOps Services.
+
+Tested with TFS 2017 and TFS 2018.
+
+- [wikipedia TFS](https://en.wikipedia.org/wiki/Team_Foundation_Server)
+- [TFS 2018 release notes](
+https://docs.microsoft.com/en-us/visualstudio/releasenotes/tfs2018-update3)
+- [TFS 2017 release notes](https://docs.microsoft.com/en-us/visualstudio/releasenotes/tfs2017-relnotes)
+- [REST API Overview for TFS 2015, 2017, and 2018 (RTW and Update 1)](https://docs.microsoft.com/en-us/azure/devops/integrate/previous-apis/overview?view=azure-devops-2019)
+
+
 ## Export command
 
 ```
@@ -74,7 +85,8 @@ No incrementals for pull request commits. No from date or from commit available 
 
 ## TFS does not have commit user link
 
-When fetching users with the commit api we only get the same data as in git log. [docs](https://docs.microsoft.com/en-us/azure/devops/integrate/previous-apis/git/commits?view=azure-devops-2019)
+When fetching users with the commit api we only get the same data as in git log. [See docs](https://docs.microsoft.com/en-us/azure/devops/integrate/previous-apis/git/commits?view=azure-devops-2019)
+
 Note: I changed the email address of the TFS user from empty to an email, created a new commit in the UI, and when looking at the commit history this user was not linked to this commit, although this user was still linked to previous commits. We will probably have to match users manually for TFS code.
 
 ## Missing data
