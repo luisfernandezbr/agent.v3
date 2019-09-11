@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/gitlab/api"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/pkg/commitusers"
+	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -39,8 +41,11 @@ type Integration struct {
 
 	refType string
 
-	repoSender       *objsender.IncrementalDateBased
-	commitUserSender *objsender.IncrementalDateBased
+	repoSender                *objsender.IncrementalDateBased
+	commitUserSender          *objsender.IncrementalDateBased
+	pullRequestSender         *objsender.IncrementalDateBased
+	pullRequestCommentsSender *objsender.NotIncremental
+	pullRequestReviewsSender  *objsender.NotIncremental
 }
 
 func main() {
@@ -155,11 +160,16 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-
 	s.commitUserSender, err = objsender.NewIncrementalDateBased(s.agent, commitusers.TableName)
 	if err != nil {
 		return err
 	}
+	s.pullRequestSender, err = objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestModelName.String())
+	if err != nil {
+		return err
+	}
+	s.pullRequestCommentsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
+	s.pullRequestReviewsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
 
 	s.qc.UserEmailMap, err = api.UserEmailMap(s.qc)
 	if err != nil {
@@ -182,6 +192,18 @@ func (s *Integration) export(ctx context.Context) (err error) {
 		return err
 	}
 	err = s.commitUserSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.pullRequestSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.pullRequestCommentsSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.pullRequestReviewsSender.Done()
 	if err != nil {
 		return err
 	}
@@ -255,6 +277,13 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 		commitConcurrency := 1
 
 		err := s.exportCommitUsers(logger, repos, commitConcurrency)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, repo := range repos {
+		err := s.exportPullRequestsForRepo(logger, repo, s.pullRequestSender, s.pullRequestCommentsSender, s.pullRequestReviewsSender)
 		if err != nil {
 			return err
 		}
@@ -351,4 +380,108 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, grou
 	}
 
 	return nil
+}
+
+func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Repo,
+	pullRequestSender *objsender.IncrementalDateBased,
+	commentsSender *objsender.NotIncremental,
+	reviewSender *objsender.NotIncremental) (rerr error) {
+
+	logger = logger.With("repo", repo.NameWithOwner)
+	logger.Info("exporting")
+
+	// export changed pull requests
+	var pullRequestsErr error
+	pullRequestsInitial := make(chan []api.PullRequest)
+	go func() {
+		defer close(pullRequestsInitial)
+		err := s.exportPullRequestsRepo(logger, repo, pullRequestsInitial, pullRequestSender.LastProcessed)
+		if err != nil {
+			pullRequestsErr = err
+		}
+	}()
+
+	// export comments, reviews, commits concurrently
+	pullRequestsForComments := make(chan []api.PullRequest, 10)
+	pullRequestsForReviews := make(chan []api.PullRequest, 10)
+	pullRequestsForCommits := make(chan []api.PullRequest, 10)
+
+	var errMu sync.Mutex
+	setErr := func(err error) {
+		logger.Error("failed repo export", "e", err)
+		errMu.Lock()
+		defer errMu.Unlock()
+		if rerr == nil {
+			rerr = err
+		}
+		// drain all pull requests on error
+		for range pullRequestsForComments {
+		}
+		for range pullRequestsForReviews {
+		}
+		for range pullRequestsForCommits {
+		}
+	}
+
+	go func() {
+		for item := range pullRequestsInitial {
+			pullRequestsForComments <- item
+			pullRequestsForReviews <- item
+			pullRequestsForCommits <- item
+		}
+		close(pullRequestsForComments)
+		close(pullRequestsForReviews)
+		close(pullRequestsForCommits)
+
+		if pullRequestsErr != nil {
+			setErr(pullRequestsErr)
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := s.exportPullRequestsComments(logger, commentsSender, repo, pullRequestsForComments)
+		if err != nil {
+			setErr(err)
+		}
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := s.exportPullRequestsReviews(logger, reviewSender, repo, pullRequestsForReviews)
+		if err != nil {
+			setErr(err)
+		}
+	}()
+
+	// set commits on the rp and then send the pr
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for prs := range pullRequestsForCommits {
+			for _, pr := range prs {
+				commits, err := s.exportPullRequestCommits(logger, repo.ID, pr.IID)
+				if err != nil {
+					setErr(err)
+					return
+				}
+				pr.CommitShas = commits
+				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, commits)
+				if len(pr.CommitShas) == 0 {
+					logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
+				} else {
+					pr.BranchID = s.qc.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
+				}
+				err = pullRequestSender.Send(pr)
+				if err != nil {
+					setErr(err)
+					return
+				}
+			}
+		}
+	}()
+	wg.Wait()
+	return
 }

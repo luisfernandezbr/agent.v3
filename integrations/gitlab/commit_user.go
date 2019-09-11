@@ -111,8 +111,6 @@ func (s *Integration) exportCommitsForRepoBranch(logger hclog.Logger, userSender
 				return nil
 			}
 
-			s.logger.Debug("\t\tMSG1", "customerID", s.customerID)
-
 			author := CommitUser{}
 			author.CustomerID = s.customerID
 			author.Name = commit.AuthorName
