@@ -24,7 +24,7 @@ import (
 
 type Opts struct {
 	cmdintegration.Opts
-	ReprocessHistorical bool `json:"reprocess_historical"`
+	ReprocessHistorical bool
 }
 
 type AgentConfig = cmdintegration.AgentConfig
@@ -57,7 +57,7 @@ func newExport(opts Opts) (*export, error) {
 	s.Command = cmdintegration.NewCommand(opts.Opts)
 
 	if opts.ReprocessHistorical {
-		s.Logger.Info("ReprocessHistorical is true, discarding incrmental checkpoints")
+		s.Logger.Info("ReprocessHistorical is true, discarding incremental checkpoints")
 		err := s.discardIncrementalData()
 		if err != nil {
 			return nil, err
@@ -136,6 +136,7 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 			Logger:     s.Logger.With("c", i),
 			CustomerID: s.Opts.AgentConfig.CustomerID,
 			RepoID:     fetch.RepoID,
+			RefType:    fetch.RefType,
 
 			Sessions: s.sessions.outsession,
 

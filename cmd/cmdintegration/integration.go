@@ -2,9 +2,13 @@
 package cmdintegration
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/iloader"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -97,4 +101,16 @@ func (s *Command) SetupIntegrations(agent rpcdef.Agent) {
 	loader := iloader.New(opts)
 	res := loader.Load(integrationNames)
 	s.Integrations = res
+
+	go func() {
+		s.CaptureShutdown()
+	}()
+}
+
+func (s *Command) CaptureShutdown() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	<-c
+	plugin.CleanupClients()
+	os.Exit(1)
 }

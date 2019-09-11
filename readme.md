@@ -10,6 +10,8 @@ Service waits for commands from a backend to validate integrations, start export
 - validate-config - Validates the configuration by making a test connection.
 - export-onboard-data - Exports users, repos or projects based on param for a specified integration. Saves that data into provided file.
 
+
+
 ### Testing integrations without backend
 
 ```
@@ -22,6 +24,32 @@ Onboarding data
 
 Getting logs
 Get-Content .\logs.txt -Wait -Tail 10
+```
+
+### Development tips
+
+#### Checking exported data
+When checking exported data is it often needed to look for a specific id or some fields. Using zcat with jq is often sufficient.
+
+One problem is that we generate multiple file per each type, and zcat * does not work on MacOS.
+
+The following workaround works for fish shell:
+
+```
+# add this function to ~/.config/fish/config.fish
+
+# similar to zcat * | jq .
+# this is required because on MacOS you need to use zcat < file, otherwise zcat wants .Z suffix attached
+# Usage:
+# in ./sourcecode.Branch
+# zcatall | less
+function zcatall
+	if test -e ./zcatall
+		cat ./zcatall
+	else
+		for f in *.json.gz; zcat < $f | jq . >> ./zcatall; end; cat ./zcatall
+	end
+end
 ```
 
 ### Using separate processes for executing commands in service

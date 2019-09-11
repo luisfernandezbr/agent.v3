@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
 
+	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
 
 	"github.com/pinpt/agent.next/pkg/encrypt"
@@ -108,12 +110,34 @@ func (s *runner) run(ctx context.Context) error {
 		return err
 	}
 
+	if os.Getenv("PP_AGENT_SERVICE_TEST_MOCK") != "" {
+		s.logger.Info("PP_AGENT_SERVICE_TEST_MOCK passed, running test mock export")
+		err := s.runTestMockExport()
+		if err != nil {
+			return err
+		}
+	}
+
 	s.logger.Info("waiting for events...")
 
 	block := make(chan bool)
 	<-block
 
 	return nil
+}
+
+func (s *runner) runTestMockExport() error {
+	agentConfig := cmdexport.AgentConfig{}
+	agentConfig.CustomerID = "c1"
+	agentConfig.PinpointRoot = s.opts.PinpointRoot
+	in := cmdexport.Integration{}
+	in.Name = "mock"
+	in.Config = map[string]interface{}{"k1": "v1"}
+	integrations := []cmdexport.Integration{in}
+	reprocessHistorical := true
+
+	ctx := context.Background()
+	return s.exporter.execExport(ctx, agentConfig, integrations, reprocessHistorical)
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {
@@ -405,47 +429,12 @@ func (s *runner) handleExportEvents(ctx context.Context) error {
 		ev := instance.Object().(*agent.ExportRequest)
 		s.logger.Info("received export request", "id", ev.ID, "uuid", ev.UUID, "request_date", ev.RequestDate.Rfc3339)
 
-		done := make(chan error)
+		publishEvent := s.processExportRequest(ev)
 
-		req := exportRequest{
-			Done: done,
-			Data: ev,
-		}
-
-		startDate := time.Now()
-
-		s.exporter.ExportQueue <- req
-
-		err := <-done
-
-		jobID := ev.JobID
-
-		data := agent.ExportResponse{
-			CustomerID: s.conf.CustomerID,
-			UUID:       s.conf.DeviceID,
-			JobID:      jobID,
-		}
-		date.ConvertToModel(startDate, &data.StartDate)
-
-		deviceinfo.AppendCommonInfoFromConfig(&data, s.conf)
-
-		if err == nil {
-			data.Success = true
-		} else {
-			s.logger.Error("failed export", "err", err)
-			data.Error = pstrings.Pointer(err.Error())
-		}
-
-		publishEvent := event.PublishEvent{
-			Object: &data,
-			Headers: map[string]string{
-				"uuid": s.conf.DeviceID,
-			},
-		}
-
-		err = event.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
+		err := event.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
 		if err != nil {
-			panic(err)
+			s.logger.Error("could not send back export result", "err", err)
+			return nil, nil
 		}
 
 		s.logger.Info("sent back export result")
@@ -467,6 +456,48 @@ func (s *runner) handleExportEvents(ctx context.Context) error {
 
 	return nil
 
+}
+
+func (s *runner) processExportRequest(ev *agent.ExportRequest) (res event.PublishEvent) {
+	done := make(chan error)
+
+	req := exportRequest{
+		Done: done,
+		Data: ev,
+	}
+
+	startDate := time.Now()
+
+	s.exporter.ExportQueue <- req
+
+	err := <-done
+
+	jobID := ev.JobID
+
+	data := agent.ExportResponse{
+		CustomerID: s.conf.CustomerID,
+		UUID:       s.conf.DeviceID,
+		JobID:      jobID,
+	}
+	date.ConvertToModel(startDate, &data.StartDate)
+
+	deviceinfo.AppendCommonInfoFromConfig(&data, s.conf)
+
+	if err == nil {
+		data.Success = true
+	} else {
+		s.logger.Error("failed export", "err", err)
+		data.Error = pstrings.Pointer(err.Error())
+	}
+
+	res = event.PublishEvent{
+		Object: &data,
+		Headers: map[string]string{
+			"uuid": s.conf.DeviceID,
+		},
+	}
+
+	return
 }
 
 func (s *runner) sendPings() {

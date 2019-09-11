@@ -145,6 +145,7 @@ func (s *Integration) setupRPC() error {
 		Cmd:             cmd,
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolGRPC},
+		Managed: true,
 	})
 	s.pluginClient = client
 

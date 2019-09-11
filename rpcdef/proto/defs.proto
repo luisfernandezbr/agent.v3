@@ -101,9 +101,10 @@ message ExportObj {
 }
 
 message ExportGitRepoReq {
-    string repo_id = 1;
-    string url = 2;
-    string commit_url_template = 3;
-    string branch_url_template = 4;
+    string repo_id = 1;    
+    string ref_type = 2;
+    string url = 3;
+    string commit_url_template = 4;
+    string branch_url_template = 5;
 }
 

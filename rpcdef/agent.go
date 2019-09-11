@@ -3,7 +3,8 @@ package rpcdef
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/pinpt/agent.next/rpcdef/proto"
 )
@@ -33,6 +34,7 @@ type ExportObj struct {
 
 type GitRepoFetch struct {
 	RepoID            string
+	RefType           string
 	URL               string
 	CommitURLTemplate string
 	BranchURLTemplate string
@@ -40,7 +42,20 @@ type GitRepoFetch struct {
 
 func (s GitRepoFetch) Validate() error {
 	if s.RepoID == "" || s.URL == "" || s.CommitURLTemplate == "" || s.BranchURLTemplate == "" {
-		return errors.New("missing required param for GitRepoFetch")
+		var missing []string
+		if s.RepoID == "" {
+			missing = append(missing, "RepoID")
+		}
+		if s.URL == "" {
+			missing = append(missing, "URL")
+		}
+		if s.CommitURLTemplate == "" {
+			missing = append(missing, "CommitURLTemplate")
+		}
+		if s.BranchURLTemplate == "" {
+			missing = append(missing, "BranchURLTemplate")
+		}
+		return fmt.Errorf("missing required param for GitRepoFetch: %s", strings.Join(missing, ", "))
 	}
 	return nil
 }
@@ -111,6 +126,7 @@ func (s *AgentServer) ExportGitRepo(ctx context.Context, req *proto.ExportGitRep
 	resp = &proto.Empty{}
 	fetch := GitRepoFetch{}
 	fetch.RepoID = req.RepoId
+	fetch.RefType = req.RefType
 	fetch.URL = req.Url
 	fetch.CommitURLTemplate = req.CommitUrlTemplate
 	fetch.BranchURLTemplate = req.BranchUrlTemplate
@@ -173,6 +189,7 @@ func (s *AgentClient) ExportGitRepo(fetch GitRepoFetch) error {
 	}
 	args := &proto.ExportGitRepoReq{}
 	args.RepoId = fetch.RepoID
+	args.RefType = fetch.RefType
 	args.Url = fetch.URL
 	args.CommitUrlTemplate = fetch.CommitURLTemplate
 	args.BranchUrlTemplate = fetch.BranchURLTemplate

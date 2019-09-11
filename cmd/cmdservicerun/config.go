@@ -64,6 +64,8 @@ func convertConfig(integrationNameBackend string, configBackend map[string]inter
 		configAgent, integrationNameAgent, rerr = convertConfigJira(integrationNameBackend, configBackend, exclusions)
 	case "sonarqube":
 		configAgent, integrationNameAgent, rerr = convertConfigSonarqube(integrationNameBackend, configBackend, exclusions)
+	case "tfs":
+		configAgent, integrationNameAgent, rerr = convertConfigFTS(integrationNameBackend, configBackend, exclusions)
 	default:
 		rerr = fmt.Errorf("unsupported integration: %v", integrationNameBackend)
 		return
@@ -228,5 +230,52 @@ func convertConfigSonarqube(inameBackend string, cb map[string]interface{}, excl
 		return
 	}
 
+	return
+}
+
+func convertConfigFTS(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+	errStr := func(err string) {
+		rerr = errors.New(err)
+		return
+	}
+	inameAgent = "tfs-code"
+	var config struct {
+		URL        string `json:"url"`
+		APIToken   string `json:"api_key"`
+		Username   string `json:"username"`
+		Password   string `json:"password"`
+		Collection string `json:"collection"`
+		Hostname   string `json:"hostname"`
+	}
+
+	err := structmarshal.MapToStruct(cb, &config)
+	if err != nil {
+		rerr = err
+		return
+	}
+	if config.URL == "" {
+		errStr("missing url")
+		return
+	}
+	if config.APIToken == "" {
+		errStr("missing apitoken")
+		return
+	}
+	if config.Username == "" {
+		errStr("missing username")
+		return
+	}
+	if config.Password == "" {
+		errStr("missing password")
+		return
+	}
+	if config.Collection == "" {
+		config.Collection = "DefaultCollection"
+	}
+	res, err = structmarshal.StructToMap(config)
+	if err != nil {
+		rerr = err
+		return
+	}
 	return
 }

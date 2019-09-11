@@ -2,10 +2,12 @@
 
 
 [[projects]]
+  digest = "1:d5e57477e56171579614125a45af9561e0534068600863aa7c1c6f10bd34e500"
   name = "github.com/boyter/scc"
   packages = ["processor"]
-  revision = "ee0ede363a7e96bac5c97e47ee6d989e269d053e"
-  version = "v2.7.0"
+  pruneopts = "UT"
+  revision = "20c82a1e689782c6a4d7b7b82095cf4f72cee71c"
+  version = "v2.8.0"
 
 [[projects]]
   name = "github.com/bsm/redislock"
@@ -23,10 +25,12 @@
   version = "v2.0.1"
 
 [[projects]]
+  digest = "1:47056e6fe3a3524238d48ddcb6d38bfcfa6db346a11d73d83f1620a8cbf69793"
   name = "github.com/cespare/xxhash"
   packages = ["."]
-  revision = "3b82fb7d186719faeedd0c2864f868c74fbf79a1"
-  version = "v2.0.0"
+  pruneopts = "UT"
+  revision = "de209a9ffae3256185a6bb135d1a0ada7b2b5f09"
+  version = "v2.1.0"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -305,6 +309,7 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:d79916706ff7e9d3197ae2cf37ffa38eb9e91c47e83afb95d8066f81aee2a7b9"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -327,6 +332,7 @@
     "strings",
     "term"
   ]
+  pruneopts = "UT"
   revision = "b010b77e2adba9c49714eda99e516d83cefdea0a"
   version = "8.2.13"
 
@@ -337,6 +343,7 @@
   version = "2.0.0"
 
 [[projects]]
+  digest = "1:914e495c822414071ec9caa4be43be812b7441c0e7c7111fe90be1af128820c0"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -347,11 +354,13 @@
     "sourcecode",
     "work"
   ]
-  revision = "b6a971856e77ddef7f06c4ead6e56c868d9283e1"
-  version = "0.0.465"
+  pruneopts = "UT"
+  revision = "1d8a15cb1959c9c4966a9ed391160dbd4a0289a4"
+  version = "0.0.470"
 
 [[projects]]
   branch = "master"
+  digest = "1:732b9e87d0a65ca2b23a015807751e2005c96e6ac1faaf00975b1de5b3aa5bc4"
   name = "github.com/pinpt/ripsrc"
   packages = [
     "ripsrc",
@@ -371,7 +380,8 @@
     "ripsrc/parentsgraph/parentsp",
     "ripsrc/pkg/logger"
   ]
-  revision = "e02239deeb856fa316254eef3408c94473405054"
+  pruneopts = "UT"
+  revision = "2bf2b4e7403772fa8571a4a7599315da476b9cd4"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -510,6 +520,7 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:e567cc6b1fda35284b5d50829c0c7b7e94c8262d529159dfd07a380049c435b7"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -520,7 +531,8 @@
     "windows/svc/eventlog",
     "windows/svc/mgr"
   ]
-  revision = "1f305c863dab438568b4750723b2b7b237a469bb"
+  pruneopts = "UT"
+  revision = "749cb33beabd9aa6d3178e3de05bcc914f70b2bf"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -581,13 +593,15 @@
     "stat/combin",
     "stat/distuv"
   ]
-  revision = "43865b531bee9d28dccf2cf831db9eef686ca8c6"
+  pruneopts = "UT"
+  revision = "2065cbd6b42a9fb208b81bf55f7188b127e9e42b"
 
 [[projects]]
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "24fa4b261c55da65468f2abfdae2b024eef27dfb"
+  pruneopts = "UT"
+  revision = "92dd089d5514cecde7a465f807541f83dfd486d5"
 
 [[projects]]
   name = "google.golang.org/grpc"
