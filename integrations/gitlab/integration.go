@@ -173,7 +173,7 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	s.pullRequestCommentsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
 	s.pullRequestReviewsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
 
-	s.qc.UserEmailMap, err = api.UserEmailMap(s.qc)
+	err = api.UsersEmails(s.qc, s.commitUserSender)
 	if err != nil {
 		return err
 	}
@@ -267,19 +267,6 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 	// export repos
 	{
 		err := s.exportRepos(ctx, logger, groupName, repos)
-		if err != nil {
-			return err
-		}
-	}
-
-	// export a link between commit and github user
-	// This is much slower than the rest
-	// for pinpoint takes 3.5m for initial, 47s for incremental
-	{
-		// higher concurrency does not make any real difference
-		commitConcurrency := 1
-
-		err := s.exportCommitUsers(logger, repos, commitConcurrency)
 		if err != nil {
 			return err
 		}

@@ -4,14 +4,19 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/pinpt/agent.next/pkg/commitusers"
+
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/objsender"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/agent"
 )
 
 type User struct {
+	ID       int64
 	Email    string
 	Username string
+	Name     string
 }
 
 func GroupUsers(qc QueryContext, group string) (users []*agent.UserResponseUsers, err error) {
@@ -121,7 +126,7 @@ func UsersOnboardPage(qc QueryContext, params url.Values) (page PageInfo, users 
 	return
 }
 
-func UsersEmailsMap(qc QueryContext, params url.Values) (page PageInfo, users []User, err error) {
+func UsersPage(qc QueryContext, params url.Values) (page PageInfo, users []User, err error) {
 	qc.Logger.Debug("users request")
 
 	objectPath := pstrings.JoinURL("/users")
@@ -129,6 +134,8 @@ func UsersEmailsMap(qc QueryContext, params url.Values) (page PageInfo, users []
 	var rawUsers []struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
+		Name     string `json:"name"`
+		ID       int64  `json:"id"`
 	}
 
 	params.Set("membership", "true")
@@ -143,6 +150,8 @@ func UsersEmailsMap(qc QueryContext, params url.Values) (page PageInfo, users []
 		nUser := User{
 			Email:    user.Email,
 			Username: user.Username,
+			Name:     user.Name,
+			ID:       user.ID,
 		}
 
 		users = append(users, nUser)
@@ -152,19 +161,59 @@ func UsersEmailsMap(qc QueryContext, params url.Values) (page PageInfo, users []
 	return
 }
 
-func UserEmailMap(qc QueryContext) (m map[string]string, e error) {
-	m = make(map[string]string)
-	e = PaginateStartAt(qc.Logger, func(log hclog.Logger, paginationParams url.Values) (page PageInfo, _ error) {
-		page, users, err := UsersEmailsMap(qc, paginationParams)
+func UserEmails(qc QueryContext, userID int64) (emails []string, err error) {
+	qc.Logger.Debug("users request")
+
+	objectPath := pstrings.JoinURL("users", fmt.Sprint(userID), "emails")
+
+	var rawEmails []struct {
+		Email string `json:"email"`
+	}
+
+	_, err = qc.Request(objectPath, nil, &rawEmails)
+	if err != nil {
+		return
+	}
+
+	for _, user := range rawEmails {
+		emails = append(emails, user.Email)
+	}
+
+	return
+}
+
+func UsersEmails(qc QueryContext, usersSender *objsender.IncrementalDateBased) error {
+	return PaginateStartAt(qc.Logger, func(log hclog.Logger, paginationParams url.Values) (page PageInfo, _ error) {
+		page, users, err := UsersPage(qc, paginationParams)
 		if err != nil {
 			return page, err
 		}
 		for _, user := range users {
-			m[user.Email] = user.Username
+			cUser := commitusers.CommitUser{
+				CustomerID: qc.CustomerID,
+				Email:      user.Email,
+				Name:       user.Name,
+				SourceID:   user.Username,
+			}
+
+			usersSender.SendMap(cUser.ToMap())
+
+			emails, err := UserEmails(qc, user.ID)
+			if err != nil {
+				return page, err
+			}
+			for _, email := range emails {
+				cUser := commitusers.CommitUser{
+					CustomerID: qc.CustomerID,
+					Email:      email,
+					Name:       user.Name,
+					SourceID:   user.Username,
+				}
+
+				usersSender.SendMap(cUser.ToMap())
+			}
 		}
+
 		return page, nil
 	})
-
-	return
-
 }
