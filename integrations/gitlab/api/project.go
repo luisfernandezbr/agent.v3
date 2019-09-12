@@ -171,19 +171,19 @@ func ReposOnboardPageGraphQL(qc QueryContext, groupName, pageSize, after string)
 	projectParams := firstParam + afterParam
 
 	query := `
-		group(fullPath:"` + groupName + `"){
-			projects(` + projectParams + `){
-				edges{
+		group(fullPath:"` + groupName + `") {
+			projects(` + projectParams + `) {
+				edges {
 					cursor
-					node{
+					node {
 						id
 						fullPath
 						description
 						createdAt
-						repository{
-							tree{
-								lastCommit{
-									author{
+						repository {
+							tree {
+								lastCommit {
+									author {
 										avatarUrl
 									}
 								}
