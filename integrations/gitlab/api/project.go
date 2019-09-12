@@ -174,20 +174,20 @@ func ReposOnboardPageGraphQL(qc QueryContext, groupName, pageSize, after string)
 		group(fullPath:"` + groupName + `"){
 			projects(` + projectParams + `){
 				edges{
-			  		cursor
-			  		node{
+					cursor
+					node{
 						id
 						fullPath
 						description
 						createdAt
 						repository{
-				  			tree{
+							tree{
 								lastCommit{
-					  				author{
+									author{
 										avatarUrl
-					  				}
+									}
 								}
-				  			}
+							}
 						}
 					}
 				}
