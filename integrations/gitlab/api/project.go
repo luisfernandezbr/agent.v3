@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -283,9 +284,9 @@ func ReposPageREST(qc QueryContext, groupID string, params url.Values, stopOnUpd
 		if repo.UpdatedAt.Before(stopOnUpdatedAt) {
 			return
 		}
-		ID := fmt.Sprint(repo.ID)
+		id := strconv.FormatInt(repo.ID, 10)
 		repo := &sourcecode.Repo{
-			RefID:       ID,
+			RefID:       id,
 			RefType:     qc.RefType,
 			CustomerID:  qc.CustomerID,
 			Name:        repo.FullName,
@@ -295,7 +296,7 @@ func ReposPageREST(qc QueryContext, groupID string, params url.Values, stopOnUpd
 			Active:      true,
 		}
 
-		repo.Language, err = RepoLanguage(qc, ID)
+		repo.Language, err = RepoLanguage(qc, id)
 		if err != nil {
 			return
 		}

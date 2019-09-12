@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -63,17 +62,13 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 		return page, err
 	}
 	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return page, err
-	}
+
 	if resp.StatusCode != 200 {
-		s.logger.Info("api request failed", "url", u, "body", string(b))
+		s.logger.Info("api request failed", "url", u)
 		return page, fmt.Errorf(`gitlab returned invalid status code: %v`, resp.StatusCode)
 	}
 
-	err = json.Unmarshal(b, &res)
-	if err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
 		return page, err
 	}
 
@@ -111,10 +106,5 @@ func (s *Requester) RequestGraphQL(query string, res interface{}) error {
 	}
 	defer resp.Body.Close()
 
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	return json.Unmarshal(b, &res)
+	return json.NewDecoder(resp.Body).Decode(&res)
 }

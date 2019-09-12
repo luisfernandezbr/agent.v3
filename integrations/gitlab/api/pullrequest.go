@@ -82,7 +82,7 @@ func PullRequestPage(
 		case "merged":
 			pr.Status = sourcecode.PullRequestStatusMerged
 		default:
-			panic("unknown state: " + rpr.State)
+			qc.Logger.Error("unknown state:", err, rpr.State)
 		}
 		pr.CreatedByRefID = rpr.Author.Username
 
