@@ -121,8 +121,8 @@ func ReposOnboardPage(qc QueryContext, params url.Values) (page PageInfo, repos 
 		CreatedAt   time.Time `json:"created_at"`
 		UpdatedAt   string    `json:"last_activity_at"`
 		ID          int64     `json:"id"`
-		FullName    string    `json:"path_with_namespace,omitempty"`
-		Description string    `json:"description,omitempty"`
+		FullName    string    `json:"path_with_namespace"`
+		Description string    `json:"description"`
 	}
 
 	page, err = qc.Request(objectPath, params, &rr)
@@ -270,9 +270,9 @@ func ReposPageREST(qc QueryContext, groupID string, params url.Values, stopOnUpd
 		CreatedAt   time.Time `json:"created_at"`
 		UpdatedAt   time.Time `json:"last_activity_at"`
 		ID          int64     `json:"id"`
-		FullName    string    `json:"path_with_namespace,omitempty"`
-		Description string    `json:"description,omitempty"`
-		WebURL      string    `json:"web_url,omitempty"`
+		FullName    string    `json:"path_with_namespace"`
+		Description string    `json:"description"`
+		WebURL      string    `json:"web_url"`
 	}
 
 	page, err = qc.Request(objectPath, params, &rr)

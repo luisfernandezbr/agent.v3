@@ -50,8 +50,8 @@ func ReposPageRESTAll(qc QueryContext, groupName string, params url.Values) (pag
 
 	var rr []struct {
 		ID            int64  `json:"id"`
-		FullName      string `json:"path_with_namespace,omitempty"`
-		DefaultBranch string `json:"default_branch,omitempty"`
+		FullName      string `json:"path_with_namespace"`
+		DefaultBranch string `json:"default_branch"`
 	}
 
 	page, err = qc.Request(objectPath, params, &rr)

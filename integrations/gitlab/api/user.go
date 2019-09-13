@@ -195,6 +195,10 @@ func UsersEmails(qc QueryContext, usersSender *objsender.IncrementalDateBased) e
 				Name:       user.Name,
 				SourceID:   user.Username,
 			}
+			err = cUser.Validate()
+			if err != nil {
+				return page, err
+			}
 
 			usersSender.SendMap(cUser.ToMap())
 
@@ -208,6 +212,10 @@ func UsersEmails(qc QueryContext, usersSender *objsender.IncrementalDateBased) e
 					Email:      email,
 					Name:       user.Name,
 					SourceID:   user.Username,
+				}
+				err := cUser.Validate()
+				if err != nil {
+					return page, err
 				}
 
 				usersSender.SendMap(cUser.ToMap())
