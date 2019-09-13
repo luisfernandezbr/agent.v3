@@ -3,15 +3,17 @@
 - GitLab Enterprise Edition 12.2.4
 
 ## GitLab API Docs
-https://docs.gitlab.com/ee/api/
-https://docs.gitlab.com/ee/api/graphql/
+- https://docs.gitlab.com/ee/api/
+- https://docs.gitlab.com/ee/api/graphql/
 
 ## TODO
 - Add support for gitlab.com
 
 ## API call examples
 
+```
 curl -H "Private-Token: $PP_GITLAB_TOKEN" http://lgitlab.com:8084/api/v4/user
+```
 
 ## Development commands
 
@@ -53,16 +55,16 @@ This is needed so that incremental export does not have to get call for pr comme
 testing different cases
 
 - create pr
-    createdDate  2019-09-13T15:06:10.117Z
-    updateDate   2019-09-13T15:06:10.117Z
+    - createdDate  2019-09-13T15:06:10.117Z
+    - updateDate   2019-09-13T15:06:10.117Z
 - create a comment on pr
-    createdDate  2019-09-13T15:06:10.117Z
-    updateDate   2019-09-13T15:10:11.151Z (updated)
+    - createdDate  2019-09-13T15:06:10.117Z
+    - updateDate   2019-09-13T15:10:11.151Z (updated)
 - edit the comment on pr
-    createdDate  2019-09-13T15:06:10.117Z
-    updateDate   2019-09-13T15:10:11.151Z (does not change)
+    - createdDate  2019-09-13T15:06:10.117Z
+    - updateDate   2019-09-13T15:10:11.151Z (does not change)
 
-We cannot trust in updateDate to get incrementals.
+UpdateDate is not correct for comment changes. We would only fetch edited comments when new historicals are run.
 
 ### Exporting users
 
