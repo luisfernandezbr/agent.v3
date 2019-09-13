@@ -239,7 +239,10 @@ func UsersEmails(qc QueryContext, commitUsersSender *objsender.IncrementalDateBa
 			sourceUser.AvatarURL = pstrings.Pointer(user.AvatarURL)
 			sourceUser.AssociatedRefID = pstrings.Pointer(user.Username)
 
-			usersSender.SendMap(sourceUser.ToMap())
+			if err := usersSender.SendMap(sourceUser.ToMap()); err != nil {
+				return page, err
+			}
+
 		}
 
 		return page, nil
