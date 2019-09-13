@@ -58,9 +58,6 @@ func PullRequestPage(
 	}
 
 	for _, rpr := range rprs {
-		if rpr.UpdatedAt.Before(stopOnUpdatedAt) {
-			return PageInfo{}, res, nil
-		}
 		pr := &sourcecode.PullRequest{}
 		pr.CustomerID = qc.CustomerID
 		pr.RefType = qc.RefType
@@ -79,22 +76,16 @@ func PullRequestPage(
 			pr.Status = sourcecode.PullRequestStatusOpen
 		case "closed":
 			pr.Status = sourcecode.PullRequestStatusClosed
-		case "merged":
-			pr.Status = sourcecode.PullRequestStatusMerged
-		default:
-			qc.Logger.Error("unknown state:", err, rpr.State)
-		}
-		pr.CreatedByRefID = rpr.Author.Username
-
-		if rpr.State == "closed" {
 			pr.ClosedByRefID = rpr.ClosedBy.Username
-		}
-
-		if rpr.State == "merged" {
+		case "merged":
 			pr.MergeSha = rpr.MergeCommitSHA
 			pr.MergeCommitID = ids.CodeCommit(qc.CustomerID, qc.RefType, pr.RepoID, rpr.MergeCommitSHA)
 			pr.MergedByRefID = rpr.MergedBy.Username
+			pr.Status = sourcecode.PullRequestStatusMerged
+		default:
+			qc.Logger.Error("PR has an unknown state", "state", rpr.State, "ref_id", pr.RefID)
 		}
+		pr.CreatedByRefID = rpr.Author.Username
 
 		spr := PullRequest{}
 		spr.IID = fmt.Sprint(rpr.IID)

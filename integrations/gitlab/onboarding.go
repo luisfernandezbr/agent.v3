@@ -23,7 +23,6 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 		res.Error = rpcdef.ErrOnboardExportNotSupported
 		return
 	}
-	return rpcdef.OnboardExportResult{}, nil
 }
 
 func (s *Integration) onboardExportRepos(ctx context.Context) (res rpcdef.OnboardExportResult, _ error) {

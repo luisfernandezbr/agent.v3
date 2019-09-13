@@ -52,20 +52,26 @@ func PullRequestReviewsPage(
 	pr PullRequest,
 	params url.Values) (pi PageInfo, res []*sourcecode.PullRequestReview, err error) {
 
-	qc.Logger.Debug("pull request commits", "repo", repo.ID)
+	qc.Logger.Debug("pull request reviews", "repo", repo.NameWithOwner, "prID", pr.ID, "prIID", pr.IID)
 
 	objectPath := pstrings.JoinURL("projects", repo.ID, "merge_requests", pr.IID, "approvals")
 
 	var rreview struct {
 		ID         int64 `json:"id"`
 		ApprovedBy []struct {
-			Username string `json:"username"`
+			User struct {
+				Username string `json:"username"`
+			} `json:"user"`
 		} `json:"approved_by"`
 		SuggestedApprovers []struct {
-			Username string `json:"username"`
+			User struct {
+				Username string `json:"username"`
+			} `json:"user"`
 		} `json:"suggested_approvers"`
 		Approvers []struct {
-			Username string `json:"username"`
+			User struct {
+				Username string `json:"username"`
+			} `json:"user"`
 		} `json:"approvers"`
 		CreatedAt time.Time `json:"created_at"`
 		UpdatedAt time.Time `json:"updated_at"`
@@ -81,7 +87,7 @@ func PullRequestReviewsPage(
 		item.CustomerID = qc.CustomerID
 		item.RefType = qc.RefType
 		item.RefID = fmt.Sprint(rreview.ID)
-		item.UpdatedAt, err = ApprovedDate(qc, repo.ID, pr.IID, a.Username)
+		item.UpdatedAt, err = ApprovedDate(qc, repo.ID, pr.IID, a.User.Username)
 		if err != nil {
 			return
 		}
@@ -91,7 +97,7 @@ func PullRequestReviewsPage(
 
 		date.ConvertToModel(rreview.CreatedAt, &item.CreatedDate)
 
-		item.UserRefID = a.Username
+		item.UserRefID = a.User.Username
 
 		res = append(res, item)
 	}
@@ -108,7 +114,7 @@ func PullRequestReviewsPage(
 
 		date.ConvertToModel(rreview.CreatedAt, &item.CreatedDate)
 
-		item.UserRefID = a.Username
+		item.UserRefID = a.User.Username
 
 		res = append(res, item)
 	}
