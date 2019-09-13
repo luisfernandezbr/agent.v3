@@ -944,6 +944,7 @@
     "github.com/kardianos/service",
     "github.com/mitchellh/go-homedir",
     "github.com/mitchellh/go-ps",
+    "github.com/pinpt/go-common/api",
     "github.com/pinpt/go-common/auth",
     "github.com/pinpt/go-common/datamodel",
     "github.com/pinpt/go-common/datetime",
