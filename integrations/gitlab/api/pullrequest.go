@@ -58,9 +58,6 @@ func PullRequestPage(
 	}
 
 	for _, rpr := range rprs {
-		if rpr.UpdatedAt.Before(stopOnUpdatedAt) {
-			return PageInfo{}, res, nil
-		}
 		pr := &sourcecode.PullRequest{}
 		pr.CustomerID = qc.CustomerID
 		pr.RefType = qc.RefType
