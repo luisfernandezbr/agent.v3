@@ -59,7 +59,9 @@ func convertConfig(integrationNameBackend string, configBackend map[string]inter
 	switch integrationNameBackend {
 
 	case "github":
-		configAgent, integrationNameAgent, rerr = convertConfigGithub(integrationNameBackend, configBackend, exclusions)
+		configAgent, integrationNameAgent, rerr = convertConfigGit(integrationNameBackend, configBackend, exclusions)
+	case "gitlab":
+		configAgent, integrationNameAgent, rerr = convertConfigGit(integrationNameBackend, configBackend, exclusions)
 	case "jira":
 		configAgent, integrationNameAgent, rerr = convertConfigJira(integrationNameBackend, configBackend, exclusions)
 	case "sonarqube":
@@ -78,7 +80,7 @@ func convertConfig(integrationNameBackend string, configBackend map[string]inter
 	return
 }
 
-func convertConfigGithub(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+func convertConfigGit(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
 
 	errStr := func(err string) {
 		rerr = errors.New(err)
