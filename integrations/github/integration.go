@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
@@ -39,6 +40,8 @@ type Integration struct {
 
 	refType string
 
+	repoSender                *objsender.IncrementalDateBased
+	commitUserSender          *objsender.IncrementalDateBased
 	pullRequestSender         *objsender.IncrementalDateBased
 	pullRequestCommentsSender *objsender.NotIncremental
 	pullRequestReviewsSender  *objsender.NotIncremental
@@ -259,6 +262,14 @@ func (s *Integration) export(ctx context.Context) error {
 	s.qc.UserLoginToRefID = s.users.LoginToRefID
 	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
 
+	s.repoSender, err = objsender.NewIncrementalDateBased(s.agent, sourcecode.RepoModelName.String())
+	if err != nil {
+		return err
+	}
+	s.commitUserSender, err = objsender.NewIncrementalDateBased(s.agent, commitusers.TableName)
+	if err != nil {
+		return err
+	}
 	s.pullRequestSender, err = objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestModelName.String())
 	if err != nil {
 		return err
@@ -274,6 +285,14 @@ func (s *Integration) export(ctx context.Context) error {
 	}
 
 	err = s.users.Done()
+	if err != nil {
+		return err
+	}
+	err = s.repoSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.commitUserSender.Done()
 	if err != nil {
 		return err
 	}
