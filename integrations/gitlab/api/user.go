@@ -205,7 +205,9 @@ func UsersEmails(qc QueryContext, commitUsersSender *objsender.IncrementalDateBa
 				return page, err
 			}
 
-			commitUsersSender.SendMap(cUser.ToMap())
+			if err := commitUsersSender.SendMap(cUser.ToMap()); err != nil {
+				return page, err
+			}
 
 			emails, err := UserEmails(qc, user.ID)
 			if err != nil {
@@ -223,7 +225,9 @@ func UsersEmails(qc QueryContext, commitUsersSender *objsender.IncrementalDateBa
 					return page, err
 				}
 
-				commitUsersSender.SendMap(cUser.ToMap())
+				if err := commitUsersSender.SendMap(cUser.ToMap()); err != nil {
+					return page, err
+				}
 			}
 
 			sourceUser := sourcecode.User{}
@@ -239,7 +243,7 @@ func UsersEmails(qc QueryContext, commitUsersSender *objsender.IncrementalDateBa
 			sourceUser.AvatarURL = pstrings.Pointer(user.AvatarURL)
 			sourceUser.AssociatedRefID = pstrings.Pointer(user.Username)
 
-			if err := usersSender.SendMap(sourceUser.ToMap()); err != nil {
+			if err := usersSender.Send(&sourceUser); err != nil {
 				return page, err
 			}
 
