@@ -47,6 +47,7 @@ type Integration struct {
 	pullRequestSender         *objsender.IncrementalDateBased
 	pullRequestCommentsSender *objsender.NotIncremental
 	pullRequestReviewsSender  *objsender.NotIncremental
+	userSender                *objsender.NotIncremental
 }
 
 func main() {
@@ -172,8 +173,9 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	}
 	s.pullRequestCommentsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
 	s.pullRequestReviewsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
+	s.userSender = objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
 
-	err = api.UsersEmails(s.qc, s.commitUserSender)
+	err = api.UsersEmails(s.qc, s.commitUserSender, s.userSender)
 	if err != nil {
 		return err
 	}
@@ -206,6 +208,10 @@ func (s *Integration) export(ctx context.Context) (err error) {
 		return err
 	}
 	err = s.pullRequestReviewsSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.userSender.Done()
 	if err != nil {
 		return err
 	}

@@ -80,3 +80,6 @@ https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html
 
 - In order to get emails, the token needs to have Administrator privileges.
 - In this integration we will use a mix of graphql and REST as the GraphQL has some limitations.
+
+## Missing data
+- Is not possible to add reviews URLs.

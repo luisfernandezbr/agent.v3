@@ -3,8 +3,10 @@ package api
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 
 	"github.com/pinpt/agent.next/pkg/commitusers"
+	"github.com/pinpt/go-datamodel/sourcecode"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/objsender"
@@ -13,10 +15,11 @@ import (
 )
 
 type User struct {
-	ID       int64
-	Email    string
-	Username string
-	Name     string
+	ID        int64
+	Email     string
+	Username  string
+	Name      string
+	AvatarURL string
 }
 
 func GroupUsers(qc QueryContext, group string) (users []*agent.UserResponseUsers, err error) {
@@ -132,10 +135,11 @@ func UsersPage(qc QueryContext, params url.Values) (page PageInfo, users []User,
 	objectPath := pstrings.JoinURL("/users")
 
 	var rawUsers []struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
-		Name     string `json:"name"`
-		ID       int64  `json:"id"`
+		Username  string `json:"username"`
+		Email     string `json:"email"`
+		Name      string `json:"name"`
+		ID        int64  `json:"id"`
+		AvatarURL string `json:"avatar_url"`
 	}
 
 	params.Set("membership", "true")
@@ -148,10 +152,11 @@ func UsersPage(qc QueryContext, params url.Values) (page PageInfo, users []User,
 
 	for _, user := range rawUsers {
 		nUser := User{
-			Email:    user.Email,
-			Username: user.Username,
-			Name:     user.Name,
-			ID:       user.ID,
+			Email:     user.Email,
+			Username:  user.Username,
+			Name:      user.Name,
+			ID:        user.ID,
+			AvatarURL: user.AvatarURL,
 		}
 
 		users = append(users, nUser)
@@ -182,7 +187,7 @@ func UserEmails(qc QueryContext, userID int64) (emails []string, err error) {
 	return
 }
 
-func UsersEmails(qc QueryContext, usersSender *objsender.IncrementalDateBased) error {
+func UsersEmails(qc QueryContext, commitUsersSender *objsender.IncrementalDateBased, usersSender *objsender.NotIncremental) error {
 	return PaginateStartAt(qc.Logger, func(log hclog.Logger, paginationParams url.Values) (page PageInfo, _ error) {
 		page, users, err := UsersPage(qc, paginationParams)
 		if err != nil {
@@ -200,7 +205,7 @@ func UsersEmails(qc QueryContext, usersSender *objsender.IncrementalDateBased) e
 				return page, err
 			}
 
-			usersSender.SendMap(cUser.ToMap())
+			commitUsersSender.SendMap(cUser.ToMap())
 
 			emails, err := UserEmails(qc, user.ID)
 			if err != nil {
@@ -218,8 +223,23 @@ func UsersEmails(qc QueryContext, usersSender *objsender.IncrementalDateBased) e
 					return page, err
 				}
 
-				usersSender.SendMap(cUser.ToMap())
+				commitUsersSender.SendMap(cUser.ToMap())
 			}
+
+			sourceUser := sourcecode.User{}
+			sourceUser.RefType = qc.RefType
+			sourceUser.Email = pstrings.Pointer(user.Email)
+			sourceUser.CustomerID = qc.CustomerID
+			sourceUser.RefID = strconv.FormatInt(user.ID, 10)
+			sourceUser.Name = user.Name
+			sourceUser.AvatarURL = pstrings.Pointer(user.AvatarURL)
+			sourceUser.Username = pstrings.Pointer(user.Username)
+			sourceUser.Member = true
+			sourceUser.Type = sourcecode.UserTypeHuman
+			sourceUser.AvatarURL = pstrings.Pointer(user.AvatarURL)
+			sourceUser.AssociatedRefID = pstrings.Pointer(user.Username)
+
+			usersSender.SendMap(sourceUser.ToMap())
 		}
 
 		return page, nil
