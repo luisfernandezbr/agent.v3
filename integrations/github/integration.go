@@ -11,6 +11,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/objsender"
+	"github.com/pinpt/agent.next/pkg/reqstats"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/integration-sdk/sourcecode"
 
@@ -39,6 +40,9 @@ type Integration struct {
 	requestConcurrencyChan chan bool
 
 	refType string
+
+	clientManager *reqstats.ClientManager
+	clients       reqstats.Clients
 
 	repoSender                *objsender.IncrementalDateBased
 	commitUserSender          *objsender.IncrementalDateBased
@@ -200,6 +204,13 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	}
 	s.qc.APIURL3 = s.config.APIURL3
 
+	s.clientManager = reqstats.New(reqstats.Opts{
+		Logger:                s.logger,
+		TLSInsecureSkipVerify: false,
+	})
+	s.clients = s.clientManager.Clients
+	s.qc.Clients = s.clients
+
 	return nil
 }
 
@@ -308,6 +319,8 @@ func (s *Integration) export(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	s.logger.Debug(s.clientManager.PrintStats())
 
 	return nil
 }

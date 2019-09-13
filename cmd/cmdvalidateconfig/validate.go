@@ -21,7 +21,10 @@ type AgentConfig = cmdintegration.AgentConfig
 type Integration = cmdintegration.Integration
 
 func Run(opts Opts) error {
-	exp := newValidator(opts)
+	exp, err := newValidator(opts)
+	if err != nil {
+		return err
+	}
 	defer exp.Destroy()
 	return nil
 }
@@ -35,22 +38,26 @@ type validator struct {
 	integration       *iloader.Integration
 }
 
-func newValidator(opts Opts) *validator {
+func newValidator(opts Opts) (*validator, error) {
 	s := &validator{}
 	if len(opts.Integrations) != 1 {
 		panic("pass exactly 1 integration")
 	}
 
-	s.Command = cmdintegration.NewCommand(opts.Opts)
+	var err error
+	s.Command, err = cmdintegration.NewCommand(opts.Opts)
+	if err != nil {
+		return nil, err
+	}
 	s.Opts = opts
 
-	s.SetupIntegrations(agentDelegate{validator: s})
+	s.SetupIntegrations(nil)
 
 	s.integrationConfig = opts.Integrations[0]
 	s.integration = s.Integrations[s.integrationConfig.Name]
 
 	s.runValidate()
-	return s
+	return s, nil
 }
 
 type Result struct {

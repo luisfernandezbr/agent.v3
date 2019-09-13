@@ -1,7 +1,6 @@
 package requests
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -12,29 +11,34 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-func testOpts() (res Opts) {
-	res.Logger = hclog.New(hclog.DefaultOptions)
-	res.Client = http.DefaultClient
-	return
+func testRequests() Requests {
+	return New(hclog.New(hclog.DefaultOptions), http.DefaultClient)
 }
 
 func TestJSON(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		u, p, ok := r.BasicAuth()
+		if !ok {
+			t.Error("basic auth not passed")
+		} else if u != "u" || p != "p" {
+			t.Error("basic auth invalid values")
+		}
 		fmt.Fprint(w, `[{"a":1},{"a":2}]`)
 	}))
 	defer server.Close()
 
-	ctx := context.Background()
-	opts := testOpts()
+	r := testRequests()
 	type obj struct {
 		A int `json:"a"`
 	}
 	var res []obj
 	req, err := http.NewRequest("GET", server.URL, nil)
+	req.SetBasicAuth("u", "p")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = JSON(ctx, opts, req, &res)
+
+	_, err = r.JSON(req, &res)
 	if err != nil {
 		t.Fatal(err)
 	}

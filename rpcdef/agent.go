@@ -26,6 +26,9 @@ type Agent interface {
 
 	// Integration can ask agent to download and process git repo using ripsrc.
 	ExportGitRepo(fetch GitRepoFetch) error
+
+	// OAuthNewAccessToken returns a new access token for integrations with UseOAuth: true. It askes agent to retrieve a new token from backend based on refresh token agent has.
+	OAuthNewAccessToken() (token string, _ error)
 }
 
 type ExportObj struct {
@@ -137,6 +140,16 @@ func (s *AgentServer) ExportGitRepo(ctx context.Context, req *proto.ExportGitRep
 	return
 }
 
+func (s *AgentServer) OAuthNewAccessToken(ctx context.Context, req *proto.Empty) (*proto.OAuthNewAccessTokenResp, error) {
+
+	token, err := s.Impl.OAuthNewAccessToken()
+
+	resp := &proto.OAuthNewAccessTokenResp{}
+	resp.Token = token
+
+	return resp, err
+}
+
 type AgentClient struct {
 	client proto.AgentClient
 }
@@ -198,4 +211,13 @@ func (s *AgentClient) ExportGitRepo(fetch GitRepoFetch) error {
 		return err
 	}
 	return nil
+}
+
+func (s *AgentClient) OAuthNewAccessToken() (token string, _ error) {
+	args := &proto.Empty{}
+	resp, err := s.client.OAuthNewAccessToken(context.Background(), args)
+	if err != nil {
+		return "", err
+	}
+	return resp.Token, nil
 }

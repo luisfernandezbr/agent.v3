@@ -103,6 +103,9 @@ SendExported(
 // Integration can ask agent to download and process git repo using ripsrc.
 ExportGitRepo(fetch GitRepoFetch) error
 
+// OAuthNewAccessToken returns a new access token for integrations with UseOAuth: true. It askes agent to retrieve a new token from backend based on refresh token agent has.
+OAuthNewAccessToken() (token string, _ error)
+
 }
 
 ```

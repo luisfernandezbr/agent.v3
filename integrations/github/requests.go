@@ -69,7 +69,7 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 	}
 
 	req.Header.Set("Authorization", "bearer "+s.config.Token)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := s.clients.TLSInsecure.Do(req)
 	if err != nil {
 		rerr = err
 		isErrorRetryable = true

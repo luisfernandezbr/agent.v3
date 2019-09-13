@@ -9,9 +9,9 @@ import (
 )
 
 type Opts struct {
-	Logger hclog.Logger
-	Locs   fsconf.Locs
-	Agent  rpcdef.Agent
+	Logger         hclog.Logger
+	Locs           fsconf.Locs
+	AgentDelegates func(integrationName string) rpcdef.Agent
 
 	// IntegrationsDir is a custom location of the integrations binaries
 	IntegrationsDir string `json:"integrations_dir"`
@@ -26,7 +26,7 @@ type Loader struct {
 }
 
 func New(opts Opts) *Loader {
-	if opts.Logger == nil || opts.Locs.Root == "" || opts.Agent == nil {
+	if opts.Logger == nil || opts.Locs.Root == "" || opts.AgentDelegates == nil {
 		panic("provide all opts")
 	}
 	s := &Loader{}
@@ -66,7 +66,7 @@ func (s *Loader) Load(names []string) map[string]*Integration {
 func (s *Loader) load(integrationName string) *Integration {
 	opts := IntegrationOpts{}
 	opts.Logger = s.opts.Logger
-	opts.Agent = s.opts.Agent
+	opts.Agent = s.opts.AgentDelegates(integrationName)
 	opts.Name = integrationName
 	opts.Locs = s.locs
 	opts.DevUseCompiledIntegrations = s.opts.DevUseCompiledIntegrations

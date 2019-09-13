@@ -46,15 +46,19 @@ func newExport(opts Opts) (*export, error) {
 		panic("pass exactly 1 integration")
 	}
 
-	s.Command = cmdintegration.NewCommand(opts.Opts)
+	var err error
+	s.Command, err = cmdintegration.NewCommand(opts.Opts)
+	if err != nil {
+		return nil, err
+	}
 	s.Opts = opts
 
-	s.SetupIntegrations(agentDelegate{export: s})
+	s.SetupIntegrations(nil)
 
 	s.integrationConfig = opts.Integrations[0]
 	s.integration = s.Integrations[s.integrationConfig.Name]
 
-	err := s.runExport()
+	err = s.runExport()
 	if err != nil {
 		return nil, err
 	}

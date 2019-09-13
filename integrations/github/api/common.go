@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/ids"
+	"github.com/pinpt/agent.next/pkg/reqstats"
 )
 
 type PageInfo struct {
@@ -27,6 +28,8 @@ type QueryContext struct {
 	UserLoginToRefIDFromCommit func(login, email string) (refID string, _ error)
 
 	IsEnterprise func() bool
+
+	Clients reqstats.Clients
 }
 
 func (s QueryContext) WithLogger(logger hclog.Logger) QueryContext {
