@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/pinpt/agent.next/pkg/commitusers"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/objsender"
