@@ -109,15 +109,19 @@ func CommitsPage(
 		item.CommitHash = data.OID
 
 		if data.Author.User.Login != "" {
-			item.AuthorRefID, err = qc.UserLoginToRefIDFromCommit(data.Author.User.Login, data.Author.Email)
+			login := data.Author.User.Login
+			email := data.Author.Email
+			item.AuthorRefID, err = qc.UserLoginToRefIDFromCommit(login, email)
 			if err != nil {
-				panic(err)
+				qc.Logger.Error("could not resolve author when processing commit", "login", login, "repo_ref_id", repoRefID, "commit", item.CommitHash)
 			}
 		}
 		if data.Committer.User.Login != "" {
-			item.CommitterRefID, err = qc.UserLoginToRefIDFromCommit(data.Committer.User.Login, data.Committer.Email)
+			login := data.Committer.User.Login
+			email := data.Committer.Email
+			item.CommitterRefID, err = qc.UserLoginToRefIDFromCommit(login, email)
 			if err != nil {
-				panic(err)
+				qc.Logger.Error("could not resolve committer when processing commit", "login", login, "repo_ref_id", repoRefID, "commit", item.CommitHash)
 			}
 		}
 		item.AuthorName = data.Author.Name
