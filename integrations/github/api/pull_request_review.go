@@ -115,9 +115,12 @@ func PullRequestReviewsPage(
 
 		date.ConvertToModel(data.CreatedAt, &item.CreatedDate)
 
-		item.UserRefID, err = qc.UserLoginToRefID(data.Author.Login)
-		if err != nil {
-			panic(err)
+		{
+			login := data.Author.Login
+			item.UserRefID, err = qc.UserLoginToRefID(login)
+			if err != nil {
+				qc.Logger.Error("could not resolve pr review author", "login", login, "review_url", data.URL)
+			}
 		}
 		res = append(res, item)
 	}

@@ -97,7 +97,7 @@ func (s *Integration) exportCommitsForRepoBranch(logger hclog.Logger, userSender
 		func(query string) (api.PageInfo, error) {
 
 			pi, res, err := api.CommitsPage(s.qc.WithLogger(logger),
-				repo.ID,
+				repo,
 				branchName,
 				query,
 			)

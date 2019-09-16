@@ -16,14 +16,14 @@ type CommitAuthor struct {
 
 func CommitsPage(
 	qc QueryContext,
-	repoRefID string, branchName string,
+	repo Repo, branchName string,
 	queryParams string) (pi PageInfo, res []CommitAuthor, _ error) {
 
-	qc.Logger.Debug("commits request", "repo", repoRefID, "branchName", branchName, "q", queryParams)
+	qc.Logger.Debug("commits request", "repo", repo.NameWithOwner, "branchName", branchName, "q", queryParams)
 
 	query := `
 	query {
-		node (id: "` + repoRefID + `") {
+		node (id: "` + repo.ID + `") {
 			... on Repository {
 				ref(qualifiedName: ` + pjson.Stringify(branchName) + `){
 					target {
@@ -113,7 +113,7 @@ func CommitsPage(
 			email := data.Author.Email
 			item.AuthorRefID, err = qc.UserLoginToRefIDFromCommit(login, email)
 			if err != nil {
-				qc.Logger.Error("could not resolve author when processing commit", "login", login, "repo_ref_id", repoRefID, "commit", item.CommitHash)
+				qc.Logger.Error("could not resolve author when processing commit", "login", login, "repo", repo.NameWithOwner, "commit", item.CommitHash)
 			}
 		}
 		if data.Committer.User.Login != "" {
@@ -121,7 +121,7 @@ func CommitsPage(
 			email := data.Committer.Email
 			item.CommitterRefID, err = qc.UserLoginToRefIDFromCommit(login, email)
 			if err != nil {
-				qc.Logger.Error("could not resolve committer when processing commit", "login", login, "repo_ref_id", repoRefID, "commit", item.CommitHash)
+				qc.Logger.Error("could not resolve committer when processing commit", "login", login, "repo", repo.NameWithOwner, "commit", item.CommitHash)
 			}
 		}
 		item.AuthorName = data.Author.Name

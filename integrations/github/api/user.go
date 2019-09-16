@@ -60,7 +60,6 @@ func User(qc QueryContext, login string, orgMember bool) (
 	data := res.Data.User
 
 	if data.ID == "" {
-		panic("user not found for login: " + login)
 		return user, errors.New("user not found for login: " + login)
 	}
 

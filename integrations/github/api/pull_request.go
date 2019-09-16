@@ -167,11 +167,15 @@ func PullRequestsPage(
 		case "MERGED":
 			pr.Status = sourcecode.PullRequestStatusMerged
 		default:
-			panic("unknown state: " + data.State)
+			qc.Logger.Error("could not process pr state, state is unknown", "state", data.State, "pr_url", data.URL)
 		}
-		pr.CreatedByRefID, err = qc.UserLoginToRefID(data.Author.Login)
-		if err != nil {
-			panic(err)
+
+		{
+			login := data.Author.Login
+			pr.CreatedByRefID, err = qc.UserLoginToRefID(data.Author.Login)
+			if err != nil {
+				qc.Logger.Error("could not resolve pr created by user", "login", login, "pr_url", data.URL)
+			}
 		}
 
 		if useClosedEvents && data.State == "CLOSED" {
@@ -183,7 +187,7 @@ func PullRequestsPage(
 				} else {
 					pr.ClosedByRefID, err = qc.UserLoginToRefID(login)
 					if err != nil {
-						panic(err)
+						qc.Logger.Error("could not resolve closed by user when processing pr", "login", login, "pr_url", data.URL)
 					}
 				}
 			} else {
@@ -200,7 +204,7 @@ func PullRequestsPage(
 			} else {
 				pr.MergedByRefID, err = qc.UserLoginToRefID(login)
 				if err != nil {
-					panic(err)
+					qc.Logger.Error("could not resolve merged by user when processing pr", "login", login, "pr_url", data.URL)
 				}
 			}
 		}
