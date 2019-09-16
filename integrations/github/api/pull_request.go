@@ -183,7 +183,7 @@ func PullRequestsPage(
 			if len(events) != 0 {
 				login := events[0].Actor.Login
 				if login == "" {
-					qc.Logger.Error("empty login for closed by author")
+					qc.Logger.Error("pull request: empty login for closed by author field", "pr_url", data.URL)
 				} else {
 					pr.ClosedByRefID, err = qc.UserLoginToRefID(login)
 					if err != nil {
@@ -200,7 +200,7 @@ func PullRequestsPage(
 			pr.MergeCommitID = ids.CodeCommit(qc.CustomerID, qc.RefType, pr.RepoID, pr.MergeSha)
 			login := data.MergedBy.Login
 			if login == "" {
-				qc.Logger.Error("empty login for mergedBy field")
+				qc.Logger.Error("pull request: empty login for mergedBy field", "pr_url", data.URL)
 			} else {
 				pr.MergedByRefID, err = qc.UserLoginToRefID(login)
 				if err != nil {
