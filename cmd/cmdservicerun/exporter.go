@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/cmd/cmdupload"
 
 	"github.com/pinpt/agent.next/pkg/fsconf"
@@ -18,11 +19,11 @@ import (
 
 type exporterOpts struct {
 	Logger       hclog.Logger
-	CustomerID   string
 	PinpointRoot string
 	FSConf       fsconf.Locs
 
 	PPEncryptionKey string
+	AgentConfig     cmdintegration.AgentConfig
 }
 
 type exporter struct {
@@ -58,10 +59,6 @@ func (s *exporter) Run() {
 func (s *exporter) export(data *agent.ExportRequest) error {
 	s.logger.Info("processing export request", "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
 
-	agentConfig := cmdexport.AgentConfig{}
-	agentConfig.CustomerID = s.opts.CustomerID
-	agentConfig.PinpointRoot = s.opts.PinpointRoot
-
 	var integrations []cmdexport.Integration
 
 	/*
@@ -95,7 +92,7 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 		return err
 	}
 
-	err = s.execExport(ctx, agentConfig, integrations, data.ReprocessHistorical)
+	err = s.execExport(ctx, s.opts.AgentConfig, integrations, data.ReprocessHistorical)
 	if err != nil {
 		return err
 	}

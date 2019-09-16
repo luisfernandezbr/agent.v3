@@ -3,6 +3,7 @@ package cmdvalidateconfig
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"time"
 
@@ -34,8 +35,8 @@ type validator struct {
 
 	Opts Opts
 
-	integrationConfig cmdintegration.Integration
-	integration       *iloader.Integration
+	integration  *iloader.Integration
+	exportConfig rpcdef.ExportConfig
 }
 
 func newValidator(opts Opts) (*validator, error) {
@@ -51,10 +52,13 @@ func newValidator(opts Opts) (*validator, error) {
 	}
 	s.Opts = opts
 
+	fmt.Println("opts received", "opts", fmt.Sprintf("%+v", opts))
+
 	s.SetupIntegrations(nil)
 
-	s.integrationConfig = opts.Integrations[0]
-	s.integration = s.Integrations[s.integrationConfig.Name]
+	integrationName := opts.Integrations[0].Name
+	s.integration = s.Integrations[integrationName]
+	s.exportConfig = s.ExportConfigs[integrationName]
 
 	s.runValidate()
 	return s, nil
@@ -70,15 +74,7 @@ func (s *validator) runValidate() error {
 	ctx := context.Background()
 	client := s.integration.RPCClient()
 
-	configPinpoint := rpcdef.ExportConfigPinpoint{
-		CustomerID: s.Opts.AgentConfig.CustomerID,
-	}
-	exportConfig := rpcdef.ExportConfig{
-		Pinpoint:    configPinpoint,
-		Integration: s.integrationConfig.Config,
-	}
-
-	res0, err := client.ValidateConfig(ctx, exportConfig)
+	res0, err := client.ValidateConfig(ctx, s.exportConfig)
 	if err != nil {
 		return err
 	}
