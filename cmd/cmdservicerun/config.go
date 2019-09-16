@@ -102,22 +102,29 @@ func convertConfigGithub(inameBackend string, cb map[string]interface{}, exclusi
 		return
 	}
 
-	{
-		v, ok := cb["api_token"].(string)
-		if !ok {
-			errStr("missing api_token")
-			return
-		}
-		config.APIToken = v
-	}
+	accessToken, _ := cb["access_token"].(string)
 
-	{
-		v, ok := cb["url"].(string)
-		if !ok {
-			errStr("missing url")
-			return
+	if accessToken != "" {
+		// this is github.com cloud auth
+		config.APIToken = accessToken
+		config.URL = "https://github.com"
+	} else {
+		{
+			v, ok := cb["api_token"].(string)
+			if !ok {
+				errStr("missing api_token")
+				return
+			}
+			config.APIToken = v
 		}
-		config.URL = v
+		{
+			v, ok := cb["url"].(string)
+			if !ok {
+				errStr("missing url")
+				return
+			}
+			config.URL = v
+		}
 	}
 
 	config.ExcludedRepos = exclusions
