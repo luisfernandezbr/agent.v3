@@ -94,9 +94,9 @@ func (s *Requester) Request(objPath string, params url.Values, paginable bool, r
 }
 
 type Response struct {
-	Size    int64           `json:"size"`
-	Page    int64           `json:"page"`
-	PageLen int64           `json:"pagelen"`
-	Next    string          `json:"next"`
-	Values  json.RawMessage `json:"values"`
+	TotalValues int64           `json:"size"`
+	Page        int64           `json:"page"`
+	PageLen     int64           `json:"pagelen"`
+	Next        string          `json:"next"`
+	Values      json.RawMessage `json:"values"`
 }
