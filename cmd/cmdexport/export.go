@@ -234,12 +234,12 @@ func (s *export) runExports() map[string]runResult {
 	}
 	wg.Wait()
 
-	s.printExportRes(res, false)
-
 	return res
 }
 
 func (s *export) printExportRes(res map[string]runResult, gitHadErrors bool) {
+	s.Logger.Debug("Printing export results for all integrations")
+
 	var successNames []string
 	var failedNames []string
 
@@ -249,6 +249,7 @@ func (s *export) printExportRes(res map[string]runResult, gitHadErrors bool) {
 			s.Logger.Error("Export failed", "integration", name, "dur", ires.Duration, "err", ires.Err)
 			panicOut, err := integration.CloseAndDetectPanic()
 			if panicOut != "" {
+				// This is already printed in integration. But we will repeat output at the end, so it's not lost.
 				fmt.Println("Panic in integration", name)
 				fmt.Println(panicOut)
 			}

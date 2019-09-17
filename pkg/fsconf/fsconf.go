@@ -9,11 +9,12 @@ import (
 type Locs struct {
 	// Dirs
 
-	Root         string
-	Temp         string
-	Cache        string
-	Logs         string
-	Integrations string
+	Root             string
+	Temp             string
+	Cache            string
+	Logs             string
+	LogsIntegrations string
+	Integrations     string
 
 	RepoCache         string
 	State             string
@@ -46,6 +47,7 @@ func New(pinpointRoot string) Locs {
 	s.Temp = j(s.Root, "temp")
 	s.Cache = j(s.Root, "cache")
 	s.Logs = j(s.Root, "logs")
+	s.LogsIntegrations = j(s.Root, "logs/integrations")
 	s.Integrations = j(s.Root, "integrations")
 
 	s.RepoCache = j(s.Cache, "repos")

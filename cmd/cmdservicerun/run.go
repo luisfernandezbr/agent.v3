@@ -86,6 +86,7 @@ func (s *runner) run(ctx context.Context) error {
 	s.exporter = newExporter(exporterOpts{
 		Logger:          s.logger,
 		PinpointRoot:    s.opts.PinpointRoot,
+		Conf:            s.conf,
 		FSConf:          s.fsconf,
 		PPEncryptionKey: s.conf.PPEncryptionKey,
 		AgentConfig:     s.agentConfig,
@@ -140,7 +141,7 @@ func (s *runner) runTestMockExport() error {
 	reprocessHistorical := true
 
 	ctx := context.Background()
-	return s.exporter.execExport(ctx, s.agentConfig, integrations, reprocessHistorical)
+	return s.exporter.execExport(ctx, s.agentConfig, integrations, reprocessHistorical, nil)
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {
