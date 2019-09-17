@@ -288,6 +288,14 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 		}
 	}
 
+	// export repos
+	{
+		err := s.exportCommitUsers(ctx, logger, repos)
+		if err != nil {
+			return err
+		}
+	}
+
 	// for _, repo := range repos {
 	// 	err := s.exportPullRequestsForRepo(logger, repo, s.pullRequestSender, s.pullRequestCommentsSender, s.pullRequestReviewsSender)
 	// 	if err != nil {
@@ -354,4 +362,30 @@ func (s *Integration) exportUsers(ctx context.Context, logger hclog.Logger, grou
 		}
 		return pi, nil
 	})
+}
+
+func (s *Integration) exportCommitUsers(ctx context.Context, logger hclog.Logger, repos []commonrepo.Repo) (err error) {
+
+	sender := s.commitUserSender
+
+	for _, repo := range repos {
+		err = api.Paginate(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
+			pi, users, err := api.CommitUsersSourcecodePage(s.qc, repo.NameWithOwner, parameters)
+			if err != nil {
+				return pi, err
+			}
+			for _, user := range users {
+				err := sender.SendMap(user.ToMap())
+				if err != nil {
+					return pi, err
+				}
+			}
+			return pi, nil
+		})
+		if err != nil {
+			return
+		}
+	}
+
+	return
 }

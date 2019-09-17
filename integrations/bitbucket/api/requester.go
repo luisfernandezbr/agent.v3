@@ -80,9 +80,11 @@ func (s *Requester) Request(objPath string, params url.Values, paginable bool, r
 			return
 		}
 
+		u, _ := url.Parse(response.Next)
+
 		page.PageSize = response.PageLen
 		page.Page = response.Page
-		page.NextPage = response.Next
+		page.NextPage = u.Query().Get("page")
 
 	} else {
 		if err = json.NewDecoder(resp.Body).Decode(&res); err != nil {

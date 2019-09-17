@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/commitusers"
+
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/ids"
 	pstrings "github.com/pinpt/go-common/strings"
@@ -86,4 +88,51 @@ func getEmailFromRaw(raw string) string {
 	}
 
 	return ""
+}
+
+func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) (page PageInfo, users []commitusers.CommitUser, err error) {
+	qc.Logger.Debug("commit users request", "repo", repo)
+
+	objectPath := pstrings.JoinURL("repositories", repo, "commits")
+
+	var rcommits []struct {
+		Author struct {
+			Raw  string `json:"raw"`
+			User struct {
+				DisplayName string `json:"display_name"`
+				AccountID   string `json:"account_id"`
+			} `json:"user"`
+		} `json:"author"`
+		Date time.Time `json:"date"`
+	}
+
+	page, err = qc.Request(objectPath, params, true, &rcommits)
+	if err != nil {
+		return
+	}
+
+	for _, c := range rcommits {
+
+		name := c.Author.User.DisplayName
+		if name == "" {
+			name = getUsernameFromRaw(c.Author.Raw)
+		}
+
+		user := commitusers.CommitUser{
+			CustomerID: qc.CustomerID,
+			Name:       name,
+			Email:      getEmailFromRaw(c.Author.Raw),
+			SourceID:   c.Author.User.AccountID,
+		}
+
+		users = append(users, user)
+	}
+
+	return
+}
+
+func getUsernameFromRaw(raw string) string {
+	index := strings.Index(raw, "<")
+
+	return raw[:index]
 }
