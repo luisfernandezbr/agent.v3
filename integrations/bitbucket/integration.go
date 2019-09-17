@@ -3,13 +3,20 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/bitbucket/api"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
+	"github.com/pinpt/agent.next/pkg/commitusers"
+	"github.com/pinpt/agent.next/pkg/commonrepo"
+	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/go-datamodel/sourcecode"
 )
 
 func main() {
@@ -92,17 +99,16 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 
 func (s *Integration) Export(ctx context.Context,
 	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
-	// err := s.initWithConfig(exportConfig)
-	// if err != nil {
-	// 	return res, err
-	// }
+	err := s.initWithConfig(exportConfig)
+	if err != nil {
+		return res, err
+	}
 
-	// err = s.export(ctx)
-	// if err != nil {
-	// 	return res, err
-	// }
+	err = s.export(ctx)
+	if err != nil {
+		return
+	}
 
-	// return res, nil
 	return
 }
 
@@ -153,4 +159,184 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	}
 	s.config = conf
 	return nil
+}
+
+func (s *Integration) export(ctx context.Context) (err error) {
+
+	s.repoSender, err = objsender.NewIncrementalDateBased(s.agent, sourcecode.RepoModelName.String())
+	if err != nil {
+		return err
+	}
+	s.commitUserSender, err = objsender.NewIncrementalDateBased(s.agent, commitusers.TableName)
+	if err != nil {
+		return err
+	}
+	s.pullRequestSender, err = objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestModelName.String())
+	if err != nil {
+		return err
+	}
+	s.pullRequestCommentsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
+	s.pullRequestReviewsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
+	s.userSender = objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
+
+	// err = api.UsersEmails(s.qc, s.commitUserSender, s.userSender)
+	// if err != nil {
+	// 	return err
+	// }
+
+	teamNames, err := api.Teams(s.qc)
+	if err != nil {
+		return err
+	}
+
+	for _, teamName := range teamNames {
+		if err := s.exportTeam(ctx, teamName); err != nil {
+			return err
+		}
+	}
+
+	err = s.repoSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.commitUserSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.pullRequestSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.pullRequestCommentsSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.pullRequestReviewsSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.userSender.Done()
+	if err != nil {
+		return err
+	}
+
+	return
+}
+
+func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
+	s.logger.Info("exporting group", "name", groupName)
+	logger := s.logger.With("org", groupName)
+
+	s.logger.Debug("\t\t\t", "msg", "checkpoint1")
+
+	repos, err := commonrepo.ReposAllSlice(s.qc, groupName, api.ReposAll)
+	if err != nil {
+		return err
+	}
+
+	s.logger.Debug("\t\t\t", "msg", "checkpoint2")
+
+	repos = commonrepo.FilterRepos(logger, repos, s.config)
+
+	if s.config.StopAfterN != 0 {
+		// only leave 1 repo for export
+		stopAfter := s.config.StopAfterN
+		l := len(repos)
+		if len(repos) > stopAfter {
+			repos = repos[0:stopAfter]
+		}
+		logger.Info("stop_after_n passed", "v", stopAfter, "repos", l, "after", len(repos))
+	}
+
+	s.logger.Debug("\t\t\t", "msg", "checkpoint3")
+
+	// queue repos for processing with ripsrc
+	{
+
+		for _, repo := range repos {
+			u, err := url.Parse(s.config.URL)
+			if err != nil {
+				return err
+			}
+			u.User = url.UserPassword(s.config.Username, s.config.Password)
+			u.Path = "/" + repo.NameWithOwner
+			repoURL := u.Scheme + "://" + u.User.String() + "@" + api.GetDomain(u.Host) + u.EscapedPath()
+
+			args := rpcdef.GitRepoFetch{}
+			args.RefType = s.refType
+			args.RepoID = ids.RepoID(repo.ID, s.qc)
+			args.URL = repoURL
+			args.CommitURLTemplate = commitURLTemplate(repo, s.config.URL)
+			args.BranchURLTemplate = branchURLTemplate(repo, s.config.URL)
+			err = s.agent.ExportGitRepo(args)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	s.logger.Debug("\t\t\t", "msg", "checkpoint4")
+
+	if s.config.OnlyGit {
+		logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
+		return nil
+	}
+
+	s.logger.Debug("\t\t\t", "msg", "checkpoint5", "len", len(repos))
+
+	// export repos
+	{
+		err := s.exportRepos(ctx, logger, groupName, repos)
+		if err != nil {
+			return err
+		}
+	}
+
+	// for _, repo := range repos {
+	// 	err := s.exportPullRequestsForRepo(logger, repo, s.pullRequestSender, s.pullRequestCommentsSender, s.pullRequestReviewsSender)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	return nil
+}
+
+func commitURLTemplate(repo commonrepo.Repo, repoURLPrefix string) string {
+	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/commit/@@@sha@@@"
+}
+
+func branchURLTemplate(repo commonrepo.Repo, repoURLPrefix string) string {
+	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/tree/@@@branch@@@"
+}
+
+func urlAppend(p1, p2 string) string {
+	return strings.TrimSuffix(p1, "/") + "/" + p2
+}
+
+func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, groupName string, onlyInclude []commonrepo.Repo) error {
+
+	sender := s.repoSender
+
+	shouldInclude := map[string]bool{}
+	for _, repo := range onlyInclude {
+		shouldInclude[repo.NameWithOwner] = true
+	}
+
+	return api.PaginateNewerThan(s.logger, sender.LastProcessed, func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
+		pi, repos, err := api.ReposSourcecodePage(s.qc, groupName, parameters, stopOnUpdatedAt)
+		if err != nil {
+			return pi, err
+		}
+		for _, repo := range repos {
+			if !shouldInclude[repo.Name] {
+				continue
+			}
+			err := sender.Send(repo)
+			if err != nil {
+				return pi, err
+			}
+		}
+		return pi, nil
+	})
 }

@@ -1,6 +1,8 @@
 package ids
 
 import (
+	"reflect"
+
 	"github.com/pinpt/integration-sdk/sourcecode"
 	"github.com/pinpt/integration-sdk/work"
 )
@@ -43,4 +45,34 @@ func WorkIssue(customerID string, refType string, refID string) string {
 
 func WorkUser(customerID string, refType string, refID string) string {
 	return work.NewUserID(customerID, refType, refID)
+}
+
+type BasicInfo struct {
+	CustomerID string
+	RefType    string
+}
+
+func getBasicInfo(conf interface{}) BasicInfo {
+
+	t := reflect.ValueOf(conf)
+
+	return BasicInfo{
+		CustomerID: t.FieldByName("CustomerID").Interface().(string),
+		RefType:    t.FieldByName("RefType").Interface().(string),
+	}
+}
+
+func RepoID(refID string, info interface{}) string {
+	s := getBasicInfo(info)
+	return CodeRepo(s.CustomerID, s.RefType, refID)
+}
+
+func BranchID(repoID, branchName, firstCommitSHA string, info interface{}) string {
+	s := getBasicInfo(info)
+	return CodeBranch(s.CustomerID, s.RefType, repoID, branchName, firstCommitSHA)
+}
+
+func PullRequestID(repoID, refID string, info interface{}) string {
+	s := getBasicInfo(info)
+	return CodePullRequest(s.CustomerID, s.RefType, repoID, refID)
 }
