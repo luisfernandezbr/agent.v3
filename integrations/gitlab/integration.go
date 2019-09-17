@@ -96,18 +96,15 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 }
 
 func (s *Integration) Export(ctx context.Context,
-	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
-	err := s.initWithConfig(exportConfig)
+	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, err error) {
+	err = s.initWithConfig(exportConfig)
 	if err != nil {
-		return res, err
+		return
 	}
 
 	err = s.export(ctx)
-	if err != nil {
-		return res, err
-	}
 
-	return res, nil
+	return
 }
 
 func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {

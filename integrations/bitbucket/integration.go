@@ -98,16 +98,14 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 }
 
 func (s *Integration) Export(ctx context.Context,
-	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
-	err := s.initWithConfig(exportConfig)
-	if err != nil {
-		return res, err
-	}
+	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, err error) {
 
-	err = s.export(ctx)
+	err = s.initWithConfig(exportConfig)
 	if err != nil {
 		return
 	}
+
+	err = s.export(ctx)
 
 	return
 }
@@ -227,14 +225,10 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 	s.logger.Info("exporting group", "name", groupName)
 	logger := s.logger.With("org", groupName)
 
-	s.logger.Debug("\t\t\t", "msg", "checkpoint1")
-
 	repos, err := commonrepo.ReposAllSlice(s.qc, groupName, api.ReposAll)
 	if err != nil {
 		return err
 	}
-
-	s.logger.Debug("\t\t\t", "msg", "checkpoint2")
 
 	repos = commonrepo.FilterRepos(logger, repos, s.config)
 
@@ -247,8 +241,6 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 		}
 		logger.Info("stop_after_n passed", "v", stopAfter, "repos", l, "after", len(repos))
 	}
-
-	s.logger.Debug("\t\t\t", "msg", "checkpoint3")
 
 	// queue repos for processing with ripsrc
 	{
@@ -275,18 +267,22 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 		}
 	}
 
-	s.logger.Debug("\t\t\t", "msg", "checkpoint4")
-
 	if s.config.OnlyGit {
 		logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
 		return nil
 	}
 
-	s.logger.Debug("\t\t\t", "msg", "checkpoint5", "len", len(repos))
-
 	// export repos
 	{
 		err := s.exportRepos(ctx, logger, groupName, repos)
+		if err != nil {
+			return err
+		}
+	}
+
+	// export users
+	{
+		err := s.exportUsers(ctx, logger, groupName)
 		if err != nil {
 			return err
 		}
@@ -333,6 +329,25 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, grou
 				continue
 			}
 			err := sender.Send(repo)
+			if err != nil {
+				return pi, err
+			}
+		}
+		return pi, nil
+	})
+}
+
+func (s *Integration) exportUsers(ctx context.Context, logger hclog.Logger, groupName string) error {
+
+	sender := s.userSender
+
+	return api.Paginate(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
+		pi, users, err := api.UsersSourcecodePage(s.qc, groupName, parameters)
+		if err != nil {
+			return pi, err
+		}
+		for _, user := range users {
+			err := sender.Send(user)
 			if err != nil {
 				return pi, err
 			}

@@ -240,7 +240,6 @@ func UsersEmails(qc QueryContext, commitUsersSender *objsender.IncrementalDateBa
 			sourceUser.Username = pstrings.Pointer(user.Username)
 			sourceUser.Member = true
 			sourceUser.Type = sourcecode.UserTypeHuman
-			sourceUser.AvatarURL = pstrings.Pointer(user.AvatarURL)
 			sourceUser.AssociatedRefID = pstrings.Pointer(user.Username)
 
 			if err := usersSender.Send(&sourceUser); err != nil {

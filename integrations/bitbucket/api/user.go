@@ -4,6 +4,7 @@ import (
 	"net/url"
 
 	pstrings "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/go-datamodel/sourcecode"
 	"github.com/pinpt/integration-sdk/agent"
 )
 
@@ -39,6 +40,47 @@ func UsersOnboardPage(qc QueryContext, teamName string, params url.Values) (page
 		}
 
 		users = append(users, repo)
+	}
+
+	return
+}
+
+func UsersSourcecodePage(qc QueryContext, group string, params url.Values) (page PageInfo, users []*sourcecode.User, err error) {
+	qc.Logger.Debug("users request", "group", group)
+
+	objectPath := pstrings.JoinURL("teams", group, "members")
+
+	var us []struct {
+		UUID        string `json:"uuid"`
+		DisplayName string `json:"display_name"`
+		Links       struct {
+			Avatar struct {
+				Href string `json:"href"`
+			} `json:"avatar"`
+		} `json:"links"`
+		AccountID string `json:"account_id"`
+	}
+
+	page, err = qc.Request(objectPath, params, true, &us)
+	if err != nil {
+		return
+	}
+
+	for _, u := range us {
+		user := &sourcecode.User{
+			RefID:           u.UUID,
+			RefType:         qc.RefType,
+			CustomerID:      qc.CustomerID,
+			Name:            u.DisplayName,
+			AvatarURL:       pstrings.Pointer(u.Links.Avatar.Href),
+			Member:          true,
+			Type:            sourcecode.UserTypeHuman,
+			AssociatedRefID: pstrings.Pointer(u.AccountID),
+			// Email: Not possible
+			// Username: Not possible
+		}
+
+		users = append(users, user)
 	}
 
 	return
