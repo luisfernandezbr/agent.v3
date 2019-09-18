@@ -74,10 +74,10 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// err := s.exportPullRequestsComments(logger, commentsSender, repo, pullRequestsForComments)
-		// if err != nil {
-		// 	setErr(fmt.Errorf("error getting comments %s", err))
-		// }
+		err := s.exportPullRequestsComments(logger, commentsSender, repo, pullRequestsForComments)
+		if err != nil {
+			setErr(fmt.Errorf("error getting comments %s", err))
+		}
 	}()
 	wg.Add(1)
 	go func() {
