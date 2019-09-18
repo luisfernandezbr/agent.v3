@@ -86,46 +86,29 @@ func (s *Integration) processPullRequests(repoids []string) error {
 	if err != nil {
 		return err
 	}
+	defer senderprs.Done()
 	senderprrs, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestReviewModelName.String())
 	if err != nil {
 		return err
 	}
+	defer senderprrs.Done()
 	senderprcs, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestCommentModelName.String())
 	if err != nil {
 		return err
 	}
-
-	for _, repoid := range repoids {
-		prs, prrs, prcs, err := s.api.FetchPullRequests(repoid, senderprs.LastProcessed)
-		if err != nil {
-			s.logger.Error("error fetching pull request, skipping", "repoid", repoid)
-			continue
-		}
-		for _, pr := range prs {
-			if err := senderprs.Send(pr); err != nil {
-				s.logger.Error("error sending pull request", "data", pr.Stringify())
-			}
-		}
-		for _, prr := range prrs {
-			if err := senderprrs.Send(prr); err != nil {
-				s.logger.Error("error sending pull request review", "data", prr.Stringify())
-			}
-		}
-		for _, prc := range prcs {
-			if err := senderprcs.Send(prc); err != nil {
-				s.logger.Error("error sending pull request comment", "data", prc.Stringify())
-			}
-		}
+	defer senderprcs.Done()
+	prchan, prdone := s.execute("pull requests", senderprs)
+	prrchan, prrdone := s.execute("pull request reviews", senderprrs)
+	prcchan, prcdone := s.execute("pull request comments", senderprcs)
+	if err := s.api.FetchPullRequests(repoids, senderprs.LastProcessed, prchan, prrchan, prcchan); err != nil {
+		return err
 	}
-	if err := senderprs.Done(); err != nil {
-		s.logger.Error("error closing pull request sender, senderprs.Done()")
-	}
-	if err := senderprrs.Done(); err != nil {
-		s.logger.Error("error closing pull request review sender, senderprrs.Done()")
-	}
-	if err := senderprcs.Done(); err != nil {
-		s.logger.Error("error closing pull request comment sender, senderprcs.Done()")
-	}
+	close(prchan)
+	close(prrchan)
+	close(prcchan)
+	<-prdone
+	<-prrdone
+	<-prcdone
 	return nil
 }
 

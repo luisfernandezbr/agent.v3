@@ -14,6 +14,8 @@ build-integrations-local:
 	go build -o ${PP_ROOT}/integrations/jira-hosted ./integrations/jira-hosted
 	go build -o ${PP_ROOT}/integrations/sonarqube ./integrations/sonarqube
 	go build -o ${PP_ROOT}/integrations/tfs-code ./integrations/tfs-code
+	go build -o ${PP_ROOT}/integrations/azure-code ./integrations/azure-code
+	go build -o ${PP_ROOT}/integrations/azure-issue ./integrations/azure-issue
 	go build -o ${PP_ROOT}/integrations/mock ./integrations/mock
 
 build-prod-local:
@@ -26,6 +28,8 @@ build-macos:
 	env GOOS=darwin go build -o dist/macos/integrations/jira-hosted ./integrations/jira-hosted
 	env GOOS=darwin go build -o dist/macos/integrations/sonarqube ./integrations/sonarqube
 	env GOOS=darwin go build -o dist/macos/integrations/tfs-code ./integrations/tfs-code
+	env GOOS=darwin go build -o dist/macos/integrations/azure-code ./integrations/azure-code
+	env GOOS=darwin go build -o dist/macos/integrations/azure-issue ./integrations/azure-issue
 	env GOOS=darwin go build -o dist/macos/integrations/mock ./integrations/mock
 
 build-linux:
@@ -35,6 +39,8 @@ build-linux:
 	env GOOS=linux go build -o dist/linux/integrations/jira-hosted ./integrations/jira-hosted
 	env GOOS=linux go build -o dist/linux/integrations/sonarqube ./integrations/sonarqube
 	env GOOS=linux go build -o dist/linux/integrations/tfs-code ./integrations/tfs-code
+	env GOOS=linux go build -o dist/linux/integrations/azure-code ./integrations/azure-code
+	env GOOS=linux go build -o dist/linux/integrations/azure-issue ./integrations/azure-issue
 	env GOOS=linux go build -o dist/linux/integrations/mock ./integrations/mock
 
 build-win:
@@ -44,6 +50,8 @@ build-win:
 	env GOOS=windows go build -o dist/windows/integrations/jira-hosted.exe ./integrations/jira-hosted
 	env GOOS=windows go build -o dist/windows/integrations/sonarqube.exe ./integrations/sonarqube
 	env GOOS=windows go build -o dist/windows/integrations/tfs-code.exe ./integrations/tfs-code
+	env GOOS=windows go build -o dist/windows/integrations/azure-code.exe ./integrations/azure-code
+	env GOOS=windows go build -o dist/windows/integrations/azure-issue.exe ./integrations/azure-issue
 	env GOOS=windows go build -o dist/windows/integrations/mock.exe ./integrations/mock
 
 build:

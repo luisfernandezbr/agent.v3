@@ -23,7 +23,7 @@ import (
 	"github.com/pinpt/httpclient"
 )
 
-const maxResults int = 200
+const maxResults int = 300
 
 type stringmap map[string]string
 

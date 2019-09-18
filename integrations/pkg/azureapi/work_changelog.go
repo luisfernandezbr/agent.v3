@@ -9,6 +9,7 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
+	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/integration-sdk/work"
 )
@@ -53,77 +54,64 @@ type WorkChangelogsResult struct {
 	Changelogs chan work.Changelog
 }
 
-func (api *API) FetchChangelogs(projids []string, results chan WorkChangelogsResult) error {
+func (api *API) FetchChangelogs(projid string, result chan<- datamodel.Model) error {
 
-	type msgdata struct {
-		projid string
-		ids    []string
-		issues chan work.Issue
-	}
 	async := NewAsync(5)
-	for _, projid := range projids {
-		projectid := api.ProjectID(projid)
-
-		result := WorkChangelogsResult{
-			ProjectID:  projid,
-			Changelogs: make(chan work.Changelog),
-		}
-		defer close(result.Changelogs)
-		results <- result
-		allids, err := api.fetchItemIDS(projid, time.Time{})
-		if err != nil {
-			return err
-		}
-		if len(allids) == 0 {
-			api.logger.Info("found 0 issues for project " + projid)
-			continue
-		}
-		for _, id := range allids {
-			async.Send(AsyncMessage{
-				Data: id,
-				F: func(data interface{}) {
-					id = data.(string)
-					var res []changelogResponse
-					url := fmt.Sprintf(`%s/_apis/wit/workItems/%s/updates`, projid, id)
-					if err := api.getRequest(url, nil, &res); err != nil {
-						api.logger.Info("found 0 updates for issue " + id)
-					}
-					issueid := api.IssueID(id)
-					for i, changelog := range res {
-						if changelog.Fields == nil {
-							continue
-						}
-						createParentField(&changelog)
-						createdDate := extractCreatedDate(changelog)
-						for field, values := range changelog.Fields {
-							if extractor, ok := fields[field]; ok {
-								name, from, to := extractor(values)
-								if from == "" && to == "" {
-									continue
-								}
-								result.Changelogs <- work.Changelog{
-									CreatedDate: createdDate,
-									CustomerID:  api.customerid,
-									Field:       name,
-									FieldType:   api.reftype,
-									From:        from,
-									IssueID:     issueid,
-									Ordinal:     int64(i),
-									ProjectID:   projectid, // use pinpoint id
-									RefID:       fmt.Sprintf("%d", changelog.ID),
-									RefType:     api.reftype,
-									To:          to,
-									UserID:      changelog.RevisedBy.ID,
-								}
-							}
-						}
-					}
-				},
-			})
-
-		}
+	allids, err := api.fetchItemIDS(projid, time.Time{})
+	if err != nil {
+		api.logger.Error("error fetching item ids", "err", err)
+	}
+	for _, refid := range allids {
+		async.Send(AsyncMessage{
+			Data: refid,
+			F: func(data interface{}) {
+				refid := data.(string)
+				if err := api.fetchChangeLog(projid, refid, result); err != nil {
+					api.logger.Error("error fetching work item updates "+refid, "err", err)
+				}
+			},
+		})
 	}
 	async.Wait()
+	return nil
+}
+
+func (api *API) fetchChangeLog(projid, refid string, result chan<- datamodel.Model) error {
+	var res []changelogResponse
+	url := fmt.Sprintf(`%s/_apis/wit/workItems/%s/updates`, projid, refid)
+	if err := api.getRequest(url, stringmap{"$top": "200"}, &res); err != nil {
+		return err
+	}
+	issueid := api.IssueID(refid)
+	for i, changelog := range res {
+		if changelog.Fields == nil {
+			continue
+		}
+		createParentField(&changelog)
+		createdDate := extractCreatedDate(changelog)
+		for field, values := range changelog.Fields {
+			if extractor, ok := fields[field]; ok {
+				name, from, to := extractor(values)
+				if from == "" && to == "" {
+					continue
+				}
+				result <- &work.Changelog{
+					CreatedDate: createdDate,
+					CustomerID:  api.customerid,
+					Field:       name,
+					FieldType:   api.reftype,
+					From:        from,
+					IssueID:     issueid,
+					Ordinal:     int64(i),
+					ProjectID:   api.ProjectID(projid),
+					RefID:       fmt.Sprintf("%d", changelog.ID),
+					RefType:     api.reftype,
+					To:          to,
+					UserID:      changelog.RevisedBy.ID,
+				}
+			}
+		}
+	}
 	return nil
 }
 
@@ -134,6 +122,8 @@ func extractCreatedDate(changelog changelogResponse) work.ChangelogCreatedDate {
 		if err == nil {
 			date.ConvertToModel(created, &createdDate)
 		}
+	} else {
+		date.ConvertToModel(changelog.RevisedDate, &createdDate)
 	}
 	return createdDate
 }

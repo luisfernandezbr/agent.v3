@@ -44,7 +44,11 @@ func (p tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) 
 		if urlquery.Get("pagingoff") != "" {
 			return false, nil
 		}
-		urlquery.Set("$skip", strconv.Itoa(maxResults*page))
+		top := maxResults
+		if t := urlquery.Get("$top"); t != "" {
+			top, _ = strconv.Atoi(t)
+		}
+		urlquery.Set("$skip", strconv.Itoa(top*page))
 		req.URL.RawQuery = urlquery.Encode()
 		p.logger.Info(req.URL.String())
 		newreq, _ := http.NewRequest(req.Method, req.URL.String(), nil)

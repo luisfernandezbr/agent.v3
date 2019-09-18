@@ -1,6 +1,7 @@
 package azureapi
 
 import (
+	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/integration-sdk/work"
 )
 
@@ -13,14 +14,14 @@ func (api *API) fetchProjects() ([]projectResponse, error) {
 	return res, nil
 }
 
-func (api *API) FetchProjects(projchan chan work.Project) ([]string, error) {
+func (api *API) FetchProjects(projchan chan<- datamodel.Model) ([]string, error) {
 	projs, err := api.fetchProjects()
 	if err != nil {
 		return nil, err
 	}
 	var projids []string
 	for _, p := range projs {
-		projchan <- work.Project{
+		projchan <- &work.Project{
 			Active:      p.State == "wellFormed",
 			CustomerID:  api.customerid,
 			Description: &p.Description,

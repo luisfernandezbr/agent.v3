@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/integration-sdk/work"
 )
 
@@ -93,59 +94,45 @@ func (api *API) fetchItemIDS(projid string, fromdate time.Time) ([]string, error
 	}
 	return all, nil
 }
-func (api *API) FetchWorkItems(projids []string, fromdate time.Time, items chan WorkItemsResult) error {
+func (api *API) FetchWorkItems(projid string, fromdate time.Time, items chan<- datamodel.Model) error {
 
-	type msgdata struct {
-		projid string
-		ids    []string
-		issues chan work.Issue
+	async := NewAsync(5)
+	allids, err := api.fetchItemIDS(projid, fromdate)
+	if err != nil {
+		return err
 	}
-	for _, projid := range projids {
-		async := NewAsync(5)
-		// create the result channel object
-		issues := make(chan work.Issue)
-		items <- WorkItemsResult{
-			ProjectID: projid,
-			Issues:    issues,
-		}
-		allids, err := api.fetchItemIDS(projid, fromdate)
-		if err != nil {
-			return err
-		}
-		var ids []string
-		for _, id := range allids {
-			ids = append(ids, id)
-			if len(ids) == 200 {
-				async.Send(AsyncMessage{
-					Data: msgdata{projid, ids, issues},
-					F: func(data interface{}) {
-						d := data.(msgdata)
-						if err := api.FetchWorkItemsByIDs(d.projid, d.ids, d.issues); err != nil {
-							api.logger.Error("error with FetchWorkItemsByIDs", "err", err)
-						}
-					},
-				})
-				ids = []string{}
-			}
-		}
-		if len(ids) > 0 {
+	var ids []string
+	for _, id := range allids {
+		ids = append(ids, id)
+		if len(ids) == 200 {
 			async.Send(AsyncMessage{
-				Data: msgdata{projid, ids, issues},
+				Data: ids,
 				F: func(data interface{}) {
-					d := data.(msgdata)
-					if err := api.FetchWorkItemsByIDs(d.projid, d.ids, d.issues); err != nil {
+					ids := data.([]string)
+					if err := api.FetchWorkItemsByIDs(projid, ids, items); err != nil {
 						api.logger.Error("error with FetchWorkItemsByIDs", "err", err)
 					}
 				},
 			})
+			ids = []string{}
 		}
-		async.Wait()
-		close(issues)
 	}
+	if len(ids) > 0 {
+		async.Send(AsyncMessage{
+			Data: ids,
+			F: func(data interface{}) {
+				ids := data.([]string)
+				if err := api.FetchWorkItemsByIDs(projid, ids, items); err != nil {
+					api.logger.Error("error with FetchWorkItemsByIDs", "err", err)
+				}
+			},
+		})
+	}
+	async.Wait()
 	return nil
 }
 
-func (api *API) FetchWorkItemsByIDs(projid string, ids []string, items chan work.Issue) error {
+func (api *API) FetchWorkItemsByIDs(projid string, ids []string, items chan<- datamodel.Model) error {
 	url := fmt.Sprintf(`%s/_apis/wit/workitems?ids=%s`, projid, strings.Join(ids, ","))
 	var res []workItemResponse
 	if err := api.getRequest(url, stringmap{"pagingoff": "true"}, &res); err != nil {
@@ -180,7 +167,7 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string, items chan work
 		date.ConvertToModel(fields.CreatedDate, &issue.CreatedDate)
 		date.ConvertToModel(fields.DueDate, &issue.DueDate)
 		date.ConvertToModel(fields.ChangedDate, &issue.UpdatedDate)
-		items <- issue
+		items <- &issue
 	}
 	return nil
 }
