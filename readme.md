@@ -16,6 +16,13 @@ dep ensure -v
 go install github.com/pinpt/agent.next
 ```
 
+Update
+```
+git pull
+dep ensure -v
+go install github.com/pinpt/agent.next
+```
+
 Run
 ```
 ~/go/bin/agent.next enroll <CODE> --channel=dev
