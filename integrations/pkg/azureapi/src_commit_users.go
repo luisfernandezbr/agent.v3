@@ -47,6 +47,7 @@ func (api *API) fetchCommits(repoid string, fromdate time.Time) ([]commitsRespon
 	var res []commitsResponse
 	if err := api.getRequest(url, stringmap{
 		"searchCriteriapi.fromDate": fromdate.Format(time.RFC3339),
+		"$top": "3000",
 	}, &res); err != nil {
 		return nil, err
 	}

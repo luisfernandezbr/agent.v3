@@ -50,7 +50,6 @@ func (p tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) 
 		}
 		urlquery.Set("$skip", strconv.Itoa(top*page))
 		req.URL.RawQuery = urlquery.Encode()
-		p.logger.Info(req.URL.String())
 		newreq, _ := http.NewRequest(req.Method, req.URL.String(), nil)
 		if user, pass, ok := req.BasicAuth(); ok {
 			newreq.SetBasicAuth(user, pass)

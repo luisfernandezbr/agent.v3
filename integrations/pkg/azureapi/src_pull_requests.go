@@ -129,7 +129,7 @@ func (api *API) FetchPullRequests(repoids []string, fromdate time.Time, prchan c
 func (api *API) fetchPullRequests(repoid string) ([]pullRequestResponse, error) {
 	url := fmt.Sprintf(`_apis/git/repositories/%s/pullRequests`, purl.PathEscape(repoid))
 	var res []pullRequestResponse
-	if err := api.getRequest(url, stringmap{"status": "all"}, &res); err != nil {
+	if err := api.getRequest(url, stringmap{"status": "all", "$top": "1000"}, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -159,7 +159,8 @@ func (api *API) fetchPullRequestCommitIDs(repoid string, prid int64) ([]string, 
 func (api *API) fetchPullRequestCommits(repoid string, prid int64) ([]commitsResponseLight, error) {
 	url := fmt.Sprintf(`_apis/git/repositories/%s/pullRequests/%d/commits`, purl.PathEscape(repoid), prid)
 	var res []commitsResponseLight
-	if err := api.getRequest(url, nil, &res); err != nil {
+	// there's a bug with paging this api in azure
+	if err := api.getRequest(url, stringmap{"$top": "1000"}, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
