@@ -17,14 +17,13 @@ type AsyncMessage struct {
 
 type async struct {
 	funcs chan AsyncMessage
-	wg    *sync.WaitGroup
+	wg    sync.WaitGroup
 }
 
 // NewAsync instantiates a new Async object
 func NewAsync(concurrency int) Async {
 	a := &async{}
 	a.funcs = make(chan AsyncMessage, concurrency*2)
-	a.wg = &sync.WaitGroup{}
 	a.wg.Add(concurrency)
 	for i := 0; i < concurrency; i++ {
 		go func() {
