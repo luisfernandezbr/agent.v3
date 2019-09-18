@@ -1,4 +1,4 @@
-package api
+package azureapi
 
 import (
 	"bytes"
@@ -19,7 +19,6 @@ type tfsPaginator struct {
 var _ httpclient.Paginator = (*tfsPaginator)(nil)
 
 func (p tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) (bool, *http.Request) {
-	var skippaging bool
 	var err error
 	var mapBody struct {
 		Count int64         `json:"count"`
@@ -40,10 +39,14 @@ func (p tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) 
 		body = append([]byte{','}, body...)
 	}
 	resp.Body = ioutil.NopCloser(bytes.NewReader(body))
-	if !skippaging && mapBody.Count == int64(maxResults) {
+	if mapBody.Count == int64(maxResults) {
 		urlquery := req.URL.Query()
+		if urlquery.Get("pagingoff") != "" {
+			return false, nil
+		}
 		urlquery.Set("$skip", strconv.Itoa(maxResults*page))
 		req.URL.RawQuery = urlquery.Encode()
+		p.logger.Info(req.URL.String())
 		newreq, _ := http.NewRequest(req.Method, req.URL.String(), nil)
 		if user, pass, ok := req.BasicAuth(); ok {
 			newreq.SetBasicAuth(user, pass)
