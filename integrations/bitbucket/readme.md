@@ -52,3 +52,5 @@ StopAfterN int `json:"stop_after_n"`
 - It is not possible to get emails from users `/teams/:name/members`
 - It is not possible to get usernames from users `/teams/:name/members`
 
+## TODO
+- There is a pull request state called SUPERSEDED, not sure how interpret this kind of PR

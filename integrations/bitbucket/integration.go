@@ -296,12 +296,12 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 		}
 	}
 
-	// for _, repo := range repos {
-	// 	err := s.exportPullRequestsForRepo(logger, repo, s.pullRequestSender, s.pullRequestCommentsSender, s.pullRequestReviewsSender)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
+	for _, repo := range repos {
+		err := s.exportPullRequestsForRepo(logger, repo, s.pullRequestSender, s.pullRequestCommentsSender, s.pullRequestReviewsSender)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
