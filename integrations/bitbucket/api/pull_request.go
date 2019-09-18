@@ -3,10 +3,13 @@ package api
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/ids"
+	"github.com/pinpt/agent.next/pkg/objsender"
+	"github.com/pinpt/go-common/hash"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/go-datamodel/sourcecode"
 )
@@ -16,7 +19,8 @@ func PullRequestPage(
 	repoID string,
 	repoName string,
 	params url.Values,
-	stopOnUpdatedAt time.Time) (pi PageInfo, res []sourcecode.PullRequest, err error) {
+	stopOnUpdatedAt time.Time,
+	reviewsSender *objsender.NotIncremental) (pi PageInfo, res []sourcecode.PullRequest, err error) {
 
 	qc.Logger.Debug("repo pull requests", "repo", repoName)
 
@@ -26,6 +30,7 @@ func PullRequestPage(
 	params.Add("state", "OPEN")
 	params.Add("state", "DECLINED")
 	params.Set("sort", "-updated_on")
+	params.Set("fields", "values.*,values.participants")
 
 	var rprs []struct {
 		ID     int64 `json:"id"`
@@ -53,6 +58,14 @@ func PullRequestPage(
 		Author struct {
 			AccountID string `json:"account_id"`
 		} `json:"author"`
+		Participants []struct {
+			Role           string    `json:"role"`
+			Approved       bool      `json:"approved"`
+			ParticipatedOn time.Time `json:"participated_on"`
+			User           struct {
+				AccountID string `json:"account_id"`
+			} `json:"user"`
+		} `json:"participants"`
 	}
 
 	pi, err = qc.Request(objectPath, params, true, &rprs)
@@ -94,6 +107,30 @@ func PullRequestPage(
 		pr.CreatedByRefID = rpr.Author.AccountID
 
 		res = append(res, pr)
+
+		for _, participant := range rpr.Participants {
+			if participant.Role == "REVIEWER" {
+				review := sourcecode.PullRequestReview{}
+
+				review.CustomerID = qc.CustomerID
+				review.PullRequestID = strconv.FormatInt(rpr.ID, 10)
+				review.RefID = hash.Values(pr.RefID, participant.User.AccountID)
+				review.RefType = qc.RefType
+				review.RepoID = ids.RepoID(repoID, qc)
+				review.UpdatedAt = participant.ParticipatedOn.Unix()
+
+				if participant.Approved {
+					review.State = sourcecode.PullRequestReviewStateApproved
+				} else {
+					review.State = sourcecode.PullRequestReviewStatePending
+				}
+
+				review.UserRefID = participant.User.AccountID
+
+				reviewsSender.Send(&review)
+			}
+		}
+
 	}
 
 	return

@@ -27,7 +27,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	pullRequestsInitial := make(chan []sourcecode.PullRequest)
 	go func() {
 		defer close(pullRequestsInitial)
-		err := s.exportPullRequestsRepo(logger, repo, pullRequestsInitial, pullRequestSender.LastProcessed)
+		err := s.exportPullRequestsRepo(logger, repo, pullRequestsInitial, pullRequestSender.LastProcessed, s.pullRequestReviewsSender)
 		if err != nil {
 			pullRequestsErr = err
 		}
@@ -35,7 +35,6 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 
 	// export comments, reviews, commits concurrently
 	pullRequestsForComments := make(chan []sourcecode.PullRequest, 10)
-	pullRequestsForReviews := make(chan []sourcecode.PullRequest, 10)
 	pullRequestsForCommits := make(chan []sourcecode.PullRequest, 10)
 
 	var errMu sync.Mutex
@@ -49,8 +48,6 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 		// drain all pull requests on error
 		for range pullRequestsForComments {
 		}
-		for range pullRequestsForReviews {
-		}
 		for range pullRequestsForCommits {
 		}
 	}
@@ -58,11 +55,9 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	go func() {
 		for item := range pullRequestsInitial {
 			pullRequestsForComments <- item
-			pullRequestsForReviews <- item
 			pullRequestsForCommits <- item
 		}
 		close(pullRequestsForComments)
-		close(pullRequestsForReviews)
 		close(pullRequestsForCommits)
 
 		if pullRequestsErr != nil {
@@ -78,14 +73,6 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 		if err != nil {
 			setErr(fmt.Errorf("error getting comments %s", err))
 		}
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		// err := s.exportPullRequestsReviews(logger, reviewSender, repo, pullRequestsForReviews)
-		// if err != nil {
-		// 	setErr(fmt.Errorf("error getting reviews %s", err))
-		// }
 	}()
 
 	// set commits on the rp and then send the pr
@@ -118,9 +105,9 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	return
 }
 
-func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, repo commonrepo.Repo, pullRequests chan []sourcecode.PullRequest, lastProcessed time.Time) error {
+func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, repo commonrepo.Repo, pullRequests chan []sourcecode.PullRequest, lastProcessed time.Time, reviewsSender *objsender.NotIncremental) error {
 	return api.PaginateNewerThan(logger, lastProcessed, func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, res, err := api.PullRequestPage(s.qc, repo.ID, repo.NameWithOwner, parameters, stopOnUpdatedAt)
+		pi, res, err := api.PullRequestPage(s.qc, repo.ID, repo.NameWithOwner, parameters, stopOnUpdatedAt, reviewsSender)
 		if err != nil {
 			return pi, err
 		}

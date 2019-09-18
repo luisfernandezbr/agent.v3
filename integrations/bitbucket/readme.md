@@ -54,3 +54,6 @@ StopAfterN int `json:"stop_after_n"`
 
 ## TODO
 - There is a pull request state called SUPERSEDED, not sure how interpret this kind of PR
+
+## Notes
+-- It's not possible to get URL for reviews
