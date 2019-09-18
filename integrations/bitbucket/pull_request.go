@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/url"
 	"sync"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/bitbucket/api"
 	"github.com/pinpt/agent.next/pkg/commonrepo"
+	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/go-datamodel/sourcecode"
 )
@@ -92,19 +94,19 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 		defer wg.Done()
 		for prs := range pullRequestsForCommits {
 			for _, pr := range prs {
-				// commits, err := s.exportPullRequestCommits(logger, repo.ID, pr.IID)
-				// if err != nil {
-				// 	setErr(fmt.Errorf("error getting commits %s", err))
-				// 	return
-				// }
-				// pr.CommitShas = commits
-				// pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, commits)
-				// if len(pr.CommitShas) == 0 {
-				// 	logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
-				// } else {
-				// 	pr.BranchID = s.qc.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
-				// }
-				err := pullRequestSender.SendMap(pr.ToMap())
+				commits, err := s.exportPullRequestCommits(logger, repo.NameWithOwner, pr.RefID)
+				if err != nil {
+					setErr(fmt.Errorf("error getting commits %s", err))
+					return
+				}
+				pr.CommitShas = commits
+				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, commits)
+				if len(pr.CommitShas) == 0 {
+					logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
+				} else {
+					pr.BranchID = ids.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0], s.qc)
+				}
+				err = pullRequestSender.SendMap(pr.ToMap())
 				if err != nil {
 					setErr(err)
 					return
