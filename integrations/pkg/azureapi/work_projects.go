@@ -25,7 +25,7 @@ func (api *API) FetchProjects(projchan chan<- datamodel.Model) ([]string, error)
 			Active:      p.State == "wellFormed",
 			CustomerID:  api.customerid,
 			Description: &p.Description,
-			Identifier:  p.Name, // ??
+			Identifier:  p.Name,
 			Name:        p.Name,
 			RefID:       p.ID,
 			RefType:     api.reftype,

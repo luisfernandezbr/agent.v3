@@ -107,7 +107,7 @@ func (api *API) FetchWorkItems(projid string, fromdate time.Time, items chan<- d
 		if len(ids) == 200 {
 			async.Send(AsyncMessage{
 				Data: ids,
-				F: func(data interface{}) {
+				Func: func(data interface{}) {
 					ids := data.([]string)
 					if err := api.FetchWorkItemsByIDs(projid, ids, items); err != nil {
 						api.logger.Error("error with FetchWorkItemsByIDs", "err", err)
@@ -120,7 +120,7 @@ func (api *API) FetchWorkItems(projid string, fromdate time.Time, items chan<- d
 	if len(ids) > 0 {
 		async.Send(AsyncMessage{
 			Data: ids,
-			F: func(data interface{}) {
+			Func: func(data interface{}) {
 				ids := data.([]string)
 				if err := api.FetchWorkItemsByIDs(projid, ids, items); err != nil {
 					api.logger.Error("error with FetchWorkItemsByIDs", "err", err)
@@ -143,12 +143,8 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string, items chan<- da
 		issue := work.Issue{
 			AssigneeRefID: fields.AssignedTo.ID,
 			CreatorRefID:  fields.CreatedBy.ID,
-			// CustomFields:
-			CustomerID: api.customerid,
-			// DueDate:
-			// ID:
-			Identifier: fields.TeamProject, //??
-			// ParentID:
+			CustomerID:    api.customerid,
+			Identifier:    fmt.Sprintf("%s-%d", fields.TeamProject, each.ID),
 			Priority:      fmt.Sprintf("%d", fields.Priority),
 			ProjectID:     projid,
 			RefID:         fmt.Sprintf("%d", each.ID),
@@ -159,10 +155,7 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string, items chan<- da
 			Tags:          strings.Split(fields.Tags, "; "),
 			Title:         fields.Title,
 			Type:          fields.WorkItemType,
-			// UpdatedDate:
-			// UpdatedAt:
-			URL: each.URL,
-			// Hashcode:
+			URL:           each.URL,
 		}
 		date.ConvertToModel(fields.CreatedDate, &issue.CreatedDate)
 		date.ConvertToModel(fields.DueDate, &issue.DueDate)

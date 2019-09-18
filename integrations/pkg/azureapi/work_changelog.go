@@ -54,17 +54,17 @@ type WorkChangelogsResult struct {
 	Changelogs chan work.Changelog
 }
 
-func (api *API) FetchChangelogs(projid string, result chan<- datamodel.Model) error {
+func (api *API) FetchChangelogs(projid string, fromdate time.Time, result chan<- datamodel.Model) error {
 
 	async := NewAsync(5)
-	allids, err := api.fetchItemIDS(projid, time.Time{})
+	allids, err := api.fetchItemIDS(projid, fromdate)
 	if err != nil {
 		api.logger.Error("error fetching item ids", "err", err)
 	}
 	for _, refid := range allids {
 		async.Send(AsyncMessage{
 			Data: refid,
-			F: func(data interface{}) {
+			Func: func(data interface{}) {
 				refid := data.(string)
 				if err := api.fetchChangeLog(projid, refid, result); err != nil {
 					api.logger.Error("error fetching work item updates "+refid, "err", err)
@@ -124,6 +124,9 @@ func extractCreatedDate(changelog changelogResponse) work.ChangelogCreatedDate {
 		}
 	} else {
 		date.ConvertToModel(changelog.RevisedDate, &createdDate)
+	}
+	if createdDate.Epoch < 0 {
+		return work.ChangelogCreatedDate{}
 	}
 	return createdDate
 }

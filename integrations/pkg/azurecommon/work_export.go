@@ -70,7 +70,7 @@ func (s *Integration) processChangelogs(projids []string) error {
 	defer sender.Done()
 	for _, projid := range projids {
 		items, done := s.execute("changelogs", sender)
-		err = s.api.FetchChangelogs(projid, items)
+		err = s.api.FetchChangelogs(projid, sender.LastProcessed, items)
 		close(items)
 		<-done
 		if err != nil {

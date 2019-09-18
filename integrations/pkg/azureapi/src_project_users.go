@@ -3,6 +3,7 @@ package azureapi
 import (
 	"fmt"
 	purl "net/url"
+	"strings"
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
@@ -30,6 +31,12 @@ func (api *API) FetchSourcecodeUsers(projids []string) (map[string]*sourcecode.U
 		for _, u := range rawusermap {
 			username := u.UniqueName
 			if _, ok := usermap[username]; !ok {
+				var usertype sourcecode.UserType
+				if strings.Contains(u.DisplayName, `]\\`) {
+					usertype = sourcecode.UserTypeBot
+				} else {
+					usertype = sourcecode.UserTypeHuman
+				}
 				usermap[username] = &sourcecode.User{
 					AvatarURL:  &u.ImageURL,
 					CustomerID: api.customerid,
@@ -37,7 +44,7 @@ func (api *API) FetchSourcecodeUsers(projids []string) (map[string]*sourcecode.U
 					Name:       u.DisplayName,
 					RefID:      u.ID,
 					RefType:    api.reftype,
-					Type:       sourcecode.UserTypeHuman,
+					Type:       usertype,
 					Username:   &username,
 				}
 			}

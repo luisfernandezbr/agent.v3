@@ -4,6 +4,7 @@ import (
 	"fmt"
 	purl "net/url"
 	"path/filepath"
+	"strings"
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
@@ -24,12 +25,12 @@ func (api *API) FetchAllRepos(included []string, excludedids []string) ([]*sourc
 		// 2. check if the repo name is in the included
 		if len(included) == 0 || exists(filepath.Base(repo.Name), included) {
 			repos = append(repos, &sourcecode.Repo{
+				Active:        true,
+				CustomerID:    api.customerid,
+				DefaultBranch: strings.Replace(repo.DefaultBranch, "refs/heads/", "", 1),
+				Name:          repo.Name,
 				RefID:         repo.ID,
 				RefType:       api.reftype,
-				CustomerID:    api.customerid,
-				Active:        true,
-				DefaultBranch: repo.DefaultBranch,
-				Name:          repo.Name,
 				URL:           repo.RemoteURL,
 			})
 			projectidmap[repo.Project.ID] = true

@@ -31,12 +31,12 @@ func (api *API) FetchPullRequests(repoids []string, fromdate time.Time, prchan c
 					continue
 				}
 				pr := sourcecode.PullRequest{
-					CreatedByRefID: p.CreatedBy.ID,
-					Description:    p.Description,
 					BranchName:     p.SourceBranch,
+					CreatedByRefID: p.CreatedBy.ID,
+					CustomerID:     api.customerid,
+					Description:    p.Description,
 					RefID:          fmt.Sprintf("%d", prid),
 					RefType:        api.reftype,
-					CustomerID:     api.customerid,
 					RepoID:         api.RepoID(p.Repository.ID),
 					Title:          p.Title,
 					URL:            p.URL,
@@ -79,13 +79,14 @@ func (api *API) FetchPullRequests(repoids []string, fromdate time.Time, prchan c
 					}
 					refid := hash.Values(i, prid, r.ID)
 					prrchan <- &sourcecode.PullRequestReview{
-						RefID:         refid, // this id is from the person, there are no "ids" for reviews
-						RefType:       api.reftype,
 						CustomerID:    api.customerid,
+						PullRequestID: api.PullRequestID(fmt.Sprintf("%d", prid), refid),
+						RefID:         refid,
+						RefType:       api.reftype,
 						RepoID:        api.RepoID(repoid),
 						State:         state,
+						URL:           r.URL,
 						UserRefID:     r.ID,
-						PullRequestID: api.PullRequestID(fmt.Sprintf("%d", prid), refid),
 					}
 				}
 				date.ConvertToModel(p.ClosedDate, &pr.ClosedDate)
@@ -108,10 +109,10 @@ func (api *API) FetchPullRequests(repoids []string, fromdate time.Time, prchan c
 						refid := fmt.Sprintf("%d_%d", cm.ID, e.ID)
 						c := sourcecode.PullRequestComment{
 							Body:          e.Content,
+							CustomerID:    api.customerid,
 							PullRequestID: api.PullRequestID(fmt.Sprintf("%d", prid), refid),
 							RefID:         refid,
 							RefType:       api.reftype,
-							CustomerID:    api.customerid,
 							RepoID:        api.RepoID(repoid),
 							UserRefID:     e.Author.ID,
 						}

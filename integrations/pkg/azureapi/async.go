@@ -11,7 +11,7 @@ type Async interface {
 }
 
 type AsyncMessage struct {
-	F    func(interface{})
+	Func func(interface{})
 	Data interface{}
 }
 
@@ -28,7 +28,7 @@ func NewAsync(concurrency int) Async {
 	for i := 0; i < concurrency; i++ {
 		go func() {
 			for each := range a.funcs {
-				each.F(each.Data)
+				each.Func(each.Data)
 			}
 			a.wg.Done()
 		}()
