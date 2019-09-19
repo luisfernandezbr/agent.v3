@@ -13,6 +13,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/commonrepo"
 	"github.com/pinpt/agent.next/pkg/ids"
+	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/pkg/template"
@@ -133,10 +134,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 
 		s.qc.Request = requester.Request
 		s.qc.RequestGraphQL = requester.RequestGraphQL
-		s.qc.BasicInfo = ids.BasicInfo{
-			CustomerID: s.customerID,
-			RefType:    s.refType,
-		}
+		s.qc.IDs = ids2.New(s.customerID, s.refType)
 	}
 
 	return nil
@@ -227,7 +225,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 	s.logger.Info("exporting group", "name", groupName)
 	logger := s.logger.With("org", groupName)
 
-	repos, err := commonrepo.ReposAllSlice(s.qc, groupName, func(res chan []commonrepo.Repo) error {
+	repos, err := commonrepo.ReposAllSlice(func(res chan []commonrepo.Repo) error {
 		return api.ReposAll(s.qc, groupName, res)
 	})
 	if err != nil {
@@ -258,7 +256,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 
 			args := rpcdef.GitRepoFetch{}
 			args.RefType = s.refType
-			args.RepoID = s.qc.BasicInfo.RepoID(repo.ID)
+			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
 			args.URL = repoURL
 			args.CommitURLTemplate = template.CommitURLTemplate(repo, s.config.URL)
 			args.BranchURLTemplate = template.BranchURLTemplate(repo, s.config.URL)
@@ -413,7 +411,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 				if len(pr.CommitShas) == 0 {
 					logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
 				} else {
-					pr.BranchID = s.qc.BasicInfo.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
+					pr.BranchID = s.qc.IDs.CodeBranch(pr.RepoID, pr.BranchName, pr.CommitShas[0])
 				}
 				err = pullRequestSender.Send(pr)
 				if err != nil {

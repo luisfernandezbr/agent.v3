@@ -48,8 +48,8 @@ func PullRequestCommentsPage(
 		item.RefID = fmt.Sprint(rcomment.ID)
 		item.URL = pstrings.JoinURL(u.Scheme, "://", u.Hostname(), repo.NameWithOwner, "merge_requests", pr.IID)
 		date.ConvertToModel(rcomment.UpdatedAt, &item.UpdatedDate)
-		item.RepoID = qc.BasicInfo.RepoID(repo.ID)
-		item.PullRequestID = qc.BasicInfo.PullRequestID(repo.ID, pr.ID)
+		item.RepoID = qc.IDs.CodeRepo(repo.ID)
+		item.PullRequestID = qc.IDs.CodePullRequest(repo.ID, pr.ID)
 		item.Body = rcomment.Body
 		date.ConvertToModel(rcomment.CreatedAt, &item.CreatedDate)
 

@@ -13,7 +13,7 @@ type Repo struct {
 
 type ReposAll func(chan []Repo) error
 
-func ReposAllSlice(qc interface{}, groupName string, reposAll ReposAll) (sl []Repo, rerr error) {
+func ReposAllSlice(reposAll ReposAll) (sl []Repo, rerr error) {
 	res := make(chan []Repo)
 	go func() {
 		defer close(res)
@@ -72,7 +72,13 @@ func FilterRepos(logger hclog.Logger, repos []Repo, config Config) (res []Repo) 
 	}
 
 	if config.StopAfterN > 0 {
-		res = res[:config.StopAfterN]
+		// only leave 1 repo for export
+		stopAfter := config.StopAfterN
+		l := len(res)
+		if l > stopAfter {
+			res = res[0:stopAfter]
+		}
+		logger.Info("stop_after_n passed", "v", stopAfter, "repos", l, "after", len(repos))
 	}
 
 	return

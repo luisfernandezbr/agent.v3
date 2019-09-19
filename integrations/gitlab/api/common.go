@@ -3,9 +3,8 @@ package api
 import (
 	"net/url"
 
-	"github.com/pinpt/agent.next/pkg/ids"
-
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/ids2"
 )
 
 type QueryContext struct {
@@ -18,7 +17,7 @@ type QueryContext struct {
 	RefType    string
 
 	UserEmailMap map[string]string
-	BasicInfo    ids.BasicInfo
+	IDs          ids2.Gen
 }
 
 type PageInfo struct {

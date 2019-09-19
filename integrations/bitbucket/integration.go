@@ -12,7 +12,7 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/commonrepo"
-	"github.com/pinpt/agent.next/pkg/ids"
+	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/pkg/template"
@@ -140,10 +140,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		requester := api.NewRequester(opts)
 
 		s.qc.Request = requester.Request
-		s.qc.BasicInfo = ids.BasicInfo{
-			CustomerID: s.customerID,
-			RefType:    s.refType,
-		}
+		s.qc.IDs = ids2.New(s.customerID, s.refType)
 	}
 
 	return nil
@@ -233,7 +230,7 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 	s.logger.Info("exporting group", "name", groupName)
 	logger := s.logger.With("org", groupName)
 
-	repos, err := commonrepo.ReposAllSlice(s.qc, groupName, func(res chan []commonrepo.Repo) error {
+	repos, err := commonrepo.ReposAllSlice(func(res chan []commonrepo.Repo) error {
 		return api.ReposAll(s.qc, groupName, res)
 	})
 	if err != nil {
@@ -241,16 +238,6 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 	}
 
 	repos = commonrepo.FilterRepos(logger, repos, s.commonInfo)
-
-	if s.config.StopAfterN != 0 {
-		// only leave 1 repo for export
-		stopAfter := s.config.StopAfterN
-		l := len(repos)
-		if len(repos) > stopAfter {
-			repos = repos[0:stopAfter]
-		}
-		logger.Info("stop_after_n passed", "v", stopAfter, "repos", l, "after", len(repos))
-	}
 
 	// queue repos for processing with ripsrc
 	{
@@ -266,7 +253,7 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 
 			args := rpcdef.GitRepoFetch{}
 			args.RefType = s.refType
-			args.RepoID = s.qc.BasicInfo.RepoID(repo.ID)
+			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
 			args.URL = repoURL
 			args.CommitURLTemplate = template.CommitURLTemplate(repo, s.config.URL)
 			args.BranchURLTemplate = template.BranchURLTemplate(repo, s.config.URL)

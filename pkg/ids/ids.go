@@ -44,20 +44,3 @@ func WorkIssue(customerID string, refType string, refID string) string {
 func WorkUser(customerID string, refType string, refID string) string {
 	return work.NewUserID(customerID, refType, refID)
 }
-
-type BasicInfo struct {
-	CustomerID string
-	RefType    string
-}
-
-func (b *BasicInfo) RepoID(refID string) string {
-	return CodeRepo(b.CustomerID, b.RefType, refID)
-}
-
-func (b *BasicInfo) BranchID(repoID, branchName, firstCommitSHA string) string {
-	return CodeBranch(b.CustomerID, b.RefType, repoID, branchName, firstCommitSHA)
-}
-
-func (b *BasicInfo) PullRequestID(repoID, refID string) string {
-	return CodePullRequest(b.CustomerID, b.RefType, repoID, refID)
-}

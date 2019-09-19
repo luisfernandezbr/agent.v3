@@ -82,7 +82,7 @@ func PullRequestPage(
 		pr.CustomerID = qc.CustomerID
 		pr.RefType = qc.RefType
 		pr.RefID = fmt.Sprint(rpr.ID)
-		pr.RepoID = qc.BasicInfo.RepoID(repoID)
+		pr.RepoID = qc.IDs.CodeRepo(repoID)
 		pr.BranchName = rpr.Source.Branch.Name
 		pr.Title = rpr.Title
 		pr.Description = rpr.Description
@@ -117,7 +117,7 @@ func PullRequestPage(
 				review.PullRequestID = strconv.FormatInt(rpr.ID, 10)
 				review.RefID = hash.Values(pr.RefID, participant.User.AccountID)
 				review.RefType = qc.RefType
-				review.RepoID = qc.BasicInfo.RepoID(repoID)
+				review.RepoID = qc.IDs.CodeRepo(repoID)
 				review.UpdatedAt = participant.ParticipatedOn.Unix()
 
 				if participant.Approved {

@@ -53,8 +53,8 @@ func PullRequestCommentsPage(
 		item.URL = rcomment.Links.HTML.Href
 		date.ConvertToModel(rcomment.UpdatedOn, &item.UpdatedDate)
 		item.UpdatedAt = rcomment.UpdatedOn.Unix()
-		item.RepoID = qc.BasicInfo.RepoID(repo.ID)
-		item.PullRequestID = qc.BasicInfo.PullRequestID(repo.ID, pr.ID)
+		item.RepoID = qc.IDs.CodeRepo(repo.ID)
+		item.PullRequestID = qc.IDs.CodePullRequest(repo.ID, pr.ID)
 		item.Body = rcomment.Content.Raw
 		date.ConvertToModel(rcomment.CreatedOn, &item.CreatedDate)
 		item.UserRefID = rcomment.User.AccountID
