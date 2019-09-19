@@ -65,7 +65,7 @@ func PullRequestPage(
 		pr.CustomerID = qc.CustomerID
 		pr.RefType = qc.RefType
 		pr.RefID = fmt.Sprint(rpr.ID)
-		pr.RepoID = qc.RepoID(repoRefID)
+		pr.RepoID = ids.RepoID(repoRefID, qc)
 		pr.BranchName = rpr.SourceBranch
 		pr.Title = rpr.Title
 		pr.Description = rpr.Description

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
@@ -12,9 +11,11 @@ import (
 	"github.com/pinpt/agent.next/integrations/gitlab/api"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/pkg/commitusers"
+	"github.com/pinpt/agent.next/pkg/commonrepo"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
+	"github.com/pinpt/agent.next/pkg/template"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
@@ -220,12 +221,12 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 	s.logger.Info("exporting group", "name", groupName)
 	logger := s.logger.With("org", groupName)
 
-	repos, err := api.ReposAllSlice(s.qc, groupName)
+	repos, err := commonrepo.ReposAllSlice(s.qc, groupName, api.ReposAll)
 	if err != nil {
 		return err
 	}
 
-	repos = s.filterRepos(logger, repos)
+	repos = commonrepo.FilterRepos(logger, repos, s.config)
 
 	if s.config.StopAfterN != 0 {
 		// only leave 1 repo for export
@@ -253,8 +254,8 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 			args.RefType = s.refType
 			args.RepoID = s.qc.RepoID(repo.ID)
 			args.URL = repoURL
-			args.CommitURLTemplate = commitURLTemplate(repo, s.config.URL)
-			args.BranchURLTemplate = branchURLTemplate(repo, s.config.URL)
+			args.CommitURLTemplate = template.CommitURLTemplate(repo, s.config.URL)
+			args.BranchURLTemplate = template.BranchURLTemplate(repo, s.config.URL)
 			err = s.agent.ExportGitRepo(args)
 			if err != nil {
 				return err
@@ -328,18 +329,6 @@ func (s *Integration) filterRepos(logger hclog.Logger, repos []api.Repo) (res []
 		res = append(res, repo)
 	}
 	return
-}
-
-func commitURLTemplate(repo api.Repo, repoURLPrefix string) string {
-	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/commit/@@@sha@@@"
-}
-
-func branchURLTemplate(repo api.Repo, repoURLPrefix string) string {
-	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/tree/@@@branch@@@"
-}
-
-func urlAppend(p1, p2 string) string {
-	return strings.TrimSuffix(p1, "/") + "/" + p2
 }
 
 func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, groupName string, onlyInclude []api.Repo) error {

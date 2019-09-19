@@ -5,7 +5,9 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/commonrepo"
 	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent.next/pkg/ids"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
@@ -48,7 +50,7 @@ func ApprovedDate(qc QueryContext, repoID string, prIID string, username string)
 
 func PullRequestReviewsPage(
 	qc QueryContext,
-	repo Repo,
+	repo commonrepo.Repo,
 	pr PullRequest,
 	params url.Values) (pi PageInfo, res []*sourcecode.PullRequestReview, err error) {
 
@@ -91,8 +93,8 @@ func PullRequestReviewsPage(
 		if err != nil {
 			return
 		}
-		item.RepoID = qc.RepoID(repo.ID)
-		item.PullRequestID = qc.PullRequestID(item.RepoID, pr.ID)
+		item.RepoID = ids.RepoID(repo.ID, qc)
+		item.PullRequestID = ids.PullRequestID(item.RepoID, pr.ID, qc)
 		item.State = sourcecode.PullRequestReviewStateApproved
 
 		date.ConvertToModel(rreview.CreatedAt, &item.CreatedDate)
@@ -108,8 +110,8 @@ func PullRequestReviewsPage(
 		item.RefType = qc.RefType
 		item.RefID = fmt.Sprint(rreview.ID)
 		item.UpdatedAt = rreview.UpdatedAt.Unix()
-		item.RepoID = qc.RepoID(repo.ID)
-		item.PullRequestID = qc.PullRequestID(item.RepoID, pr.ID)
+		item.RepoID = ids.RepoID(repo.ID, qc)
+		item.PullRequestID = ids.PullRequestID(item.RepoID, pr.ID, qc)
 		item.State = sourcecode.PullRequestReviewStatePending
 
 		date.ConvertToModel(rreview.CreatedAt, &item.CreatedDate)
