@@ -232,6 +232,8 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 		return err
 	}
 
+	repos = commonrepo.FilterRepos(logger, repos, s.commonInfo)
+
 	if s.config.StopAfterN != 0 {
 		// only leave 1 repo for export
 		stopAfter := s.config.StopAfterN

@@ -45,6 +45,8 @@ StopAfterN int `json:"stop_after_n"`
 
 ## Onboard Users
 - The account_id field will be used as the RefID which is a unique identifier across all atlassian(https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-changes-gdpr/#introducing-atlassian-account-id-and-nicknames)
+
+## Missing data
 - It is not possible to get emails from users `/teams/:name/members`
 - It is not possible to get usernames from users `/teams/:name/members`
 
