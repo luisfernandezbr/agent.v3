@@ -1,8 +1,6 @@
 package ids
 
 import (
-	"reflect"
-
 	"github.com/pinpt/integration-sdk/sourcecode"
 	"github.com/pinpt/integration-sdk/work"
 )
@@ -52,27 +50,14 @@ type BasicInfo struct {
 	RefType    string
 }
 
-func getBasicInfo(conf interface{}) BasicInfo {
-
-	t := reflect.ValueOf(conf)
-
-	return BasicInfo{
-		CustomerID: t.FieldByName("CustomerID").Interface().(string),
-		RefType:    t.FieldByName("RefType").Interface().(string),
-	}
+func (b *BasicInfo) RepoID(refID string) string {
+	return CodeRepo(b.CustomerID, b.RefType, refID)
 }
 
-func RepoID(refID string, info interface{}) string {
-	s := getBasicInfo(info)
-	return CodeRepo(s.CustomerID, s.RefType, refID)
+func (b *BasicInfo) BranchID(repoID, branchName, firstCommitSHA string) string {
+	return CodeBranch(b.CustomerID, b.RefType, repoID, branchName, firstCommitSHA)
 }
 
-func BranchID(repoID, branchName, firstCommitSHA string, info interface{}) string {
-	s := getBasicInfo(info)
-	return CodeBranch(s.CustomerID, s.RefType, repoID, branchName, firstCommitSHA)
-}
-
-func PullRequestID(repoID, refID string, info interface{}) string {
-	s := getBasicInfo(info)
-	return CodePullRequest(s.CustomerID, s.RefType, repoID, refID)
+func (b *BasicInfo) PullRequestID(repoID, refID string) string {
+	return CodePullRequest(b.CustomerID, b.RefType, repoID, refID)
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/pinpt/agent.next/integrations/bitbucket/api"
 	"github.com/pinpt/agent.next/pkg/commonrepo"
 	"github.com/pinpt/agent.next/pkg/objsender"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func (s *Integration) exportPullRequestsComments(logger hclog.Logger, sender *objsender.NotIncremental, repo commonrepo.Repo, pullRequests chan []sourcecode.PullRequest) error {

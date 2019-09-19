@@ -10,8 +10,8 @@ import (
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/go-common/datetime"
 	pstrings "github.com/pinpt/go-common/strings"
-	"github.com/pinpt/go-datamodel/sourcecode"
 	"github.com/pinpt/integration-sdk/agent"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func ReposOnboardPage(qc QueryContext, teamName string, params url.Values) (page PageInfo, repos []*agent.RepoResponseRepos, err error) {

@@ -49,6 +49,8 @@ type Integration struct {
 	pullRequestCommentsSender *objsender.NotIncremental
 	pullRequestReviewsSender  *objsender.NotIncremental
 	userSender                *objsender.NotIncremental
+
+	commonInfo commonrepo.Config
 }
 
 func main() {
@@ -131,6 +133,10 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 
 		s.qc.Request = requester.Request
 		s.qc.RequestGraphQL = requester.RequestGraphQL
+		s.qc.BasicInfo = ids.BasicInfo{
+			CustomerID: s.customerID,
+			RefType:    s.refType,
+		}
 	}
 
 	return nil
@@ -221,12 +227,12 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 	s.logger.Info("exporting group", "name", groupName)
 	logger := s.logger.With("org", groupName)
 
-	repos, err := commonrepo.ReposAllSlice(s.qc, groupName, api.ReposAll)
+	repos, err := commonrepo.ReposAllSlice(s.qc, groupName, func(res chan []commonrepo.Repo) error {
+		return api.ReposAll(s.qc, groupName, res)
+	})
 	if err != nil {
 		return err
 	}
-
-	repos = commonrepo.FilterRepos(logger, repos, s.config)
 
 	if s.config.StopAfterN != 0 {
 		// only leave 1 repo for export
@@ -252,7 +258,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 
 			args := rpcdef.GitRepoFetch{}
 			args.RefType = s.refType
-			args.RepoID = s.qc.RepoID(repo.ID)
+			args.RepoID = s.qc.BasicInfo.RepoID(repo.ID)
 			args.URL = repoURL
 			args.CommitURLTemplate = template.CommitURLTemplate(repo, s.config.URL)
 			args.BranchURLTemplate = template.BranchURLTemplate(repo, s.config.URL)
@@ -269,11 +275,9 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 	}
 
 	// export repos
-	{
-		err := s.exportRepos(ctx, logger, groupName, repos)
-		if err != nil {
-			return err
-		}
+	err = s.exportRepos(ctx, logger, groupName, repos)
+	if err != nil {
+		return err
 	}
 
 	for _, repo := range repos {
@@ -286,52 +290,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 	return nil
 }
 
-func (s *Integration) filterRepos(logger hclog.Logger, repos []api.Repo) (res []api.Repo) {
-	if len(s.config.Repos) != 0 {
-		ok := map[string]bool{}
-		for _, nameWithOwner := range s.config.Repos {
-			ok[nameWithOwner] = true
-		}
-		for _, repo := range repos {
-			if !ok[repo.NameWithOwner] {
-				continue
-			}
-			res = append(res, repo)
-		}
-		logger.Info("repos", "found", len(repos), "repos_specified", len(s.config.Repos), "result", len(res))
-		return
-	}
-
-	//all := map[string]bool{}
-	//for _, repo := range repos {
-	//	all[repo.ID] = true
-	//}
-	excluded := map[string]bool{}
-	for _, id := range s.config.ExcludedRepos {
-		// This does not work because we pass excluded repos for all orgs. But filterRepos is called separately per org.
-		//if !all[id] {
-		//	return fmt.Errorf("wanted to exclude non existing repo: %v", id)
-		//}
-		excluded[id] = true
-	}
-
-	filtered := map[string]api.Repo{}
-	// filter excluded repos
-	for _, repo := range repos {
-		if excluded[repo.ID] {
-			continue
-		}
-		filtered[repo.ID] = repo
-	}
-
-	logger.Info("repos", "found", len(repos), "excluded_definition", len(s.config.ExcludedRepos), "result", len(filtered))
-	for _, repo := range filtered {
-		res = append(res, repo)
-	}
-	return
-}
-
-func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, groupName string, onlyInclude []api.Repo) error {
+func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, groupName string, onlyInclude []commonrepo.Repo) error {
 
 	sender := s.repoSender
 
@@ -364,7 +323,7 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, grou
 	return nil
 }
 
-func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Repo,
+func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
 	pullRequestSender *objsender.IncrementalDateBased,
 	commentsSender *objsender.NotIncremental,
 	reviewSender *objsender.NotIncremental) (rerr error) {
@@ -454,7 +413,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 				if len(pr.CommitShas) == 0 {
 					logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
 				} else {
-					pr.BranchID = s.qc.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
+					pr.BranchID = s.qc.BasicInfo.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
 				}
 				err = pullRequestSender.Send(pr)
 				if err != nil {

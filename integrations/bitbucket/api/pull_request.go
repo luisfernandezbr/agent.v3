@@ -11,7 +11,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/go-common/hash"
 	pstrings "github.com/pinpt/go-common/strings"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func PullRequestPage(
@@ -82,7 +82,7 @@ func PullRequestPage(
 		pr.CustomerID = qc.CustomerID
 		pr.RefType = qc.RefType
 		pr.RefID = fmt.Sprint(rpr.ID)
-		pr.RepoID = ids.RepoID(repoID, qc)
+		pr.RepoID = qc.BasicInfo.RepoID(repoID)
 		pr.BranchName = rpr.Source.Branch.Name
 		pr.Title = rpr.Title
 		pr.Description = rpr.Description
@@ -117,7 +117,7 @@ func PullRequestPage(
 				review.PullRequestID = strconv.FormatInt(rpr.ID, 10)
 				review.RefID = hash.Values(pr.RefID, participant.User.AccountID)
 				review.RefType = qc.RefType
-				review.RepoID = ids.RepoID(repoID, qc)
+				review.RepoID = qc.BasicInfo.RepoID(repoID)
 				review.UpdatedAt = participant.ParticipatedOn.Unix()
 
 				if participant.Approved {

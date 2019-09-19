@@ -3,6 +3,8 @@ package api
 import (
 	"net/url"
 
+	"github.com/pinpt/agent.next/pkg/ids"
+
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -15,6 +17,7 @@ type QueryContext struct {
 	RefType    string
 
 	UserEmailMap map[string]string
+	BasicInfo    ids.BasicInfo
 }
 
 type PageInfo struct {

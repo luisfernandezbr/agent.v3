@@ -2,12 +2,9 @@
 
 - Bitbucket.com (2019-08-21)
 
-## GitLab API Docs
+## Bitbucket API Docs
 - [Create auth token](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html)
 - https://developer.atlassian.com/bitbucket/api/2/reference/resource/
-
-## TODO
-
 
 ## API call examples
 
@@ -73,7 +70,7 @@ testing different cases
     - created_on   2019-09-19T16:48:02.187173+00:00
     - updated_on   2019-09-19T16:54:01.492411+00:00 (updated)
 
-UpdateDate is not correct for comment changes. We would only fetch edited comments when new historicals are run.
+updated_on got updated for all scenarios
 
 ## TODO
 - There is a pull request state called SUPERSEDED, not sure how to interpret this kind of PR

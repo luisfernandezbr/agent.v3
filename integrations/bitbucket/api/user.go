@@ -4,8 +4,8 @@ import (
 	"net/url"
 
 	pstrings "github.com/pinpt/go-common/strings"
-	"github.com/pinpt/go-datamodel/sourcecode"
 	"github.com/pinpt/integration-sdk/agent"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func UsersOnboardPage(qc QueryContext, teamName string, params url.Values) (page PageInfo, users []*agent.UserResponseUsers, err error) {

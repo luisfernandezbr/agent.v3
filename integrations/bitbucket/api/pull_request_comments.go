@@ -7,9 +7,8 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/commonrepo"
 	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/ids"
 	pstrings "github.com/pinpt/go-common/strings"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func PullRequestCommentsPage(
@@ -54,8 +53,8 @@ func PullRequestCommentsPage(
 		item.URL = rcomment.Links.HTML.Href
 		date.ConvertToModel(rcomment.UpdatedOn, &item.UpdatedDate)
 		item.UpdatedAt = rcomment.UpdatedOn.Unix()
-		item.RepoID = ids.RepoID(repo.ID, qc)
-		item.PullRequestID = ids.PullRequestID(repo.ID, pr.ID, qc)
+		item.RepoID = qc.BasicInfo.RepoID(repo.ID)
+		item.PullRequestID = qc.BasicInfo.PullRequestID(repo.ID, pr.ID)
 		item.Body = rcomment.Content.Raw
 		date.ConvertToModel(rcomment.CreatedOn, &item.CreatedDate)
 		item.UserRefID = rcomment.User.AccountID

@@ -11,7 +11,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/commonrepo"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/objsender"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
@@ -91,7 +91,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 				if len(pr.CommitShas) == 0 {
 					logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
 				} else {
-					pr.BranchID = ids.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0], s.qc)
+					pr.BranchID = s.qc.BasicInfo.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
 				}
 				err = pullRequestSender.SendMap(pr.ToMap())
 				if err != nil {

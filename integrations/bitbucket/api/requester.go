@@ -50,7 +50,7 @@ func (s *Requester) Request(objPath string, params url.Values, paginable bool, r
 
 	if paginable && params.Get("fields") == "" {
 		tags := getJsonTags(res)
-		// This parameters will helpus get only the fields we need
+		// This parameters will help us get only the fields we need
 		// This reduce the time from ~27s to ~12s
 		params.Set("fields", tags)
 	}

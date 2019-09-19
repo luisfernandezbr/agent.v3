@@ -16,7 +16,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/pkg/template"
 	"github.com/pinpt/agent.next/rpcdef"
-	"github.com/pinpt/go-datamodel/sourcecode"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func main() {
@@ -61,6 +61,8 @@ type Integration struct {
 	pullRequestCommentsSender *objsender.NotIncremental
 	pullRequestReviewsSender  *objsender.NotIncremental
 	userSender                *objsender.NotIncremental
+
+	commonInfo commonrepo.Config
 }
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
@@ -121,6 +123,11 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	s.qc.Logger = s.logger
 	s.qc.RefType = s.refType
 	s.customerID = config.Pinpoint.CustomerID
+	s.commonInfo = commonrepo.Config{
+		Repos:         s.config.Repos,
+		ExcludedRepos: s.config.ExcludedRepos,
+		StopAfterN:    s.config.StopAfterN,
+	}
 
 	{
 		opts := api.RequesterOpts{}
@@ -132,6 +139,10 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		requester := api.NewRequester(opts)
 
 		s.qc.Request = requester.Request
+		s.qc.BasicInfo = ids.BasicInfo{
+			CustomerID: s.customerID,
+			RefType:    s.refType,
+		}
 	}
 
 	return nil
@@ -141,21 +152,22 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	rerr := func(msg string, args ...interface{}) error {
 		return fmt.Errorf("config validation error: "+msg, args...)
 	}
-	var conf Config
-	err := structmarshal.MapToStruct(data, &conf)
+	var def Config
+	err := structmarshal.MapToStruct(data, &def)
 	if err != nil {
 		return err
 	}
-	if conf.URL == "" {
+	if def.URL == "" {
 		return rerr("url is missing")
 	}
-	if conf.Username == "" {
+	if def.Username == "" {
 		return rerr("username is missing")
 	}
-	if conf.Password == "" {
+	if def.Password == "" {
 		return rerr("password is missing")
 	}
-	s.config = conf
+
+	s.config = def
 	return nil
 }
 
@@ -220,12 +232,14 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 	s.logger.Info("exporting group", "name", groupName)
 	logger := s.logger.With("org", groupName)
 
-	repos, err := commonrepo.ReposAllSlice(s.qc, groupName, api.ReposAll)
+	repos, err := commonrepo.ReposAllSlice(s.qc, groupName, func(res chan []commonrepo.Repo) error {
+		return api.ReposAll(s.qc, groupName, res)
+	})
 	if err != nil {
 		return err
 	}
 
-	repos = commonrepo.FilterRepos(logger, repos, s.config)
+	repos = commonrepo.FilterRepos(logger, repos, s.commonInfo)
 
 	if s.config.StopAfterN != 0 {
 		// only leave 1 repo for export
@@ -251,7 +265,7 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 
 			args := rpcdef.GitRepoFetch{}
 			args.RefType = s.refType
-			args.RepoID = ids.RepoID(repo.ID, s.qc)
+			args.RepoID = s.qc.BasicInfo.RepoID(repo.ID)
 			args.URL = repoURL
 			args.CommitURLTemplate = template.CommitURLTemplate(repo, s.config.URL)
 			args.BranchURLTemplate = template.BranchURLTemplate(repo, s.config.URL)
