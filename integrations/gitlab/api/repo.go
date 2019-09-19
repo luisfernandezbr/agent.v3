@@ -5,7 +5,7 @@ import (
 	"net/url"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/commonrepo"
+	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	pstrings "github.com/pinpt/go-common/strings"
 )
 

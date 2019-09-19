@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/commonrepo"
+	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/pkg/date"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"

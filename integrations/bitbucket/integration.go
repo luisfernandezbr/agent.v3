@@ -9,13 +9,13 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/bitbucket/api"
+	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
+	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/pkg/commitusers"
-	"github.com/pinpt/agent.next/pkg/commonrepo"
 	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
-	"github.com/pinpt/agent.next/pkg/template"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
@@ -63,7 +63,7 @@ type Integration struct {
 	pullRequestReviewsSender  *objsender.NotIncremental
 	userSender                *objsender.NotIncremental
 
-	commonInfo commonrepo.Config
+	repoFilterConfig commonrepo.FilterConfig
 }
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
@@ -124,10 +124,11 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	s.qc.Logger = s.logger
 	s.qc.RefType = s.refType
 	s.customerID = config.Pinpoint.CustomerID
-	s.commonInfo = commonrepo.Config{
-		Repos:         s.config.Repos,
-		ExcludedRepos: s.config.ExcludedRepos,
-		StopAfterN:    s.config.StopAfterN,
+	s.repoFilterConfig = commonrepo.FilterConfig{
+
+		OnlyIncludeNames: s.config.Repos,
+		ExcludedIDs:      s.config.ExcludedRepos,
+		StopAfterN:       s.config.StopAfterN,
 	}
 
 	{
@@ -237,7 +238,7 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 		return err
 	}
 
-	repos = commonrepo.FilterRepos(logger, repos, s.commonInfo)
+	repos = commonrepo.Filter(logger, repos, s.repoFilterConfig)
 
 	// queue repos for processing with ripsrc
 	{
@@ -255,8 +256,8 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 			args.RefType = s.refType
 			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
 			args.URL = repoURL
-			args.CommitURLTemplate = template.CommitURLTemplate(repo, s.config.URL)
-			args.BranchURLTemplate = template.BranchURLTemplate(repo, s.config.URL)
+			args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
+			args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
 			err = s.agent.ExportGitRepo(args)
 			if err != nil {
 				return err

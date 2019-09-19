@@ -9,14 +9,14 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/gitlab/api"
+	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
+	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/pkg/commitusers"
-	"github.com/pinpt/agent.next/pkg/commonrepo"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
-	"github.com/pinpt/agent.next/pkg/template"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
@@ -51,7 +51,7 @@ type Integration struct {
 	pullRequestReviewsSender  *objsender.NotIncremental
 	userSender                *objsender.NotIncremental
 
-	commonInfo commonrepo.Config
+	repoFilterConfig commonrepo.FilterConfig
 }
 
 func main() {
@@ -258,8 +258,8 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 			args.RefType = s.refType
 			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
 			args.URL = repoURL
-			args.CommitURLTemplate = template.CommitURLTemplate(repo, s.config.URL)
-			args.BranchURLTemplate = template.BranchURLTemplate(repo, s.config.URL)
+			args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
+			args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
 			err = s.agent.ExportGitRepo(args)
 			if err != nil {
 				return err
