@@ -16,8 +16,7 @@ type QueryContext struct {
 	CustomerID string
 	RefType    string
 
-	UserEmailMap map[string]string
-	IDs          ids2.Gen
+	IDs ids2.Gen
 }
 
 type PageInfo struct {
