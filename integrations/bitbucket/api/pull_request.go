@@ -30,7 +30,8 @@ func PullRequestPage(
 	params.Add("state", "OPEN")
 	params.Add("state", "DECLINED")
 	params.Set("sort", "-updated_on")
-	params.Set("fields", "values.*,values.participants")
+	// Greater than 50 throws "Invalid pagelen"
+	params.Set("pagelen", "50")
 
 	var rprs []struct {
 		ID     int64 `json:"id"`

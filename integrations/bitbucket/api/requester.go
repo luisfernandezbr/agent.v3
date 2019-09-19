@@ -48,7 +48,7 @@ func (s *Requester) Request(objPath string, params url.Values, paginable bool, r
 
 	u := pstrings.JoinURL(s.opts.APIURL, objPath)
 
-	if paginable {
+	if paginable && params.Get("fields") == "" {
 		tags := getJsonTags(res)
 		// This parameters will helpus get only the fields we need
 		// This reduce the time from ~27s to ~12s

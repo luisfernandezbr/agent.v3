@@ -72,6 +72,8 @@ func ReposPage(qc QueryContext, groupName string, params url.Values) (page PageI
 
 	objectPath := pstrings.JoinURL("teams", groupName, "repositories")
 
+	params.Set("pagelen", "100")
+
 	var rr []struct {
 		UUID       string `json:"uuid"`
 		FullName   string `json:"full_name"`
@@ -102,6 +104,8 @@ func ReposSourcecodePage(qc QueryContext, group string, params url.Values, stopO
 	qc.Logger.Debug("repos request", "group", group)
 
 	objectPath := pstrings.JoinURL("teams", group, "repositories")
+
+	params.Set("pagelen", "100")
 
 	type repo struct {
 		CreatedAt   time.Time `json:"created_on"`

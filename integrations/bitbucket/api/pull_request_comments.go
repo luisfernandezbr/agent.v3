@@ -20,6 +20,8 @@ func PullRequestCommentsPage(
 
 	qc.Logger.Debug("pull request commits", "repo", repo.ID)
 
+	params.Set("pagelen", "100")
+
 	objectPath := pstrings.JoinURL("repositories", repo.NameWithOwner, "pullrequests", pr.RefID, "comments")
 
 	var rcomments []struct {

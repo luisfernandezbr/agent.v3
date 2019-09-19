@@ -50,6 +50,8 @@ func UsersSourcecodePage(qc QueryContext, group string, params url.Values) (page
 
 	objectPath := pstrings.JoinURL("teams", group, "members")
 
+	params.Set("pagelen", "100")
+
 	var us []struct {
 		UUID        string `json:"uuid"`
 		DisplayName string `json:"display_name"`

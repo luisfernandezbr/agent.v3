@@ -20,6 +20,7 @@ func PullRequestCommitsPage(
 		Hash string `json:"hash"`
 	}
 
+	params.Set("pagelen", "100")
 	// Setting the page parameter alone as part of params results in "Invalid page" error
 	params.Set("fields", "values.hash,page,pagelen,size?page="+params.Get("page"))
 	params.Del("page")

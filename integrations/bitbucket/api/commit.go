@@ -95,6 +95,8 @@ func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) 
 
 	objectPath := pstrings.JoinURL("repositories", repo, "commits")
 
+	params.Set("pagelen", "100")
+
 	var rcommits []struct {
 		Author struct {
 			Raw  string `json:"raw"`
