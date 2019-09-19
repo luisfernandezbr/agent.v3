@@ -22,13 +22,11 @@ import (
 )
 
 type Config struct {
-	URL                string   `json:"url"`
-	APIToken           string   `json:"apitoken"`
-	ExcludedRepos      []string `json:"excluded_repos"`
-	Repos              []string `json:"repos"`
-	StopAfterN         int      `json:"stop_after_n"`
-	OnlyGit            bool     `json:"only_git"`
-	InsecureSkipVerify bool     `json:"insecure_skip_verify"`
+	commonrepo.FilterConfig
+	URL                string `json:"url"`
+	APIToken           string `json:"apitoken"`
+	OnlyGit            bool   `json:"only_git"`
+	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
 }
 
 type Integration struct {
@@ -50,8 +48,6 @@ type Integration struct {
 	pullRequestCommentsSender *objsender.NotIncremental
 	pullRequestReviewsSender  *objsender.NotIncremental
 	userSender                *objsender.NotIncremental
-
-	repoFilterConfig commonrepo.FilterConfig
 }
 
 func main() {
@@ -232,7 +228,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 		return err
 	}
 
-	repos = commonrepo.Filter(logger, repos, s.repoFilterConfig)
+	repos = commonrepo.Filter(logger, repos, s.config.FilterConfig)
 
 	// queue repos for processing with ripsrc
 	{

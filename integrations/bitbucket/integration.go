@@ -33,14 +33,12 @@ func NewIntegration(logger hclog.Logger) *Integration {
 }
 
 type Config struct {
-	URL                string   `json:"url"`
-	Username           string   `json:"username"`
-	Password           string   `json:"password"`
-	ExcludedRepos      []string `json:"excluded_repos"`
-	Repos              []string `json:"repos"`
-	StopAfterN         int      `json:"stop_after_n"`
-	OnlyGit            bool     `json:"only_git"`
-	InsecureSkipVerify bool     `json:"insecure_skip_verify"`
+	commonrepo.FilterConfig
+	URL                string `json:"url"`
+	Username           string `json:"username"`
+	Password           string `json:"password"`
+	OnlyGit            bool   `json:"only_git"`
+	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
 }
 
 type Integration struct {
@@ -62,8 +60,6 @@ type Integration struct {
 	pullRequestCommentsSender *objsender.NotIncremental
 	pullRequestReviewsSender  *objsender.NotIncremental
 	userSender                *objsender.NotIncremental
-
-	repoFilterConfig commonrepo.FilterConfig
 }
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
@@ -124,12 +120,6 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	s.qc.Logger = s.logger
 	s.qc.RefType = s.refType
 	s.customerID = config.Pinpoint.CustomerID
-	s.repoFilterConfig = commonrepo.FilterConfig{
-
-		OnlyIncludeNames: s.config.Repos,
-		ExcludedIDs:      s.config.ExcludedRepos,
-		StopAfterN:       s.config.StopAfterN,
-	}
 
 	{
 		opts := api.RequesterOpts{}
@@ -238,7 +228,7 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 		return err
 	}
 
-	repos = commonrepo.Filter(logger, repos, s.repoFilterConfig)
+	repos = commonrepo.Filter(logger, repos, s.config.FilterConfig)
 
 	// queue repos for processing with ripsrc
 	{

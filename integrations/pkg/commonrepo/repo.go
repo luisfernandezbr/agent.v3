@@ -55,10 +55,11 @@ func commonToRepos(common []repoprojects.RepoProject) (res []Repo) {
 	return
 }
 
+// FilterConfig specifies the repos to use. JSON tags are used in config definitions.
 type FilterConfig struct {
-	OnlyIncludeNames []string
-	ExcludedIDs      []string
-	StopAfterN       int
+	OnlyIncludeNames []string `json:"repos"`
+	ExcludedIDs      []string `json:"excluded_repos"`
+	StopAfterN       int      `json:"stop_after_n"`
 }
 
 func Filter(logger hclog.Logger, repos []Repo, config FilterConfig) []Repo {
