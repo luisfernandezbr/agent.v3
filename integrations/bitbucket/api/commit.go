@@ -55,7 +55,7 @@ func LastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (lastCommit agen
 	}
 	lastCommit = agent.RepoResponseReposLastCommit{
 		Message:   lastCommitSource.Message,
-		URL:       url.Scheme + "://" + GetDomain(url.Hostname()) + "/" + repo.Name + "/commits/" + lastCommitSource.HASH,
+		URL:       url.Scheme + "://" + strings.TrimPrefix(url.Hostname(), "api.") + "/" + repo.Name + "/commits/" + lastCommitSource.HASH,
 		CommitSha: lastCommitSource.HASH,
 		CommitID:  ids.CodeCommit(qc.CustomerID, qc.RefType, repo.RefID, lastCommitSource.HASH),
 	}
@@ -71,13 +71,6 @@ func LastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (lastCommit agen
 	date.ConvertToModel(lastCommitSource.Date, &lastCommit.CreatedDate)
 
 	return
-}
-
-func GetDomain(hostname string) string {
-
-	sub := strings.Split(hostname, ".")
-
-	return strings.Join(sub[len(sub)-2:], ".")
 }
 
 func getEmailFromRaw(raw string) string {

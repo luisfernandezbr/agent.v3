@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -261,7 +262,7 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 			}
 			u.User = url.UserPassword(s.config.Username, s.config.Password)
 			u.Path = "/" + repo.NameWithOwner
-			repoURL := u.Scheme + "://" + u.User.String() + "@" + api.GetDomain(u.Host) + u.EscapedPath()
+			repoURL := u.Scheme + "://" + u.User.String() + "@" + strings.TrimPrefix(u.Host, "api.") + u.EscapedPath()
 
 			args := rpcdef.GitRepoFetch{}
 			args.RefType = s.refType
