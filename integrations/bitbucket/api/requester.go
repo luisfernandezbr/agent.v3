@@ -116,6 +116,10 @@ func getJsonTags(i interface{}) string {
 	typ := reflect.TypeOf(i)
 	tags := getJsonTagsFromType(typ)
 	tags = appendPrefix("values", tags)
+	tags = append(tags, "pagelen")
+	tags = append(tags, "page")
+	tags = append(tags, "size")
+	tags = append(tags, "next")
 	joinTags := strings.Join(tags, ",")
 	return joinTags
 }
