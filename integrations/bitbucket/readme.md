@@ -46,14 +46,37 @@ Repos []string `json:"repos"`
 StopAfterN int `json:"stop_after_n"`
 ```
 
-
 ## Onboard Users
 - The account_id field will be used as the RefID which is a unique identifier across all atlassian(https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-changes-gdpr/#introducing-atlassian-account-id-and-nicknames)
 - It is not possible to get emails from users `/teams/:name/members`
 - It is not possible to get usernames from users `/teams/:name/members`
 
+### Does updating pr node children update updated_at field on parent?
+
+This is needed so that incremental export does not have to get call for pr comments and reviews on every single pr and other similar cases.
+
+testing different cases
+
+- create pr
+    - created_on   2019-09-19T16:48:02.187173+00:00
+    - updated_on   2019-09-19T16:48:02.230229+00:00
+- create a comment on pr
+    - created_on   2019-09-19T16:48:02.187173+00:00
+    - updated_on   2019-09-19T16:49:44.417294+00:00 (updated)
+- edit the comment on pr
+    - created_on   2019-09-19T16:48:02.187173+00:00
+    - updated_on   2019-09-19T16:50:36.033829+00:00 (updated)
+- added reviewer
+    - created_on   2019-09-19T16:48:02.187173+00:00
+    - updated_on   2019-09-19T16:51:31.502755+00:00 (updated)
+- approve from reviewer
+    - created_on   2019-09-19T16:48:02.187173+00:00
+    - updated_on   2019-09-19T16:54:01.492411+00:00 (updated)
+
+UpdateDate is not correct for comment changes. We would only fetch edited comments when new historicals are run.
+
 ## TODO
-- There is a pull request state called SUPERSEDED, not sure how interpret this kind of PR
+- There is a pull request state called SUPERSEDED, not sure how to interpret this kind of PR
 
 ## Notes
 -- It's not possible to get URL for reviews
