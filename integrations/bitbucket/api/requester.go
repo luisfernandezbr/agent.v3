@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
+	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/httpdefaults"
@@ -45,6 +47,13 @@ type Requester struct {
 func (s *Requester) Request(objPath string, params url.Values, paginable bool, res interface{}) (page PageInfo, err error) {
 
 	u := pstrings.JoinURL(s.opts.APIURL, objPath)
+
+	if paginable {
+		tags := getJsonTags(res)
+		// This parameters will helpus get only the fields we need
+		// This reduce the time from ~27s to ~12s
+		params.Set("fields", tags)
+	}
 
 	if len(params) != 0 {
 		u += "?" + params.Encode()
@@ -101,4 +110,37 @@ type Response struct {
 	PageLen     int64           `json:"pagelen"`
 	Next        string          `json:"next"`
 	Values      json.RawMessage `json:"values"`
+}
+
+func getJsonTags(i interface{}) string {
+	typ := reflect.TypeOf(i)
+	tags := getJsonTagsFromType(typ)
+	tags = appendPrefix("values", tags)
+	joinTags := strings.Join(tags, ",")
+	return joinTags
+}
+
+func getJsonTagsFromType(typ reflect.Type) (names []string) {
+	if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Ptr {
+		return getJsonTagsFromType(typ.Elem())
+	} else {
+		for i, total := 0, typ.NumField(); i < total; i++ {
+			fieldType := typ.Field(i)
+			if fieldType.Type.Kind() == reflect.Struct && fieldType.Type.Name() != "Time" {
+				newValues := getJsonTagsFromType(fieldType.Type)
+				prefix := fieldType.Tag.Get("json")
+				names = append(names, appendPrefix(prefix, newValues)...)
+			} else {
+				names = append(names, fieldType.Tag.Get("json"))
+			}
+		}
+	}
+	return
+}
+
+func appendPrefix(prefix string, names []string) (newnames []string) {
+	for _, name := range names {
+		newnames = append(newnames, prefix+"."+name)
+	}
+	return
 }

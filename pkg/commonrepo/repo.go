@@ -39,7 +39,7 @@ type Config struct {
 
 func FilterRepos(logger hclog.Logger, repos []Repo, config interface{}) (res []Repo) {
 
-	lconfig := getLocalConfig(config)
+	lconfig := getConfigInfo(config)
 
 	if len(lconfig.Repos) != 0 {
 		ok := map[string]bool{}
@@ -76,7 +76,7 @@ func FilterRepos(logger hclog.Logger, repos []Repo, config interface{}) (res []R
 	return
 }
 
-func getLocalConfig(conf interface{}) Config {
+func getConfigInfo(conf interface{}) Config {
 
 	t := reflect.ValueOf(conf)
 

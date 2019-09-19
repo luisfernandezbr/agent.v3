@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -15,6 +14,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
+	"github.com/pinpt/agent.next/pkg/template"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-datamodel/sourcecode"
 )
@@ -177,11 +177,6 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	s.pullRequestReviewsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
 	s.userSender = objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
 
-	// err = api.UsersEmails(s.qc, s.commitUserSender, s.userSender)
-	// if err != nil {
-	// 	return err
-	// }
-
 	teamNames, err := api.Teams(s.qc)
 	if err != nil {
 		return err
@@ -258,8 +253,8 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 			args.RefType = s.refType
 			args.RepoID = ids.RepoID(repo.ID, s.qc)
 			args.URL = repoURL
-			args.CommitURLTemplate = commitURLTemplate(repo, s.config.URL)
-			args.BranchURLTemplate = branchURLTemplate(repo, s.config.URL)
+			args.CommitURLTemplate = template.CommitURLTemplate(repo, s.config.URL)
+			args.BranchURLTemplate = template.BranchURLTemplate(repo, s.config.URL)
 			err = s.agent.ExportGitRepo(args)
 			if err != nil {
 				return err
@@ -304,18 +299,6 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 	}
 
 	return nil
-}
-
-func commitURLTemplate(repo commonrepo.Repo, repoURLPrefix string) string {
-	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/commit/@@@sha@@@"
-}
-
-func branchURLTemplate(repo commonrepo.Repo, repoURLPrefix string) string {
-	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/tree/@@@branch@@@"
-}
-
-func urlAppend(p1, p2 string) string {
-	return strings.TrimSuffix(p1, "/") + "/" + p2
 }
 
 func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, groupName string, onlyInclude []commonrepo.Repo) error {
