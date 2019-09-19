@@ -232,17 +232,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 		return err
 	}
 
-	repos = commonrepo.FilterRepos(logger, repos, s.commonInfo)
-
-	if s.config.StopAfterN != 0 {
-		// only leave 1 repo for export
-		stopAfter := s.config.StopAfterN
-		l := len(repos)
-		if len(repos) > stopAfter {
-			repos = repos[0:stopAfter]
-		}
-		logger.Info("stop_after_n passed", "v", stopAfter, "repos", l, "after", len(repos))
-	}
+	repos = commonrepo.Filter(logger, repos, s.repoFilterConfig)
 
 	// queue repos for processing with ripsrc
 	{
