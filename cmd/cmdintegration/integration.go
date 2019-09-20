@@ -113,14 +113,14 @@ func (s *Command) setupConfig() error {
 		ec.Pinpoint.CustomerID = s.Opts.AgentConfig.CustomerID
 		ec.Integration = obj.Config
 
-		refreshToken, _ := obj.Config["refresh_token"].(string)
+		refreshToken, _ := obj.Config["oauth_refresh_token"].(string)
 		if refreshToken != "" {
 			s.OAuthRefreshTokens[name] = refreshToken
 			ec.UseOAuth = true
-			// do not pass refresh_token to instegration
+			// do not pass oauth_refresh_token to instegration
 			// integrations should use
 			// NewAccessToken() to get access token instead
-			delete(ec.Integration, "refresh_token")
+			delete(ec.Integration, "oauth_refresh_token")
 		}
 
 		s.ExportConfigs[obj.Name] = ec

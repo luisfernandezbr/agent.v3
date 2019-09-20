@@ -7,6 +7,17 @@
 https://developer.github.com/v4/
 https://developer.github.com/enterprise/2.15/
 
+## Authentication
+
+It supports both auth tokens created manually and tokens created using OAuth flow.
+
+In both cases pass the token as apitoken.
+
+- [Create auth token](https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line)
+- [OAuth docs](https://developer.github.com/v3/oauth_authorizations/)
+
+Github OAuth tokens do not expire, so not need to use pinpoint token refresh api, which is difference from jira.
+
 ## TODO
 - sourcecode.PullRequest.ClosedByRefID not implemented for GitHub Enterprise 2.15.9. timelineItems is not available need to get it another way
 
@@ -122,9 +133,3 @@ When commit has a login, we first do the same process of sending this user as fo
 As a second step, for both author and committer, we send a entry with name, email and if it exists a github login link.
 
 Agent checks if we have already sent it behind the scenes, and if not creates a user with github and git ref types.
-
-### Other
-
-Create auth token
-
-https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line

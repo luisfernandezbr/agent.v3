@@ -3,12 +3,15 @@ package cmdservicerun
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 
+	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/cmd/cmdupload"
 
+	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 
 	"github.com/hashicorp/go-hclog"
@@ -18,15 +21,18 @@ import (
 
 type exporterOpts struct {
 	Logger       hclog.Logger
-	CustomerID   string
 	PinpointRoot string
 	FSConf       fsconf.Locs
+	Conf         agentconf.Config
 
 	PPEncryptionKey string
+	AgentConfig     cmdintegration.AgentConfig
 }
 
 type exporter struct {
 	ExportQueue chan exportRequest
+
+	conf agentconf.Config
 
 	logger hclog.Logger
 	opts   exporterOpts
@@ -43,6 +49,7 @@ func newExporter(opts exporterOpts) *exporter {
 	}
 	s := &exporter{}
 	s.opts = opts
+	s.conf = opts.Conf
 	s.logger = opts.Logger
 	s.ExportQueue = make(chan exportRequest)
 	return s
@@ -56,11 +63,7 @@ func (s *exporter) Run() {
 }
 
 func (s *exporter) export(data *agent.ExportRequest) error {
-	s.logger.Info("processing export request", "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
-
-	agentConfig := cmdexport.AgentConfig{}
-	agentConfig.CustomerID = s.opts.CustomerID
-	agentConfig.PinpointRoot = s.opts.PinpointRoot
+	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
 
 	var integrations []cmdexport.Integration
 
@@ -95,9 +98,16 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 		return err
 	}
 
-	err = s.execExport(ctx, agentConfig, integrations, data.ReprocessHistorical)
+	exportLogSender := newExportLogSender(s.logger, s.conf, data.JobID)
+
+	err = s.execExport(ctx, s.opts.AgentConfig, integrations, data.ReprocessHistorical, exportLogSender)
 	if err != nil {
 		return err
+	}
+
+	err = exportLogSender.FlushAndClose()
+	if err != nil {
+		s.logger.Error("could not send export logs to the server", "err", err)
 	}
 
 	s.logger.Info("export finished, running upload")
@@ -109,7 +119,15 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 	return nil
 }
 
-func (s *exporter) execExport(ctx context.Context, agentConfig cmdexport.AgentConfig, integrations []cmdexport.Integration, reprocessHistorical bool) error {
+func (s *exporter) execExport(ctx context.Context, agentConfig cmdexport.AgentConfig, integrations []cmdexport.Integration, reprocessHistorical bool, exportLogWriter io.Writer) error {
+
+	var logWriter io.Writer
+	if exportLogWriter == nil {
+		logWriter = os.Stdout
+	} else {
+		logWriter = io.MultiWriter(os.Stdout, exportLogWriter)
+	}
+
 	args := []string{"export"}
 	if reprocessHistorical {
 		args = append(args, "--reprocess-historical=true")
@@ -126,7 +144,7 @@ func (s *exporter) execExport(ctx context.Context, agentConfig cmdexport.AgentCo
 	defer fs.Clean()
 
 	cmd := exec.CommandContext(ctx, os.Args[0], args...)
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = logWriter
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }

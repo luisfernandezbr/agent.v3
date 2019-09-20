@@ -9,15 +9,17 @@ import (
 type Locs struct {
 	// Dirs
 
-	Root         string
-	Temp         string
-	Cache        string
-	Logs         string
-	Integrations string
+	Root             string
+	Temp             string
+	Cache            string
+	Logs             string
+	LogsIntegrations string
+	Integrations     string
 
 	RepoCache         string
 	State             string
 	Uploads           string
+	UploadZips        string
 	RipsrcCheckpoints string
 
 	// Special files
@@ -46,11 +48,13 @@ func New(pinpointRoot string) Locs {
 	s.Temp = j(s.Root, "temp")
 	s.Cache = j(s.Root, "cache")
 	s.Logs = j(s.Root, "logs")
+	s.LogsIntegrations = j(s.Root, "logs/integrations")
 	s.Integrations = j(s.Root, "integrations")
 
 	s.RepoCache = j(s.Cache, "repos")
 	s.State = j(s.Root, "state")
 	s.Uploads = j(s.State, "uploads")
+	s.UploadZips = j(s.State, "upload-zips")
 	s.RipsrcCheckpoints = j(s.State, "ripsrc_checkpoints")
 
 	s.Config2 = j(s.Root, "config.json")

@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 )
 
@@ -40,16 +39,12 @@ func (s *runner) validate(ctx context.Context, name string, config map[string]in
 	in.Name = name2
 	in.Config = inConf
 
-	agent := cmdexport.AgentConfig{}
-	agent.CustomerID = s.conf.CustomerID
-	agent.PinpointRoot = s.opts.PinpointRoot
-
 	integrations := []cmdvalidateconfig.Integration{in}
 
 	args := []string{"validate-config"}
 
 	fs, err := newFsPassedParams(s.fsconf.Temp, []kv{
-		{"--agent-config-file", agent},
+		{"--agent-config-file", s.agentConfig},
 		{"--integrations-file", integrations},
 	})
 	if err != nil {
