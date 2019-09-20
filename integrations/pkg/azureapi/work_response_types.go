@@ -64,8 +64,8 @@ type sprintsResponse struct {
 		StartDate  time.Time `json:"startDate"`
 		TimeFrame  string    `json:"timeFrame"` // past, current, future
 	} `json:"attributes"`
-	ID   string `json"id"`
-	Name string `json"name"`
-	Path string `json"path"`
-	URL  string `json"url"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Path string `json:"path"`
+	URL  string `json:"url"`
 }

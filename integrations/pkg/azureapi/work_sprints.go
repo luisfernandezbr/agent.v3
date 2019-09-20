@@ -42,7 +42,16 @@ func (api *API) fetchSprint(projid string, teamid string, sprints chan<- datamod
 			Name:    r.Name,
 			RefID:   r.ID,
 			RefType: api.reftype,
-			// Status
+		}
+		switch r.Attributes.TimeFrame {
+		case "past":
+			sprint.Status = work.SprintStatusClosed
+		case "current":
+			sprint.Status = work.SprintStatusActive
+		case "future":
+			sprint.Status = work.SprintStatusFuture
+		default:
+			sprint.Status = work.SprintStatus(4) // unset
 		}
 		date.ConvertToModel(r.Attributes.StartDate, &sprint.StartedDate)
 		date.ConvertToModel(r.Attributes.FinishDate, &sprint.EndedDate)
