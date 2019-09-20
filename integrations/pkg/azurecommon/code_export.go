@@ -102,9 +102,10 @@ func (s *Integration) processPullRequests(repoids []string) error {
 	prchan, prdone := azureapi.AsyncProcess("pull requests", s.logger, senderprs, nil)
 	prrchan, prrdone := azureapi.AsyncProcess("pull request reviews", s.logger, senderprrs, nil)
 	prcchan, prcdone := azureapi.AsyncProcess("pull request comments", s.logger, senderprcs, nil)
+	prcmhan, prmdone := azureapi.AsyncProcess("pull request commits", s.logger, senderprcs, nil)
 	var errors []string
 	for _, repoid := range repoids {
-		if err := s.api.FetchPullRequests(repoid, senderprs.LastProcessed, prchan, prrchan, prcchan); err != nil {
+		if err := s.api.FetchPullRequests(repoid, senderprs.LastProcessed, prchan, prrchan, prcchan, prcmhan); err != nil {
 			errors = append(errors, err.Error())
 			continue
 		}
@@ -112,9 +113,11 @@ func (s *Integration) processPullRequests(repoids []string) error {
 	close(prchan)
 	close(prrchan)
 	close(prcchan)
+	close(prcmhan)
 	<-prdone
 	<-prrdone
 	<-prcdone
+	<-prmdone
 	if errors != nil {
 		return fmt.Errorf("error fetching pull requests. err %s", strings.Join(errors, ", "))
 	}

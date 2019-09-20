@@ -80,6 +80,8 @@ type pullRequestResponse struct {
 	TargetBranch       string `json:"targetRefName"`
 	Title              string `json:"title"`
 	URL                string `json:"url"`
+
+	commitshas []string
 }
 
 // used in pull_request_commits.go - fetchPullRequestCommits
@@ -96,7 +98,12 @@ type commitsResponseLight struct {
 		Email string    `json:"email"`
 		Name  string    `json:"name"`
 	} `json:"committer"`
-	URL string `json:"url"`
+	URL          string `json:"url"`
+	ChangeCounts struct {
+		Add    int `json:"Add"`
+		Delete int `json:"Delete"`
+		Edit   int `json:"Edit"`
+	} `json:"changeCounts"`
 }
 
 // used in commit_users.go fetchCommits
@@ -171,4 +178,30 @@ type teamsResponse struct {
 	ProjectID   string `json:"projectId"`
 	ProjectName string `json:"projectName"`
 	URL         string `json:"url"`
+}
+
+type singleCommitResponse struct {
+	Author struct {
+		Date     time.Time `json:"date"`
+		Email    string    `json:"email"`
+		ImageURL string    `json:"imageUrl"`
+		Name     string    `json:"name"`
+	} `json:"author"`
+	ChangeCounts struct {
+		Add    int64 `json:"Add"`
+		Delete int64 `json:"Delete"`
+		Edit   int64 `json:"Edit"`
+	} `json:"changeCounts"`
+	Comment   string `json:"comment"`
+	Committer struct {
+		Date     time.Time `json:"date"`
+		Email    string    `json:"email"`
+		ImageURL string    `json:"imageUrl"`
+		Name     string    `json:"name"`
+	} `json:"committer"`
+	Push struct {
+		Date     time.Time     `json:"date"`
+		PushedBy usersResponse `json:"pushedBy"`
+	} `json:"push"`
+	RemoteURL string `json:"remoteUrl"`
 }

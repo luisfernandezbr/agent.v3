@@ -29,7 +29,8 @@ func (p tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) 
 		return false, nil
 	}
 	err = json.Unmarshal(raw, &mapBody)
-	if err != nil {
+	if err != nil || mapBody.Value == nil {
+		resp.Body = ioutil.NopCloser(bytes.NewReader(raw))
 		return false, nil
 	}
 	body, _ := json.Marshal(mapBody.Value)

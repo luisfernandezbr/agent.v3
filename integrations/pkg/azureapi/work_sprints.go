@@ -38,7 +38,7 @@ func (api *API) fetchSprint(projid string, teamid string, sprints chan<- datamod
 	for _, r := range res {
 		sprint := work.Sprint{
 			CustomerID: api.customerid,
-			// Goal
+			// Goal is missing
 			Name:    r.Name,
 			RefID:   r.ID,
 			RefType: api.reftype,
