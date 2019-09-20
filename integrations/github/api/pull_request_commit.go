@@ -1,9 +1,18 @@
 package api
 
+import (
+	"time"
+
+	"github.com/pinpt/agent.next/pkg/ids"
+
+	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/integration-sdk/sourcecode"
+)
+
 func PullRequestCommitsPage(
 	qc QueryContext,
 	pullRequestRefID string,
-	queryParams string) (pi PageInfo, res []string, _ error) {
+	queryParams string) (pi PageInfo, res []*sourcecode.PullRequestCommit, rerr error) {
 
 	if pullRequestRefID == "" {
 		panic("missing pr id")
@@ -15,6 +24,9 @@ func PullRequestCommitsPage(
 	query {
 		node (id: "` + pullRequestRefID + `") {
 			... on PullRequest {
+				repository {
+					id 
+				}
 				commits(` + queryParams + `) {
 					totalCount
 					pageInfo {
@@ -26,6 +38,17 @@ func PullRequestCommitsPage(
 					nodes {
 						commit {
 							oid
+							message
+							url
+							additions
+							deletions
+							author {
+								email
+							}
+							committer {
+								email
+							}
+							authoredDate
 						}
 					}
 				}
@@ -37,12 +60,26 @@ func PullRequestCommitsPage(
 	var requestRes struct {
 		Data struct {
 			Node struct {
+				Repository struct {
+					ID string `json:"id"`
+				} `json:"repository"`
 				Commits struct {
 					TotalCount int      `json:"totalCount"`
 					PageInfo   PageInfo `json:"pageInfo"`
 					Nodes      []struct {
 						Commit struct {
-							OID string `json:"oid"`
+							OID       string `json:"oid"`
+							Message   string `json:"message"`
+							URL       string `json:"url"`
+							Additions int    `json:"additions"`
+							Deletions int    `json:"deletions"`
+							Author    struct {
+								Email string `json:"email"`
+							} `json:"author"`
+							Committer struct {
+								Email string `json:"email"`
+							} `json:"committer"`
+							AuthoredData time.Time `json:"authoredDate"`
 						} `json:"commit"`
 					} `json:"nodes"`
 				} `json:"commits"`
@@ -52,14 +89,37 @@ func PullRequestCommitsPage(
 
 	err := qc.Request(query, &requestRes)
 	if err != nil {
-		return pi, res, err
+		rerr = err
+		return
 	}
 
 	nodesContainer := requestRes.Data.Node.Commits
 	nodes := nodesContainer.Nodes
-	//qc.Logger.Info("got comments", "n", len(nodes))
-	for _, data := range nodes {
-		res = append(res, data.Commit.OID)
+
+	repoID := qc.RepoID(requestRes.Data.Node.Repository.ID)
+
+	for _, node := range nodes {
+		data := node.Commit
+
+		item := &sourcecode.PullRequestCommit{}
+		item.CustomerID = qc.CustomerID
+		item.RefType = "github"
+		item.RefID = data.OID
+
+		item.RepoID = repoID
+		item.PullRequestID = qc.PullRequestID(item.RepoID, pullRequestRefID)
+		item.Sha = data.OID
+		item.Message = data.Message
+		item.URL = data.URL
+		date.ConvertToModel(data.AuthoredData, &item.CreatedDate)
+
+		item.Additions = int64(data.Additions)
+		item.Deletions = int64(data.Deletions)
+		// not setting branch, too difficult
+		item.AuthorRefID = ids.CodeCommitEmail(qc.CustomerID, data.Author.Email)
+		item.CommitterRefID = ids.CodeCommitEmail(qc.CustomerID, data.Committer.Email)
+
+		res = append(res, item)
 	}
 
 	return nodesContainer.PageInfo, res, nil
