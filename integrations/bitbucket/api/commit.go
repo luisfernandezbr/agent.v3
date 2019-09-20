@@ -73,16 +73,6 @@ func LastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (lastCommit agen
 	return
 }
 
-func getEmailFromRaw(raw string) string {
-	var re = regexp.MustCompile(`(?m)<(.*)>`)
-
-	for _, match := range re.FindAllStringSubmatch(raw, -1) {
-		return match[1]
-	}
-
-	return ""
-}
-
 func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) (page PageInfo, users []commitusers.CommitUser, err error) {
 	qc.Logger.Debug("commit users request", "repo", repo)
 
@@ -110,7 +100,7 @@ func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) 
 
 		name := c.Author.User.DisplayName
 		if name == "" {
-			name = getUsernameFromRaw(c.Author.Raw)
+			name = getNameFromGitRaw(c.Author.Raw)
 		}
 
 		user := commitusers.CommitUser{
@@ -126,8 +116,18 @@ func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) 
 	return
 }
 
-func getUsernameFromRaw(raw string) string {
+func getNameFromGitRaw(raw string) string {
 	index := strings.Index(raw, "<")
 
 	return raw[:index]
+}
+
+func getEmailFromRaw(raw string) string {
+	var re = regexp.MustCompile(`(?m)<(.*)>`)
+
+	for _, match := range re.FindAllStringSubmatch(raw, -1) {
+		return match[1]
+	}
+
+	return ""
 }

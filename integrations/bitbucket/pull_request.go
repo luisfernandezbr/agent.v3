@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/bitbucket/api"
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
-	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
@@ -87,13 +86,13 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 					return
 				}
 				pr.CommitShas = commits
-				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, commits)
+				pr.CommitIds = s.qc.IDs.CodeCommits(pr.RepoID, commits)
 				if len(pr.CommitShas) == 0 {
 					logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
 				} else {
 					pr.BranchID = s.qc.IDs.CodeBranch(pr.RepoID, pr.BranchName, pr.CommitShas[0])
 				}
-				err = pullRequestSender.SendMap(pr.ToMap())
+				err = pullRequestSender.Send(&pr)
 				if err != nil {
 					setErr(err)
 					return

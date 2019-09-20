@@ -217,12 +217,12 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	return
 }
 
-func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
-	s.logger.Info("exporting group", "name", groupName)
-	logger := s.logger.With("org", groupName)
+func (s *Integration) exportTeam(ctx context.Context, teamName string) error {
+	s.logger.Info("exporting group", "name", teamName)
+	logger := s.logger.With("org", teamName)
 
 	repos, err := commonrepo.ReposAllSlice(func(res chan []commonrepo.Repo) error {
-		return api.ReposAll(s.qc, groupName, res)
+		return api.ReposAll(s.qc, teamName, res)
 	})
 	if err != nil {
 		return err
@@ -261,27 +261,21 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 	}
 
 	// export repos
-	{
-		err := s.exportRepos(ctx, logger, groupName, repos)
-		if err != nil {
-			return err
-		}
+	err = s.exportRepos(ctx, logger, teamName, repos)
+	if err != nil {
+		return err
 	}
 
 	// export users
-	{
-		err := s.exportUsers(ctx, logger, groupName)
-		if err != nil {
-			return err
-		}
+	err = s.exportUsers(ctx, logger, teamName)
+	if err != nil {
+		return err
 	}
 
 	// export repos
-	{
-		err := s.exportCommitUsers(ctx, logger, repos)
-		if err != nil {
-			return err
-		}
+	err = s.exportCommitUsers(ctx, logger, repos)
+	if err != nil {
+		return err
 	}
 
 	for _, repo := range repos {
