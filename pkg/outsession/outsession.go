@@ -101,7 +101,7 @@ func (s *Manager) Done(id ID, lastProcessed interface{}) error {
 			return err
 		}
 	}
-	s.logger.Info("session done", "type", modelType, " last_processed_new", lastProcessed)
+	s.logger.Info("session done", "type", modelType, "last_processed_new", lastProcessed)
 	return nil
 }
 
