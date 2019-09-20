@@ -4,16 +4,16 @@ import (
 	"testing"
 )
 
-func TestParseSprintTime(t *testing.T) {
+func TestGetNameAndEmail(t *testing.T) {
 	cases := []struct {
 		In        string
 		NameWant  string
 		EmailWant string
 	}{
 		{
-			"^_623s#%1na3%^ <01em2a3il4%^&%>",
-			"^_623s#%1na3%^",
-			"01em2a3il4%^&%",
+			"1na3me3 <1em2a3il4>",
+			"1na3me3",
+			"1em2a3il4",
 		},
 		{
 			"^_623s#%1na3%^ <01em2a3il4%^&%>",
@@ -24,6 +24,11 @@ func TestParseSprintTime(t *testing.T) {
 			"Jose C Ordaz <cordaz@pinpoint.com>",
 			"Jose C Ordaz",
 			"cordaz@pinpoint.com",
+		},
+		{
+			"",
+			"",
+			"",
 		},
 	}
 	for _, c := range cases {
