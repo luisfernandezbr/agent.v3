@@ -54,7 +54,12 @@ type export struct {
 
 func newExport(opts Opts) (*export, error) {
 	s := &export{}
-	s.Command = cmdintegration.NewCommand(opts.Opts)
+
+	var err error
+	s.Command, err = cmdintegration.NewCommand(opts.Opts)
+	if err != nil {
+		return nil, err
+	}
 
 	if opts.ReprocessHistorical {
 		s.Logger.Info("ReprocessHistorical is true, discarding incremental checkpoints")
@@ -66,7 +71,6 @@ func newExport(opts Opts) (*export, error) {
 		s.Logger.Info("ReprocessHistorical is false, will use incremental checkpoints if available")
 	}
 
-	var err error
 	s.lastProcessed, err = jsonstore.New(s.Locs.LastProcessedFile)
 	if err != nil {
 		return nil, err
@@ -86,7 +90,9 @@ func newExport(opts Opts) (*export, error) {
 		gitProcessingDone <- hadErrors
 	}()
 
-	s.SetupIntegrations(agentDelegate{export: s})
+	s.SetupIntegrations(func(integrationName string) rpcdef.Agent {
+		return newAgentDelegate(s, integrationName)
+	})
 
 	exportRes := s.runExports()
 	close(s.gitProcessingRepos)
@@ -192,10 +198,6 @@ func (s *export) runExports() map[string]runResult {
 	res := map[string]runResult{}
 	resMu := sync.Mutex{}
 
-	configPinpoint := rpcdef.ExportConfigPinpoint{
-		CustomerID: s.Opts.AgentConfig.CustomerID,
-	}
-
 	for name, integration := range s.Integrations {
 		wg.Add(1)
 		name := name
@@ -217,18 +219,9 @@ func (s *export) runExports() map[string]runResult {
 
 			s.Logger.Info("Export starting", "integration", name, "log_file", integration.LogFile())
 
-			integrationDef, ok := s.IntegrationConfigs[name]
+			exportConfig, ok := s.ExportConfigs[name]
 			if !ok {
 				panic("no config for integration")
-			}
-			integrationConfig := integrationDef.Config
-			if len(integrationConfig) == 0 {
-				ret(fmt.Errorf("empty config for integration: %v", name))
-				return
-			}
-			exportConfig := rpcdef.ExportConfig{
-				Pinpoint:    configPinpoint,
-				Integration: integrationConfig,
 			}
 			_, err := integration.RPCClient().Export(ctx, exportConfig)
 			if err != nil {
@@ -241,12 +234,12 @@ func (s *export) runExports() map[string]runResult {
 	}
 	wg.Wait()
 
-	s.printExportRes(res, false)
-
 	return res
 }
 
 func (s *export) printExportRes(res map[string]runResult, gitHadErrors bool) {
+	s.Logger.Debug("Printing export results for all integrations")
+
 	var successNames []string
 	var failedNames []string
 
@@ -256,6 +249,7 @@ func (s *export) printExportRes(res map[string]runResult, gitHadErrors bool) {
 			s.Logger.Error("Export failed", "integration", name, "dur", ires.Duration, "err", ires.Err)
 			panicOut, err := integration.CloseAndDetectPanic()
 			if panicOut != "" {
+				// This is already printed in integration. But we will repeat output at the end, so it's not lost.
 				fmt.Println("Panic in integration", name)
 				fmt.Println(panicOut)
 			}

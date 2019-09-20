@@ -21,6 +21,7 @@ message IntegrationExportReq {
 message IntegrationExportConfig {
     bytes integration_config_json = 1;
     IntegrationAgentConfig agent_config = 2;   
+    bool use_oauth = 3;
 }
 
 message IntegrationAgentConfig {
@@ -28,7 +29,6 @@ message IntegrationAgentConfig {
 }
 
 message IntegrationExportResp {
-//   bytes integration_new_config_json = 1;
 }
 
 message IntegrationValidateConfigReq {
@@ -66,6 +66,8 @@ service Agent {
     rpc SendExported(SendExportedReq) returns (Empty);
 
     rpc ExportGitRepo(ExportGitRepoReq) returns (Empty);
+
+    rpc OAuthNewAccessToken(Empty) returns (OAuthNewAccessTokenResp);
 }
 
 message LastProcessed {
@@ -108,3 +110,6 @@ message ExportGitRepoReq {
     string branch_url_template = 5;
 }
 
+message OAuthNewAccessTokenResp {
+    string token = 1;
+}

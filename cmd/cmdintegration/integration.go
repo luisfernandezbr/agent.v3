@@ -2,6 +2,7 @@
 package cmdintegration
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -30,6 +31,12 @@ type AgentConfig struct {
 	IntegrationsDir string `json:"integrations_dir"`
 	// DevUseCompiledIntegrations set to true to use compiled integrations in dev build. They are used by default in prod builds.
 	DevUseCompiledIntegrations bool `json:"dev_use_compiled_integrations"`
+
+	// EnableBackend enabled calls to pinpoint backend. It is disabled by default, but is required for the following features:
+	// - using OAuth with refresh token
+	EnableBackend bool `json:"enable_backend"`
+	// Channel is pinpoint backend channel. Only used when EnableBackend is true.
+	Channel string `json:"channel"`
 }
 
 func (s AgentConfig) Locs() (res fsconf.Locs, _ error) {
@@ -56,12 +63,22 @@ type Command struct {
 	StartTime time.Time
 	Locs      fsconf.Locs
 
-	Integrations       map[string]*iloader.Integration
-	IntegrationConfigs map[string]Integration
+	Integrations  map[string]*iloader.Integration
+	ExportConfigs map[string]rpcdef.ExportConfig
+
+	// OAuthRefreshTokens contains refresh token for integrations
+	// using OAuth. These are allow getting new access tokens using
+	// pinpoint backend. Do not pass them to integrations, these are handled in agent instead.
+	OAuthRefreshTokens map[string]string
 }
 
-func NewCommand(opts Opts) *Command {
+func NewCommand(opts Opts) (*Command, error) {
 	s := &Command{}
+
+	if opts.AgentConfig.Channel == "" {
+		// use edge as default
+		opts.AgentConfig.Channel = "edge"
+	}
 
 	s.Opts = opts
 	s.Logger = opts.Logger
@@ -71,18 +88,62 @@ func NewCommand(opts Opts) *Command {
 	var err error
 	s.Locs, err = opts.AgentConfig.Locs()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	s.IntegrationConfigs = map[string]Integration{}
-	for _, obj := range s.Opts.Integrations {
-		s.IntegrationConfigs[obj.Name] = obj
+	err = s.setupConfig()
+	if err != nil {
+		return nil, err
 	}
 
-	return s
+	return s, nil
 }
 
-func (s *Command) SetupIntegrations(agent rpcdef.Agent) {
+func (s *Command) setupConfig() error {
+	s.ExportConfigs = map[string]rpcdef.ExportConfig{}
+	s.OAuthRefreshTokens = map[string]string{}
+
+	for _, obj := range s.Opts.Integrations {
+		name := obj.Name
+		if len(obj.Config) == 0 {
+			return fmt.Errorf("empty config for integration: %v", name)
+		}
+
+		ec := rpcdef.ExportConfig{}
+		ec.Pinpoint.CustomerID = s.Opts.AgentConfig.CustomerID
+		ec.Integration = obj.Config
+
+		refreshToken, _ := obj.Config["oauth_refresh_token"].(string)
+		if refreshToken != "" {
+			s.OAuthRefreshTokens[name] = refreshToken
+			ec.UseOAuth = true
+			// do not pass oauth_refresh_token to instegration
+			// integrations should use
+			// NewAccessToken() to get access token instead
+			delete(ec.Integration, "oauth_refresh_token")
+		}
+
+		s.ExportConfigs[obj.Name] = ec
+
+	}
+	return nil
+}
+
+func copyMap(data map[string]interface{}) map[string]interface{} {
+	res := map[string]interface{}{}
+	for k, v := range data {
+		res[k] = v
+	}
+	return res
+}
+
+func (s *Command) SetupIntegrations(
+	agentDelegates func(integrationName string) rpcdef.Agent) {
+
+	if agentDelegates == nil {
+		agentDelegates = AgentDelegateMinFactory(s)
+	}
+
 	var integrationNames []string
 	for _, integration := range s.Opts.Integrations {
 		name := integration.Name
@@ -95,7 +156,7 @@ func (s *Command) SetupIntegrations(agent rpcdef.Agent) {
 	opts := iloader.Opts{}
 	opts.Logger = s.Logger
 	opts.Locs = s.Locs
-	opts.Agent = agent
+	opts.AgentDelegates = agentDelegates
 	opts.IntegrationsDir = s.Opts.AgentConfig.IntegrationsDir
 	opts.DevUseCompiledIntegrations = s.Opts.AgentConfig.DevUseCompiledIntegrations
 	loader := iloader.New(opts)

@@ -391,7 +391,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:92351ac3664422197388b1a474107c2478488bc729287efc92da969b43c8ef0c"
+  digest = "1:73b0997c4ba7f05406a4d5bf413f5d94ea26ea13962749a798ce7d5cbb8e2bd6"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -415,8 +415,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "d586d344fc0ed0883baa7b248483b005d120ee2d"
-  version = "8.2.18"
+  revision = "b518d24623338882db3ae65e246100373c162bdc"
+  version = "8.2.20"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
@@ -427,7 +427,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:b5a666a364532f7f9742053ac1069b1695f97981d2567490992385f83661323e"
+  digest = "1:e42cf19da2afd2a900ad449269f74936ab707a608a8fc159a6fae122088a518d"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,8 +439,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "012a97d51fb294387849250e6829158326d89cf0"
-  version = "0.0.479"
+  revision = "a363cab7343c81dfa0d6fa22fde3b851b9f38b92"
+  version = "0.0.491"
 
 [[projects]]
   branch = "master"
@@ -516,12 +516,12 @@
   version = "v0.0.5"
 
 [[projects]]
-  digest = "1:c1b1102241e7f645bc8e0c22ae352e8f0dc6484b6cb4d132fa9f24174e0119e2"
+  digest = "1:524b71991fc7d9246cc7dc2d9e0886ccb97648091c63e30eef619e6862c955dd"
   name = "github.com/spf13/pflag"
   packages = ["."]
   pruneopts = "UT"
-  revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
-  version = "v1.0.3"
+  revision = "2e9d26c8c37aae03e3f9d4e90b7116f5accb7cab"
+  version = "v1.0.5"
 
 [[projects]]
   digest = "1:e4ed0afd67bf7be353921665cdac50834c867ff1bba153efc0745b755a7f5905"
@@ -616,7 +616,7 @@
   name = "golang.org/x/exp"
   packages = ["rand"]
   pruneopts = "UT"
-  revision = "ac5d2bfcbfe092bf8a1233e37c03571b3047d81b"
+  revision = "81c71964d733d2e3e2375a315c0e2fd4d162adc4"
 
 [[projects]]
   branch = "master"
@@ -634,11 +634,11 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "24e19bdeb0f2d062d8e2640d50a7aaf2a7f80e7a"
+  revision = "a8b05e9114ab0cb08faec337c959aed24b68bf50"
 
 [[projects]]
   branch = "master"
-  digest = "1:ab3524005a54a51bf315bf4c8153215b02f22c8e324f47a0518c5a9b386b48c6"
+  digest = "1:a4b872af9900bdbebe41ac93bb2a3da7eb7fef2fd504a67406f3ae92c24cdcd7"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -650,7 +650,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "bc967efca4b87fb45e946a3ea4cb891883404fd0"
+  revision = "ef0ce1748380fdf001bd0ff86a45329a12945357"
 
 [[projects]]
   digest = "1:3952dba92e6a837cf34e6a073160d31029412bf863e37274cb779f319ddbe0b4"
@@ -688,7 +688,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a30554e3b85ff43f13cfedd1c71da7e517806992f6c048834c8089dc0ba1a111"
+  digest = "1:609af385cc42b73873f5fd3279d3243b4696a125416744fcb47a7c708f2988ff"
   name = "gonum.org/v1/gonum"
   packages = [
     "blas",
@@ -715,7 +715,7 @@
     "stat/distuv",
   ]
   pruneopts = "UT"
-  revision = "40d3308efe802a316868b7144afbe5fb9aae4ec8"
+  revision = "16f41441268f3dab0269c341936d645ec725d07d"
 
 [[projects]]
   branch = "master"
@@ -723,7 +723,7 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "UT"
-  revision = "1774047e7e5133fa3573a4e51b37a586b6b0360c"
+  revision = "f660b865573183437d2d868f703fe88bb8af0b55"
 
 [[projects]]
   digest = "1:cf0d541de126d13cf9187c90a8f84df915f603656b59e78778d043cb3dc1ba94"
@@ -944,6 +944,7 @@
     "github.com/kardianos/service",
     "github.com/mitchellh/go-homedir",
     "github.com/mitchellh/go-ps",
+    "github.com/pinpt/go-common/api",
     "github.com/pinpt/go-common/auth",
     "github.com/pinpt/go-common/datamodel",
     "github.com/pinpt/go-common/datetime",

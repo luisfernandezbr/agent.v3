@@ -36,8 +36,8 @@ type export struct {
 
 	Opts Opts
 
-	integrationConfig cmdintegration.Integration
-	integration       *iloader.Integration
+	integration  *iloader.Integration
+	exportConfig rpcdef.ExportConfig
 }
 
 func newExport(opts Opts) (*export, error) {
@@ -46,15 +46,20 @@ func newExport(opts Opts) (*export, error) {
 		panic("pass exactly 1 integration")
 	}
 
-	s.Command = cmdintegration.NewCommand(opts.Opts)
+	var err error
+	s.Command, err = cmdintegration.NewCommand(opts.Opts)
+	if err != nil {
+		return nil, err
+	}
 	s.Opts = opts
 
-	s.SetupIntegrations(agentDelegate{export: s})
+	s.SetupIntegrations(nil)
 
-	s.integrationConfig = opts.Integrations[0]
-	s.integration = s.Integrations[s.integrationConfig.Name]
+	integrationName := opts.Integrations[0].Name
+	s.integration = s.Integrations[integrationName]
+	s.exportConfig = s.ExportConfigs[integrationName]
 
-	err := s.runExport()
+	err = s.runExport()
 	if err != nil {
 		return nil, err
 	}
@@ -65,17 +70,9 @@ func (s *export) runExport() error {
 	ctx := context.Background()
 	client := s.integration.RPCClient()
 
-	configPinpoint := rpcdef.ExportConfigPinpoint{
-		CustomerID: s.Opts.AgentConfig.CustomerID,
-	}
-	exportConfig := rpcdef.ExportConfig{
-		Pinpoint:    configPinpoint,
-		Integration: s.integrationConfig.Config,
-	}
-
 	cmdRes := Result{}
 
-	res, err := client.OnboardExport(ctx, s.Opts.ExportType, exportConfig)
+	res, err := client.OnboardExport(ctx, s.Opts.ExportType, s.exportConfig)
 	if err != nil {
 		cmdRes.Error = err.Error()
 	} else {

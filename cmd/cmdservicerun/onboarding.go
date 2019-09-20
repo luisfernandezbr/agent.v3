@@ -6,23 +6,18 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 
-	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 )
 
 func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integration, objectType string) (res cmdexportonboarddata.Result, _ error) {
 	s.logger.Info("getting onboarding data for integration", "name", config.Name, "objectType", objectType)
 
-	agent := cmdexport.AgentConfig{}
-	agent.CustomerID = s.conf.CustomerID
-	agent.PinpointRoot = s.opts.PinpointRoot
-
 	integrations := []cmdvalidateconfig.Integration{config}
 
 	args := []string{"export-onboard-data", "--object-type", objectType}
 
 	fs, err := newFsPassedParams(s.fsconf.Temp, []kv{
-		{"--agent-config-file", agent},
+		{"--agent-config-file", s.agentConfig},
 		{"--integrations-file", integrations},
 	})
 	if err != nil {

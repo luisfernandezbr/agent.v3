@@ -23,6 +23,11 @@ type Integration interface {
 type ExportConfig struct {
 	Pinpoint    ExportConfigPinpoint
 	Integration map[string]interface{}
+	UseOAuth    bool
+}
+
+type ExportConfigPinpoint struct {
+	CustomerID string
 }
 
 func exportConfigFromProto(data *proto.IntegrationExportConfig) (res ExportConfig, _ error) {
@@ -31,6 +36,7 @@ func exportConfigFromProto(data *proto.IntegrationExportConfig) (res ExportConfi
 		return res, err
 	}
 	res.Pinpoint.CustomerID = data.AgentConfig.CustomerId
+	res.UseOAuth = data.UseOauth
 	return res, nil
 }
 
@@ -42,11 +48,8 @@ func (s ExportConfig) proto() (*proto.IntegrationExportConfig, error) {
 	}
 	res.IntegrationConfigJson = b
 	res.AgentConfig = s.Pinpoint.proto()
+	res.UseOauth = s.UseOAuth
 	return res, nil
-}
-
-type ExportConfigPinpoint struct {
-	CustomerID string
 }
 
 func (s ExportConfigPinpoint) proto() *proto.IntegrationAgentConfig {

@@ -115,7 +115,7 @@ func (s *Integration) Close() error {
 }
 
 func (s *Integration) setupLogFile() error {
-	dir := s.opts.Locs.Logs
+	dir := s.opts.Locs.LogsIntegrations
 	err := os.MkdirAll(dir, 0777)
 	if err != nil {
 		return err

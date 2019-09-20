@@ -3,6 +3,7 @@ package cmdvalidateconfig
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"time"
 
@@ -21,7 +22,10 @@ type AgentConfig = cmdintegration.AgentConfig
 type Integration = cmdintegration.Integration
 
 func Run(opts Opts) error {
-	exp := newValidator(opts)
+	exp, err := newValidator(opts)
+	if err != nil {
+		return err
+	}
 	defer exp.Destroy()
 	return nil
 }
@@ -31,26 +35,33 @@ type validator struct {
 
 	Opts Opts
 
-	integrationConfig cmdintegration.Integration
-	integration       *iloader.Integration
+	integration  *iloader.Integration
+	exportConfig rpcdef.ExportConfig
 }
 
-func newValidator(opts Opts) *validator {
+func newValidator(opts Opts) (*validator, error) {
 	s := &validator{}
 	if len(opts.Integrations) != 1 {
 		panic("pass exactly 1 integration")
 	}
 
-	s.Command = cmdintegration.NewCommand(opts.Opts)
+	var err error
+	s.Command, err = cmdintegration.NewCommand(opts.Opts)
+	if err != nil {
+		return nil, err
+	}
 	s.Opts = opts
 
-	s.SetupIntegrations(agentDelegate{validator: s})
+	fmt.Println("opts received", "opts", fmt.Sprintf("%+v", opts))
 
-	s.integrationConfig = opts.Integrations[0]
-	s.integration = s.Integrations[s.integrationConfig.Name]
+	s.SetupIntegrations(nil)
+
+	integrationName := opts.Integrations[0].Name
+	s.integration = s.Integrations[integrationName]
+	s.exportConfig = s.ExportConfigs[integrationName]
 
 	s.runValidate()
-	return s
+	return s, nil
 }
 
 type Result struct {
@@ -63,15 +74,7 @@ func (s *validator) runValidate() error {
 	ctx := context.Background()
 	client := s.integration.RPCClient()
 
-	configPinpoint := rpcdef.ExportConfigPinpoint{
-		CustomerID: s.Opts.AgentConfig.CustomerID,
-	}
-	exportConfig := rpcdef.ExportConfig{
-		Pinpoint:    configPinpoint,
-		Integration: s.integrationConfig.Config,
-	}
-
-	res0, err := client.ValidateConfig(ctx, exportConfig)
+	res0, err := client.ValidateConfig(ctx, s.exportConfig)
 	if err != nil {
 		return err
 	}

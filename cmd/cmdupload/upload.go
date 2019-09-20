@@ -3,11 +3,12 @@ package cmdupload
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
+	"time"
 
 	"github.com/pinpt/go-common/fileutil"
 
@@ -23,22 +24,21 @@ func Run(ctx context.Context,
 
 	fsc := fsconf.New(pinpointRoot)
 
-	err := os.MkdirAll(fsc.Temp, 0777)
+	err := os.MkdirAll(fsc.UploadZips, 0777)
 	if err != nil {
 		return err
 	}
 
-	dir, err := ioutil.TempDir(fsc.Temp, "upload")
-	if err != nil {
-		return err
-	}
+	fileName := time.Now().Format(time.RFC3339)
+	fileName = strings.ReplaceAll(fileName, ":", "_")
 
-	zipPath := filepath.Join(dir, "upload.zip")
+	zipPath := filepath.Join(fsc.UploadZips, fileName+".zip")
 
 	err = zipFilesJSON(logger, zipPath, fsc.Uploads)
 	if err != nil {
 		return err
 	}
+	logger.Info("uploading export result", "upload_url", uploadURL, "zip_path", zipPath)
 
 	err = upload(logger, zipPath, uploadURL)
 	if err != nil {
@@ -61,7 +61,7 @@ func zipFilesJSON(logger hclog.Logger, target, source string) error {
 }
 
 func upload(logger hclog.Logger, zipPath, uploadURL string) error {
-	logger.Info("uploading", "zip_path", zipPath)
+
 	f, err := os.Open(zipPath)
 	defer f.Close()
 	if err != nil {

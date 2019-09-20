@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"strings"
 	"sync"
 
 	"github.com/pinpt/agent.next/pkg/objsender"
@@ -142,8 +143,7 @@ func (s *Users) exportOrganizationUsers(org api.Org) error {
 }
 
 func (s *Users) LoginToRefID(login string) (refID string, _ error) {
-	if login == "dependabot" || login == "dependabot[bot]" {
-		// TODO: to handle bots we will need to track urls
+	if login == "dependabot" || strings.HasSuffix(login, "[bot]") {
 		return "", nil
 	}
 	s.mu.Lock()
@@ -165,8 +165,7 @@ func (s *Users) LoginToRefID(login string) (refID string, _ error) {
 
 func (s *Users) LoginToRefIDFromCommit(login string, email string) (refID string, _ error) {
 	if email == "noreply@github.com" {
-		panic("email:" + email + "login:" + login)
-		return "", nil
+		return "", errors.New("can not resolve user with email: noreply@github.com")
 	}
 	return s.LoginToRefID(login)
 }

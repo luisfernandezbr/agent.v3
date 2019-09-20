@@ -167,11 +167,15 @@ func PullRequestsPage(
 		case "MERGED":
 			pr.Status = sourcecode.PullRequestStatusMerged
 		default:
-			panic("unknown state: " + data.State)
+			qc.Logger.Error("could not process pr state, state is unknown", "state", data.State, "pr_url", data.URL)
 		}
-		pr.CreatedByRefID, err = qc.UserLoginToRefID(data.Author.Login)
-		if err != nil {
-			panic(err)
+
+		{
+			login := data.Author.Login
+			pr.CreatedByRefID, err = qc.UserLoginToRefID(data.Author.Login)
+			if err != nil {
+				qc.Logger.Error("could not resolve pr created by user", "login", login, "pr_url", data.URL)
+			}
 		}
 
 		if useClosedEvents && data.State == "CLOSED" {
@@ -179,11 +183,11 @@ func PullRequestsPage(
 			if len(events) != 0 {
 				login := events[0].Actor.Login
 				if login == "" {
-					qc.Logger.Error("empty login for closed by author")
+					qc.Logger.Error("pull request: empty login for closed by author field", "pr_url", data.URL)
 				} else {
 					pr.ClosedByRefID, err = qc.UserLoginToRefID(login)
 					if err != nil {
-						panic(err)
+						qc.Logger.Error("could not resolve closed by user when processing pr", "login", login, "pr_url", data.URL)
 					}
 				}
 			} else {
@@ -196,11 +200,11 @@ func PullRequestsPage(
 			pr.MergeCommitID = ids.CodeCommit(qc.CustomerID, qc.RefType, pr.RepoID, pr.MergeSha)
 			login := data.MergedBy.Login
 			if login == "" {
-				qc.Logger.Error("empty login for mergedBy field")
+				qc.Logger.Error("pull request: empty login for mergedBy field", "pr_url", data.URL)
 			} else {
 				pr.MergedByRefID, err = qc.UserLoginToRefID(login)
 				if err != nil {
-					panic(err)
+					qc.Logger.Error("could not resolve merged by user when processing pr", "login", login, "pr_url", data.URL)
 				}
 			}
 		}

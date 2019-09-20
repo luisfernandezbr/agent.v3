@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pinpt/agent.next/pkg/reqstats"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommon"
@@ -29,6 +30,9 @@ type Integration struct {
 	qc     api.QueryContext
 
 	common *jiracommon.JiraCommon
+
+	clientManager *reqstats.ClientManager
+	clients       reqstats.Clients
 }
 
 func NewIntegration(logger hclog.Logger) *Integration {
@@ -42,39 +46,35 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	return nil
 }
 
-type Config struct {
-	URL              string   `json:"url"`
-	Username         string   `json:"username"`
-	Password         string   `json:"password"`
-	ExcludedProjects []string `json:"excluded_projects"`
-	// Projects specifies a specific projects to process. Ignores excluded_projects in this case. Specify projects using jira key. For example: DE.
-	Projects []string `json:"projects"`
-}
+type Config jiracommon.Config
 
-func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
-	rerr := func(msg string, args ...interface{}) error {
-		return fmt.Errorf("config validation error: "+msg, args...)
+func ConfigFromMap(data map[string]interface{}) (res Config, rerr error) {
+	validationErr := func(msg string, args ...interface{}) {
+		rerr = fmt.Errorf("config validation error: "+msg, args...)
 	}
-	var conf Config
-	err := structmarshal.MapToStruct(data, &conf)
+	err := structmarshal.MapToStruct(data, &res)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
-	if conf.URL == "" {
-		return rerr("url is missing")
+	if res.URL == "" {
+		validationErr("url is missing")
+		return
 	}
-	if conf.Username == "" {
-		return rerr("username is missing")
+	if res.Username == "" {
+		validationErr("username is missing")
+		return
 	}
-	if conf.Password == "" {
-		return rerr("password is missing")
+	if res.Password == "" {
+		validationErr("password is missing")
+		return
 	}
-	s.config = conf
-	return nil
+	return
 }
 
 func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
-	err := s.setIntegrationConfig(config.Integration)
+	var err error
+	s.config, err = ConfigFromMap(config.Integration)
 	if err != nil {
 		return err
 	}
@@ -83,14 +83,20 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	s.qc.CustomerID = config.Pinpoint.CustomerID
 	s.qc.Logger = s.logger
 
+	s.clientManager = reqstats.New(reqstats.Opts{
+		Logger:                s.logger,
+		TLSInsecureSkipVerify: true,
+	})
+	s.clients = s.clientManager.Clients
+
 	{
-		opts := api.RequesterOpts{}
+		opts := RequesterOpts{}
 		opts.Logger = s.logger
+		opts.Clients = s.clients
 		opts.APIURL = s.config.URL
 		opts.Username = s.config.Username
 		opts.Password = s.config.Password
-		requester := api.NewRequester(opts)
-
+		requester := NewRequester(opts)
 		s.qc.Request = requester.Request
 	}
 

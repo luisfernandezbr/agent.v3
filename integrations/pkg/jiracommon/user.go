@@ -1,6 +1,8 @@
 package jiracommon
 
 import (
+	"sync"
+
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -10,6 +12,7 @@ import (
 type Users struct {
 	sender     *objsender.NotIncremental
 	exported   map[string]bool
+	exportedMu sync.Mutex
 	customerID string
 }
 
@@ -21,6 +24,7 @@ func NewUsers(customerID string, agent rpcdef.Agent) (*Users, error) {
 	return s, nil
 }
 
+// Export user is safe for concurrent use
 func (s *Users) ExportUser(user jiracommonapi.User) error {
 	customerID := s.customerID
 	pk := user.RefID()
@@ -32,11 +36,16 @@ func (s *Users) ExportUser(user jiracommonapi.User) error {
 			pk = hash.Values("users", customerID, user.Key, "jira")
 		}
 	*/
+	s.exportedMu.Lock()
 	if s.exported[pk] {
+		s.exportedMu.Unlock()
 		return nil
 	}
-	//s.integration.logger.Info("exporting user", "user", user.EmailAddress)
+
 	s.exported[pk] = true
+	s.exportedMu.Unlock()
+
+	//s.integration.logger.Info("exporting user", "user", user.EmailAddress)
 	return s.sendUser(&work.User{
 		//ID:         hash.Values(customerID, pk),
 		RefType:    "jira",

@@ -1,11 +1,11 @@
 package api
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
-	"github.com/pinpt/agent.next/integrations/github/api/requests"
+	"github.com/pinpt/agent.next/pkg/requests"
+	pstrings "github.com/pinpt/go-common/strings"
 )
 
 // Org contains the data needed for exporting other resources depending on it
@@ -92,7 +92,7 @@ func OrgsEnterpriseAll(qc QueryContext) (res []Org, rerr error) {
 
 func OrgsEnterprisePage(qc QueryContext, u string) (res []Org, header http.Header, rerr error) {
 	if u == "" {
-		u = requests.AppendURL(qc.APIURL3, "organizations")
+		u = pstrings.JoinURL(qc.APIURL3, "organizations")
 	}
 
 	req, err := http.NewRequest("GET", u, nil)
@@ -104,12 +104,9 @@ func OrgsEnterprisePage(qc QueryContext, u string) (res []Org, header http.Heade
 		Login string `json:"login"`
 	}
 
-	ctx := context.Background()
-	opts := requests.Opts{}
-	opts.Client = http.DefaultClient
-	opts.Logger = qc.Logger
+	reqs := requests.New(qc.Logger, qc.Clients.TLSInsecure)
 
-	resp, err := requests.JSON(ctx, opts, req, &respJSON)
+	resp, err := reqs.JSON(req, &respJSON)
 	if err != nil {
 		rerr = err
 		return

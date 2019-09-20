@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -23,6 +24,7 @@ import (
 
 	"github.com/pinpt/agent.next/cmd/cmdservicerun"
 
+	"github.com/pinpt/agent.next/pkg/filelog"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 
 	"github.com/fatih/color"
@@ -65,11 +67,37 @@ var cmdRoot = &cobra.Command{
 	},
 }
 
-func defaultLogger() hclog.Logger {
+func loggerStdout() hclog.Logger {
 	return hclog.New(&hclog.LoggerOptions{
 		Output:     os.Stdout,
 		Level:      hclog.Debug,
-		JSONFormat: false,
+		JSONFormat: true,
+	})
+}
+
+func loggerCopyToFile(logger hclog.Logger, pinpointRoot string) hclog.Logger {
+	if pinpointRoot == "" {
+		var err error
+		pinpointRoot, err = fsconf.DefaultRoot()
+		if err != nil {
+			logger.Error("could not get default pinpoint-root", "err", err)
+		}
+	}
+	fsloc := fsconf.New(pinpointRoot)
+	if len(os.Args) <= 1 {
+		logger.Error("could not create log file, len(os.Args) <= 1, and we use subcommand as name")
+		return logger
+	}
+	logFile := filepath.Join(fsloc.Logs, os.Args[1])
+	wr, err := filelog.NewSyncWriter(logFile)
+	if err != nil {
+		logger.Error("could not create log file", "err", err)
+		return logger
+	}
+	return hclog.New(&hclog.LoggerOptions{
+		Output:     io.MultiWriter(os.Stdout, wr),
+		Level:      hclog.Debug,
+		JSONFormat: true,
 	})
 }
 
@@ -92,11 +120,14 @@ var cmdEnroll = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		code := args[0]
-		logger := defaultLogger()
+		logger := loggerStdout()
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
+		// once we have pinpoint root, we can also log to a file
+		logger = loggerCopyToFile(logger, pinpointRoot)
+
 		channel, _ := cmd.Flags().GetString("channel")
 		ctx := context.Background()
 		err = cmdenroll.Run(ctx, cmdenroll.Opts{
@@ -131,7 +162,7 @@ func integrationCommandFlags(cmd *cobra.Command) {
 	cmd.Flags().String("integrations-dir", "", "Integrations dir")
 }
 
-func integrationCommandOpts(logger hclog.Logger, cmd *cobra.Command) cmdintegration.Opts {
+func integrationCommandOpts(logger hclog.Logger, cmd *cobra.Command) (hclog.Logger, cmdintegration.Opts) {
 	opts := cmdintegration.Opts{}
 
 	agentConfigFile, _ := cmd.Flags().GetString("agent-config-file")
@@ -154,12 +185,15 @@ func integrationCommandOpts(logger hclog.Logger, cmd *cobra.Command) cmdintegrat
 		}
 	}
 
+	var pinpointRoot string
+
 	// allow setting pinpoint root in either json or command line flag
 	{
 		v, _ := cmd.Flags().GetString("pinpoint-root")
 		if v != "" {
 			opts.AgentConfig.PinpointRoot = v
 		}
+		pinpointRoot = v
 	}
 
 	// allow setting integrations-dir in both json and command line flag
@@ -194,8 +228,8 @@ func integrationCommandOpts(logger hclog.Logger, cmd *cobra.Command) cmdintegrat
 		exitWithErr(logger, errors.New("missing integrations-json"))
 	}
 
-	opts.Logger = logger
-	return opts
+	opts.Logger = loggerCopyToFile(logger, pinpointRoot)
+	return opts.Logger, opts
 }
 
 var cmdExport = &cobra.Command{
@@ -204,9 +238,9 @@ var cmdExport = &cobra.Command{
 	Short:  "Export all data of multiple passed integrations",
 	Args:   cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		logger := defaultLogger()
 		opts := cmdexport.Opts{}
-		opts.Opts = integrationCommandOpts(logger, cmd)
+		logger, opts2 := integrationCommandOpts(loggerStdout(), cmd)
+		opts.Opts = opts2
 		opts.ReprocessHistorical, _ = cmd.Flags().GetBool("reprocess-historical")
 		err := cmdexport.Run(opts)
 		if err != nil {
@@ -265,8 +299,7 @@ var cmdValidateConfig = &cobra.Command{
 	Short:  "Validates the configuration by making a test connection",
 	Args:   cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		logger := defaultLogger()
-		baseOpts := integrationCommandOpts(logger, cmd)
+		logger, baseOpts := integrationCommandOpts(loggerStdout(), cmd)
 		opts := cmdvalidateconfig.Opts{}
 		opts.Opts = baseOpts
 
@@ -294,8 +327,7 @@ var cmdExportOboardData = &cobra.Command{
 	Short:  "Exports users, repos or projects based on param for a specified integration. Saves that data into provided file.",
 	Args:   cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		logger := defaultLogger()
-		baseOpts := integrationCommandOpts(logger, cmd)
+		logger, baseOpts := integrationCommandOpts(loggerStdout(), cmd)
 		opts := cmdexportonboarddata.Opts{}
 		opts.Opts = baseOpts
 
@@ -335,7 +367,7 @@ var cmdServiceInstall = &cobra.Command{
 	Short: "Install OS service of agent",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		logger := defaultLogger()
+		logger := loggerStdout()
 		err := cmdserviceinstall.Run(logger)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -352,7 +384,7 @@ var cmdServiceUninstall = &cobra.Command{
 	Short: "Uninstall OS service of agent, but keep data and configuration",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		logger := defaultLogger()
+		logger := loggerStdout()
 		err := cmdserviceuninstall.Run(logger)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -369,11 +401,12 @@ var cmdServiceRun = &cobra.Command{
 	Short: "This command is called by OS service to run the service.",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		logger := defaultLogger()
+		logger := loggerStdout()
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
+		logger = loggerCopyToFile(logger, pinpointRoot)
 		ctx := context.Background()
 		opts := cmdservicerun.Opts{}
 		opts.Logger = logger

@@ -90,7 +90,7 @@ func (s *Manager) Done(id ID, lastProcessed interface{}) error {
 	}
 	modelType := sess.modelType
 
-	err := sess.stream.Close()
+	err := sess.Close()
 	delete(s.sessions, id)
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func (s *Manager) Done(id ID, lastProcessed interface{}) error {
 			return err
 		}
 	}
-	s.logger.Info("session done", "type", modelType, " last_processed_new", lastProcessed)
+	s.logger.Info("session done", "type", modelType, "last_processed_new", lastProcessed)
 	return nil
 }
 
@@ -109,8 +109,12 @@ type session struct {
 	id        ID
 	logger    hclog.Logger
 	modelType string
-	stream    *io.JSONStream
-	streamMu  sync.Mutex
+	outputDir string
+
+	streamCreated sync.Once
+
+	stream   *io.JSONStream
+	streamMu sync.Mutex
 }
 
 func newSession(logger hclog.Logger, modelType string, outputDir string, id ID) (*session, error) {
@@ -118,11 +122,27 @@ func newSession(logger hclog.Logger, modelType string, outputDir string, id ID) 
 	s.id = id
 	s.logger = logger
 	s.modelType = modelType
-	err := s.createStream(outputDir)
-	if err != nil {
-		return nil, err
-	}
+	s.outputDir = outputDir
 	return s, nil
+}
+
+// Close closes session. Should not be called concurrently with other methods.
+func (s *session) Close() error {
+	if s.stream == nil {
+		// there was no stream, since no objects were sent
+		return nil
+	}
+	return s.stream.Close()
+}
+
+func (s *session) createStreamIfNeeded() (rerr error) {
+	s.streamCreated.Do(func() {
+		err := s.createStream(s.outputDir)
+		if err != nil {
+			rerr = err
+		}
+	})
+	return
 }
 
 func (s *session) createStream(outputDir string) error {
@@ -141,6 +161,11 @@ func (s *session) createStream(outputDir string) error {
 }
 
 func (s *session) Write(objs []map[string]interface{}) error {
+	err := s.createStreamIfNeeded()
+	if err != nil {
+		return err
+	}
+
 	//s.logger.Debug("writing", "n", len(objs), "model_type", s.modelType)
 	s.streamMu.Lock()
 	defer s.streamMu.Unlock()

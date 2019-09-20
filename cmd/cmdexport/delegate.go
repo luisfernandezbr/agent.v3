@@ -5,7 +5,15 @@ import (
 )
 
 type agentDelegate struct {
-	export *export
+	export          *export
+	integrationName string
+}
+
+func newAgentDelegate(export *export, integrationName string) *agentDelegate {
+	s := &agentDelegate{}
+	s.export = export
+	s.integrationName = integrationName
+	return s
 }
 
 func (s agentDelegate) ExportStarted(modelType string) (sessionID string, lastProcessed interface{}) {
@@ -33,4 +41,8 @@ func (s agentDelegate) SendExported(sessionID string, objs []rpcdef.ExportObj) {
 func (s agentDelegate) ExportGitRepo(fetch rpcdef.GitRepoFetch) error {
 	s.export.gitProcessingRepos <- fetch
 	return nil
+}
+
+func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
+	return s.export.OAuthNewAccessToken(s.integrationName)
 }

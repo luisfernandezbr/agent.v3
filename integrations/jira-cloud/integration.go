@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
-	"github.com/pinpt/agent.next/pkg/structmarshal"
-
+	"github.com/pinpt/agent.next/pkg/oauthtoken"
 	"github.com/pinpt/agent.next/pkg/objsender"
+	"github.com/pinpt/agent.next/pkg/reqstats"
+	"github.com/pinpt/agent.next/pkg/structmarshal"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/jira-cloud/api"
@@ -31,6 +33,10 @@ type Integration struct {
 	qc     api.QueryContext
 
 	common *jiracommon.JiraCommon
+
+	UseOAuth      bool
+	clientManager *reqstats.ClientManager
+	clients       reqstats.Clients
 }
 
 func NewIntegration(logger hclog.Logger) *Integration {
@@ -45,56 +51,96 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 }
 
 type Config struct {
-	URL              string   `json:"url"`
-	Username         string   `json:"username"`
-	Password         string   `json:"password"`
-	ExcludedProjects []string `json:"excluded_projects"`
-	// Projects specifies a specific projects to process. Ignores excluded_projects in this case. Specify projects using jira key. For example: DE.
-	Projects []string `json:"projects"`
+	jiracommon.Config
+	RefreshToken string `json:"refresh_token"`
 }
 
-func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
-	rerr := func(msg string, args ...interface{}) error {
-		return fmt.Errorf("config validation error: "+msg, args...)
+func setConfig(config rpcdef.ExportConfig) (res Config, rerr error) {
+	data := config.Integration
+	validationErr := func(msg string, args ...interface{}) {
+		rerr = fmt.Errorf("config validation error: "+msg, args...)
 	}
-	var conf Config
-	err := structmarshal.MapToStruct(data, &conf)
+	err := structmarshal.MapToStruct(data, &res)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
-	if conf.URL == "" {
-		return rerr("url is missing")
+	if config.UseOAuth {
+		// no required fields for OAuth
+		return
 	}
-	if conf.Username == "" {
-		return rerr("username is missing")
+	if res.URL == "" {
+		validationErr("url is missing")
+		return
 	}
-	if conf.Password == "" {
-		return rerr("password is missing")
+	if res.Username == "" {
+		validationErr("username is missing")
+		return
 	}
-	s.config = conf
-	return nil
+	if res.Password == "" {
+		validationErr("password is missing")
+		return
+	}
+	return
 }
 
 func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
-	err := s.setIntegrationConfig(config.Integration)
+	var err error
+	s.config, err = setConfig(config)
 	if err != nil {
 		return err
 	}
+	s.UseOAuth = config.UseOAuth
 
-	s.qc.BaseURL = s.config.URL
-	s.qc.CustomerID = config.Pinpoint.CustomerID
-	s.qc.Logger = s.logger
+	s.clientManager = reqstats.New(reqstats.Opts{
+		Logger:                s.logger,
+		TLSInsecureSkipVerify: false,
+	})
+	s.clients = s.clientManager.Clients
+
+	var oauth *oauthtoken.Manager
+
+	if s.UseOAuth {
+		oauth, err = oauthtoken.New(s.logger, s.agent)
+		if err != nil {
+			return err
+		}
+
+		sites, err := api.AccessibleResources(s.logger, s.clients, oauth.Get())
+		if err != nil {
+			return err
+		}
+		if len(sites) == 0 {
+			return errors.New("no accessible-resources resources found for oauth token")
+		}
+		if len(sites) > 1 {
+			return errors.New("more than 1 site accessible with oauth token, this is not supported")
+		}
+		site := sites[0]
+		s.qc.BaseURL = "https://api.atlassian.com/ex/jira/" + site.ID
+
+	} else {
+		s.qc.BaseURL = s.config.URL
+	}
 
 	{
-		opts := api.RequesterOpts{}
+		opts := RequesterOpts{}
 		opts.Logger = s.logger
-		opts.APIURL = s.config.URL
-		opts.Username = s.config.Username
-		opts.Password = s.config.Password
-		requester := api.NewRequester(opts)
+		opts.APIURL = s.qc.BaseURL
+		opts.Clients = s.clients
 
+		if s.UseOAuth {
+			opts.OAuthToken = oauth
+		} else {
+			opts.Username = s.config.Username
+			opts.Password = s.config.Password
+		}
+		requester := NewRequester(opts)
 		s.qc.Request = requester.Request
 	}
+
+	s.qc.CustomerID = config.Pinpoint.CustomerID
+	s.qc.Logger = s.logger
 
 	s.common, err = jiracommon.New(jiracommon.Opts{
 		BaseURL:          s.config.URL,

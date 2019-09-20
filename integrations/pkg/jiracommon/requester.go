@@ -1,4 +1,4 @@
-package api
+package jiracommon
 
 import (
 	"crypto/tls"
@@ -19,12 +19,16 @@ type RequesterOpts struct {
 	APIURL   string
 	Username string
 	Password string
+
+	IsJiraCloud bool
 }
 
 type Requester struct {
 	logger     hclog.Logger
 	opts       RequesterOpts
 	httpClient *http.Client
+
+	version string
 }
 
 func NewRequester(opts RequesterOpts) *Requester {
@@ -32,33 +36,44 @@ func NewRequester(opts RequesterOpts) *Requester {
 	s.opts = opts
 	s.logger = opts.Logger
 
-	{
+	if s.opts.IsJiraCloud {
+		s.httpClient = http.DefaultClient
+		s.version = "3"
+	} else {
 		c := &http.Client{}
 		transport := httpdefaults.DefaultTransport()
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		c.Transport = transport
 		s.httpClient = c
+		s.version = "2"
 	}
 
 	return s
 }
 
-const apiVersion = "2"
+func NewRequesterFromConfig(logger hclog.Logger, conf Config, isJiraCloud bool) *Requester {
+	opts := RequesterOpts{}
+	opts.Logger = logger
+	opts.APIURL = conf.URL
+	opts.Username = conf.Username
+	opts.Password = conf.Password
+	opts.IsJiraCloud = isJiraCloud
+	return NewRequester(opts)
+}
 
 func (s *Requester) Request(objPath string, params url.Values, res interface{}) error {
-
-	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", apiVersion, objPath)
+	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
 
 	if len(params) != 0 {
 		u += "?" + params.Encode()
 	}
+	s.logger.Info("request", "url", u)
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return err
 	}
 	req.SetBasicAuth(s.opts.Username, s.opts.Password)
-
-	resp, err := s.httpClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -68,7 +83,7 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 		return err
 	}
 	if resp.StatusCode != 200 {
-		s.logger.Info("api request failed", "url", u, "body", string(b))
+		//s.logger.Info("api request failed", "body", string(b))
 		return fmt.Errorf(`jira returned invalid status code: %v`, resp.StatusCode)
 	}
 
