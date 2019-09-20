@@ -69,10 +69,9 @@ var cmdRoot = &cobra.Command{
 
 func loggerStdout() hclog.Logger {
 	return hclog.New(&hclog.LoggerOptions{
-		Output: os.Stdout,
-		Level:  hclog.Debug,
-		// do not use json for stdout for more readable output
-		JSONFormat: false,
+		Output:     os.Stdout,
+		Level:      hclog.Debug,
+		JSONFormat: true,
 	})
 }
 
@@ -96,10 +95,9 @@ func loggerCopyToFile(logger hclog.Logger, pinpointRoot string) hclog.Logger {
 		return logger
 	}
 	return hclog.New(&hclog.LoggerOptions{
-		Output: io.MultiWriter(os.Stdout, wr),
-		Level:  hclog.Debug,
-		// NOTE: log format for integrations is json (so plugin can sent it up properly), but here it's custom. more readable this way
-		JSONFormat: false,
+		Output:     io.MultiWriter(os.Stdout, wr),
+		Level:      hclog.Debug,
+		JSONFormat: true,
 	})
 }
 
