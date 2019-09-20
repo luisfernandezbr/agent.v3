@@ -9,26 +9,24 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/gitlab/api"
+	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
+	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/pkg/commitusers"
-	"github.com/pinpt/agent.next/pkg/commonrepo"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
-	"github.com/pinpt/agent.next/pkg/template"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 type Config struct {
-	URL                string   `json:"url"`
-	APIToken           string   `json:"apitoken"`
-	ExcludedRepos      []string `json:"excluded_repos"`
-	Repos              []string `json:"repos"`
-	StopAfterN         int      `json:"stop_after_n"`
-	OnlyGit            bool     `json:"only_git"`
-	InsecureSkipVerify bool     `json:"insecure_skip_verify"`
+	commonrepo.FilterConfig
+	URL                string `json:"url"`
+	APIToken           string `json:"apitoken"`
+	OnlyGit            bool   `json:"only_git"`
+	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
 }
 
 type Integration struct {
@@ -50,8 +48,6 @@ type Integration struct {
 	pullRequestCommentsSender *objsender.NotIncremental
 	pullRequestReviewsSender  *objsender.NotIncremental
 	userSender                *objsender.NotIncremental
-
-	commonInfo commonrepo.Config
 }
 
 func main() {
@@ -232,17 +228,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 		return err
 	}
 
-	repos = commonrepo.FilterRepos(logger, repos, s.commonInfo)
-
-	if s.config.StopAfterN != 0 {
-		// only leave 1 repo for export
-		stopAfter := s.config.StopAfterN
-		l := len(repos)
-		if len(repos) > stopAfter {
-			repos = repos[0:stopAfter]
-		}
-		logger.Info("stop_after_n passed", "v", stopAfter, "repos", l, "after", len(repos))
-	}
+	repos = commonrepo.Filter(logger, repos, s.config.FilterConfig)
 
 	// queue repos for processing with ripsrc
 	{
@@ -260,8 +246,8 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 			args.RefType = s.refType
 			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
 			args.URL = repoURL
-			args.CommitURLTemplate = template.CommitURLTemplate(repo, s.config.URL)
-			args.BranchURLTemplate = template.BranchURLTemplate(repo, s.config.URL)
+			args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
+			args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
 			err = s.agent.ExportGitRepo(args)
 			if err != nil {
 				return err

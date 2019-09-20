@@ -9,13 +9,13 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/bitbucket/api"
+	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
+	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/pkg/commitusers"
-	"github.com/pinpt/agent.next/pkg/commonrepo"
 	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
-	"github.com/pinpt/agent.next/pkg/template"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
@@ -33,14 +33,12 @@ func NewIntegration(logger hclog.Logger) *Integration {
 }
 
 type Config struct {
-	URL                string   `json:"url"`
-	Username           string   `json:"username"`
-	Password           string   `json:"password"`
-	ExcludedRepos      []string `json:"excluded_repos"`
-	Repos              []string `json:"repos"`
-	StopAfterN         int      `json:"stop_after_n"`
-	OnlyGit            bool     `json:"only_git"`
-	InsecureSkipVerify bool     `json:"insecure_skip_verify"`
+	commonrepo.FilterConfig
+	URL                string `json:"url"`
+	Username           string `json:"username"`
+	Password           string `json:"password"`
+	OnlyGit            bool   `json:"only_git"`
+	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
 }
 
 type Integration struct {
@@ -62,8 +60,6 @@ type Integration struct {
 	pullRequestCommentsSender *objsender.NotIncremental
 	pullRequestReviewsSender  *objsender.NotIncremental
 	userSender                *objsender.NotIncremental
-
-	commonInfo commonrepo.Config
 }
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
@@ -124,11 +120,6 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	s.qc.Logger = s.logger
 	s.qc.RefType = s.refType
 	s.customerID = config.Pinpoint.CustomerID
-	s.commonInfo = commonrepo.Config{
-		Repos:         s.config.Repos,
-		ExcludedRepos: s.config.ExcludedRepos,
-		StopAfterN:    s.config.StopAfterN,
-	}
 
 	{
 		opts := api.RequesterOpts{}
@@ -237,7 +228,7 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 		return err
 	}
 
-	repos = commonrepo.FilterRepos(logger, repos, s.commonInfo)
+	repos = commonrepo.Filter(logger, repos, s.config.FilterConfig)
 
 	// queue repos for processing with ripsrc
 	{
@@ -255,8 +246,8 @@ func (s *Integration) exportTeam(ctx context.Context, groupName string) error {
 			args.RefType = s.refType
 			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
 			args.URL = repoURL
-			args.CommitURLTemplate = template.CommitURLTemplate(repo, s.config.URL)
-			args.BranchURLTemplate = template.BranchURLTemplate(repo, s.config.URL)
+			args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
+			args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
 			err = s.agent.ExportGitRepo(args)
 			if err != nil {
 				return err

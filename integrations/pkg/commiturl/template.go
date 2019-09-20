@@ -1,9 +1,9 @@
-package template
+package commiturl
 
 import (
 	"strings"
 
-	"github.com/pinpt/agent.next/pkg/commonrepo"
+	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 )
 
 func CommitURLTemplate(repo commonrepo.Repo, repoURLPrefix string) string {
