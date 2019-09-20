@@ -11,19 +11,19 @@ func TestGetNameAndEmail(t *testing.T) {
 		EmailWant string
 	}{
 		{
-			"^_623s#%1na3%^ <01em2a3il4%^&%>",
-			"^_623s#%1na3%^",
-			"01em2a3il4%^&%",
+			"name <name@email.com>",
+			"name",
+			"name@email.com",
 		},
 		{
-			"1na3me3 <1em2a3il4>",
-			"1na3me3",
-			"1em2a3il4",
+			"<name@email.com>",
+			"",
+			"name@email.com",
 		},
 		{
-			"Jose C Ordaz <cordaz@pinpoint.com>",
-			"Jose C Ordaz",
-			"cordaz@pinpoint.com",
+			"name <>",
+			"name",
+			"",
 		},
 		{
 			"",
