@@ -60,7 +60,7 @@ func convertConfig(integrationNameBackend string, configBackend map[string]inter
 	switch integrationNameBackend {
 
 	case "github":
-		configAgent, integrationNameAgent, rerr = convertConfigGit(integrationNameBackend, configBackend, exclusions)
+		configAgent, integrationNameAgent, rerr = convertConfigGithub(integrationNameBackend, configBackend, exclusions)
 	case "bitbucket":
 		configAgent, integrationNameAgent, rerr = convertConfigBitbucket(integrationNameBackend, configBackend, exclusions)
 	case "gitlab":
