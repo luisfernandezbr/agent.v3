@@ -24,7 +24,7 @@ https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-o
 
 The permissions are the same between them. But for github.com token also need to press "Enable SSO" button for organizations that have SSO.
 
-- repo X
+- repo X (the options below are selected automatically)
     - repositories X
     - repo_deployment X
     - public_repo X
