@@ -12,6 +12,7 @@ func (s *Integration) exportWork() error {
 	if err != nil {
 		return err
 	}
+
 	if err = s.processWorkUsers(projids); err != nil {
 		return err
 	}
@@ -19,6 +20,9 @@ func (s *Integration) exportWork() error {
 		return err
 	}
 	if err = s.processChangelogs(projids); err != nil {
+		return err
+	}
+	if err = s.processSprints(projids); err != nil {
 		return err
 	}
 	return nil
@@ -79,4 +83,19 @@ func (s *Integration) processChangelogs(projids []string) error {
 	}
 	return err
 
+}
+
+func (s *Integration) processSprints(projids []string) error {
+	sender := objsender.NewNotIncremental(s.agent, work.SprintModelName.String())
+	defer sender.Done()
+	for _, projid := range projids {
+		items, done := s.execute("sprints", sender)
+		err := s.api.FetchSprints(projid, items)
+		close(items)
+		<-done
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
