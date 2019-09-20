@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 
@@ -60,11 +59,10 @@ func LastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (lastCommit agen
 		CommitID:  ids.CodeCommit(qc.CustomerID, qc.RefType, repo.RefID, lastCommitSource.HASH),
 	}
 
-	authorLastCommit := agent.RepoResponseReposLastCommitAuthor{
-		Name:      lastCommitSource.Author.User.DisplayName,
-		Email:     getEmailFromRaw(lastCommitSource.Author.Raw),
-		AvatarURL: lastCommitSource.Author.User.Links.Avatar.Href,
-	}
+	authorLastCommit := agent.RepoResponseReposLastCommitAuthor{}
+	authorLastCommit.Name = lastCommitSource.Author.User.DisplayName
+	_, authorLastCommit.Email = getNameAndEmail(lastCommitSource.Author.Raw)
+	authorLastCommit.AvatarURL = lastCommitSource.Author.User.Links.Avatar.Href
 
 	lastCommit.Author = authorLastCommit
 
@@ -100,15 +98,14 @@ func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) 
 
 		name := c.Author.User.DisplayName
 		if name == "" {
-			name = getNameFromGitRaw(c.Author.Raw)
+			name, _ = getNameAndEmail(c.Author.Raw)
 		}
 
-		user := commitusers.CommitUser{
-			CustomerID: qc.CustomerID,
-			Name:       name,
-			Email:      getEmailFromRaw(c.Author.Raw),
-			SourceID:   c.Author.User.AccountID,
-		}
+		user := commitusers.CommitUser{}
+		user.CustomerID = qc.CustomerID
+		user.Name = name
+		user.SourceID = c.Author.User.AccountID
+		_, user.Email = getNameAndEmail(c.Author.Raw)
 
 		users = append(users, user)
 	}
@@ -116,18 +113,8 @@ func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) 
 	return
 }
 
-func getNameFromGitRaw(raw string) string {
+func getNameAndEmail(raw string) (string, string) {
 	index := strings.Index(raw, "<")
 
-	return raw[:index]
-}
-
-func getEmailFromRaw(raw string) string {
-	var re = regexp.MustCompile(`(?m)<(.*)>`)
-
-	for _, match := range re.FindAllStringSubmatch(raw, -1) {
-		return match[1]
-	}
-
-	return ""
+	return raw[:index-1], raw[index+1 : len(raw)-1]
 }

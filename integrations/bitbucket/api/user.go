@@ -53,7 +53,6 @@ func UsersSourcecodePage(qc QueryContext, group string, params url.Values) (page
 	params.Set("pagelen", "100")
 
 	var us []struct {
-		UUID        string `json:"uuid"`
 		DisplayName string `json:"display_name"`
 		Links       struct {
 			Avatar struct {
@@ -70,14 +69,13 @@ func UsersSourcecodePage(qc QueryContext, group string, params url.Values) (page
 
 	for _, u := range us {
 		user := &sourcecode.User{
-			RefID:           u.UUID,
-			RefType:         qc.RefType,
-			CustomerID:      qc.CustomerID,
-			Name:            u.DisplayName,
-			AvatarURL:       pstrings.Pointer(u.Links.Avatar.Href),
-			Member:          true,
-			Type:            sourcecode.UserTypeHuman,
-			AssociatedRefID: pstrings.Pointer(u.AccountID),
+			RefID:      u.AccountID,
+			RefType:    qc.RefType,
+			CustomerID: qc.CustomerID,
+			Name:       u.DisplayName,
+			AvatarURL:  pstrings.Pointer(u.Links.Avatar.Href),
+			Member:     true,
+			Type:       sourcecode.UserTypeHuman,
 			// Email: Not possible
 			// Username: Not possible
 		}
