@@ -1,6 +1,41 @@
+### Build and run
+
+The instruction below assume you don't have $GOPATH set. If you do replace ~/go with $GOPATH.
+
+Clone
+```
+mkdir -p ~/go/src/github.com/pinpt
+cd ~/go/src/github.com/pinpt
+git clone git@github.com:pinpt/agent.next.git
+```
+
+Build
+```
+cd ./agent.next
+dep ensure -v
+go install github.com/pinpt/agent.next
+```
+
+Update
+```
+git pull
+dep ensure -v
+go install github.com/pinpt/agent.next
+```
+
+Run
+```
+~/go/bin/agent.next enroll <CODE> --channel=dev
+~/go/bin/agent.next service-run
+```
+
+It will store the data into ~/.pinpoint/next folder.
+
+If you want to re-enroll the agent, delete ~/.pinpoint/next.
+
 ### Overview
 
-Agent is run continuosly on the target machine. All actions are driven from a backend.
+Agent is run continuously on the target machine. All actions are driven from a backend.
 
 User installs agent using enroll command, which ensures that service is on the the system startup.
 
@@ -51,6 +86,18 @@ function zcatall
 	end
 end
 ```
+
+### Logging
+
+This section will bescribe how logging works starting with lower lovel, which are integrations and how it is passed up to export command and then to service-run.
+
+Integrations log the output using provided hclog.Logger, log output is passed up to export, which outputs the logs to stdout and at the same time saves log file per integrations into --pinpoint-root/logs folder. In these files only output from the last run is saved. Panics in integrations are written both into logs file and repeated in stdout output.
+
+When export is run the log output is shown in stdout and the copy is saved into logs/export file. For export-onboard-data and validate-config the file names match the command.
+
+When service-run command is run it outputs all logs to stdout and saves a copy into logs/service-run file. When it runs the subcommands their behavior doesn't change and logs are saved the same way as described above.
+
+There is a special handing for export sub-command in service-run, in addition to usual log handing, the logs are sent to backend api in batches.
 
 ### Using separate processes for executing commands in service
 We have a long running service that accepts commands from the backend, such as export, validation, getting users and similar. We could run these directly or as a separate processes.

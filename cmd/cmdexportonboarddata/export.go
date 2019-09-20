@@ -36,8 +36,8 @@ type export struct {
 
 	Opts Opts
 
-	integrationConfig cmdintegration.Integration
-	integration       *iloader.Integration
+	integration  *iloader.Integration
+	exportConfig rpcdef.ExportConfig
 }
 
 func newExport(opts Opts) (*export, error) {
@@ -55,8 +55,9 @@ func newExport(opts Opts) (*export, error) {
 
 	s.SetupIntegrations(nil)
 
-	s.integrationConfig = opts.Integrations[0]
-	s.integration = s.Integrations[s.integrationConfig.Name]
+	integrationName := opts.Integrations[0].Name
+	s.integration = s.Integrations[integrationName]
+	s.exportConfig = s.ExportConfigs[integrationName]
 
 	err = s.runExport()
 	if err != nil {
@@ -69,17 +70,9 @@ func (s *export) runExport() error {
 	ctx := context.Background()
 	client := s.integration.RPCClient()
 
-	configPinpoint := rpcdef.ExportConfigPinpoint{
-		CustomerID: s.Opts.AgentConfig.CustomerID,
-	}
-	exportConfig := rpcdef.ExportConfig{
-		Pinpoint:    configPinpoint,
-		Integration: s.integrationConfig.Config,
-	}
-
 	cmdRes := Result{}
 
-	res, err := client.OnboardExport(ctx, s.Opts.ExportType, exportConfig)
+	res, err := client.OnboardExport(ctx, s.Opts.ExportType, s.exportConfig)
 	if err != nil {
 		cmdRes.Error = err.Error()
 	} else {

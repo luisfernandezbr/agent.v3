@@ -12,6 +12,7 @@ import (
 
 	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
+	"github.com/pinpt/agent.next/cmd/cmdintegration"
 
 	"github.com/pinpt/agent.next/pkg/encrypt"
 
@@ -50,6 +51,8 @@ type runner struct {
 	fsconf   fsconf.Locs
 	conf     agentconf.Config
 	exporter *exporter
+
+	agentConfig cmdintegration.AgentConfig
 }
 
 func newRunner(opts Opts) (*runner, error) {
@@ -69,6 +72,8 @@ func (s *runner) run(ctx context.Context) error {
 		return err
 	}
 
+	s.agentConfig = s.getAgentConfig()
+
 	go func() {
 		s.sendPings()
 	}()
@@ -80,10 +85,11 @@ func (s *runner) run(ctx context.Context) error {
 
 	s.exporter = newExporter(exporterOpts{
 		Logger:          s.logger,
-		CustomerID:      s.conf.CustomerID,
 		PinpointRoot:    s.opts.PinpointRoot,
+		Conf:            s.conf,
 		FSConf:          s.fsconf,
 		PPEncryptionKey: s.conf.PPEncryptionKey,
+		AgentConfig:     s.agentConfig,
 	})
 
 	go func() {
@@ -127,9 +133,7 @@ func (s *runner) run(ctx context.Context) error {
 }
 
 func (s *runner) runTestMockExport() error {
-	agentConfig := cmdexport.AgentConfig{}
-	agentConfig.CustomerID = "c1"
-	agentConfig.PinpointRoot = s.opts.PinpointRoot
+
 	in := cmdexport.Integration{}
 	in.Name = "mock"
 	in.Config = map[string]interface{}{"k1": "v1"}
@@ -137,7 +141,7 @@ func (s *runner) runTestMockExport() error {
 	reprocessHistorical := true
 
 	ctx := context.Background()
-	return s.exporter.execExport(ctx, agentConfig, integrations, reprocessHistorical)
+	return s.exporter.execExport(ctx, s.agentConfig, integrations, reprocessHistorical, nil)
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {
@@ -554,4 +558,12 @@ func (s *runner) sendEvent(ctx context.Context, agentEvent datamodel.Model, jobI
 		Headers: headers,
 	}
 	return event.Publish(ctx, e, s.conf.Channel, s.conf.APIKey)
+}
+
+func (s *runner) getAgentConfig() (res cmdintegration.AgentConfig) {
+	res.CustomerID = s.conf.CustomerID
+	res.PinpointRoot = s.opts.PinpointRoot
+	res.Channel = s.conf.Channel
+	res.EnableBackend = true
+	return
 }
