@@ -114,6 +114,11 @@ func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) 
 }
 
 func getNameAndEmail(raw string) (string, string) {
+
+	if raw == "" {
+		return "", ""
+	}
+
 	index := strings.Index(raw, "<")
 
 	return raw[:index-1], raw[index+1 : len(raw)-1]
