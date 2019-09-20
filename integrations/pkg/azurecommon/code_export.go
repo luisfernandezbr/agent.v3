@@ -1,13 +1,16 @@
 package azurecommon
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/pinpt/agent.next/integrations/pkg/azureapi"
 	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/go-common/datamodel"
 	pjson "github.com/pinpt/go-common/json"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
@@ -46,19 +49,18 @@ func (s *Integration) processRepos() (repoids []string, projectids []string, err
 	sender := objsender.NewNotIncremental(s.agent, sourcecode.RepoModelName.String())
 	defer sender.Done()
 
-	var repos []*sourcecode.Repo
-	if repos, projectids, err = s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs); err != nil {
-		return
-	}
-	for _, repo := range repos {
+	items, done := azureapi.AsyncProcess("repos", s.logger, sender, func(model datamodel.Model) {
+		repo := model.(*sourcecode.Repo)
 		repoids = append(repoids, repo.RefID)
-		if err := sender.Send(repo); err != nil {
-			s.logger.Error("error sending repo", "data", repo.Stringify())
-		}
 		if err := s.ripSource(repo); err != nil {
 			s.logger.Error("error with ripsrc in repo", "data", repo.Stringify())
 		}
+	})
+	if projectids, err = s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs, items); err != nil {
+		return
 	}
+	close(items)
+	<-done
 	return
 }
 
@@ -97,11 +99,15 @@ func (s *Integration) processPullRequests(repoids []string) error {
 		return err
 	}
 	defer senderprcs.Done()
-	prchan, prdone := s.execute("pull requests", senderprs)
-	prrchan, prrdone := s.execute("pull request reviews", senderprrs)
-	prcchan, prcdone := s.execute("pull request comments", senderprcs)
-	if err := s.api.FetchPullRequests(repoids, senderprs.LastProcessed, prchan, prrchan, prcchan); err != nil {
-		return err
+	prchan, prdone := azureapi.AsyncProcess("pull requests", s.logger, senderprs, nil)
+	prrchan, prrdone := azureapi.AsyncProcess("pull request reviews", s.logger, senderprrs, nil)
+	prcchan, prcdone := azureapi.AsyncProcess("pull request comments", s.logger, senderprcs, nil)
+	var errors []string
+	for _, repoid := range repoids {
+		if err := s.api.FetchPullRequests(repoid, senderprs.LastProcessed, prchan, prrchan, prcchan); err != nil {
+			errors = append(errors, err.Error())
+			continue
+		}
 	}
 	close(prchan)
 	close(prrchan)
@@ -109,6 +115,9 @@ func (s *Integration) processPullRequests(repoids []string) error {
 	<-prdone
 	<-prrdone
 	<-prcdone
+	if errors != nil {
+		return fmt.Errorf("error fetching pull requests. err %s", strings.Join(errors, ", "))
+	}
 	return nil
 }
 
@@ -118,18 +127,18 @@ func (s *Integration) processUsers(repoids []string, projectids []string) error 
 	// this is the only api with incremental, but we're only fething users to match the other user api
 	sendercomm := objsender.NewNotIncremental(s.agent, commitusers.TableName)
 	senderproj := objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
-	defer func() {
-		if err := senderproj.Done(); err != nil {
-			s.logger.Error("error closing project user sender, senderproj.Done()")
-		}
-		if err := sendercomm.Done(); err != nil {
-			s.logger.Error("error closing commit user sender, sendercomm.Done()")
-		}
-	}()
+	defer senderproj.Done()
+	defer sendercomm.Done()
 
-	projusers, err := s.api.FetchSourcecodeUsers(projectids)
-	if err != nil {
-		return err
+	projusers := make(map[string]*sourcecode.User)
+	for _, projid := range projectids {
+		teamids, err := s.api.FetchTeamIDs(projid)
+		if err != nil {
+			return err
+		}
+		if err := s.api.FetchSourcecodeUsers(projid, teamids, projusers); err != nil {
+			return err
+		}
 	}
 	commusers, err := s.api.FetchCommitUsers(repoids, time.Time{} /* sendercomm.LastProcessed */)
 	if err != nil {

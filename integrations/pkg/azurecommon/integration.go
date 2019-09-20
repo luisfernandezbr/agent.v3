@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pinpt/go-common/datamodel"
 	pstrings "github.com/pinpt/go-common/strings"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -78,9 +79,11 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 	if err := s.initConfig(ctx, config); err != nil {
 		return res, err
 	}
-	if _, _, err := s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs); err != nil {
+	repochan := make(chan datamodel.Model)
+	if _, err := s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs, repochan); err != nil {
 		res.Errors = append(res.Errors)
 	}
+	close(repochan)
 	return res, nil
 }
 

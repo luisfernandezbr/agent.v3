@@ -5,19 +5,19 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
-func (api *API) FetchWorkUsers(repoids []string, userchan chan<- datamodel.Model) error {
-	srcusers, err := api.FetchSourcecodeUsers(repoids)
+func (api *API) FetchWorkUsers(projid string, teamids []string, userchan chan<- datamodel.Model) error {
+	users, err := api.fetchAllUsers(projid, teamids)
 	if err != nil {
 		return err
 	}
-	for _, u := range srcusers {
+	for _, u := range users {
 		userchan <- &work.User{
-			AvatarURL:  u.AvatarURL,
+			AvatarURL:  &u.ImageURL,
 			CustomerID: api.customerid,
-			Name:       u.Name,
-			RefID:      u.RefID,
+			Name:       u.DisplayName,
+			RefID:      u.ID,
 			RefType:    api.reftype,
-			Username:   *u.Username,
+			Username:   u.UniqueName,
 		}
 	}
 	return nil

@@ -110,6 +110,24 @@ type commitsResponse struct {
 	} `json:"changeCounts"`
 }
 
+// CommitResponse used for last commit
+type CommitResponse struct {
+	Author struct {
+		Date  time.Time `json:"date"`
+		Email string    `json:"email"`
+		Name  string    `json:"name"`
+	} `json:"author"`
+	Comment   string `json:"comment"`
+	CommitID  string `json:"commitId"`
+	Committer struct {
+		Date  time.Time `json:"date"`
+		Email string    `json:"email"`
+		Name  string    `json:"name"`
+	} `json:"committer"`
+	URL       string `json:"url"`
+	RemoteURL string `json:"remoteUrl"`
+}
+
 // used in pull_request_comments.go - fetchPullRequestComments
 type commentsReponse struct {
 	Comments []struct {

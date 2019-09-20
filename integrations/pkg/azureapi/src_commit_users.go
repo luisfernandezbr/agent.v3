@@ -54,23 +54,6 @@ func (api *API) fetchCommits(repoid string, fromdate time.Time) ([]commitsRespon
 	return res, nil
 }
 
-type CommitResponse struct {
-	Author struct {
-		Date  time.Time `json:"date"`
-		Email string    `json:"email"`
-		Name  string    `json:"name"`
-	} `json:"author"`
-	Comment   string `json:"comment"`
-	CommitID  string `json:"commitId"`
-	Committer struct {
-		Date  time.Time `json:"date"`
-		Email string    `json:"email"`
-		Name  string    `json:"name"`
-	} `json:"committer"`
-	URL       string `json:"url"`
-	RemoteURL string `json:"remoteUrl"`
-}
-
 func (api *API) FetchLastCommit(repoid string) (*CommitResponse, error) {
 	url := fmt.Sprintf(`_apis/git/repositories/%s/commits`, purl.PathEscape(repoid))
 	var res []CommitResponse

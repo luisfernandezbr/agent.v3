@@ -1,7 +1,13 @@
 package azureapi
 
 import (
+	"fmt"
+	"reflect"
 	"sync"
+
+	hclog "github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/objsender"
+	"github.com/pinpt/go-common/datamodel"
 )
 
 // Async simple async interface
@@ -43,4 +49,32 @@ func (a *async) Send(f AsyncMessage) {
 func (a *async) Wait() {
 	close(a.funcs)
 	a.wg.Wait()
+}
+
+type AsyncProcessCallback func(datamodel.Model)
+
+func AsyncProcess(name string, logger hclog.Logger, sender objsender.Sender, callback AsyncProcessCallback) (channel chan datamodel.Model, done chan bool) {
+	channel = make(chan datamodel.Model)
+	done = make(chan bool)
+	go func() {
+		logger.Info("started with " + name)
+		count := 0
+		for each := range channel {
+			if sender != nil {
+				if err := sender.Send(each); err != nil {
+					logger.Error("error sending "+reflect.TypeOf(each).String(), "err", err)
+				}
+			}
+			if callback != nil {
+				callback(each)
+			}
+			count++
+			if (count % 1000) == 0 {
+				logger.Info(fmt.Sprintf("%d", count) + " " + name + " sent")
+			}
+		}
+		logger.Info("ended with "+name, "count", count)
+		done <- true
+	}()
+	return
 }

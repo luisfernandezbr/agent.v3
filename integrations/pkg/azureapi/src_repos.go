@@ -6,17 +6,17 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 // FetchAllRepos calls the repo api returns a list of sourcecode.Repo and unique project ids
-func (api *API) FetchAllRepos(included []string, excludedids []string) ([]*sourcecode.Repo, []string, error) {
+func (api *API) FetchAllRepos(included []string, excludedids []string, repochan chan<- datamodel.Model) ([]string, error) {
 	rawrepos, err := api.fetchRepos("")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	projectidmap := make(map[string]bool)
-	var repos = []*sourcecode.Repo{}
 	for _, repo := range rawrepos {
 		if len(excludedids) > 0 && exists(repo.ID, excludedids) {
 			continue
@@ -24,7 +24,7 @@ func (api *API) FetchAllRepos(included []string, excludedids []string) ([]*sourc
 		// 1. check if there are any in included
 		// 2. check if the repo name is in the included
 		if len(included) == 0 || exists(filepath.Base(repo.Name), included) {
-			repos = append(repos, &sourcecode.Repo{
+			repochan <- &sourcecode.Repo{
 				Active:        true,
 				CustomerID:    api.customerid,
 				DefaultBranch: strings.Replace(repo.DefaultBranch, "refs/heads/", "", 1),
@@ -32,7 +32,7 @@ func (api *API) FetchAllRepos(included []string, excludedids []string) ([]*sourc
 				RefID:         repo.ID,
 				RefType:       api.reftype,
 				URL:           repo.RemoteURL,
-			})
+			}
 			projectidmap[repo.Project.ID] = true
 		}
 	}
@@ -40,7 +40,7 @@ func (api *API) FetchAllRepos(included []string, excludedids []string) ([]*sourc
 	for projid := range projectidmap {
 		projectids = append(projectids, projid)
 	}
-	return repos, projectids, nil
+	return projectids, nil
 }
 
 func (api *API) fetchRepos(projid string) ([]reposResponse, error) {

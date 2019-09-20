@@ -10,69 +10,44 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
-type workItemOperation struct {
-	Op    string  `json:"op"`
-	Path  string  `json:"path"`
-	From  *string `json:"from"`
-	Value string  `json:"value"`
-}
+func (api *API) FetchWorkItems(projid string, fromdate time.Time, items chan<- datamodel.Model) error {
 
-func (api *API) CreateWorkItems(projid string) error {
-
-	url := fmt.Sprintf(`%s/_apis/wit/workitems/%s`, projid, `$Issue`)
-	for i := 848; i < 1000; i++ {
-		ops := []workItemOperation{
-			workItemOperation{
-				Op:    "add",
-				Path:  "/fields/System.Title",
-				Value: fmt.Sprintf("this is a title for issue number %d", i),
-			},
-			workItemOperation{
-				Op:    "add",
-				Path:  "/fields/System.Description",
-				Value: fmt.Sprintf("this is a description for issue number %d", i),
-			},
-		}
-		var res []interface{}
-		if err := api.postRequest(url, stringmap{}, ops, &res); err != nil {
-			return err
-		}
-		_ = res
-		fmt.Println(i)
+	async := NewAsync(5)
+	allids, err := api.fetchItemIDs(projid, fromdate)
+	if err != nil {
+		return err
 	}
-
+	var ids []string
+	for _, id := range allids {
+		ids = append(ids, id)
+		if len(ids) == 200 {
+			async.Send(AsyncMessage{
+				Data: ids,
+				Func: func(data interface{}) {
+					ids := data.([]string)
+					if _, err := api.fetchWorkItemsByIDs(projid, ids, items); err != nil {
+						api.logger.Error("error with fetchWorkItemsByIDs", "err", err)
+					}
+				},
+			})
+			ids = []string{}
+		}
+	}
+	if len(ids) > 0 {
+		async.Send(AsyncMessage{
+			Data: ids,
+			Func: func(data interface{}) {
+				ids := data.([]string)
+				if _, err := api.fetchWorkItemsByIDs(projid, ids, items); err != nil {
+					api.logger.Error("error with fetchWorkItemsByIDs", "err", err)
+				}
+			},
+		})
+	}
+	async.Wait()
 	return nil
 }
-
-type workItemsResponse struct {
-	AsOf    time.Time `json:"asOf"`
-	Columns []struct {
-		Name          string `json:"name"`
-		ReferenceName string `json:"referenceName"`
-		URL           string `json:"url"`
-	} `json:"columns"`
-	QueryResultType string `json:"queryResultType"`
-	QueryType       string `json:"queryType"`
-	SortColumns     []struct {
-		Descending bool `json:"descending"`
-		Field      struct {
-			Name          string `json:"name"`
-			ReferenceName string `json:"referenceName"`
-			URL           string `json:"url"`
-		} `json:"field"`
-	} `json:"sortColumns"`
-	WorkItems []struct {
-		ID  int64  `json:"id"`
-		URL string `json:"url"`
-	} `json:"workItems"`
-}
-
-type WorkItemsResult struct {
-	ProjectID string
-	Issues    chan work.Issue
-}
-
-func (api *API) fetchItemIDS(projid string, fromdate time.Time) ([]string, error) {
+func (api *API) fetchItemIDs(projid string, fromdate time.Time) ([]string, error) {
 	url := fmt.Sprintf(`%s/_apis/wit/wiql`, projid)
 	var q struct {
 		Query string `json:"query"`
@@ -94,49 +69,12 @@ func (api *API) fetchItemIDS(projid string, fromdate time.Time) ([]string, error
 	}
 	return all, nil
 }
-func (api *API) FetchWorkItems(projid string, fromdate time.Time, items chan<- datamodel.Model) error {
 
-	async := NewAsync(5)
-	allids, err := api.fetchItemIDS(projid, fromdate)
-	if err != nil {
-		return err
-	}
-	var ids []string
-	for _, id := range allids {
-		ids = append(ids, id)
-		if len(ids) == 200 {
-			async.Send(AsyncMessage{
-				Data: ids,
-				Func: func(data interface{}) {
-					ids := data.([]string)
-					if err := api.FetchWorkItemsByIDs(projid, ids, items); err != nil {
-						api.logger.Error("error with FetchWorkItemsByIDs", "err", err)
-					}
-				},
-			})
-			ids = []string{}
-		}
-	}
-	if len(ids) > 0 {
-		async.Send(AsyncMessage{
-			Data: ids,
-			Func: func(data interface{}) {
-				ids := data.([]string)
-				if err := api.FetchWorkItemsByIDs(projid, ids, items); err != nil {
-					api.logger.Error("error with FetchWorkItemsByIDs", "err", err)
-				}
-			},
-		})
-	}
-	async.Wait()
-	return nil
-}
-
-func (api *API) FetchWorkItemsByIDs(projid string, ids []string, items chan<- datamodel.Model) error {
+func (api *API) fetchWorkItemsByIDs(projid string, ids []string, items chan<- datamodel.Model) ([]workItemResponse, error) {
 	url := fmt.Sprintf(`%s/_apis/wit/workitems?ids=%s`, projid, strings.Join(ids, ","))
 	var res []workItemResponse
 	if err := api.getRequest(url, stringmap{"pagingoff": "true"}, &res); err != nil {
-		return err
+		return nil, err
 	}
 	for _, each := range res {
 		fields := each.Fields
@@ -162,7 +100,7 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string, items chan<- da
 		date.ConvertToModel(fields.ChangedDate, &issue.UpdatedDate)
 		items <- &issue
 	}
-	return nil
+	return res, nil
 }
 
 type workItemResponse struct {

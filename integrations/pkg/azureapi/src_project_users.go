@@ -1,8 +1,6 @@
 package azureapi
 
 import (
-	"fmt"
-	purl "net/url"
 	"strings"
 
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -11,73 +9,28 @@ import (
 // FetchSourcecodeUsers gets users from the teams and memembers api
 // 		returns map[user.UniqueName]*sourcecode.User or Error
 //		(user.UniqueName seems to be the email for Azure)
-func (api *API) FetchSourcecodeUsers(projids []string) (map[string]*sourcecode.User, error) {
-	usermap := make(map[string]*sourcecode.User)
-	for _, projid := range projids {
-		teams, err := api.fetchTeams(projid)
-		if err != nil {
-			return nil, err
+func (api *API) FetchSourcecodeUsers(projid string, teamids []string, usermap map[string]*sourcecode.User) error {
+	allusers, err := api.fetchAllUsers(projid, teamids)
+	if err != nil {
+		return err
+	}
+	for _, user := range allusers {
+		var usertype sourcecode.UserType
+		if strings.Contains(user.DisplayName, `]\\`) {
+			usertype = sourcecode.UserTypeBot
+		} else {
+			usertype = sourcecode.UserTypeHuman
 		}
-		rawusermap := make(map[string]*usersResponse)
-		for _, team := range teams {
-			res, err := api.fetchUsers(projid, team.ID)
-			if err != nil {
-				return nil, err
-			}
-			for _, u := range res {
-				rawusermap[u.ID] = &u
-			}
-		}
-		for _, u := range rawusermap {
-			username := u.UniqueName
-			if _, ok := usermap[username]; !ok {
-				var usertype sourcecode.UserType
-				if strings.Contains(u.DisplayName, `]\\`) {
-					usertype = sourcecode.UserTypeBot
-				} else {
-					usertype = sourcecode.UserTypeHuman
-				}
-				usermap[username] = &sourcecode.User{
-					AvatarURL:  &u.ImageURL,
-					CustomerID: api.customerid,
-					Member:     true,
-					Name:       u.DisplayName,
-					RefID:      u.ID,
-					RefType:    api.reftype,
-					Type:       usertype,
-					Username:   &username,
-				}
-			}
+		usermap[user.UniqueName] = &sourcecode.User{
+			AvatarURL:  &user.ImageURL,
+			CustomerID: api.customerid,
+			Member:     true,
+			Name:       user.DisplayName,
+			RefID:      user.ID,
+			RefType:    api.reftype,
+			Type:       usertype,
+			Username:   &user.UniqueName,
 		}
 	}
-	return usermap, nil
-}
-
-func (api *API) fetchTeams(projid string) ([]teamsResponse, error) {
-	url := fmt.Sprintf(`_apis/projects/%s/teams`, purl.PathEscape(projid))
-	var res []teamsResponse
-	if err := api.getRequest(url, nil, &res); err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
-func (api *API) fetchUsers(projid string, teamid string) ([]usersResponse, error) {
-	url := fmt.Sprintf(`_apis/projects/%s/teams/%s/members`, purl.PathEscape(projid), purl.PathEscape(teamid))
-	if api.tfs {
-		var res []usersResponse
-		if err := api.getRequest(url, nil, &res); err != nil {
-			return nil, err
-		}
-		return res, nil
-	}
-	var res []usersResponseAzure
-	if err := api.getRequest(url, nil, &res); err != nil {
-		return nil, err
-	}
-	var users []usersResponse
-	for _, r := range res {
-		users = append(users, r.Identity)
-	}
-	return users, nil
+	return nil
 }

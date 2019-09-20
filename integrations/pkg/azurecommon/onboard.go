@@ -3,22 +3,36 @@ package azurecommon
 import (
 	"context"
 
+	"github.com/pinpt/agent.next/integrations/pkg/azureapi"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/integration-sdk/agent"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func (s *Integration) onboardExportUsers(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
-	_, projids, err := s.api.FetchAllRepos([]string{}, []string{})
+
+	repochan := make(chan datamodel.Model)
+	projids, err := s.api.FetchAllRepos([]string{}, []string{}, repochan)
+	close(repochan)
 	if err != nil {
 		s.logger.Error("error fetching repos for onboard export users")
 		return
 	}
-	usermap, err := s.api.FetchSourcecodeUsers(projids)
-	if err != nil {
-		s.logger.Error("error fetching users for onboard export")
-		return
+	usermap := make(map[string]*sourcecode.User)
+	for _, projid := range projids {
+		teamids, err := s.api.FetchTeamIDs(projid)
+		if err != nil {
+			s.logger.Error("error fetching team ids for users for onboard export")
+			return
+		}
+		err = s.api.FetchSourcecodeUsers(projid, teamids, usermap)
+		if err != nil {
+			s.logger.Error("error fetching users for onboard export")
+			return
+		}
 	}
 	for _, user := range usermap {
 		u := agent.UserResponseUsers{
@@ -39,7 +53,14 @@ func (s *Integration) onboardExportUsers(ctx context.Context, config rpcdef.Expo
 }
 
 func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
-	repos, _, err := s.api.FetchAllRepos([]string{}, []string{})
+
+	var repos []*sourcecode.Repo
+	reposchan, done := azureapi.AsyncProcess("export repos", s.logger, nil, func(model datamodel.Model) {
+		repos = append(repos, model.(*sourcecode.Repo))
+	})
+	_, err = s.api.FetchAllRepos([]string{}, []string{}, reposchan)
+	close(reposchan)
+	<-done
 	if err != nil {
 		s.logger.Error("error fetching repos for onboard export repos")
 		return

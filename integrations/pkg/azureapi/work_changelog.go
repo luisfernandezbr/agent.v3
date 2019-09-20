@@ -2,7 +2,6 @@ package azureapi
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -14,50 +13,9 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
-type changelogField struct {
-	NewValue interface{} `json:"newValue"`
-	OldValue interface{} `json:"oldvalue"`
-}
-type changelogResponse struct {
-	Fields      map[string]changelogField `json:"fields"`
-	ID          int64                     `json:"id"`
-	RevisedDate time.Time                 `json:"revisedDate"`
-	URL         string                    `json:"url"`
-	Relations   struct {
-		Added []struct {
-			Attributes struct {
-				Name string `json:"name"`
-			} `json:"attributes"`
-			URL string `json:"url"`
-		} `json:"added"`
-		Removed []struct {
-			Attributes struct {
-				Name string `json:"name"`
-			} `json:"attributes"`
-			URL string `json:"url"`
-		} `json:"removed"`
-	} `json:"relations"`
-	RevisedBy usersResponse `json:"revisedBy"`
-}
-
-func (api *API) FetchChangelogs2(projid string, issueid string) error {
-	var res []interface{}
-	url := fmt.Sprintf(`%s/_apis/wit/workItems/%s/updates`, projid, issueid)
-	err := api.getRequest(url, nil, &res)
-	fmt.Println(stringify(res))
-	os.Exit(1)
-	return err
-}
-
-type WorkChangelogsResult struct {
-	ProjectID  string
-	Changelogs chan work.Changelog
-}
-
 func (api *API) FetchChangelogs(projid string, fromdate time.Time, result chan<- datamodel.Model) error {
-
 	async := NewAsync(5)
-	allids, err := api.fetchItemIDS(projid, fromdate)
+	allids, err := api.fetchItemIDs(projid, fromdate)
 	if err != nil {
 		api.logger.Error("error fetching item ids", "err", err)
 	}
@@ -66,7 +24,7 @@ func (api *API) FetchChangelogs(projid string, fromdate time.Time, result chan<-
 			Data: refid,
 			Func: func(data interface{}) {
 				refid := data.(string)
-				if err := api.fetchChangeLog(projid, refid, result); err != nil {
+				if _, err := api.fetchChangeLog(projid, refid, result); err != nil {
 					api.logger.Error("error fetching work item updates "+refid, "err", err)
 				}
 			},
@@ -76,21 +34,21 @@ func (api *API) FetchChangelogs(projid string, fromdate time.Time, result chan<-
 	return nil
 }
 
-func (api *API) fetchChangeLog(projid, refid string, result chan<- datamodel.Model) error {
+func (api *API) fetchChangeLog(projid, refid string, result chan<- datamodel.Model) ([]changelogResponse, error) {
 	var res []changelogResponse
 	url := fmt.Sprintf(`%s/_apis/wit/workItems/%s/updates`, projid, refid)
 	if err := api.getRequest(url, stringmap{"$top": "200"}, &res); err != nil {
-		return err
+		return nil, err
 	}
 	issueid := api.IssueID(refid)
 	for i, changelog := range res {
 		if changelog.Fields == nil {
 			continue
 		}
-		createParentField(&changelog)
-		createdDate := extractCreatedDate(changelog)
+		changelogCreateParentField(&changelog)
+		createdDate := changeLogExtractCreatedDate(changelog)
 		for field, values := range changelog.Fields {
-			if extractor, ok := fields[field]; ok {
+			if extractor, ok := changelogFields[field]; ok {
 				name, from, to := extractor(values)
 				if from == "" && to == "" {
 					continue
@@ -112,10 +70,10 @@ func (api *API) fetchChangeLog(projid, refid string, result chan<- datamodel.Mod
 			}
 		}
 	}
-	return nil
+	return res, nil
 }
 
-func extractCreatedDate(changelog changelogResponse) work.ChangelogCreatedDate {
+func changeLogExtractCreatedDate(changelog changelogResponse) work.ChangelogCreatedDate {
 	var createdDate work.ChangelogCreatedDate
 	if field, ok := changelog.Fields["System.CreatedDate"]; ok {
 		created, err := time.Parse(time.RFC3339, fmt.Sprint(field.NewValue))
@@ -131,7 +89,7 @@ func extractCreatedDate(changelog changelogResponse) work.ChangelogCreatedDate {
 	return createdDate
 }
 
-func createParentField(changelog *changelogResponse) {
+func changelogCreateParentField(changelog *changelogResponse) {
 	if added := changelog.Relations.Added; added != nil {
 		for _, each := range added {
 			if each.Attributes.Name == "Parent" {
@@ -161,7 +119,7 @@ func createParentField(changelog *changelogResponse) {
 	}
 }
 
-func toString(i interface{}) string {
+func changelogToString(i interface{}) string {
 	if i == nil {
 		return ""
 	}
@@ -174,7 +132,7 @@ func toString(i interface{}) string {
 	return fmt.Sprintf("%v", i)
 }
 
-type fieldExtractor func(item changelogField) (name string, from string, to string)
+type changeogFieldExtractor func(item changelogField) (name string, from string, to string)
 
 func extractUsers(item changelogField) (from string, to string) {
 	if item.OldValue != nil {
@@ -190,12 +148,12 @@ func extractUsers(item changelogField) (from string, to string) {
 	return
 }
 
-var fields = map[string]fieldExtractor{
+var changelogFields = map[string]changeogFieldExtractor{
 	"System.State": func(item changelogField) (string, string, string) {
-		return "status", toString(item.OldValue), toString(item.NewValue)
+		return "status", changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	"Microsoft.VSTS.Common.ResolvedReason": func(item changelogField) (string, string, string) {
-		return "resolution", toString(item.OldValue), toString(item.NewValue)
+		return "resolution", changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	"System.AssignedTo": func(item changelogField) (string, string, string) {
 		from, to := extractUsers(item)
@@ -206,18 +164,18 @@ var fields = map[string]fieldExtractor{
 		return "reporter_ref_id", from, to
 	},
 	"System.Title": func(item changelogField) (string, string, string) {
-		return "title", toString(item.OldValue), toString(item.NewValue)
+		return "title", changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	// convert to date
 	"Microsoft.VSTS.Scheduling.DueDate": func(item changelogField) (string, string, string) {
-		return "due_date", toString(item.OldValue), toString(item.NewValue)
+		return "due_date", changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	"System.WorkItemType": func(item changelogField) (string, string, string) {
-		return "type", toString(item.OldValue), toString(item.NewValue)
+		return "type", changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	"System.Tags": func(item changelogField) (string, string, string) {
-		from := toString(item.OldValue)
-		to := toString(item.NewValue)
+		from := changelogToString(item.OldValue)
+		to := changelogToString(item.NewValue)
 		if from != "" {
 			tmp := strings.Split(from, "; ")
 			from = strings.Join(tmp, ",")
@@ -229,23 +187,23 @@ var fields = map[string]fieldExtractor{
 		return "tags", from, to
 	},
 	"Microsoft.VSTS.Common.Priority": func(item changelogField) (string, string, string) {
-		return "priority", toString(item.OldValue), toString(item.NewValue)
+		return "priority", changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	"System.Id": func(item changelogField) (string, string, string) {
-		return "project_id", toString(item.OldValue), toString(item.NewValue)
+		return "project_id", changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	"System.TeamProject": func(item changelogField) (string, string, string) {
-		return "identifier", toString(item.OldValue), toString(item.NewValue)
+		return "identifier", changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	"System.IterationId": func(item changelogField) (string, string, string) {
-		return "sprint_ids", toString(item.OldValue), toString(item.NewValue)
+		return "sprint_ids", changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	"parent": func(item changelogField) (string, string, string) {
 		var from, to string
-		if toString(item.OldValue) != "" {
+		if changelogToString(item.OldValue) != "" {
 			from = hash.Values("Issue", "item.CustomerID", "jira", item.OldValue)
 		}
-		if toString(item.NewValue) != "" {
+		if changelogToString(item.NewValue) != "" {
 			to = hash.Values("Issue", "item.CustomerID", "jira", item.NewValue)
 		}
 		return "parent_id", from, to

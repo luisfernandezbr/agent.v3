@@ -5,22 +5,23 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
-func (api *API) fetchProjects() ([]projectResponse, error) {
-	url := `_apis/projects/`
-	var res []projectResponse
-	if err := api.getRequest(url, stringmap{"stateFilter": "all"}, &res); err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
 func (api *API) FetchProjects(projchan chan<- datamodel.Model) ([]string, error) {
-	projs, err := api.fetchProjects()
+	_, projids, err := api.fetchProjects(projchan)
 	if err != nil {
 		return nil, err
 	}
+	return projids, nil
+}
+
+func (api *API) fetchProjects(projchan chan<- datamodel.Model) ([]projectResponse, []string, error) {
+	url := `_apis/projects/`
+	var res []projectResponse
+	if err := api.getRequest(url, stringmap{"stateFilter": "all"}, &res); err != nil {
+		return nil, nil, err
+	}
 	var projids []string
-	for _, p := range projs {
+	for _, p := range res {
+		projids = append(projids, p.ID)
 		projchan <- &work.Project{
 			Active:      p.State == "wellFormed",
 			CustomerID:  api.customerid,
@@ -31,7 +32,6 @@ func (api *API) FetchProjects(projchan chan<- datamodel.Model) ([]string, error)
 			RefType:     api.reftype,
 			URL:         p.URL,
 		}
-		projids = append(projids, p.ID)
 	}
-	return projids, nil
+	return res, projids, nil
 }
