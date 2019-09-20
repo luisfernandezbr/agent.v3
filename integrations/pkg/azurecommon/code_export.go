@@ -94,7 +94,7 @@ func (s *Integration) processPullRequests(repoids []string) error {
 		return err
 	}
 	defer senderprrs.Done()
-	senderprcs, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestCommentModelName.String())
+	senderprcs, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestCommitModelName.String())
 	if err != nil {
 		return err
 	}

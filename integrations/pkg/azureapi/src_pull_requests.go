@@ -168,7 +168,7 @@ func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestRespons
 		commit := &sourcecode.PullRequestCommit{
 			Additions: c.ChangeCounts.Add,
 			// AuthorRefID: not provided
-			BranchID: p.SourceBranch,
+			BranchID: api.BranchID(repoid, p.SourceBranch, p.commitshas[0]),
 			// CommitterRefID: not provided
 			CustomerID:    api.customerid,
 			Deletions:     c.ChangeCounts.Delete,
