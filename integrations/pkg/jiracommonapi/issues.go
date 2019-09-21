@@ -9,7 +9,7 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
-
+	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/integration-sdk/work"
 )
 
@@ -118,6 +118,11 @@ func IssuesAndChangelogsPage(
 	if len(rr.Issues) == rr.MaxResults {
 		pi.HasMore = true
 	}
+
+	// ordinal should be a monotonically increasing number for changelogs
+	// the value itself doesn't matter as long as the changelog is from
+	// the oldest to the newest
+	ordinal := datetime.EpochNow()
 
 	for i, data := range rr.Issues {
 
@@ -231,7 +236,10 @@ func IssuesAndChangelogsPage(
 		issueRefID := item.RefID
 		issueID := qc.IssueID(item.RefID)
 
-		for i, cl := range data.Changelog.Histories {
+		// Jira changelog histories are ordered from the newest to the oldest but we want changelogs to be
+		// sent from the oldest event to the newest event when we send
+		for i := len(data.Changelog.Histories) - 1; i >= 0; i-- {
+			cl := data.Changelog.Histories[i]
 			for _, data := range cl.Items {
 
 				item := &work.Changelog{}
@@ -240,7 +248,9 @@ func IssuesAndChangelogsPage(
 				item.RefID = cl.ID
 
 				item.IssueID = issueID
-				item.Ordinal = int64(i)
+				item.Ordinal = ordinal
+
+				ordinal++
 
 				createdAt, err := ParseTime(cl.Created)
 				if err != nil {
