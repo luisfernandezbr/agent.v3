@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/integration-sdk/work"
@@ -266,20 +267,22 @@ func IssuesAndChangelogsPage(
 
 				item.Field = data.Field
 				item.FieldType = data.FieldType
-				item.From = data.From
-				// the From/To AccountID holds the ref_id (jira account id) for the
-				// case the the From/To fields are users and we need this to properly
-				// make the state change otherwise we only have their username or display name
-				// which aren't reliable
-				if data.FromAccountID != nil {
-					item.From = *data.FromAccountID
-				}
+
 				item.FromString = data.FromString
-				item.To = data.To
-				if data.ToAccountID != nil {
-					item.To = *data.ToAccountID
-				}
 				item.ToString = data.ToString
+
+				if data.Field == "assignee" {
+					if data.FromString != "" {
+						item.From = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.FromString)
+					}
+					if data.ToString != "" {
+						item.To = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.ToString)
+					}
+				} else {
+					item.From = data.From
+					item.To = data.To
+				}
+
 				resChangelogs = append(resChangelogs, item)
 			}
 
