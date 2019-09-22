@@ -60,12 +60,14 @@ func IssuesAndChangelogsPage(
 					Author  User   `json:"author"`
 					Created string `json:"created"`
 					Items   []struct {
-						Field      string `json:"field"`
-						FieldType  string `json:"fieldtype"`
-						From       string `json:"from"`
-						FromString string `json:"fromString"`
-						To         string `json:"to"`
-						ToString   string `json:"toString"`
+						Field         string  `json:"field"`
+						FieldType     string  `json:"fieldtype"`
+						From          string  `json:"from"`
+						FromString    string  `json:"fromString"`
+						To            string  `json:"to"`
+						ToString      string  `json:"toString"`
+						FromAccountID *string `json:"tmpFromAccountId"`
+						ToAccountID   *string `json:"tmpToAccountId"`
 					} `json:"items"`
 				} `json:"histories"`
 			} `json:"changelog"`
@@ -253,8 +255,18 @@ func IssuesAndChangelogsPage(
 				item.Field = data.Field
 				item.FieldType = data.FieldType
 				item.From = data.From
+				// the From/To AccountID holds the ref_id (jira account id) for the
+				// case the the From/To fields are users and we need this to properly
+				// make the state change otherwise we only have their username or display name
+				// which aren't reliable
+				if data.FromAccountID != nil {
+					item.From = *data.FromAccountID
+				}
 				item.FromString = data.FromString
 				item.To = data.To
+				if data.ToAccountID != nil {
+					item.To = *data.ToAccountID
+				}
 				item.ToString = data.ToString
 				resChangelogs = append(resChangelogs, item)
 			}
