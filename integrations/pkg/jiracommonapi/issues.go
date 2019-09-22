@@ -122,6 +122,8 @@ func IssuesAndChangelogsPage(
 	// ordinal should be a monotonically increasing number for changelogs
 	// the value itself doesn't matter as long as the changelog is from
 	// the oldest to the newest
+	//
+	// Using current timestamp here instead of int, so the number is also an increasing one when running incrementals compared to previous values in the historical.
 	ordinal := datetime.EpochNow()
 
 	for i, data := range rr.Issues {
