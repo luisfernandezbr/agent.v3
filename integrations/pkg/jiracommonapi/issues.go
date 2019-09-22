@@ -272,12 +272,14 @@ func IssuesAndChangelogsPage(
 				item.ToString = data.ToString
 
 				if data.Field == "assignee" {
-					if data.FromString != "" {
-						item.From = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.FromString)
+					if data.From != "" {
+						item.From = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.From)
 					}
-					if data.ToString != "" {
-						item.To = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.ToString)
+					if data.To != "" {
+						item.To = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.To)
 					}
+					item.FromString = data.FromString + " @ " + data.From
+					item.ToString = data.ToString + " @ " + data.To
 				} else {
 					item.From = data.From
 					item.To = data.To
