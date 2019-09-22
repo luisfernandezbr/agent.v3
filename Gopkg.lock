@@ -157,14 +157,6 @@
   version = "v1.3.2"
 
 [[projects]]
-  digest = "1:e4f5819333ac698d294fe04dbf640f84719658d5c7ce195b10060cc37292ce79"
-  name = "github.com/golang/snappy"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "2a8bb927dd31d8daada140a5d09578521ce5c36a"
-  version = "v0.0.1"
-
-[[projects]]
   digest = "1:582b704bebaa06b48c29b0cec224a6058a09c86883aaddabde889cd1a5f73e1b"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -187,6 +179,14 @@
   pruneopts = "UT"
   revision = "5ccdce08c75b6c7b37af61159f13f6a4f5e2e928"
   version = "v0.9.2"
+
+[[projects]]
+  digest = "1:5d8539af558ca2ea960a4c11afb12c75ae9e9dca3560f1103318aaa2030e37e2"
+  name = "github.com/hashicorp/go-msgpack"
+  packages = ["codec"]
+  pruneopts = "UT"
+  revision = "ad60660ecf9c5a1eae0ca32182ed72bab5807961"
+  version = "v0.5.5"
 
 [[projects]]
   branch = "master"
@@ -268,14 +268,6 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
-
-[[projects]]
-  digest = "1:00809017863aa1bf51c33c3a044727e6ee6b5bb1787d72208fa60d8be6653819"
-  name = "github.com/linkedin/goavro"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "6315d37042482c83edf87d503cb0d70a1b109767"
-  version = "v2.9.6"
 
 [[projects]]
   digest = "1:891f9c13236eb1b6d1abd4fe01e6c9be51bcc65f04da0dfa4bfdf356374e98c4"
@@ -391,7 +383,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:73b0997c4ba7f05406a4d5bf413f5d94ea26ea13962749a798ce7d5cbb8e2bd6"
+  digest = "1:bdaec8f55c2a4f0a025215b37ae03e4f2edbb3af98c723bb6d231f81423fe8fc"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -415,8 +407,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "b518d24623338882db3ae65e246100373c162bdc"
-  version = "8.2.20"
+  revision = "282488b09a34834955e2e8efa8300215a2434122"
+  version = "9.0.0"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
@@ -427,7 +419,8 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:e42cf19da2afd2a900ad449269f74936ab707a608a8fc159a6fae122088a518d"
+  branch = "master"
+  digest = "1:3deff698fd087d4dca5ee5a63477ea68f022d167e52aaace9e9e621c5d598808"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -439,8 +432,7 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "a363cab7343c81dfa0d6fa22fde3b851b9f38b92"
-  version = "0.0.491"
+  revision = "7448108d093dd90c5e0c16ce16988ebde4b15e1c"
 
 [[projects]]
   branch = "master"
@@ -634,11 +626,11 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "a8b05e9114ab0cb08faec337c959aed24b68bf50"
+  revision = "1a5e07d1ff72da30f660d3c95b312a20be31173c"
 
 [[projects]]
   branch = "master"
-  digest = "1:a4b872af9900bdbebe41ac93bb2a3da7eb7fef2fd504a67406f3ae92c24cdcd7"
+  digest = "1:20b2052a69dfe97a5596cbb2bf1fa8aa630da6658f5497bdae584330b5db552e"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -650,7 +642,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "UT"
-  revision = "ef0ce1748380fdf001bd0ff86a45329a12945357"
+  revision = "0a153f010e6963173baba2306531d173aa843137"
 
 [[projects]]
   digest = "1:3952dba92e6a837cf34e6a073160d31029412bf863e37274cb779f319ddbe0b4"
@@ -688,7 +680,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:609af385cc42b73873f5fd3279d3243b4696a125416744fcb47a7c708f2988ff"
+  digest = "1:1c98862d0a4db9182650629b3d1b4ccf5821b1077477fdf0dc31af9d6c0f440a"
   name = "gonum.org/v1/gonum"
   packages = [
     "blas",
@@ -715,7 +707,7 @@
     "stat/distuv",
   ]
   pruneopts = "UT"
-  revision = "16f41441268f3dab0269c341936d645ec725d07d"
+  revision = "bcfb93e04962ee7bd8b0143e9728fc7d8b22ab63"
 
 [[projects]]
   branch = "master"
