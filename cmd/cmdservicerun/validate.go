@@ -79,6 +79,7 @@ func (s *runner) runCommand(ctx context.Context, res interface{}, args []string)
 	f.Close()
 	defer os.Remove(out)
 
+	args = append(args, "--log-format", "json")
 	args = append(args, "--output-file", out)
 	cmd := exec.CommandContext(ctx, os.Args[0], args...)
 	cmd.Stdout = os.Stdout
