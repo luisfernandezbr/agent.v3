@@ -278,8 +278,8 @@ func IssuesAndChangelogsPage(
 					if data.To != "" {
 						item.To = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.To)
 					}
-					item.FromString = data.FromString + " @ " + data.From
-					item.ToString = data.ToString + " @ " + data.To
+					item.FromString += " @ " + data.From
+					item.ToString += " @ " + data.To
 				} else {
 					item.From = data.From
 					item.To = data.To
