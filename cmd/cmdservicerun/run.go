@@ -80,7 +80,7 @@ func (s *runner) run(ctx context.Context) error {
 
 	err = s.sendStart(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("could not send start event, err: %v", err)
 	}
 
 	s.exporter = newExporter(exporterOpts{
@@ -98,22 +98,22 @@ func (s *runner) run(ctx context.Context) error {
 
 	err = s.sendEnabled(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not send enabled event, err: %v", err)
 	}
 
 	err = s.handleIntegrationEvents(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("error handling integration events, err: %v", err)
 	}
 
 	err = s.handleOnboardingEvents(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("error handling onboarding events, err: %v", err)
 	}
 
 	err = s.handleExportEvents(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("error handling export events, err: %v", err)
 	}
 
 	if os.Getenv("PP_AGENT_SERVICE_TEST_MOCK") != "" {
