@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/integration-sdk/work"
@@ -45,17 +46,19 @@ func (s *Users) ExportUser(user jiracommonapi.User) error {
 	s.exported[pk] = true
 	s.exportedMu.Unlock()
 
-	//s.integration.logger.Info("exporting user", "user", user.EmailAddress)
-	return s.sendUser(&work.User{
-		//ID:         hash.Values(customerID, pk),
-		RefType:    "jira",
-		RefID:      pk,
-		CustomerID: customerID,
-		Name:       user.DisplayName,
-		Username:   user.Name,
-		AvatarURL:  &user.Avatars.Large,
-		Email:      &user.EmailAddress,
-	})
+	u := &work.User{}
+	u.RefType = "jira"
+	u.RefID = pk
+	u.CustomerID = customerID
+	u.Name = user.DisplayName
+	u.Username = user.Name
+	u.AvatarURL = &user.Avatars.Large
+	u.Email = &user.EmailAddress
+	if user.Name != "" {
+		v := ids.WorkUserAssociatedRefID(customerID, "jira", user.Name)
+		u.AssociatedRefID = &v
+	}
+	return s.sendUser(u)
 }
 
 func (s *Users) sendUser(user *work.User) error {

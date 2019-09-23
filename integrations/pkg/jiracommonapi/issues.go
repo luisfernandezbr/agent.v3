@@ -8,8 +8,9 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
-
+	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/integration-sdk/work"
 )
 
@@ -60,12 +61,14 @@ func IssuesAndChangelogsPage(
 					Author  User   `json:"author"`
 					Created string `json:"created"`
 					Items   []struct {
-						Field      string `json:"field"`
-						FieldType  string `json:"fieldtype"`
-						From       string `json:"from"`
-						FromString string `json:"fromString"`
-						To         string `json:"to"`
-						ToString   string `json:"toString"`
+						Field         string  `json:"field"`
+						FieldType     string  `json:"fieldtype"`
+						From          string  `json:"from"`
+						FromString    string  `json:"fromString"`
+						To            string  `json:"to"`
+						ToString      string  `json:"toString"`
+						FromAccountID *string `json:"tmpFromAccountId"`
+						ToAccountID   *string `json:"tmpToAccountId"`
 					} `json:"items"`
 				} `json:"histories"`
 			} `json:"changelog"`
@@ -118,6 +121,13 @@ func IssuesAndChangelogsPage(
 	if len(rr.Issues) == rr.MaxResults {
 		pi.HasMore = true
 	}
+
+	// ordinal should be a monotonically increasing number for changelogs
+	// the value itself doesn't matter as long as the changelog is from
+	// the oldest to the newest
+	//
+	// Using current timestamp here instead of int, so the number is also an increasing one when running incrementals compared to previous values in the historical.
+	ordinal := datetime.EpochNow()
 
 	for i, data := range rr.Issues {
 
@@ -231,7 +241,10 @@ func IssuesAndChangelogsPage(
 		issueRefID := item.RefID
 		issueID := qc.IssueID(item.RefID)
 
-		for i, cl := range data.Changelog.Histories {
+		// Jira changelog histories are ordered from the newest to the oldest but we want changelogs to be
+		// sent from the oldest event to the newest event when we send
+		for i := len(data.Changelog.Histories) - 1; i >= 0; i-- {
+			cl := data.Changelog.Histories[i]
 			for _, data := range cl.Items {
 
 				item := &work.Changelog{}
@@ -240,7 +253,9 @@ func IssuesAndChangelogsPage(
 				item.RefID = cl.ID
 
 				item.IssueID = issueID
-				item.Ordinal = int64(i)
+				item.Ordinal = ordinal
+
+				ordinal++
 
 				createdAt, err := ParseTime(cl.Created)
 				if err != nil {
@@ -252,10 +267,24 @@ func IssuesAndChangelogsPage(
 
 				item.Field = data.Field
 				item.FieldType = data.FieldType
-				item.From = data.From
+
 				item.FromString = data.FromString
-				item.To = data.To
 				item.ToString = data.ToString
+
+				if data.Field == "assignee" {
+					if data.From != "" {
+						item.From = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.From)
+					}
+					if data.To != "" {
+						item.To = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.To)
+					}
+					item.FromString += " @ " + data.From
+					item.ToString += " @ " + data.To
+				} else {
+					item.From = data.From
+					item.To = data.To
+				}
+
 				resChangelogs = append(resChangelogs, item)
 			}
 

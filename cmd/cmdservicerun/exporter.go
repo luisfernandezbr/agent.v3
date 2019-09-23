@@ -128,7 +128,8 @@ func (s *exporter) execExport(ctx context.Context, agentConfig cmdexport.AgentCo
 		logWriter = io.MultiWriter(os.Stdout, exportLogWriter)
 	}
 
-	args := []string{"export"}
+	args := []string{"export", "--log-format", "json"}
+
 	if reprocessHistorical {
 		args = append(args, "--reprocess-historical=true")
 	}
