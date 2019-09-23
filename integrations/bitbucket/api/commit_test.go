@@ -36,13 +36,13 @@ func TestGetNameAndEmail(t *testing.T) {
 			"",
 		},
 	}
-	for _, c := range cases {
+	for i, c := range cases {
 		name, email := getNameAndEmail(c.In)
 		if name != c.NameWant {
 			t.Errorf("wanted [%v], got [%v]", c.NameWant, name)
 		}
 		if email != c.EmailWant {
-			t.Errorf("wanted [%v], got [%v]", c.EmailWant, email)
+			t.Errorf("%d wanted [%v], got [%v]", i, c.EmailWant, email)
 		}
 	}
 }
