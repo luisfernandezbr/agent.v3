@@ -48,6 +48,7 @@ type Integration struct {
 	pullRequestCommentsSender *objsender.NotIncremental
 	pullRequestReviewsSender  *objsender.NotIncremental
 	userSender                *objsender.NotIncremental
+	pullRequestCommitsSender  *objsender.NotIncremental
 }
 
 func main() {
@@ -172,6 +173,7 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	s.pullRequestCommentsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
 	s.pullRequestReviewsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
 	s.userSender = objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
+	s.pullRequestCommitsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommitModelName.String())
 
 	err = api.UsersEmails(s.qc, s.commitUserSender, s.userSender)
 	if err != nil {
@@ -210,6 +212,10 @@ func (s *Integration) export(ctx context.Context) (err error) {
 		return err
 	}
 	err = s.userSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.pullRequestCommitsSender.Done()
 	if err != nil {
 		return err
 	}
@@ -389,13 +395,17 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 		defer wg.Done()
 		for prs := range pullRequestsForCommits {
 			for _, pr := range prs {
-				commits, err := s.exportPullRequestCommits(logger, repo.ID, pr.IID)
+				commits, err := s.exportPullRequestCommits(logger, repo, pr.ID, pr.IID)
 				if err != nil {
 					setErr(fmt.Errorf("error getting commits %s", err))
 					return
 				}
-				pr.CommitShas = commits
-				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, commits)
+
+				for _, c := range commits {
+					pr.CommitShas = append(pr.CommitShas, c.Sha)
+				}
+
+				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, repo.ID, pr.CommitShas)
 				if len(pr.CommitShas) == 0 {
 					logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
 				} else {
@@ -405,6 +415,15 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 				if err != nil {
 					setErr(err)
 					return
+				}
+
+				for _, c := range commits {
+					c.BranchID = pr.BranchID
+					err := s.pullRequestCommitsSender.Send(c)
+					if err != nil {
+						setErr(err)
+						return
+					}
 				}
 			}
 		}
