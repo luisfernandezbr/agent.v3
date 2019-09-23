@@ -79,11 +79,14 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 	if err := s.initConfig(ctx, config); err != nil {
 		return res, err
 	}
-	repochan := make(chan datamodel.Model)
+	repochan, done := azureapi.AsyncProcess("validate", s.logger, func(m datamodel.Model) {
+		// empty, nothing to do here
+	})
 	if _, err := s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs, repochan); err != nil {
 		res.Errors = append(res.Errors)
 	}
 	close(repochan)
+	<-done
 	return res, nil
 }
 

@@ -14,9 +14,12 @@ import (
 
 func (s *Integration) onboardExportUsers(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
 
-	repochan := make(chan datamodel.Model)
+	repochan, done := azureapi.AsyncProcess("validate", s.logger, func(m datamodel.Model) {
+		// empty, nothing to do here
+	})
 	projids, err := s.api.FetchAllRepos([]string{}, []string{}, repochan)
 	close(repochan)
+	<-done
 	if err != nil {
 		s.logger.Error("error fetching repos for onboard export users")
 		return
