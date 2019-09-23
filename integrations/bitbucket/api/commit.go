@@ -147,5 +147,5 @@ func getSubstring(str string, ind1, ind2 int) (res string) {
 }
 
 func validateIndex(str string, index int) bool {
-	return index <= len(str)
+	return index <= len(str) && index > -1
 }
