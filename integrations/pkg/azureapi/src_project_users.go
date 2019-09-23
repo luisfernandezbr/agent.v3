@@ -6,9 +6,7 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-// FetchSourcecodeUsers gets users from the teams and memembers api
-// 		returns map[user.UniqueName]*sourcecode.User or Error
-//		(user.UniqueName seems to be the email for Azure)
+// FetchSourcecodeUsers gets users from the teams and memembers api, passing in a map to avoid dups
 func (api *API) FetchSourcecodeUsers(projid string, teamids []string, usermap map[string]*sourcecode.User) error {
 	allusers, err := api.fetchAllUsers(projid, teamids)
 	if err != nil {

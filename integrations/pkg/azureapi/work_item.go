@@ -10,8 +10,10 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
+// FetchWorkItems gets the work items (issues) and sends them to the items channel
+// The first step is to get the IDs of all items that changed after the fromdate
+// Then we need to get the items 200 at a time, this is done async
 func (api *API) FetchWorkItems(projid string, fromdate time.Time, items chan<- datamodel.Model) error {
-
 	async := NewAsync(5)
 	allids, err := api.fetchItemIDs(projid, fromdate)
 	if err != nil {
@@ -101,24 +103,4 @@ func (api *API) fetchWorkItemsByIDs(projid string, ids []string, items chan<- da
 		items <- &issue
 	}
 	return res, nil
-}
-
-type workItemResponse struct {
-	Fields struct {
-		AssignedTo     usersResponse `json:"System.AssignedTo"`
-		CreatedDate    time.Time     `json:"System.CreatedDate"`
-		CreatedBy      usersResponse `json:"System.CreatedBy"`
-		DueDate        time.Time     `json:"Microsoft.VSTS.Scheduling.DueDate"` // ??
-		TeamProject    string        `json:"System.TeamProject"`
-		Priority       int           `json:"Microsoft.VSTS.Common.Priority"`
-		ResolvedReason string        `json:"Microsoft.VSTS.Common.ResolvedReason"`
-		ResolvedDate   time.Time     `json:"Microsoft.VSTS.Common.ResolvedDate"`
-		State          string        `json:"System.State"`
-		Tags           string        `json:"System.Tags"`
-		Title          string        `json:"System.Title"`
-		WorkItemType   string        `json:"System.WorkItemType"`
-		ChangedDate    time.Time     `json:"System.ChangedDate"`
-	} `json:"fields"`
-	ID  int    `json:"id"`
-	URL string `json:"url"`
 }

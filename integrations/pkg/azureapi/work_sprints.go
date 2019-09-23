@@ -9,6 +9,7 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
+// FetchSprints gets sprints from a single project and multiple teams async, and sends them to the sprint channel
 func (api *API) FetchSprints(projid string, sprints chan<- datamodel.Model) error {
 	teams, err := api.fetchTeams(projid)
 	if err != nil {

@@ -5,6 +5,30 @@ import (
 	purl "net/url"
 )
 
+type usersResponse struct {
+	Descriptor  string `json:"descriptor"`
+	DisplayName string `json:"displayName"`
+	ID          string `json:"id"`
+	ImageURL    string `json:"imageUrl"`
+	UniqueName  string `json:"uniqueName"`
+	URL         string `json:"url"`
+}
+
+type usersResponseAzure struct {
+	Identity usersResponse `json:"identity"`
+}
+
+type teamsResponse struct {
+	Description string `json:"description"`
+	ID          string `json:"id"`
+	IdentityURL string `json:"identityUrl"`
+	Name        string `json:"name"`
+	ProjectID   string `json:"projectId"`
+	ProjectName string `json:"projectName"`
+	URL         string `json:"url"`
+}
+
+// FetchTeamIDs gets the team ids
 func (api *API) FetchTeamIDs(projid string) (ids []string, _ error) {
 	teams, err := api.fetchTeams(projid)
 	if err != nil {

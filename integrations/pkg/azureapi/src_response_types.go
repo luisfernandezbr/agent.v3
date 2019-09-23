@@ -2,7 +2,7 @@ package azureapi
 
 import "time"
 
-// used in reposResponseLight struct
+// used in reposResponseLight struct and projectResponse struct
 type projectResponseLight struct {
 	ID             string `json:"id"`
 	LastUpdateTime string `json:"lastUpdateTime"` // not in TFS
@@ -28,7 +28,7 @@ type reposResponseLight struct {
 	URL     string               `json:"url"`
 }
 
-// used in repos.go - fetchRepos
+// used in src_repos.go - fetchRepos
 type reposResponse struct {
 	reposResponseLight
 	DefaultBranch string          `json:"defaultBranch"`
@@ -39,7 +39,7 @@ type reposResponse struct {
 	WebURL        string          `json:"webUrl"` // not in TFS
 }
 
-// used in pull_requests.go - fetchPullRequests
+// used in src_pull_requests.go - fetchPullRequests
 type pullRequestResponse struct {
 	ClosedDate          time.Time     `json:"closedDate"`
 	CodeReviewID        int64         `json:"codeReviewId"`
@@ -84,7 +84,7 @@ type pullRequestResponse struct {
 	commitshas []string
 }
 
-// used in pull_request_commits.go - fetchPullRequestCommits
+// used in src_pull_request_commits.go - fetchPullRequestCommits
 type commitsResponseLight struct {
 	Author struct {
 		Date  time.Time `json:"date"`
@@ -106,7 +106,7 @@ type commitsResponseLight struct {
 	} `json:"changeCounts"`
 }
 
-// used in commit_users.go fetchCommits
+// used in src_commit_users.go - fetchCommits
 type commitsResponse struct {
 	commitsResponseLight
 	RemoteURL    string `json:"remoteUrl"`
@@ -117,7 +117,7 @@ type commitsResponse struct {
 	} `json:"changeCounts"`
 }
 
-// CommitResponse used for last commit
+// CommitResponse used in src_commit_users.go - FetchLastCommit
 type CommitResponse struct {
 	Author struct {
 		Date  time.Time `json:"date"`
@@ -135,7 +135,7 @@ type CommitResponse struct {
 	RemoteURL string `json:"remoteUrl"`
 }
 
-// used in pull_request_comments.go - fetchPullRequestComments
+// used in src_pull_request_comments.go - fetchPullRequestComments
 type commentsReponse struct {
 	Comments []struct {
 		Author                 usersResponse `json:"author"`
@@ -154,32 +154,7 @@ type commentsReponse struct {
 	PublishedDate   time.Time                `json:"publishedDate"`
 }
 
-// used in project_users.go fetchUsers
-type usersResponse struct {
-	Descriptor  string `json:"descriptor"`
-	DisplayName string `json:"displayName"`
-	ID          string `json:"id"`
-	ImageURL    string `json:"imageUrl"`
-	UniqueName  string `json:"uniqueName"`
-	URL         string `json:"url"`
-}
-
-// used in project_users.go fetchUsers
-type usersResponseAzure struct {
-	Identity usersResponse `json:"identity"`
-}
-
-// used in project_users.go fetchTeams
-type teamsResponse struct {
-	Description string `json:"description"`
-	ID          string `json:"id"`
-	IdentityURL string `json:"identityUrl"`
-	Name        string `json:"name"`
-	ProjectID   string `json:"projectId"`
-	ProjectName string `json:"projectName"`
-	URL         string `json:"url"`
-}
-
+// used in scr_pull_requests.go - fetchSingleCommit
 type singleCommitResponse struct {
 	Author struct {
 		Date     time.Time `json:"date"`

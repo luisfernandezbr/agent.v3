@@ -49,8 +49,11 @@ func (s *Integration) processRepos() (repoids []string, projectids []string, err
 	sender := objsender.NewNotIncremental(s.agent, sourcecode.RepoModelName.String())
 	defer sender.Done()
 
-	items, done := azureapi.AsyncProcess("repos", s.logger, sender, func(model datamodel.Model) {
+	items, done := azureapi.AsyncProcess("repos", s.logger, func(model datamodel.Model) {
 		repo := model.(*sourcecode.Repo)
+		if err := sender.Send(repo); err != nil {
+			s.logger.Error("error sending "+repo.GetModelName().String(), "err", err)
+		}
 		repoids = append(repoids, repo.RefID)
 		if err := s.ripSource(repo); err != nil {
 			s.logger.Error("error with ripsrc in repo", "data", repo.Stringify())
@@ -99,10 +102,26 @@ func (s *Integration) processPullRequests(repoids []string) error {
 		return err
 	}
 	defer senderprcs.Done()
-	prchan, prdone := azureapi.AsyncProcess("pull requests", s.logger, senderprs, nil)
-	prrchan, prrdone := azureapi.AsyncProcess("pull request reviews", s.logger, senderprrs, nil)
-	prcchan, prcdone := azureapi.AsyncProcess("pull request comments", s.logger, senderprcs, nil)
-	prcmhan, prmdone := azureapi.AsyncProcess("pull request commits", s.logger, senderprcs, nil)
+	prchan, prdone := azureapi.AsyncProcess("pull requests", s.logger, func(model datamodel.Model) {
+		if err := senderprs.Send(model); err != nil {
+			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
+		}
+	})
+	prrchan, prrdone := azureapi.AsyncProcess("pull request reviews", s.logger, func(model datamodel.Model) {
+		if err := senderprrs.Send(model); err != nil {
+			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
+		}
+	})
+	prcchan, prcdone := azureapi.AsyncProcess("pull request comments", s.logger, func(model datamodel.Model) {
+		if err := senderprcs.Send(model); err != nil {
+			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
+		}
+	})
+	prcmhan, prmdone := azureapi.AsyncProcess("pull request commits", s.logger, func(model datamodel.Model) {
+		if err := senderprcs.Send(model); err != nil {
+			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
+		}
+	})
 	var errors []string
 	for _, repoid := range repoids {
 		if err := s.api.FetchPullRequests(repoid, senderprs.LastProcessed, prchan, prrchan, prcchan, prcmhan); err != nil {

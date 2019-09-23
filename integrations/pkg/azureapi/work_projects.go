@@ -5,6 +5,7 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
+// FetchProjects gets the projects and sends them to the projchan channel
 func (api *API) FetchProjects(projchan chan<- datamodel.Model) ([]string, error) {
 	_, projids, err := api.fetchProjects(projchan)
 	if err != nil {

@@ -42,18 +42,7 @@ func (api *API) FetchCommitUsers(repoids []string, fromdate time.Time) (map[stri
 	return usermap, nil
 }
 
-func (api *API) fetchCommits(repoid string, fromdate time.Time) ([]commitsResponse, error) {
-	url := fmt.Sprintf(`_apis/git/repositories/%s/commits`, purl.PathEscape(repoid))
-	var res []commitsResponse
-	if err := api.getRequest(url, stringmap{
-		"searchCriteriapi.fromDate": fromdate.Format(time.RFC3339),
-		"$top": "3000",
-	}, &res); err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
+// FetchLastCommit gets the last commit in a repo
 func (api *API) FetchLastCommit(repoid string) (*CommitResponse, error) {
 	url := fmt.Sprintf(`_apis/git/repositories/%s/commits`, purl.PathEscape(repoid))
 	var res []CommitResponse
@@ -64,4 +53,16 @@ func (api *API) FetchLastCommit(repoid string) (*CommitResponse, error) {
 		return &res[0], nil
 	}
 	return nil, nil
+}
+
+func (api *API) fetchCommits(repoid string, fromdate time.Time) ([]commitsResponse, error) {
+	url := fmt.Sprintf(`_apis/git/repositories/%s/commits`, purl.PathEscape(repoid))
+	var res []commitsResponse
+	if err := api.getRequest(url, stringmap{
+		"searchCriteriapi.fromDate": fromdate.Format(time.RFC3339),
+		"$top": "3000",
+	}, &res); err != nil {
+		return nil, err
+	}
+	return res, nil
 }

@@ -2,11 +2,9 @@ package azureapi
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/go-common/datamodel"
 )
 
@@ -16,6 +14,7 @@ type Async interface {
 	Wait()
 }
 
+// AsyncMessage struct to be passed to the Send func
 type AsyncMessage struct {
 	Func func(interface{})
 	Data interface{}
@@ -51,26 +50,23 @@ func (a *async) Wait() {
 	a.wg.Wait()
 }
 
+// AsyncProcessCallback callback function definition
 type AsyncProcessCallback func(datamodel.Model)
 
-func AsyncProcess(name string, logger hclog.Logger, sender objsender.Sender, callback AsyncProcessCallback) (channel chan datamodel.Model, done chan bool) {
+// AsyncProcess proceses the channel reponse. Returns the channel to be used and the done chan bool
+func AsyncProcess(name string, logger hclog.Logger, callback AsyncProcessCallback) (channel chan datamodel.Model, done chan bool) {
 	channel = make(chan datamodel.Model)
 	done = make(chan bool)
 	go func() {
 		logger.Info("started with " + name)
 		count := 0
 		for each := range channel {
-			if sender != nil {
-				if err := sender.Send(each); err != nil {
-					logger.Error("error sending "+reflect.TypeOf(each).String(), "err", err)
-				}
-			}
 			if callback != nil {
 				callback(each)
 			}
 			count++
 			if (count % 1000) == 0 {
-				logger.Info(fmt.Sprintf("%d", count) + " " + name + " sent")
+				logger.Info(fmt.Sprintf("%d", count) + " " + name + " processed")
 			}
 		}
 		logger.Info("ended with "+name, "count", count)

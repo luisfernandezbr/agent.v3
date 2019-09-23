@@ -12,7 +12,8 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-// FetchPullRequests calls the pull request api and returns a list of sourcecode.PullRequest, sourcecode.PullRequestReview, and sourcecode.PullRequestComment
+// FetchPullRequests calls the pull request api and processes the reponse sending each object to the corresponding channel async
+// sourcecode.PullRequest, sourcecode.PullRequestReview, sourcecode.PullRequestComment, and sourcecode.PullRequestCommit
 func (api *API) FetchPullRequests(repoid string, fromdate time.Time, prchan chan<- datamodel.Model, prrchan chan<- datamodel.Model, prcchan chan<- datamodel.Model, prcmchan chan<- datamodel.Model) error {
 	res, err := api.fetchPullRequests(repoid)
 	if err != nil {
@@ -23,7 +24,6 @@ func (api *API) FetchPullRequests(repoid string, fromdate time.Time, prchan chan
 	for _, p := range res {
 		// if this is not incremental, return only the objects created after the fromdate
 		if !incremental || p.CreationDate.After(fromdate) {
-
 			commits, err := api.fetchPullRequestCommits(repoid, p.PullRequestID)
 			if err != nil {
 				api.logger.Error("error fetching commits for PR, skiping", "pr-id", p.PullRequestID, "repo-id", repoid)
@@ -160,7 +160,7 @@ func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponse, prc
 }
 func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestResponse, commichan chan<- datamodel.Model) error {
 	sha := p.commitshas[len(p.commitshas)-1]
-	commits, err := api.fetchCommit(repoid, sha)
+	commits, err := api.fetchSingleCommit(repoid, sha)
 	if err != nil {
 		return err
 	}
@@ -215,7 +215,7 @@ func (api *API) fetchPullRequestCommits(repoid string, prid int64) ([]commitsRes
 	return res, nil
 }
 
-func (api *API) fetchCommit(repoid string, commitid string) ([]singleCommitResponse, error) {
+func (api *API) fetchSingleCommit(repoid string, commitid string) ([]singleCommitResponse, error) {
 	url := fmt.Sprintf(`_apis/git/repositories/%s/commits/%s`, purl.PathEscape(repoid), purl.PathEscape(commitid))
 	var res []singleCommitResponse
 	if err := api.getRequest(url, stringmap{

@@ -10,7 +10,7 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-// FetchAllRepos calls the repo api returns a list of sourcecode.Repo and unique project ids
+// FetchAllRepos gets the repos and filters the inclided and excludedids if any passed, and sends them to the repochan channel
 func (api *API) FetchAllRepos(included []string, excludedids []string, repochan chan<- datamodel.Model) ([]string, error) {
 	rawrepos, err := api.fetchRepos("")
 	if err != nil {

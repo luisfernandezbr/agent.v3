@@ -55,7 +55,7 @@ func (s *Integration) onboardExportUsers(ctx context.Context, config rpcdef.Expo
 func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
 
 	var repos []*sourcecode.Repo
-	reposchan, done := azureapi.AsyncProcess("export repos", s.logger, nil, func(model datamodel.Model) {
+	reposchan, done := azureapi.AsyncProcess("export repos", s.logger, func(model datamodel.Model) {
 		repos = append(repos, model.(*sourcecode.Repo))
 	})
 	_, err = s.api.FetchAllRepos([]string{}, []string{}, reposchan)

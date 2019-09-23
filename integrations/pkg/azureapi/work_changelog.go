@@ -13,6 +13,9 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
+// FetchChangelogs gets the changelogs for a single project and sends them to the result channel
+// First we need to get the IDs of the items that hav changed after the fromdate
+// Then we need to get each changelog individually.
 func (api *API) FetchChangelogs(projid string, fromdate time.Time, result chan<- datamodel.Model) error {
 	async := NewAsync(5)
 	allids, err := api.fetchItemIDs(projid, fromdate)
@@ -45,7 +48,9 @@ func (api *API) fetchChangeLog(projid, refid string, result chan<- datamodel.Mod
 		if changelog.Fields == nil {
 			continue
 		}
+		// check if there is a parent
 		changelogCreateParentField(&changelog)
+		// get the created date, if any. Some changelogs don't have this
 		createdDate := changeLogExtractCreatedDate(changelog)
 		for field, values := range changelog.Fields {
 			if extractor, ok := changelogFields[field]; ok {
