@@ -30,6 +30,11 @@ func TestGetNameAndEmail(t *testing.T) {
 			"",
 			"",
 		},
+		{
+			"<",
+			"",
+			"",
+		},
 	}
 	for _, c := range cases {
 		name, email := getNameAndEmail(c.In)
