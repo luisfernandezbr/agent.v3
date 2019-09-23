@@ -10,30 +10,24 @@ import (
 
 // Async simple async interface
 type Async interface {
-	Send(f AsyncMessage)
+	Send(f func())
 	Wait()
 }
 
-// AsyncMessage struct to be passed to the Send func
-type AsyncMessage struct {
-	Func func(interface{})
-	Data interface{}
-}
-
 type async struct {
-	funcs chan AsyncMessage
+	funcs chan func()
 	wg    sync.WaitGroup
 }
 
 // NewAsync instantiates a new Async object
 func NewAsync(concurrency int) Async {
 	a := &async{}
-	a.funcs = make(chan AsyncMessage, concurrency*2)
+	a.funcs = make(chan func(), concurrency)
 	a.wg.Add(concurrency)
 	for i := 0; i < concurrency; i++ {
 		go func() {
-			for each := range a.funcs {
-				each.Func(each.Data)
+			for f := range a.funcs {
+				f()
 			}
 			a.wg.Done()
 		}()
@@ -41,7 +35,7 @@ func NewAsync(concurrency int) Async {
 	return a
 }
 
-func (a *async) Send(f AsyncMessage) {
+func (a *async) Send(f func()) {
 	a.funcs <- f
 }
 

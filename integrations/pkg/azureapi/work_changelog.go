@@ -17,20 +17,17 @@ import (
 // First we need to get the IDs of the items that hav changed after the fromdate
 // Then we need to get each changelog individually.
 func (api *API) FetchChangelogs(projid string, fromdate time.Time, result chan<- datamodel.Model) error {
-	async := NewAsync(5)
+	async := NewAsync(api.concurrency)
 	allids, err := api.fetchItemIDs(projid, fromdate)
 	if err != nil {
 		api.logger.Error("error fetching item ids", "err", err)
 	}
 	for _, refid := range allids {
-		async.Send(AsyncMessage{
-			Data: refid,
-			Func: func(data interface{}) {
-				refid := data.(string)
-				if _, err := api.fetchChangeLog(projid, refid, result); err != nil {
-					api.logger.Error("error fetching work item updates "+refid, "err", err)
-				}
-			},
+		refid := refid
+		async.Send(func() {
+			if _, err := api.fetchChangeLog(projid, refid, result); err != nil {
+				api.logger.Error("error fetching work item updates "+refid, "err", err)
+			}
 		})
 	}
 	async.Wait()

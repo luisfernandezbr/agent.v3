@@ -80,7 +80,10 @@ type pullRequestResponse struct {
 	TargetBranch       string `json:"targetRefName"`
 	Title              string `json:"title"`
 	URL                string `json:"url"`
+}
 
+type pullRequestResponseWithShas struct {
+	pullRequestResponse
 	commitshas []string
 }
 

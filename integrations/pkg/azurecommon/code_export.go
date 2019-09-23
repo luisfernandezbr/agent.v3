@@ -144,7 +144,6 @@ func (s *Integration) processPullRequests(repoids []string) error {
 }
 
 func (s *Integration) processUsers(repoids []string, projectids []string) error {
-
 	// not sure if we should call the incremental sender in commit users,
 	// this is the only api with incremental, but we're only fething users to match the other user api
 	sendercomm := objsender.NewNotIncremental(s.agent, commitusers.TableName)
@@ -166,7 +165,6 @@ func (s *Integration) processUsers(repoids []string, projectids []string) error 
 	if err != nil {
 		return err
 	}
-
 	// Commit Users:
 	// only send the commit users who's email matches the UniqueName of a project user
 	// the key of the commit user map is the email
@@ -184,7 +182,6 @@ func (s *Integration) processUsers(repoids []string, projectids []string) error 
 			}
 		}
 	}
-
 	// Project Users:
 	for _, user := range projusers {
 		if err := senderproj.Send(user); err != nil {

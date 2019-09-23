@@ -13,19 +13,16 @@ import (
 func (api *API) FetchSprints(projid string, sprints chan<- datamodel.Model) error {
 	teams, err := api.fetchTeams(projid)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	a := NewAsync(5)
+	a := NewAsync(api.concurrency)
 	for _, team := range teams {
-		a.Send(AsyncMessage{
-			Data: team.ID,
-			Func: func(data interface{}) {
-				teamid := data.(string)
-				if _, err := api.fetchSprint(projid, teamid, sprints); err != nil {
-					api.logger.Error("error fetching sprints for project "+projid+" and team "+teamid, "err", err)
-					return
-				}
-			},
+		teamid := team.ID
+		a.Send(func() {
+			if _, err := api.fetchSprint(projid, teamid, sprints); err != nil {
+				api.logger.Error("error fetching sprints for project "+projid+" and team "+teamid, "err", err)
+				return
+			}
 		})
 	}
 	a.Wait()

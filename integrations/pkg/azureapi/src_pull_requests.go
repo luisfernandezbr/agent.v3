@@ -20,42 +20,33 @@ func (api *API) FetchPullRequests(repoid string, fromdate time.Time, prchan chan
 		return err
 	}
 	incremental := !fromdate.IsZero()
-	a := NewAsync(5)
+	a := NewAsync(api.concurrency)
+
 	for _, p := range res {
+		pr := pullRequestResponseWithShas{}
+		pr.pullRequestResponse = p
 		// if this is not incremental, return only the objects created after the fromdate
-		if !incremental || p.CreationDate.After(fromdate) {
-			commits, err := api.fetchPullRequestCommits(repoid, p.PullRequestID)
+		if !incremental || pr.CreationDate.After(fromdate) {
+			commits, err := api.fetchPullRequestCommits(repoid, pr.PullRequestID)
 			if err != nil {
-				api.logger.Error("error fetching commits for PR, skiping", "pr-id", p.PullRequestID, "repo-id", repoid)
+				api.logger.Error("error fetching commits for PR, skiping", "pr-id", pr.PullRequestID, "repo-id", repoid)
 				continue
 			}
 			for _, commit := range commits {
-				p.commitshas = append(p.commitshas, commit.CommitID)
-				a.Send(AsyncMessage{
-					Data: p,
-					Func: func(data interface{}) {
-						p := data.(pullRequestResponse)
-						api.sendPullRequestCommitObjects(repoid, p, prcmchan)
-					},
+				pr.commitshas = append(pr.commitshas, commit.CommitID)
+				pr := pr
+				a.Send(func() {
+					api.sendPullRequestCommitObjects(repoid, pr, prcmchan)
 				})
-
 			}
-			a.Send(AsyncMessage{
-				Data: p,
-				Func: func(data interface{}) {
-					p := data.(pullRequestResponse)
-					api.sendPullRequestObjects(repoid, p, prchan, prrchan, prcmchan)
-				},
+			a.Send(func() {
+				api.sendPullRequestObjects(repoid, pr, prchan, prrchan)
 			})
 		}
 		// if this is not incremental, only fetch the comments if this pr is still opened or was closed after the last processed date
-		if !incremental || (p.Status == "active" || (incremental && p.ClosedDate.After(fromdate))) {
-			a.Send(AsyncMessage{
-				Data: p,
-				Func: func(data interface{}) {
-					p := data.(pullRequestResponse)
-					api.sendPullRequestCommentObject(repoid, p.PullRequestID, prcchan)
-				},
+		if !incremental || (pr.Status == "active" || (incremental && pr.ClosedDate.After(fromdate))) {
+			a.Send(func() {
+				api.sendPullRequestCommentObject(repoid, pr.PullRequestID, prcchan)
 			})
 		}
 	}
@@ -92,7 +83,7 @@ func (api *API) sendPullRequestCommentObject(repoid string, prid int64, prcchan 
 	}
 }
 
-func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponse, prchan chan<- datamodel.Model, prrchan chan<- datamodel.Model, prcmchan chan<- datamodel.Model) {
+func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithShas, prchan chan<- datamodel.Model, prrchan chan<- datamodel.Model) {
 	prid := p.PullRequestID
 
 	pr := sourcecode.PullRequest{
@@ -158,7 +149,7 @@ func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponse, prc
 	date.ConvertToModel(p.CreationDate, &pr.CreatedDate)
 	prchan <- &pr
 }
-func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestResponse, commichan chan<- datamodel.Model) error {
+func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestResponseWithShas, commichan chan<- datamodel.Model) error {
 	sha := p.commitshas[len(p.commitshas)-1]
 	commits, err := api.fetchSingleCommit(repoid, sha)
 	if err != nil {

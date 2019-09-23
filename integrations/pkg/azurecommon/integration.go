@@ -26,17 +26,15 @@ var RefTypeTFS = RefType("tfs")
 // RefTypeAzure the azure integration type
 var RefTypeAzure = RefType("azure")
 
-// RefType the type of integration
+// IntegrationType the type of integration
 type IntegrationType string
 
 func (r IntegrationType) String() string {
 	return string(r)
 }
 
-// RefTypeTFS the tfs integration type
 var IntegrationTypeCode = IntegrationType("code")
 
-// RefTypeAzure the azure integration type
 var IntegrationTypeIssues = IntegrationType("issues")
 
 // Integration the main integration object
@@ -52,6 +50,7 @@ type Integration struct {
 	ExcludedRepoIDs     []string `json:"excluded_repo_ids"` // excluded repo ids - this comes from the admin ui
 	IncludedRepos       []string `json:"repo_names"`        // repo_names - this is for debug and develop only
 	OverrideGitHostName string   `json:"git_host_name"`
+	Concurrency         int      `json:"concurrency"` // add it
 }
 
 // Init the init function
@@ -68,9 +67,6 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		err = s.exportCode()
 	} else {
 		err = s.exportWork()
-	}
-	if err != nil {
-		panic(err)
 	}
 	return
 }
@@ -134,6 +130,9 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 			s.creds.Password = s.creds.APIKey
 		}
 	}
+	if s.Concurrency == 0 {
+		s.Concurrency = 10
+	}
 	if s.creds.URL == "" {
 		return fmt.Errorf("missing url")
 	}
@@ -141,7 +140,7 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 		return fmt.Errorf("missing api_key")
 	}
 	s.customerid = config.Pinpoint.CustomerID
-	s.api = azureapi.NewAPI(ctx, s.logger, s.customerid, s.reftype.String(), s.creds)
+	s.api = azureapi.NewAPI(ctx, s.logger, s.Concurrency, s.customerid, s.reftype.String(), s.creds)
 	return nil
 }
 

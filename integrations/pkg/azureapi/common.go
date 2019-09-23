@@ -44,10 +44,11 @@ type API struct {
 	customerid string
 	reftype    string
 
-	client     *httpclient.HTTPClient
-	logger     hclog.Logger
-	tfs        bool
-	apiversion string
+	client      *httpclient.HTTPClient
+	logger      hclog.Logger
+	tfs         bool
+	apiversion  string
+	concurrency int
 }
 
 // RepoID returns a new hashed id for the pipeline
@@ -91,7 +92,7 @@ func (api *API) WorkUserID(refID string) string {
 }
 
 // NewAPI initializer
-func NewAPI(ctx context.Context, logger hclog.Logger, customerid, reftype string, creds *Creds) *API {
+func NewAPI(ctx context.Context, logger hclog.Logger, concurrency int, customerid, reftype string, creds *Creds) *API {
 	client := &http.Client{
 		Transport: httpdefaults.DefaultTransport(),
 		Timeout:   10 * time.Minute,
@@ -104,13 +105,14 @@ func NewAPI(ctx context.Context, logger hclog.Logger, customerid, reftype string
 	}
 	istfs := creds.Collection != nil
 	api := &API{
-		creds:      creds,
-		client:     httpclient.NewHTTPClient(ctx, conf, client),
-		logger:     logger,
-		customerid: customerid,
-		reftype:    reftype,
-		tfs:        istfs,
-		apiversion: creds.APIVersion,
+		creds:       creds,
+		client:      httpclient.NewHTTPClient(ctx, conf, client),
+		logger:      logger,
+		customerid:  customerid,
+		reftype:     reftype,
+		tfs:         istfs,
+		apiversion:  creds.APIVersion,
+		concurrency: concurrency,
 	}
 	if api.apiversion == "" {
 		if istfs {
@@ -163,7 +165,7 @@ func (api *API) doRequest(method, endPoint string, params stringmap, reader io.R
 	u.RawQuery = vals.Encode()
 	req, err := http.NewRequest(method, u.String(), reader)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	req.SetBasicAuth("", api.creds.APIKey)
 	req.Header.Set("Content-Type", "application/json")

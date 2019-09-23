@@ -14,37 +14,29 @@ import (
 // The first step is to get the IDs of all items that changed after the fromdate
 // Then we need to get the items 200 at a time, this is done async
 func (api *API) FetchWorkItems(projid string, fromdate time.Time, items chan<- datamodel.Model) error {
-	async := NewAsync(5)
+	async := NewAsync(api.concurrency)
 	allids, err := api.fetchItemIDs(projid, fromdate)
 	if err != nil {
 		return err
+	}
+	fetchitems := func(ids []string) {
+		async.Send(func() {
+			fmt.Println(ids[0])
+			if _, err := api.fetchWorkItemsByIDs(projid, ids, items); err != nil {
+				api.logger.Error("error with fetchWorkItemsByIDs", "err", err)
+			}
+		})
 	}
 	var ids []string
 	for _, id := range allids {
 		ids = append(ids, id)
 		if len(ids) == 200 {
-			async.Send(AsyncMessage{
-				Data: ids,
-				Func: func(data interface{}) {
-					ids := data.([]string)
-					if _, err := api.fetchWorkItemsByIDs(projid, ids, items); err != nil {
-						api.logger.Error("error with fetchWorkItemsByIDs", "err", err)
-					}
-				},
-			})
+			fetchitems(ids)
 			ids = []string{}
 		}
 	}
 	if len(ids) > 0 {
-		async.Send(AsyncMessage{
-			Data: ids,
-			Func: func(data interface{}) {
-				ids := data.([]string)
-				if _, err := api.fetchWorkItemsByIDs(projid, ids, items); err != nil {
-					api.logger.Error("error with fetchWorkItemsByIDs", "err", err)
-				}
-			},
-		})
+		fetchitems(ids)
 	}
 	async.Wait()
 	return nil

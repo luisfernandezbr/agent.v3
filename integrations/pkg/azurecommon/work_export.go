@@ -17,7 +17,6 @@ func (s *Integration) exportWork() error {
 	if err != nil {
 		return err
 	}
-
 	if err = s.processWorkUsers(projids); err != nil {
 		return err
 	}
@@ -117,7 +116,6 @@ func (s *Integration) processChangelogs(projids []string) error {
 		}
 	}
 	return err
-
 }
 
 func (s *Integration) processSprints(projids []string) error {
