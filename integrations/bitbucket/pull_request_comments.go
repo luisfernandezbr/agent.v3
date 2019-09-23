@@ -4,12 +4,13 @@ import (
 	"net/url"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/gitlab/api"
+	"github.com/pinpt/agent.next/integrations/bitbucket/api"
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/pkg/objsender"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportPullRequestsComments(logger hclog.Logger, sender *objsender.NotIncremental, repo commonrepo.Repo, pullRequests chan []api.PullRequest) error {
+func (s *Integration) exportPullRequestsComments(logger hclog.Logger, sender *objsender.NotIncremental, repo commonrepo.Repo, pullRequests chan []sourcecode.PullRequest) error {
 	for prs := range pullRequests {
 		for _, pr := range prs {
 			err := s.exportPullRequestComments(logger, sender, repo, pr)
@@ -21,8 +22,8 @@ func (s *Integration) exportPullRequestsComments(logger hclog.Logger, sender *ob
 	return nil
 }
 
-func (s *Integration) exportPullRequestComments(logger hclog.Logger, sender *objsender.NotIncremental, repo commonrepo.Repo, pr api.PullRequest) error {
-	return api.PaginateStartAt(logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
+func (s *Integration) exportPullRequestComments(logger hclog.Logger, sender *objsender.NotIncremental, repo commonrepo.Repo, pr sourcecode.PullRequest) error {
+	return api.Paginate(logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
 		pi, res, err := api.PullRequestCommentsPage(s.qc, repo, pr, paginationParams)
 		if err != nil {
 			return pi, err

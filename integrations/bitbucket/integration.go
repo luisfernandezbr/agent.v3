@@ -4,16 +4,15 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/gitlab/api"
+	"github.com/pinpt/agent.next/integrations/bitbucket/api"
 	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/pkg/commitusers"
-	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
@@ -21,10 +20,23 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
+func main() {
+	ibase.MainFunc(func(logger hclog.Logger) rpcdef.Integration {
+		return NewIntegration(logger)
+	})
+}
+
+func NewIntegration(logger hclog.Logger) *Integration {
+	s := &Integration{}
+	s.logger = logger
+	return s
+}
+
 type Config struct {
 	commonrepo.FilterConfig
 	URL                string `json:"url"`
-	APIToken           string `json:"apitoken"`
+	Username           string `json:"username"`
+	Password           string `json:"password"`
 	OnlyGit            bool   `json:"only_git"`
 	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
 }
@@ -50,20 +62,9 @@ type Integration struct {
 	userSender                *objsender.NotIncremental
 }
 
-func main() {
-	ibase.MainFunc(func(logger hclog.Logger) rpcdef.Integration {
-		return NewIntegration(logger)
-	})
-}
-
-func NewIntegration(logger hclog.Logger) *Integration {
-	s := &Integration{}
-	s.logger = logger
-	return s
-}
 func (s *Integration) Init(agent rpcdef.Agent) error {
 	s.agent = agent
-	s.refType = "gitlab"
+	s.refType = "bitbucket"
 
 	s.qc = api.QueryContext{
 		Logger: s.logger,
@@ -97,6 +98,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 
 func (s *Integration) Export(ctx context.Context,
 	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, err error) {
+
 	err = s.initWithConfig(exportConfig)
 	if err != nil {
 		return
@@ -122,14 +124,13 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	{
 		opts := api.RequesterOpts{}
 		opts.Logger = s.logger
-		opts.APIURL = s.config.URL + "/api/v4"
-		opts.APIGraphQL = s.config.URL + "/api/graphql"
-		opts.APIToken = s.config.APIToken
+		opts.APIURL = s.config.URL + "/2.0"
+		opts.Username = s.config.Username
+		opts.Password = s.config.Password
 		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
 		requester := api.NewRequester(opts)
 
 		s.qc.Request = requester.Request
-		s.qc.RequestGraphQL = requester.RequestGraphQL
 		s.qc.IDs = ids2.New(s.customerID, s.refType)
 	}
 
@@ -140,18 +141,22 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	rerr := func(msg string, args ...interface{}) error {
 		return fmt.Errorf("config validation error: "+msg, args...)
 	}
-	var conf Config
-	err := structmarshal.MapToStruct(data, &conf)
+	var def Config
+	err := structmarshal.MapToStruct(data, &def)
 	if err != nil {
 		return err
 	}
-	if conf.URL == "" {
+	if def.URL == "" {
 		return rerr("url is missing")
 	}
-	if conf.APIToken == "" {
-		return rerr("api token is missing")
+	if def.Username == "" {
+		return rerr("username is missing")
 	}
-	s.config = conf
+	if def.Password == "" {
+		return rerr("password is missing")
+	}
+
+	s.config = def
 	return nil
 }
 
@@ -173,18 +178,13 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	s.pullRequestReviewsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
 	s.userSender = objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
 
-	err = api.UsersEmails(s.qc, s.commitUserSender, s.userSender)
+	teamNames, err := api.Teams(s.qc)
 	if err != nil {
 		return err
 	}
 
-	groupNames, err := api.Groups(s.qc)
-	if err != nil {
-		return err
-	}
-
-	for _, groupName := range groupNames {
-		if err := s.exportGroup(ctx, groupName); err != nil {
+	for _, teamName := range teamNames {
+		if err := s.exportTeam(ctx, teamName); err != nil {
 			return err
 		}
 	}
@@ -217,12 +217,12 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	return
 }
 
-func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
-	s.logger.Info("exporting group", "name", groupName)
-	logger := s.logger.With("org", groupName)
+func (s *Integration) exportTeam(ctx context.Context, teamName string) error {
+	s.logger.Info("exporting group", "name", teamName)
+	logger := s.logger.With("org", teamName)
 
 	repos, err := commonrepo.ReposAllSlice(func(res chan []commonrepo.Repo) error {
-		return api.ReposAll(s.qc, groupName, res)
+		return api.ReposAll(s.qc, teamName, res)
 	})
 	if err != nil {
 		return err
@@ -238,9 +238,9 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 			if err != nil {
 				return err
 			}
-			u.User = url.UserPassword("token", s.config.APIToken)
-			u.Path = repo.NameWithOwner
-			repoURL := u.String()
+			u.User = url.UserPassword(s.config.Username, s.config.Password)
+			u.Path = "/" + repo.NameWithOwner
+			repoURL := u.Scheme + "://" + u.User.String() + "@" + strings.TrimPrefix(u.Host, "api.") + u.EscapedPath()
 
 			args := rpcdef.GitRepoFetch{}
 			args.RefType = s.refType
@@ -261,7 +261,19 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 	}
 
 	// export repos
-	err = s.exportRepos(ctx, logger, groupName, repos)
+	err = s.exportRepos(ctx, logger, teamName, repos)
+	if err != nil {
+		return err
+	}
+
+	// export users
+	err = s.exportUsers(ctx, logger, teamName)
+	if err != nil {
+		return err
+	}
+
+	// export repos
+	err = s.exportCommitUsers(ctx, logger, repos)
 	if err != nil {
 		return err
 	}
@@ -285,8 +297,8 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, grou
 		shouldInclude[repo.NameWithOwner] = true
 	}
 
-	err := api.PaginateNewerThan(s.logger, sender.LastProcessed, func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, repos, err := api.ReposPageREST(s.qc, groupName, parameters, stopOnUpdatedAt)
+	return api.PaginateNewerThan(s.logger, sender.LastProcessed, func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
+		pi, repos, err := api.ReposSourcecodePage(s.qc, groupName, parameters, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
 		}
@@ -301,114 +313,49 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, grou
 		}
 		return pi, nil
 	})
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
-func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
-	pullRequestSender *objsender.IncrementalDateBased,
-	commentsSender *objsender.NotIncremental,
-	reviewSender *objsender.NotIncremental) (rerr error) {
+func (s *Integration) exportUsers(ctx context.Context, logger hclog.Logger, groupName string) error {
 
-	logger = logger.With("repo", repo.NameWithOwner)
-	logger.Info("exporting")
+	sender := s.userSender
 
-	// export changed pull requests
-	var pullRequestsErr error
-	pullRequestsInitial := make(chan []api.PullRequest)
-	go func() {
-		defer close(pullRequestsInitial)
-		err := s.exportPullRequestsRepo(logger, repo, pullRequestsInitial, pullRequestSender.LastProcessed)
+	return api.Paginate(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
+		pi, users, err := api.UsersSourcecodePage(s.qc, groupName, parameters)
 		if err != nil {
-			pullRequestsErr = err
+			return pi, err
 		}
-	}()
+		for _, user := range users {
+			err := sender.Send(user)
+			if err != nil {
+				return pi, err
+			}
+		}
+		return pi, nil
+	})
+}
 
-	// export comments, reviews, commits concurrently
-	pullRequestsForComments := make(chan []api.PullRequest, 10)
-	pullRequestsForReviews := make(chan []api.PullRequest, 10)
-	pullRequestsForCommits := make(chan []api.PullRequest, 10)
+func (s *Integration) exportCommitUsers(ctx context.Context, logger hclog.Logger, repos []commonrepo.Repo) (err error) {
 
-	var errMu sync.Mutex
-	setErr := func(err error) {
-		logger.Error("failed repo export", "e", err)
-		errMu.Lock()
-		defer errMu.Unlock()
-		if rerr == nil {
-			rerr = err
-		}
-		// drain all pull requests on error
-		for range pullRequestsForComments {
-		}
-		for range pullRequestsForReviews {
-		}
-		for range pullRequestsForCommits {
+	sender := s.commitUserSender
+
+	for _, repo := range repos {
+		err = api.Paginate(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
+			pi, users, err := api.CommitUsersSourcecodePage(s.qc, repo.NameWithOwner, parameters)
+			if err != nil {
+				return pi, err
+			}
+			for _, user := range users {
+				err := sender.SendMap(user.ToMap())
+				if err != nil {
+					return pi, err
+				}
+			}
+			return pi, nil
+		})
+		if err != nil {
+			return
 		}
 	}
 
-	go func() {
-		for item := range pullRequestsInitial {
-			pullRequestsForComments <- item
-			pullRequestsForReviews <- item
-			pullRequestsForCommits <- item
-		}
-		close(pullRequestsForComments)
-		close(pullRequestsForReviews)
-		close(pullRequestsForCommits)
-
-		if pullRequestsErr != nil {
-			setErr(pullRequestsErr)
-		}
-	}()
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := s.exportPullRequestsComments(logger, commentsSender, repo, pullRequestsForComments)
-		if err != nil {
-			setErr(fmt.Errorf("error getting comments %s", err))
-		}
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := s.exportPullRequestsReviews(logger, reviewSender, repo, pullRequestsForReviews)
-		if err != nil {
-			setErr(fmt.Errorf("error getting reviews %s", err))
-		}
-	}()
-
-	// set commits on the rp and then send the pr
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for prs := range pullRequestsForCommits {
-			for _, pr := range prs {
-				commits, err := s.exportPullRequestCommits(logger, repo.ID, pr.IID)
-				if err != nil {
-					setErr(fmt.Errorf("error getting commits %s", err))
-					return
-				}
-				pr.CommitShas = commits
-				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, commits)
-				if len(pr.CommitShas) == 0 {
-					logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
-				} else {
-					pr.BranchID = s.qc.IDs.CodeBranch(pr.RepoID, pr.BranchName, pr.CommitShas[0])
-				}
-				err = pullRequestSender.Send(pr)
-				if err != nil {
-					setErr(err)
-					return
-				}
-			}
-		}
-	}()
-	wg.Wait()
 	return
 }

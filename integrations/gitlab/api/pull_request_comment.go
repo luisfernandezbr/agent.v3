@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/pkg/date"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -12,7 +13,7 @@ import (
 
 func PullRequestCommentsPage(
 	qc QueryContext,
-	repo Repo,
+	repo commonrepo.Repo,
 	pr PullRequest,
 	params url.Values) (pi PageInfo, res []*sourcecode.PullRequestComment, err error) {
 
@@ -47,8 +48,8 @@ func PullRequestCommentsPage(
 		item.RefID = fmt.Sprint(rcomment.ID)
 		item.URL = pstrings.JoinURL(u.Scheme, "://", u.Hostname(), repo.NameWithOwner, "merge_requests", pr.IID)
 		date.ConvertToModel(rcomment.UpdatedAt, &item.UpdatedDate)
-		item.RepoID = qc.RepoID(repo.ID)
-		item.PullRequestID = qc.PullRequestID(repo.ID, pr.ID)
+		item.RepoID = qc.IDs.CodeRepo(repo.ID)
+		item.PullRequestID = qc.IDs.CodePullRequest(repo.ID, pr.ID)
 		item.Body = rcomment.Body
 		date.ConvertToModel(rcomment.CreatedAt, &item.CreatedDate)
 
