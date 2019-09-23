@@ -69,7 +69,7 @@ func NewNotIncremental(agent rpcdef.Agent, refType string) *NotIncremental {
 }
 
 type Model interface {
-	ToMap(...bool) map[string]interface{}
+	ToMap() map[string]interface{}
 }
 
 func (s *NotIncremental) Send(obj Model) error {

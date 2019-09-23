@@ -49,3 +49,7 @@ func WorkIssue(customerID string, refType string, refID string) string {
 func WorkUser(customerID string, refType string, refID string) string {
 	return work.NewUserID(customerID, refType, refID)
 }
+
+func WorkUserAssociatedRefID(customerID string, refType string, associatedRefID string) string {
+	return hash.Values(customerID, refType, associatedRefID)
+}

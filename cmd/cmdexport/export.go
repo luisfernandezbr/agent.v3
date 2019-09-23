@@ -62,13 +62,13 @@ func newExport(opts Opts) (*export, error) {
 	}
 
 	if opts.ReprocessHistorical {
-		s.Logger.Info("ReprocessHistorical is true, discarding incremental checkpoints")
+		s.Logger.Info("Starting export. ReprocessHistorical is true, discarding incremental checkpoints")
 		err := s.discardIncrementalData()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		s.Logger.Info("ReprocessHistorical is false, will use incremental checkpoints if available")
+		s.Logger.Info("Starting export. ReprocessHistorical is false, will use incremental checkpoints if available.")
 	}
 
 	s.lastProcessed, err = jsonstore.New(s.Locs.LastProcessedFile)
@@ -97,8 +97,14 @@ func newExport(opts Opts) (*export, error) {
 	exportRes := s.runExports()
 	close(s.gitProcessingRepos)
 
-	s.Logger.Info("Waiting for git repo processing to complete")
-	hadErrors := <-gitProcessingDone
+	hadErrors := false
+	select {
+	case hadErrors = <-gitProcessingDone:
+	case <-time.After(1 * time.Second):
+		// only log this is there is actual work needed for git repos
+		s.Logger.Info("Waiting for git repo processing to complete")
+		hadErrors = <-gitProcessingDone
+	}
 
 	s.printExportRes(exportRes, hadErrors)
 
@@ -165,7 +171,7 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 	}
 
 	if i == 0 {
-		s.Logger.Warn("Finished git repo processing: No git repos found")
+		s.Logger.Info("Finished git repo processing: No git repos found")
 		return false, nil
 	}
 
@@ -177,12 +183,12 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 		for k, err := range resErrors {
 			s.Logger.Error("Error processing git repo", "repo", k, "err", err)
 		}
-		s.Logger.Error("Error in git repo processing", "count", i, "dur", time.Since(start), "repos_failed", len(resErrors))
+		s.Logger.Error("Error in git repo processing", "count", i, "dur", time.Since(start).String(), "repos_failed", len(resErrors))
 		return true, nil
 
 	}
 
-	s.Logger.Info("Finished git repo processing", "count", i, "dur", time.Since(start))
+	s.Logger.Info("Finished git repo processing", "count", i, "dur", time.Since(start).String())
 	return false, nil
 }
 
@@ -211,13 +217,13 @@ func (s *export) runExports() map[string]runResult {
 				res[name] = runResult{Err: err, Duration: time.Since(start)}
 				resMu.Unlock()
 				if err != nil {
-					s.Logger.Error("Export failed", "integration", name, "dur", time.Since(start), "err", err)
+					s.Logger.Error("Export failed", "integration", name, "dur", time.Since(start).String(), "err", err)
 					return
 				}
-				s.Logger.Info("Export success", "integration", name, "dur", time.Since(start))
+				s.Logger.Info("Export success", "integration", name, "dur", time.Since(start).String())
 			}
 
-			s.Logger.Info("Export starting", "integration", name, "log_file", integration.LogFile())
+			s.Logger.Info("Export starting", "integration", name)
 
 			exportConfig, ok := s.ExportConfigs[name]
 			if !ok {
@@ -246,7 +252,7 @@ func (s *export) printExportRes(res map[string]runResult, gitHadErrors bool) {
 	for name, integration := range s.Integrations {
 		ires := res[name]
 		if ires.Err != nil {
-			s.Logger.Error("Export failed", "integration", name, "dur", ires.Duration, "err", ires.Err)
+			s.Logger.Error("Export failed", "integration", name, "dur", ires.Duration.String(), "err", ires.Err)
 			panicOut, err := integration.CloseAndDetectPanic()
 			if panicOut != "" {
 				// This is already printed in integration. But we will repeat output at the end, so it's not lost.
@@ -260,7 +266,7 @@ func (s *export) printExportRes(res map[string]runResult, gitHadErrors bool) {
 			continue
 		}
 
-		s.Logger.Info("Export success", "integration", name, "dur", ires.Duration)
+		s.Logger.Info("Export success", "integration", name, "dur", ires.Duration.String())
 		successNames = append(successNames, name)
 	}
 
@@ -271,9 +277,9 @@ func (s *export) printExportRes(res map[string]runResult, gitHadErrors bool) {
 	}
 
 	if len(failedNames) > 0 {
-		s.Logger.Error("Some exports failed", "failed", failedNames, "succeded", successNames, "dur", dur)
+		s.Logger.Error("Some exports failed", "failed", failedNames, "succeded", successNames, "dur", dur.String())
 	} else {
-		s.Logger.Info("Exports completed", "succeded", successNames, "dur", dur)
+		s.Logger.Info("Exports completed", "succeded", successNames, "dur", dur.String())
 	}
 }
 

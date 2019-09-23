@@ -21,7 +21,7 @@ type metricsResponse struct {
 
 // FetchMetrics _
 func (a *SonarqubeAPI) FetchMetrics(project *codequality.Project, fromDate time.Time) ([]*codequality.Metric, error) {
-	project.ToMap(false) // need to call setDefaults so that ID is set
+	project.ToMap() // need to call setDefaults so that ID is set
 	metricKeys := strings.Join(a.metrics, ",")
 	ur := "/measures/search_history?p=1&ps=500&component=" + project.Identifier + "&metrics=" + metricKeys
 	val := []metricsResponse{}
