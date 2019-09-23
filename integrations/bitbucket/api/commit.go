@@ -121,5 +121,9 @@ func getNameAndEmail(raw string) (string, string) {
 
 	index := strings.Index(raw, "<")
 
+	if index == 0 {
+		return "", raw[index+1 : len(raw)-1]
+	}
+
 	return raw[:index-1], raw[index+1 : len(raw)-1]
 }
