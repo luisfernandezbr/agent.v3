@@ -19,34 +19,43 @@ build-integrations-local:
 build-prod-local:
 	go build -tags prod -o dist/agent.next
 
-build-macos:
+macos:
 	env GOOS=darwin go build -tags prod -o dist/macos/agent.next
+
+	env GOOS=darwin go build -o dist/macos/integrations/bitbucket ./integrations/bitbucket
 	env GOOS=darwin go build -o dist/macos/integrations/github ./integrations/github
+	env GOOS=darwin go build -o dist/macos/integrations/gitlab ./integrations/gitlab
 	env GOOS=darwin go build -o dist/macos/integrations/jira-cloud ./integrations/jira-cloud
 	env GOOS=darwin go build -o dist/macos/integrations/jira-hosted ./integrations/jira-hosted
+	env GOOS=darwin go build -o dist/macos/integrations/mock ./integrations/mock
 	env GOOS=darwin go build -o dist/macos/integrations/sonarqube ./integrations/sonarqube
 	env GOOS=darwin go build -o dist/macos/integrations/tfs-code ./integrations/tfs-code
-	env GOOS=darwin go build -o dist/macos/integrations/mock ./integrations/mock
 
-build-linux:
+linux:
 	env GOOS=linux go build -tags prod -o dist/linux/agent.next
+
+	env GOOS=linux go build -o dist/linux/integrations/bitbucket ./integrations/bitbucket
 	env GOOS=linux go build -o dist/linux/integrations/github ./integrations/github
+	env GOOS=linux go build -o dist/linux/integrations/gitlab ./integrations/gitlab
 	env GOOS=linux go build -o dist/linux/integrations/jira-cloud ./integrations/jira-cloud
 	env GOOS=linux go build -o dist/linux/integrations/jira-hosted ./integrations/jira-hosted
+	env GOOS=linux go build -o dist/linux/integrations/mock ./integrations/mock
 	env GOOS=linux go build -o dist/linux/integrations/sonarqube ./integrations/sonarqube
 	env GOOS=linux go build -o dist/linux/integrations/tfs-code ./integrations/tfs-code
-	env GOOS=linux go build -o dist/linux/integrations/mock ./integrations/mock
 
-build-win:
+windows:
 	env GOOS=windows go build -tags prod -o dist/windows/agent-next.exe
+
+	env GOOS=windows go build -o dist/windows/integrations/bitbucket.exe ./integrations/bitbucket
 	env GOOS=windows go build -o dist/windows/integrations/github.exe ./integrations/github
+	env GOOS=windows go build -o dist/windows/integrations/gitlab.exe ./integrations/gitlab
 	env GOOS=windows go build -o dist/windows/integrations/jira-cloud.exe ./integrations/jira-cloud
 	env GOOS=windows go build -o dist/windows/integrations/jira-hosted.exe ./integrations/jira-hosted
+	env GOOS=windows go build -o dist/windows/integrations/mock.exe ./integrations/mock
 	env GOOS=windows go build -o dist/windows/integrations/sonarqube.exe ./integrations/sonarqube
 	env GOOS=windows go build -o dist/windows/integrations/tfs-code.exe ./integrations/tfs-code
-	env GOOS=windows go build -o dist/windows/integrations/mock.exe ./integrations/mock
 
 build:
-	make build-macos 
-	make build-linux 
-	make build-win 
+	make macos
+	make linux
+	make windows
