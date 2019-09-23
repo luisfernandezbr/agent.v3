@@ -1,6 +1,7 @@
 package ids2
 
 import (
+	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/integration-sdk/sourcecode"
 	"github.com/pinpt/integration-sdk/work"
 )
@@ -15,6 +16,10 @@ func New(customerID, refType string) Gen {
 		customerID: customerID,
 		refType:    refType,
 	}
+}
+
+func (s Gen) CodeCommitEmail(email string) string {
+	return hash.Values(s.customerID, email)
 }
 
 func (s Gen) CodeRepo(refID string) string {
@@ -55,4 +60,8 @@ func (s Gen) WorkIssue(refID string) string {
 
 func (s Gen) WorkUser(refID string) string {
 	return work.NewUserID(s.customerID, s.refType, refID)
+}
+
+func (s Gen) WorkUserAssociatedRefID(associatedRefID string) string {
+	return hash.Values(s.customerID, s.refType, associatedRefID)
 }

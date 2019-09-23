@@ -14,7 +14,6 @@ import (
 
 	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/go-common/fileutil"
-	"github.com/pinpt/go-common/hash"
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 
@@ -491,8 +490,8 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 			Additions:      commitAdditions,
 			Deletions:      commitDeletions,
 			FilesChanged:   commitFilesCount,
-			AuthorRefID:    hash.Values(customerID, commit.AuthorEmail),
-			CommitterRefID: hash.Values(customerID, commit.CommitterEmail),
+			AuthorRefID:    ids.CodeCommitEmail(customerID, commit.AuthorEmail),
+			CommitterRefID: ids.CodeCommitEmail(customerID, commit.CommitterEmail),
 			Ordinal:        commit.Ordinal,
 			Loc:            commitLocCount,
 			Sloc:           commitSlocCount,

@@ -40,7 +40,7 @@ func New(opts Opts) *Loader {
 }
 
 func (s *Loader) Load(names []string) map[string]*Integration {
-	s.logger.Info("loading integrations", "names", names)
+	s.logger.Info("Loading integrations", "names", names)
 
 	res := make(chan *Integration)
 	go func() {
