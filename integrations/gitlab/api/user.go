@@ -282,7 +282,6 @@ func RepoUsersPageREST(qc QueryContext, repo commonrepo.Repo, params url.Values)
 		sourceUser.Username = pstrings.Pointer(user.Username)
 		sourceUser.Member = true
 		sourceUser.Type = sourcecode.UserTypeHuman
-		sourceUser.AssociatedRefID = pstrings.Pointer(user.Username)
 
 		repos = append(repos, &sourceUser)
 	}
