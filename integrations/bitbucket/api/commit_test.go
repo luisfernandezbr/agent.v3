@@ -11,33 +11,123 @@ func TestGetNameAndEmail(t *testing.T) {
 		EmailWant string
 	}{
 		{
-			"1na3me3 <1em2a3il4>",
-			"1na3me3",
-			"1em2a3il4",
+			"name <name@email.com>",
+			"name",
+			"name@email.com",
 		},
 		{
-			"^_623s#%1na3%^ <01em2a3il4%^&%>",
-			"^_623s#%1na3%^",
-			"01em2a3il4%^&%",
+			"<name@email.com>",
+			"",
+			"name@email.com",
 		},
 		{
-			"Jose C Ordaz <cordaz@pinpoint.com>",
-			"Jose C Ordaz",
-			"cordaz@pinpoint.com",
+			"name <>",
+			"name",
+			"",
 		},
 		{
 			"",
+			"",
+			"",
+		},
+		{
+			"<",
 			"",
 			"",
 		},
 	}
-	for _, c := range cases {
+	for i, c := range cases {
 		name, email := getNameAndEmail(c.In)
 		if name != c.NameWant {
 			t.Errorf("wanted [%v], got [%v]", c.NameWant, name)
 		}
 		if email != c.EmailWant {
-			t.Errorf("wanted [%v], got [%v]", c.EmailWant, email)
+			t.Errorf("%d wanted [%v], got [%v]", i, c.EmailWant, email)
+		}
+	}
+}
+func TestValidateIndex(t *testing.T) {
+	cases := []struct {
+		InStr   string
+		InIndex int
+		Want    bool
+	}{
+		{
+			"str",
+			0,
+			true,
+		},
+		{
+			"str",
+			1,
+			true,
+		},
+		{
+			"str",
+			3,
+			true,
+		},
+		{
+			"str",
+			-1,
+			false,
+		},
+		{
+			"str",
+			4,
+			false,
+		},
+	}
+	for i, c := range cases {
+		validate := validateIndex(c.InStr, c.InIndex)
+		if !validate && c.Want {
+			t.Errorf("%d: StrIn[%s], Index[%d]  wanted [%v], got [%v]", i, c.InStr, c.InIndex, c.Want, validate)
+		}
+	}
+}
+
+func TestGetSubstring(t *testing.T) {
+	cases := []struct {
+		InStr     string
+		InitIndex int
+		EndIndex  int
+		Want      string
+	}{
+		{
+			"str",
+			0,
+			1,
+			"s",
+		},
+		{
+			"str",
+			0,
+			3,
+			"str",
+		},
+		{
+			"str",
+			-1,
+			3,
+			"",
+		},
+		{
+			"str",
+			1,
+			4,
+			"",
+		},
+		{
+			"str",
+			3,
+			2,
+			"",
+		},
+	}
+	for i, c := range cases {
+		res := getSubstring(c.InStr, c.InitIndex, c.EndIndex)
+		if res != c.Want {
+			t.Errorf("%d: StrIn[%s], InitIndex[%d]  EndIndex[%d] Wanted [%v], got [%v]", i, c.InStr, c.InitIndex, c.EndIndex, c.Want, res)
 		}
 	}
 }

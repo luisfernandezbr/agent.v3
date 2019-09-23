@@ -113,11 +113,39 @@ func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) 
 	return
 }
 
-func getNameAndEmail(raw string) (string, string) {
+func getNameAndEmail(raw string) (name string, email string) {
 	if raw == "" {
-		return "", ""
+		return
 	}
+
 	index := strings.Index(raw, "<")
 
-	return raw[:index-1], raw[index+1 : len(raw)-1]
+	if index == 0 {
+		name = ""
+		email = getSubstring(raw, index+1, len(raw)-1)
+
+		return
+	}
+
+	name = getSubstring(raw, 0, index-1)
+	email = getSubstring(raw, index+1, len(raw)-1)
+
+	return
+}
+
+func getSubstring(str string, ind1, ind2 int) (res string) {
+	if !validateIndex(str, ind1) {
+		return
+	}
+	if !validateIndex(str, ind2) {
+		return
+	}
+	if ind2 < ind1 {
+		return
+	}
+	return str[ind1:ind2]
+}
+
+func validateIndex(str string, index int) bool {
+	return index <= len(str) && index > -1
 }

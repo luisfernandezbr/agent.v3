@@ -1,9 +1,14 @@
 package ids
 
 import (
+	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/integration-sdk/sourcecode"
 	"github.com/pinpt/integration-sdk/work"
 )
+
+func CodeCommitEmail(customerID string, email string) string {
+	return hash.Values(customerID, email)
+}
 
 func CodeRepo(customerID string, refType string, refID string) string {
 	return sourcecode.NewRepoID(customerID, refType, refID)
@@ -43,4 +48,8 @@ func WorkIssue(customerID string, refType string, refID string) string {
 
 func WorkUser(customerID string, refType string, refID string) string {
 	return work.NewUserID(customerID, refType, refID)
+}
+
+func WorkUserAssociatedRefID(customerID string, refType string, associatedRefID string) string {
+	return hash.Values(customerID, refType, associatedRefID)
 }

@@ -2,6 +2,7 @@ package cmdservicerun
 
 import (
 	"bytes"
+	"compress/gzip"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -65,7 +66,22 @@ func (s *exportLogSender) upload() {
 
 	s.logger.Info("uploading log", "size", len(s.buf), "url", url)
 
-	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(s.buf))
+	// gzip the bytes before sending
+	buf := &bytes.Buffer{}
+	gw := gzip.NewWriter(buf)
+	_, err = gw.Write(s.buf)
+	if err != nil {
+		perr(err)
+		return
+	}
+
+	err = gw.Close()
+	if err != nil {
+		perr(err)
+		return
+	}
+
+	req, err := http.NewRequest(http.MethodPut, url, buf)
 	if err != nil {
 		perr(err)
 		return

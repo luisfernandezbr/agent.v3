@@ -3,9 +3,10 @@ package main
 import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/github/api"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportPullRequestCommits(logger hclog.Logger, prID string) (res []string, _ error) {
+func (s *Integration) exportPullRequestCommits(logger hclog.Logger, prID string) (res []*sourcecode.PullRequestCommit, _ error) {
 	err := api.PaginateRegular(func(query string) (api.PageInfo, error) {
 		pi, sub, err := api.PullRequestCommitsPage(s.qc, prID, query)
 		if err != nil {

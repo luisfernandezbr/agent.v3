@@ -49,6 +49,7 @@ type Integration struct {
 	pullRequestSender         *objsender.IncrementalDateBased
 	pullRequestCommentsSender *objsender.NotIncremental
 	pullRequestReviewsSender  *objsender.NotIncremental
+	pullRequestCommitsSender  *objsender.NotIncremental
 }
 
 func NewIntegration(logger hclog.Logger) *Integration {
@@ -287,6 +288,7 @@ func (s *Integration) export(ctx context.Context) error {
 	}
 	s.pullRequestCommentsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
 	s.pullRequestReviewsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
+	s.pullRequestCommitsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommitModelName.String())
 
 	for _, org := range orgs {
 		err := s.exportOrganization(ctx, org)
@@ -316,6 +318,10 @@ func (s *Integration) export(ctx context.Context) error {
 		return err
 	}
 	err = s.pullRequestReviewsSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.pullRequestCommitsSender.Done()
 	if err != nil {
 		return err
 	}
@@ -540,23 +546,39 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 		defer wg.Done()
 		for prs := range pullRequestsForCommits {
 			for _, pr := range prs {
+
 				commits, err := s.exportPullRequestCommits(logger, pr.RefID)
 				if err != nil {
 					setErr(err)
 					return
 				}
-				pr.CommitShas = commits
-				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, commits)
+
+				for _, c := range commits {
+					pr.CommitShas = append(pr.CommitShas, c.Sha)
+				}
+
+				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, pr.CommitShas)
 				if len(pr.CommitShas) == 0 {
 					logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
 				} else {
 					pr.BranchID = s.qc.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
 				}
+
 				err = pullRequestSender.Send(pr)
 				if err != nil {
 					setErr(err)
 					return
 				}
+
+				for _, c := range commits {
+					c.BranchID = pr.BranchID
+					err := s.pullRequestCommitsSender.Send(c)
+					if err != nil {
+						setErr(err)
+						return
+					}
+				}
+
 			}
 		}
 	}()
