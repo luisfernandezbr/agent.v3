@@ -8,6 +8,69 @@ Sourcecode integrations also process git repositories directly after cloning the
 
 ## Data processing for git repos
 
-Sourcecode integrations clone full git repositories, and send content of all commits to the backend, with some exceptions for performance reasons.
+Sourcecode integrations clone git repositories to the machine where agent is running. Each commit in repository is processed, code statistics are extracted and send to the server. We do not send the actual code after processing with agent. 
 
-Agent also calculated some additional statistic and similar data based on this, which is sent to the server as well.
+But we do send metadata for every commit, file and line. For example, we send flags for each line to know if it's code, comment or empty line, as well as in which commit it was modified, author, dates and similar.
+
+```
+sourcecode.Commit
+    Metadata
+        Sha
+        Message
+        FilesChanged
+        AuthorEmailHash
+        CommitterEmailHash
+        IsGpgSigned
+
+    Counts
+        Additions
+        Deletions
+        Loc
+        Sloc
+        Comments
+        Blanks
+        Size
+        Complexity
+
+    Files 
+        Metadata for each file
+
+        Filename
+        Language
+        Renamed
+        Additions
+        Deletions
+        License
+        Size
+        Loc
+        Sloc
+        Comments
+        Blanks
+        Complexity
+
+sourcecode.Blame
+    This is information about each file changed in commit. Somewhat similar to Files above, but also included information about the lines in the file.
+    License
+    Size
+    Loc
+    Sloc
+    Blanks
+    Comments
+    Filename
+    Language
+    Sha
+    Complexity
+    Lines
+        LastCommit
+        AuthorEmailHash
+        Date
+        IsComment
+        IsCode
+        IsBlank
+
+sourcecode.Branch
+    Name
+    CommitShas
+    BehindDefaultCount
+    AheadDefaultCount
+```
