@@ -134,7 +134,7 @@ func ReposOnboardPage(qc QueryContext, params url.Values) (page PageInfo, repos 
 		ID := fmt.Sprint(v.ID)
 		repo := &agent.RepoResponseRepos{
 			RefID:       ID,
-			RefType:     "gitlab",
+			RefType:     qc.RefType,
 			Name:        v.FullName,
 			Description: v.Description,
 			Active:      true,
