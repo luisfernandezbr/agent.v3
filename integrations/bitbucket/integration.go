@@ -60,6 +60,7 @@ type Integration struct {
 	pullRequestCommentsSender *objsender.NotIncremental
 	pullRequestReviewsSender  *objsender.NotIncremental
 	userSender                *objsender.NotIncremental
+	pullRequestCommitsSender  *objsender.NotIncremental
 }
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
@@ -177,6 +178,7 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	s.pullRequestCommentsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
 	s.pullRequestReviewsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
 	s.userSender = objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
+	s.pullRequestCommitsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommitModelName.String())
 
 	teamNames, err := api.Teams(s.qc)
 	if err != nil {
@@ -210,6 +212,10 @@ func (s *Integration) export(ctx context.Context) (err error) {
 		return err
 	}
 	err = s.userSender.Done()
+	if err != nil {
+		return err
+	}
+	err = s.pullRequestCommitsSender.Done()
 	if err != nil {
 		return err
 	}
