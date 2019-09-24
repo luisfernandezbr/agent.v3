@@ -79,3 +79,4 @@ updated_on got updated for all scenarios
 
 ## Notes
 -- It's not possible to get URL for reviews
+-- If the user needs to have the admin level, otherwise the call to get commit stats will fail with status 404
