@@ -178,15 +178,12 @@ func convertConfigGitlab(inameBackend string, cb map[string]interface{}, exclusi
 			return
 		}
 		config.URL = v
-	}
 
-	{
-		v, ok := cb["server_type"].(string)
-		if !ok {
-			errStr("missing server_type")
-			return
+		if config.URL == "https://gitlab.com" {
+			config.ServerType = "cloud"
+		} else {
+			config.ServerType = "on-premise"
 		}
-		config.ServerType = v
 	}
 
 	config.ExcludedRepos = exclusions
