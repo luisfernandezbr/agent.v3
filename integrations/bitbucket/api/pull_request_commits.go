@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -56,7 +57,7 @@ func PullRequestCommitsPage(
 		if err != nil {
 			return pi, res, err
 		}
-		item.URL = url.Scheme + "://" + url.Hostname() + "/" + repo.NameWithOwner + "/commit/" + rcommit.Hash
+		item.URL = url.Scheme + "://" + strings.TrimPrefix(url.Hostname(), "api.") + "/" + repo.NameWithOwner + "/commits/" + rcommit.Hash
 		date.ConvertToModel(rcommit.Date, &item.CreatedDate)
 
 		adds, dels, err := commitStats(qc, repo.NameWithOwner, rcommit.Hash)
