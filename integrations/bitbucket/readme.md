@@ -6,6 +6,8 @@
 - [Create auth token](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html)
 - https://developer.atlassian.com/bitbucket/api/2/reference/resource/
 
+## [All exported data](./_docs/exported_data.md)
+
 ## API call examples
 
 The password can be an app password (https://confluence.atlassian.com/bitbucket/app-passwords-828781300.html)
