@@ -21,12 +21,18 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
+const (
+	CLOUD      = "cloud"
+	ON_PREMISE = "on-premise"
+)
+
 type Config struct {
 	commonrepo.FilterConfig
 	URL                string `json:"url"`
 	APIToken           string `json:"apitoken"`
 	OnlyGit            bool   `json:"only_git"`
 	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
+	ServerType         string `json:"server-type"`
 }
 
 type Integration struct {
@@ -152,6 +158,13 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	if conf.APIToken == "" {
 		return rerr("api token is missing")
 	}
+	if conf.ServerType == "" {
+		return rerr("server type is missing")
+	}
+	if conf.ServerType != CLOUD && conf.ServerType != ON_PREMISE {
+		return rerr("server type invalid: type %s", conf.ServerType)
+	}
+
 	s.config = conf
 	return nil
 }
@@ -175,9 +188,11 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	s.userSender = objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
 	s.pullRequestCommitsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommitModelName.String())
 
-	err = api.UsersEmails(s.qc, s.commitUserSender, s.userSender)
-	if err != nil {
-		return err
+	if s.config.ServerType == ON_PREMISE {
+		err = api.UsersEmails(s.qc, s.commitUserSender, s.userSender)
+		if err != nil {
+			return err
+		}
 	}
 
 	groupNames, err := api.Groups(s.qc)
@@ -272,6 +287,16 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 		return err
 	}
 
+	if s.config.ServerType == CLOUD {
+		for _, repo := range repos {
+			err = s.exportUsersFromRepos(ctx, logger, repo)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+
 	for _, repo := range repos {
 		err := s.exportPullRequestsForRepo(logger, repo, s.pullRequestSender, s.pullRequestCommentsSender, s.pullRequestReviewsSender)
 		if err != nil {
@@ -301,6 +326,31 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, grou
 				continue
 			}
 			err := sender.Send(repo)
+			if err != nil {
+				return pi, err
+			}
+		}
+		return pi, nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Logger, repo commonrepo.Repo) error {
+
+	sender := s.userSender
+
+	err := api.PaginateStartAt(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
+		pi, users, err := api.RepoUsersPageREST(s.qc, repo, parameters)
+		if err != nil {
+			return pi, err
+		}
+		for _, user := range users {
+			err := sender.Send(user)
 			if err != nil {
 				return pi, err
 			}

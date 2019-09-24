@@ -61,7 +61,7 @@ func LastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (lastCommit agen
 
 	authorLastCommit := agent.RepoResponseReposLastCommitAuthor{}
 	authorLastCommit.Name = lastCommitSource.Author.User.DisplayName
-	_, authorLastCommit.Email = getNameAndEmail(lastCommitSource.Author.Raw)
+	_, authorLastCommit.Email = GetNameAndEmail(lastCommitSource.Author.Raw)
 	authorLastCommit.AvatarURL = lastCommitSource.Author.User.Links.Avatar.Href
 
 	lastCommit.Author = authorLastCommit
@@ -98,14 +98,14 @@ func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) 
 
 		name := c.Author.User.DisplayName
 		if name == "" {
-			name, _ = getNameAndEmail(c.Author.Raw)
+			name, _ = GetNameAndEmail(c.Author.Raw)
 		}
 
 		user := commitusers.CommitUser{}
 		user.CustomerID = qc.CustomerID
 		user.Name = name
 		user.SourceID = c.Author.User.AccountID
-		_, user.Email = getNameAndEmail(c.Author.Raw)
+		_, user.Email = GetNameAndEmail(c.Author.Raw)
 
 		users = append(users, user)
 	}
@@ -113,7 +113,7 @@ func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) 
 	return
 }
 
-func getNameAndEmail(raw string) (name string, email string) {
+func GetNameAndEmail(raw string) (name string, email string) {
 	if raw == "" {
 		return
 	}

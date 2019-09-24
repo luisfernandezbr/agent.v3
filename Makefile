@@ -5,6 +5,11 @@
 # make build-integrations PP_ROOT=~/.pinpoint/next-dev
 PP_ROOT := ~/.pinpoint/next
 
+build:
+	make macos
+	make linux
+	make windows
+
 protobuf:
 	protoc -I rpcdef/proto/ rpcdef/proto/*.proto --go_out=plugins=grpc:rpcdef/proto/
 
@@ -55,7 +60,3 @@ windows:
 	env GOOS=windows go build -o dist/windows/integrations/sonarqube.exe ./integrations/sonarqube
 	env GOOS=windows go build -o dist/windows/integrations/tfs-code.exe ./integrations/tfs-code
 
-build:
-	make macos
-	make linux
-	make windows

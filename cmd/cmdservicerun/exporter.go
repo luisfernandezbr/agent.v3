@@ -67,12 +67,14 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 
 	var integrations []cmdexport.Integration
 
-	/*
+	// add in additional integrations defined in config
+
+	for _, in := range s.conf.ExtraIntegrations {
 		integrations = append(integrations, cmdexport.Integration{
-			Name:   "mock",
-			Config: map[string]interface{}{"k1": "v1"},
+			Name:   in.Name,
+			Config: in.Config,
 		})
-	*/
+	}
 
 	for _, integration := range data.Integrations {
 
