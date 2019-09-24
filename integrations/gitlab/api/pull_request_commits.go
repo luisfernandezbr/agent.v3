@@ -37,8 +37,6 @@ func PullRequestCommitsPage(
 		return
 	}
 
-	var firstCommitSHA = rcommits[len(rcommits)-1].ID
-
 	for _, rcommit := range rcommits {
 
 		item := &sourcecode.PullRequestCommit{}
@@ -61,14 +59,8 @@ func PullRequestCommitsPage(
 			return pi, res, err
 		}
 
-		branchName, err := BranchFromPR(qc, repo.ID, prIID)
-		if err != nil {
-			return pi, res, err
-		}
-
 		item.Additions = adds
 		item.Deletions = dels
-		item.BranchID = qc.IDs.CodeBranch(repo.ID, branchName, firstCommitSHA)
 		item.AuthorRefID = ids.CodeCommitEmail(qc.CustomerID, rcommit.AuthorEmail)
 		item.CommitterRefID = ids.CodeCommitEmail(qc.CustomerID, rcommit.CommitterEmail)
 
