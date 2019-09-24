@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
+
 	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/integration-sdk/sourcecode"
 
@@ -250,4 +252,39 @@ func UsersEmails(qc QueryContext, commitUsersSender *objsender.IncrementalDateBa
 
 		return page, nil
 	})
+}
+
+func RepoUsersPageREST(qc QueryContext, repo commonrepo.Repo, params url.Values) (page PageInfo, repos []*sourcecode.User, err error) {
+	qc.Logger.Debug("users request", "repo", repo)
+
+	objectPath := pstrings.JoinURL("projects", repo.ID, "users")
+
+	var ru []struct {
+		ID        int64  `json:"id"`
+		Name      string `json:"name"`
+		Username  string `json:"username"`
+		AvatarURL string `json:"avatar_url"`
+	}
+
+	page, err = qc.Request(objectPath, params, &ru)
+	if err != nil {
+		return
+	}
+
+	for _, user := range ru {
+		sourceUser := sourcecode.User{}
+		sourceUser.RefType = qc.RefType
+		// sourceUser.Email = // No email info here
+		sourceUser.CustomerID = qc.CustomerID
+		sourceUser.RefID = strconv.FormatInt(user.ID, 10)
+		sourceUser.Name = user.Name
+		sourceUser.AvatarURL = pstrings.Pointer(user.AvatarURL)
+		sourceUser.Username = pstrings.Pointer(user.Username)
+		sourceUser.Member = true
+		sourceUser.Type = sourcecode.UserTypeHuman
+
+		repos = append(repos, &sourceUser)
+	}
+
+	return
 }
