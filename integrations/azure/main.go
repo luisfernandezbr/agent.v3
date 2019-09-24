@@ -9,6 +9,6 @@ import (
 
 func main() {
 	ibase.MainFunc(func(logger hclog.Logger) rpcdef.Integration {
-		return azurecommon.NewAzureIntegration(logger, azurecommon.IntegrationTypeCode)
+		return azurecommon.NewAzureIntegration(logger)
 	})
 }

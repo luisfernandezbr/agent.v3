@@ -75,14 +75,14 @@ func (s *Integration) ripSource(repo *sourcecode.Repo) error {
 	if err != nil {
 		return err
 	}
-	u.User = url.UserPassword(s.creds.Username, s.creds.Password)
+	u.User = url.UserPassword(s.Creds.Username, s.Creds.Password)
 	args := rpcdef.GitRepoFetch{}
 	args.RefType = s.reftype.String()
 	args.RepoID = s.api.RepoID(repo.RefID)
 	args.URL = u.String()
 	s.logger.Info("cloning repo " + u.String())
-	args.BranchURLTemplate = branchURLTemplate(repo.Name, s.creds.URL)
-	args.CommitURLTemplate = commitURLTemplate(repo.Name, s.creds.URL)
+	args.BranchURLTemplate = branchURLTemplate(repo.Name, s.Creds.URL)
+	args.CommitURLTemplate = commitURLTemplate(repo.Name, s.Creds.URL)
 	return s.agent.ExportGitRepo(args)
 }
 

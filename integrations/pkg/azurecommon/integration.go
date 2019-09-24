@@ -3,6 +3,7 @@ package azurecommon
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pinpt/go-common/datamodel"
 	pstrings "github.com/pinpt/go-common/strings"
@@ -37,20 +38,22 @@ var IntegrationTypeCode = IntegrationType("code")
 
 var IntegrationTypeIssues = IntegrationType("issues")
 
+var IntegrationTypeBoth = IntegrationType("")
+
 // Integration the main integration object
 type Integration struct {
-	logger          hclog.Logger
-	agent           rpcdef.Agent
-	api             *azureapi.API
-	creds           *azureapi.Creds
-	customerid      string
-	reftype         RefType
-	integrationtype IntegrationType
+	logger     hclog.Logger
+	agent      rpcdef.Agent
+	api        *azureapi.API
+	Creds      *azureapi.Creds `json:"credentials"`
+	customerid string
+	reftype    RefType
 
-	ExcludedRepoIDs     []string `json:"excluded_repo_ids"` // excluded repo ids - this comes from the admin ui
-	IncludedRepos       []string `json:"repo_names"`        // repo_names - this is for debug and develop only
-	OverrideGitHostName string   `json:"git_host_name"`
-	Concurrency         int      `json:"concurrency"` // add it
+	IntegrationType     IntegrationType `json:"type"`
+	ExcludedRepoIDs     []string        `json:"excluded_repo_ids"` // excluded repo ids - this comes from the admin ui
+	IncludedRepos       []string        `json:"repo_names"`        // repo_names - this is for debug and develop only
+	OverrideGitHostName string          `json:"git_host_name"`
+	Concurrency         int             `json:"concurrency"` // add it
 }
 
 // Init the init function
@@ -63,15 +66,33 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	if err = s.initConfig(ctx, config); err != nil {
 		return
 	}
-	if s.integrationtype == IntegrationTypeCode {
+	if s.IntegrationType == IntegrationTypeCode {
 		err = s.exportCode()
-	} else {
+	} else if s.IntegrationType == IntegrationTypeIssues {
 		err = s.exportWork()
+	} else {
+		a := azureapi.NewAsync(2)
+		var errors []string
+		a.Send(func() {
+			if err = s.exportCode(); err != nil {
+				errors = append(errors, err.Error())
+			}
+		})
+		a.Send(func() {
+			if err = s.exportWork(); err != nil {
+				errors = append(errors, err.Error())
+			}
+		})
+		a.Wait()
+		if errors != nil {
+			err = fmt.Errorf("%v", strings.Join(errors, ", "))
+		}
 	}
 	return
 }
 
 func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
+	s.logger.Info("========= ValidateConfig")
 	if err := s.initConfig(ctx, config); err != nil {
 		return res, err
 	}
@@ -103,44 +124,47 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 }
 
 func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig) error {
-	if err := structmarshal.MapToStruct(config.Integration, &s.creds); err != nil {
-		return err
-	}
-	if err := structmarshal.MapToStruct(config.Integration, s); err != nil {
+
+	// itype IntegrationType
+	if err := structmarshal.MapToStruct(config.Integration, &s); err != nil {
 		return err
 	}
 	if s.reftype == RefTypeTFS {
-		if s.creds.Collection == nil {
-			s.creds.Collection = pstrings.Pointer("DefaultCollection")
+		if s.Creds.Collection == nil {
+			s.Creds.Collection = pstrings.Pointer("DefaultCollection")
 		}
-		if s.creds.Username == "" {
+		if s.Creds.Username == "" {
 			return fmt.Errorf("missing username")
 		}
-		if s.creds.Password == "" {
+		if s.Creds.Password == "" {
 			return fmt.Errorf("missing password")
 		}
 	} else { // if s.reftype == RefTypeAzure
-		if s.creds.Organization == nil {
-			return fmt.Errorf("missing organization")
+		if s.Creds.Organization == nil {
+			return fmt.Errorf("missing organization %s", stringify(s))
 		}
-		if s.creds.Username == "" {
-			s.creds.Username = *s.creds.Organization
+		if s.Creds.Username == "" {
+			s.Creds.Username = *s.Creds.Organization
 		}
-		if s.creds.Password == "" {
-			s.creds.Password = s.creds.APIKey
+		if s.Creds.Password == "" {
+			s.Creds.Password = s.Creds.APIKey
 		}
 	}
 	if s.Concurrency == 0 {
 		s.Concurrency = 10
 	}
-	if s.creds.URL == "" {
+	if s.IntegrationType != IntegrationTypeBoth && s.IntegrationType != IntegrationTypeCode && s.IntegrationType != IntegrationTypeIssues {
+		return fmt.Errorf(`"type" must be "` + IntegrationTypeIssues.String() + `", "` + IntegrationTypeCode.String() + `", or empty for both`)
+	}
+	if s.Creds.URL == "" {
 		return fmt.Errorf("missing url")
 	}
-	if s.creds.APIKey == "" {
+	if s.Creds.APIKey == "" {
 		return fmt.Errorf("missing api_key")
 	}
 	s.customerid = config.Pinpoint.CustomerID
-	s.api = azureapi.NewAPI(ctx, s.logger, s.Concurrency, s.customerid, s.reftype.String(), s.creds)
+	s.logger.Info("Concurrency " + fmt.Sprintf("%d", s.Concurrency))
+	s.api = azureapi.NewAPI(ctx, s.logger, s.Concurrency, s.customerid, s.reftype.String(), s.Creds)
 	return nil
 }
 
@@ -148,14 +172,13 @@ func NewTFSIntegration(logger hclog.Logger, itype IntegrationType) *Integration 
 	s := &Integration{}
 	s.logger = logger
 	s.reftype = RefTypeTFS
-	s.integrationtype = itype
+	s.IntegrationType = itype
 	return s
 }
 
-func NewAzureIntegration(logger hclog.Logger, itype IntegrationType) *Integration {
+func NewAzureIntegration(logger hclog.Logger) *Integration {
 	s := &Integration{}
 	s.logger = logger
 	s.reftype = RefTypeAzure
-	s.integrationtype = itype
 	return s
 }
