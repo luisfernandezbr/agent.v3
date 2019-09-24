@@ -33,6 +33,7 @@ It will store the data into ~/.pinpoint/next folder.
 
 If you want to re-enroll the agent, delete ~/.pinpoint/next.
 
+
 ### Overview
 
 Agent is run continuously on the target machine. All actions are driven from a backend.
@@ -45,7 +46,7 @@ Service waits for commands from a backend to validate integrations, start export
 - validate-config - Validates the configuration by making a test connection.
 - export-onboard-data - Exports users, repos or projects based on param for a specified integration. Saves that data into provided file.
 
-
+### [Exported data](./_docs/exported_data.md)
 
 ### Testing integrations without backend
 
