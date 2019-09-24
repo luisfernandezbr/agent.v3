@@ -1,10 +1,10 @@
-## Jira integration
-
-## Table of contents
+## Contents
 
 - [Jira Cloud](#jira-cloud)
 - [Jira Server](#jira-server)
 - [Exported data](./_docs/exported_data.md)
+
+## Jira integration
 
 We have separate binaries for jira cloud and jira server.
 
