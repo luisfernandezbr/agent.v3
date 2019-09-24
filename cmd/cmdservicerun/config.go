@@ -183,7 +183,7 @@ func convertConfigGitlab(inameBackend string, cb map[string]interface{}, exclusi
 	{
 		v, ok := cb["server_type"].(string)
 		if !ok {
-			errStr("missing server type")
+			errStr("missing server_type")
 			return
 		}
 		config.ServerType = v
