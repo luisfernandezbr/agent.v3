@@ -153,6 +153,7 @@ func convertConfigGitlab(inameBackend string, cb map[string]interface{}, exclusi
 		URL           string   `json:"url"`
 		APIToken      string   `json:"apitoken"`
 		ExcludedRepos []string `json:"excluded_repos"`
+		ServerType    string   `json:"server_type"`
 	}
 
 	err := structmarshal.MapToStruct(cb, &config)
@@ -177,6 +178,15 @@ func convertConfigGitlab(inameBackend string, cb map[string]interface{}, exclusi
 			return
 		}
 		config.URL = v
+	}
+
+	{
+		v, ok := cb["server_type"].(string)
+		if !ok {
+			errStr("missing server type")
+			return
+		}
+		config.ServerType = v
 	}
 
 	config.ExcludedRepos = exclusions
