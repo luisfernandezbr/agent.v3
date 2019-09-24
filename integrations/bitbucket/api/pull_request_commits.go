@@ -101,7 +101,6 @@ func CommitStatsPage(
 	params.Set("pagelen", "100")
 
 	pi, err = qc.Request(objectPath, params, true, &rfiles)
-	qc.Logger.Info("SUPER ERROR\t", "err", err)
 	if err != nil {
 		return
 	}
