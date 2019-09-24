@@ -25,7 +25,7 @@ func PullRequestCommentsPage(
 		ID     int64 `json:"id"`
 		Author struct {
 			Username string `json:"username"`
-		}
+		} `json:"author"`
 		Body      string    `json:"body"`
 		UpdatedAt time.Time `json:"updated_at"`
 		CreatedAt time.Time `json:"created_at"`
