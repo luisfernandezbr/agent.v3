@@ -61,14 +61,12 @@ func IssuesAndChangelogsPage(
 					Author  User   `json:"author"`
 					Created string `json:"created"`
 					Items   []struct {
-						Field         string  `json:"field"`
-						FieldType     string  `json:"fieldtype"`
-						From          string  `json:"from"`
-						FromString    string  `json:"fromString"`
-						To            string  `json:"to"`
-						ToString      string  `json:"toString"`
-						FromAccountID *string `json:"tmpFromAccountId"`
-						ToAccountID   *string `json:"tmpToAccountId"`
+						Field      string `json:"field"`
+						FieldType  string `json:"fieldtype"`
+						From       string `json:"from"`
+						FromString string `json:"fromString"`
+						To         string `json:"to"`
+						ToString   string `json:"toString"`
 					} `json:"items"`
 				} `json:"histories"`
 			} `json:"changelog"`
