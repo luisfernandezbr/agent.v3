@@ -111,15 +111,12 @@ func integrationCommandOpts(cmd *cobra.Command) (hclog.Logger, cmdintegration.Op
 		}
 	}
 
-	var pinpointRoot string
-
 	// allow setting pinpoint root in either json or command line flag
 	{
 		v, _ := cmd.Flags().GetString("pinpoint-root")
 		if v != "" {
 			opts.AgentConfig.PinpointRoot = v
 		}
-		pinpointRoot = v
 	}
 
 	// allow setting integrations-dir in both json and command line flag
@@ -154,7 +151,7 @@ func integrationCommandOpts(cmd *cobra.Command) (hclog.Logger, cmdintegration.Op
 		exitWithErr(logger, errors.New("missing integrations-json"))
 	}
 
-	opts.Logger = cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
+	opts.Logger = cmdlogger.CopyToFile(cmd, logger, opts.AgentConfig.PinpointRoot)
 	return opts.Logger, opts
 }
 
