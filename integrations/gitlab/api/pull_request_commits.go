@@ -91,21 +91,3 @@ func CommitStats(qc QueryContext, repoID string, commitID string) (adds, dels in
 
 	return
 }
-
-func BranchFromPR(qc QueryContext, repoID string, prIID string) (branch string, err error) {
-	qc.Logger.Debug("pull request changes", "repoID", repoID, "priid", prIID)
-
-	objectPath := pstrings.JoinURL("projects", repoID, "merge_requests", prIID, "changes")
-
-	var changes struct {
-		SourceBranch string `json:"source_branch"`
-	}
-
-	if _, err = qc.Request(objectPath, nil, &changes); err != nil {
-		return
-	}
-
-	branch = changes.SourceBranch
-
-	return
-}
