@@ -181,14 +181,6 @@
   version = "v0.9.2"
 
 [[projects]]
-  digest = "1:5d8539af558ca2ea960a4c11afb12c75ae9e9dca3560f1103318aaa2030e37e2"
-  name = "github.com/hashicorp/go-msgpack"
-  packages = ["codec"]
-  pruneopts = "UT"
-  revision = "ad60660ecf9c5a1eae0ca32182ed72bab5807961"
-  version = "v0.5.5"
-
-[[projects]]
   branch = "master"
   digest = "1:5d8ebc1cb15676990b1cb8b969b86de8549b21a3729bd2cf11754211e1919131"
   name = "github.com/hashicorp/go-plugin"
@@ -383,7 +375,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:bdaec8f55c2a4f0a025215b37ae03e4f2edbb3af98c723bb6d231f81423fe8fc"
+  digest = "1:d276935edf26a7d80d16aa3a90da5af0d811beba94d4310386e72afa5f4d3144"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -407,8 +399,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "282488b09a34834955e2e8efa8300215a2434122"
-  version = "9.0.0"
+  revision = "665c877fa462bbde220d06a364319caf4b3e5588"
+  version = "9.0.3"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
