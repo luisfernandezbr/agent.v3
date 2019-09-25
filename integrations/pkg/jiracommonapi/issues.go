@@ -263,6 +263,9 @@ func IssuesAndChangelogsPage(
 				date.ConvertToModel(createdAt, &item.CreatedDate)
 				item.UserID = cl.Author.RefID()
 
+				item.FromString = data.FromString
+				item.ToString = data.ToString
+
 				item.FieldType = data.FieldType
 				switch strings.ToLower(data.Field) {
 				case "status":
