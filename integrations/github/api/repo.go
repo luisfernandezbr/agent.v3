@@ -112,7 +112,7 @@ func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInf
 	return repositories.PageInfo, batch, nil
 }
 
-func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*sourcecode.Repo, rerr error) {
+func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*sourcecode.Repo, totalCount int, rerr error) {
 	qc.Logger.Debug("repos request", "q", queryParams)
 
 	query := `
@@ -197,5 +197,5 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 		repos = append(repos, repo)
 	}
 
-	return repositories.PageInfo, repos, nil
+	return repositories.PageInfo, repos, repositories.TotalCount, nil
 }

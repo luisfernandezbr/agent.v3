@@ -10,7 +10,7 @@ import (
 func PullRequestReviewsPage(
 	qc QueryContext,
 	pullRequestRefID string,
-	queryParams string) (pi PageInfo, res []*sourcecode.PullRequestReview, _ error) {
+	queryParams string) (pi PageInfo, res []*sourcecode.PullRequestReview, totalCount int, rerr error) {
 
 	if pullRequestRefID == "" {
 		panic("missing pr id")
@@ -82,7 +82,8 @@ func PullRequestReviewsPage(
 
 	err := qc.Request(query, &requestRes)
 	if err != nil {
-		return pi, res, err
+		rerr = err
+		return
 	}
 
 	//qc.Logger.Info(fmt.Sprintf("%+v", res))
@@ -125,5 +126,5 @@ func PullRequestReviewsPage(
 		res = append(res, item)
 	}
 
-	return nodesContainer.PageInfo, res, nil
+	return nodesContainer.PageInfo, res, nodesContainer.TotalCount, nil
 }

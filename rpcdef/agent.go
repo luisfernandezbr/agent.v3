@@ -16,13 +16,26 @@ type Agent interface {
 	ExportStarted(modelType string) (sessionID string, lastProcessed interface{})
 
 	// ExportDone should be called when export of a certain modelType is complete.
+	// TODO: rename to SessionDone
 	ExportDone(sessionID string, lastProcessed interface{})
 
 	// SendExported forwards the exported objects from intergration to agent,
 	// which then uploads the data (or queues for uploading).
+	// TODO: rename to SessionSend
 	SendExported(
 		sessionID string,
 		objs []ExportObj)
+
+	// SessionStart creates a new export session with optional parent.
+	// isTracking is a bool to create a tracking session instead of normal session. Tracking sessions do not allow sending data, they are only used for organizing progress events.
+	// name - For normal sessions use model name. For tracking sessions any string is allows, it will be shown in the progress log.
+	// parentSessionID - parent session. Can be 0 for root sessions.
+	// parentObjectID - id of the parent object. To show in progress logs.
+	// parentObjectName - name of the parent object
+	SessionStart(isTracking bool, name string, parentSessionID int, parentObjectID, parentObjectName string) (sessionID int, lastProcessed interface{}, _ error)
+
+	// SessionProgress updates progress for a session
+	SessionProgress(id int, current, total int) error
 
 	// Integration can ask agent to download and process git repo using ripsrc.
 	ExportGitRepo(fetch GitRepoFetch) error
@@ -140,6 +153,23 @@ func (s *AgentServer) ExportGitRepo(ctx context.Context, req *proto.ExportGitRep
 	return
 }
 
+func (s *AgentServer) SessionStart(ctx context.Context, req *proto.SessionStartReq) (resp *proto.SessionStartResp, _ error) {
+	resp = &proto.SessionStartResp{}
+	sessionID, lastProcessed, err := s.Impl.SessionStart(req.IsTracking, req.Name, int(req.ParentSessionId), req.ParentObjectId, req.ParentObjectName)
+	if err != nil {
+		return resp, err
+	}
+	resp.SessionId = int64(sessionID)
+	resp.LastProcessed = lastProcessedMarshal(lastProcessed)
+	return resp, nil
+}
+
+func (s *AgentServer) SessionProgress(ctx context.Context, req *proto.SessionProgressReq) (resp *proto.Empty, _ error) {
+	resp = &proto.Empty{}
+	err := s.Impl.SessionProgress(int(req.Id), int(req.Current), int(req.Total))
+	return resp, err
+}
+
 func (s *AgentServer) OAuthNewAccessToken(ctx context.Context, req *proto.Empty) (*proto.OAuthNewAccessTokenResp, error) {
 
 	token, err := s.Impl.OAuthNewAccessToken()
@@ -207,6 +237,32 @@ func (s *AgentClient) ExportGitRepo(fetch GitRepoFetch) error {
 	args.CommitUrlTemplate = fetch.CommitURLTemplate
 	args.BranchUrlTemplate = fetch.BranchURLTemplate
 	_, err = s.client.ExportGitRepo(context.Background(), args)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *AgentClient) SessionStart(isTracking bool, name string, parentSessionID int, parentObjectID, parentObjectName string) (sessionID int, lastProcessed interface{}, _ error) {
+	args := &proto.SessionStartReq{}
+	args.IsTracking = isTracking
+	args.Name = name
+	args.ParentSessionId = int64(parentSessionID)
+	args.ParentObjectId = parentObjectID
+	args.ParentObjectName = parentObjectName
+	resp, err := s.client.SessionStart(context.Background(), args)
+	if err != nil {
+		return 0, nil, err
+	}
+	return int(resp.SessionId), lastProcessedUnmarshal(resp.LastProcessed), nil
+}
+
+func (s *AgentClient) SessionProgress(id int, current, total int) error {
+	args := &proto.SessionProgressReq{}
+	args.Id = int64(id)
+	args.Current = int64(current)
+	args.Total = int64(total)
+	_, err := s.client.SessionProgress(context.Background(), args)
 	if err != nil {
 		return err
 	}

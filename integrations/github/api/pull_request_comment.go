@@ -10,7 +10,7 @@ import (
 func PullRequestCommentsPage(
 	qc QueryContext,
 	pullRequestRefID string,
-	queryParams string) (pi PageInfo, res []*sourcecode.PullRequestComment, _ error) {
+	queryParams string) (pi PageInfo, res []*sourcecode.PullRequestComment, totalCount int, rerr error) {
 
 	if pullRequestRefID == "" {
 		panic("missing pr id")
@@ -82,7 +82,8 @@ func PullRequestCommentsPage(
 
 	err := qc.Request(query, &requestRes)
 	if err != nil {
-		return pi, res, err
+		rerr = err
+		return
 	}
 
 	nodesContainer := requestRes.Data.Node.Comments
@@ -111,5 +112,5 @@ func PullRequestCommentsPage(
 		res = append(res, item)
 	}
 
-	return nodesContainer.PageInfo, res, nil
+	return nodesContainer.PageInfo, res, nodesContainer.TotalCount, nil
 }

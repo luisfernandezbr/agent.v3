@@ -137,6 +137,57 @@ When agent export command is called, agent loads all available/configured plugin
 
 After that agent calls Export methods on integrations in parallel. Integration marks the export state for each model type using ExportStarted and ExportDone. It sends the data using SendExported call.
 
+### Export sessions and progress
+We use nested sessions to keep track of the progress and last processed tokens. We have 2 different session types, model sessions which allow sending the objects to the backend and tracking sessions which are used for progress notification and for keeping last processed tokens from overwriting each other.
+
+Here is the preudo-code for using the sessions from integration. We provide a nicer wrapper that calls these methods underneath.
+
+```
+exportStart := time.Now()
+
+// NoModel sessions do not support sending objects, and are used for progress tracking and ensuring that last process tokens are nested. This is important when using ids as last process token.
+
+orgSession, _ := SessionRootTracking("organization")
+
+total, orgs := http.GetOrgs()
+
+for i, org := range orgs {
+	every x seconds
+		SessionProgress(repoSessionID, i, total)
+
+	repoSession, lastProcessed := Session("pull_request". orgSession, org.ID, org.Name)
+
+	total, repos := http.GetRepos(since: lastProcessed)
+
+	for i, repo := range repos {
+		every x seconds
+			SessionProgress(repoSession, i, total)
+		send when you have a batch of repos
+			SessionSend(repoSession, batch)
+
+		prSession, lastProcessedID := Session("pull_request", repoSession, repo.ID, repo.Name)
+
+		total, prs := http.GetRepoPullRequest(repo, since: lastProcessedID)
+
+		// example of using id as last processed
+		var lastID
+		for i, pr := range  {
+			id = pr.id
+			every x second
+				SessionProgress(prSession, i, total)
+			send when you have a batch of pull requests
+				SessionSend(prSession, batch)		
+		}
+
+		SessionDone(prSession, lastID)
+	}
+
+	SessionDone(repoSession, exportStart)
+}
+
+SessionDone(orgSession, exportStart)
+```
+
 ### Agent RPC interface
 
 [See in code](https://github.com/pinpt/agent.next/blob/master/rpcdef/agent.go)
@@ -146,26 +197,35 @@ type Agent interface {
 
 // ExportStarted should be called when starting export for each modelType.
 // It returns session id to be used later when sending objects.
-ExportStarted(modelType string) 
-	(sessionID string,
-	lastProcessed interface{})
+ExportStarted(modelType string) (sessionID string, lastProcessed interface{})
 
 // ExportDone should be called when export of a certain modelType is complete.
+// TODO: rename to SessionDone
 ExportDone(sessionID string, lastProcessed interface{})
 
 // SendExported forwards the exported objects from intergration to agent,
 // which then uploads the data (or queues for uploading).
+// TODO: rename to SessionSend
 SendExported(
-		sessionID string,
-		objs []ExportObj)
+	sessionID string,
+	objs []ExportObj)
+
+// SessionStart creates a new export session with optional parent.
+// isTracking is a bool to create a tracking session instead of normal session. Tracking sessions do not allow sending data, they are only used for organizing progress events.
+// name - For normal sessions use model name. For tracking sessions any string is allows, it will be shown in the progress log.
+// parentSessionID - parent session. Can be 0 for root sessions.
+// parentObjectID - id of the parent object. To show in progress logs.
+// parentObjectName - name of the parent object
+SessionStart(isTracking bool, name string, parentSessionID int, parentObjectID, parentObjectName string) (sessionID int, lastProcessed interface{}, _ error)
+
+// SessionProgress updates progress for a session
+SessionProgress(id int, current, total int) error
 
 // Integration can ask agent to download and process git repo using ripsrc.
 ExportGitRepo(fetch GitRepoFetch) error
 
 // OAuthNewAccessToken returns a new access token for integrations with UseOAuth: true. It askes agent to retrieve a new token from backend based on refresh token agent has.
 OAuthNewAccessToken() (token string, _ error)
-
-}
 
 ```
 

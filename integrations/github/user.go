@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
 	"github.com/pinpt/agent.next/pkg/objsender"
 
 	pstrings "github.com/pinpt/go-common/strings"
@@ -16,7 +17,7 @@ import (
 // map[login]refID
 type Users struct {
 	integration *Integration
-	sender      *objsender.NotIncremental
+	sender      *objsender2.Session
 	loginToID   map[string]string
 
 	mu sync.Mutex
@@ -25,10 +26,14 @@ type Users struct {
 func NewUsers(integration *Integration, orgs []api.Org) (*Users, error) {
 	s := &Users{}
 	s.integration = integration
-	s.sender = objsender.NewNotIncremental(integration.agent, sourcecode.UserModelName.String())
+	var err error
+	s.sender, err = objsender2.Root(integration.agent, sourcecode.UserModelName.String())
+	if err != nil {
+		return nil, err
+	}
 	s.loginToID = map[string]string{}
 
-	err := s.createGhost()
+	err = s.createGhost()
 	if err != nil {
 		return nil, err
 	}
