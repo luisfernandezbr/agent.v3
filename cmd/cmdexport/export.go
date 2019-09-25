@@ -120,13 +120,16 @@ func (s *export) discardIncrementalData() error {
 }
 
 func (s *export) gitProcessing() (hadErrors bool, _ error) {
-	if s.Opts.AgentConfig.SkipGit {
-		s.Logger.Warn("SkipGit is true, skipping git clone and ripsrc for all repos")
-		for range s.gitProcessingRepos {
+	logger := s.Logger.Named("git")
 
+	if s.Opts.AgentConfig.SkipGit {
+		logger.Warn("SkipGit is true, skipping git clone and ripsrc for all repos")
+		for range s.gitProcessingRepos {
 		}
 		return false, nil
 	}
+
+	logger.Info("starting git repo processing")
 
 	i := 0
 	reposFailedRevParse := 0
@@ -165,30 +168,32 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 			continue
 		}
 		if err != nil {
-			s.Logger.Error("Error processing git repo", "repo", repoDirName, "err", err)
+			logger.Error("Error processing git repo", "repo", repoDirName, "err", err)
 			resErrors[repoDirName] = err
+		} else {
+			logger.Info("Finished processing git repo", "repo", repoDirName)
 		}
 	}
 
 	if i == 0 {
-		s.Logger.Info("Finished git repo processing: No git repos found")
+		logger.Info("Finished git repo processing: No git repos found")
 		return false, nil
 	}
 
 	if reposFailedRevParse != 0 {
-		s.Logger.Warn("Skipped ripsrc on empty repos", "repos", reposFailedRevParse)
+		logger.Warn("Skipped ripsrc on empty repos", "repos", reposFailedRevParse)
 	}
 
 	if len(resErrors) != 0 {
 		for k, err := range resErrors {
-			s.Logger.Error("Error processing git repo", "repo", k, "err", err)
+			logger.Error("Error processing git repo", "repo", k, "err", err)
 		}
-		s.Logger.Error("Error in git repo processing", "count", i, "dur", time.Since(start).String(), "repos_failed", len(resErrors))
+		logger.Error("Error in git repo processing", "count", i, "dur", time.Since(start).String(), "repos_failed", len(resErrors))
 		return true, nil
 
 	}
 
-	s.Logger.Info("Finished git repo processing", "count", i, "dur", time.Since(start).String())
+	logger.Info("Finished git repo processing", "count", i, "dur", time.Since(start).String())
 	return false, nil
 }
 
