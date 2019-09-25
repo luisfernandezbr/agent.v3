@@ -264,7 +264,7 @@ func IssuesAndChangelogsPage(
 				item.UserID = cl.Author.RefID()
 
 				item.FromString = data.FromString + " @ " + data.From
-				item.ToString = data.ToString + " @ " + data.From
+				item.ToString = data.ToString + " @ " + data.To
 
 				item.FieldType = data.FieldType
 				switch strings.ToLower(data.Field) {
@@ -284,8 +284,6 @@ func IssuesAndChangelogsPage(
 					if data.To != "" {
 						item.To = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.To)
 					}
-					item.FromString += " @ " + data.From
-					item.ToString += " @ " + data.To
 				case "reporter":
 					item.Field = work.ChangelogFieldReporterRefID
 					item.From = data.From
