@@ -10,7 +10,7 @@ import (
 
 // Async simple async interface
 type Async interface {
-	Send(f func())
+	Do(f func())
 	Wait()
 }
 
@@ -35,7 +35,7 @@ func NewAsync(concurrency int) Async {
 	return a
 }
 
-func (a *async) Send(f func()) {
+func (a *async) Do(f func()) {
 	a.funcs <- f
 }
 

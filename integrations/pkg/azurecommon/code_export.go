@@ -78,9 +78,9 @@ func (s *Integration) ripSource(repo *sourcecode.Repo) error {
 	u.User = url.UserPassword(s.Creds.Username, s.Creds.Password)
 	args := rpcdef.GitRepoFetch{}
 	args.RefType = s.reftype.String()
-	args.RepoID = s.api.RepoID(repo.RefID)
+	args.RepoID = s.api.IDs.CodeRepo(repo.RefID)
 	args.URL = u.String()
-	s.logger.Info("cloning repo " + u.String())
+	s.logger.Info("queueing repo for processing " + u.String())
 	args.BranchURLTemplate = branchURLTemplate(repo.Name, s.Creds.URL)
 	args.CommitURLTemplate = commitURLTemplate(repo.Name, s.Creds.URL)
 	return s.agent.ExportGitRepo(args)

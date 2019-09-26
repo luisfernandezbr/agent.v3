@@ -15,17 +15,17 @@ func (api *API) FetchSprints(projid string, sprints chan<- datamodel.Model) erro
 	if err != nil {
 		return err
 	}
-	a := NewAsync(api.concurrency)
+	async := NewAsync(api.concurrency)
 	for _, team := range teams {
 		teamid := team.ID
-		a.Send(func() {
+		async.Do(func() {
 			if _, err := api.fetchSprint(projid, teamid, sprints); err != nil {
 				api.logger.Error("error fetching sprints for project "+projid+" and team "+teamid, "err", err)
 				return
 			}
 		})
 	}
-	a.Wait()
+	async.Wait()
 	return err
 }
 

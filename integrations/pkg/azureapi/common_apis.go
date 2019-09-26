@@ -2,7 +2,7 @@ package azureapi
 
 import (
 	"fmt"
-	purl "net/url"
+	"net/url"
 )
 
 type usersResponse struct {
@@ -59,25 +59,25 @@ func (api *API) fetchAllUsers(projid string, teamids []string) ([]usersResponse,
 }
 
 func (api *API) fetchTeams(projid string) ([]teamsResponse, error) {
-	url := fmt.Sprintf(`_apis/projects/%s/teams`, purl.PathEscape(projid))
+	u := fmt.Sprintf(`_apis/projects/%s/teams`, url.PathEscape(projid))
 	var res []teamsResponse
-	if err := api.getRequest(url, nil, &res); err != nil {
+	if err := api.getRequest(u, nil, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
 func (api *API) fetchUsers(projid string, teamid string) ([]usersResponse, error) {
-	url := fmt.Sprintf(`_apis/projects/%s/teams/%s/members`, purl.PathEscape(projid), purl.PathEscape(teamid))
+	u := fmt.Sprintf(`_apis/projects/%s/teams/%s/members`, url.PathEscape(projid), url.PathEscape(teamid))
 	if api.tfs {
 		var res []usersResponse
-		if err := api.getRequest(url, nil, &res); err != nil {
+		if err := api.getRequest(u, nil, &res); err != nil {
 			return nil, err
 		}
 		return res, nil
 	}
 	var res []usersResponseAzure
-	if err := api.getRequest(url, nil, &res); err != nil {
+	if err := api.getRequest(u, nil, &res); err != nil {
 		return nil, err
 	}
 	var users []usersResponse

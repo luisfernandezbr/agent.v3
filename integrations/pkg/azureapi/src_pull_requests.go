@@ -2,7 +2,7 @@ package azureapi
 
 import (
 	"fmt"
-	purl "net/url"
+	"net/url"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
@@ -14,13 +14,13 @@ import (
 
 // FetchPullRequests calls the pull request api and processes the reponse sending each object to the corresponding channel async
 // sourcecode.PullRequest, sourcecode.PullRequestReview, sourcecode.PullRequestComment, and sourcecode.PullRequestCommit
-func (api *API) FetchPullRequests(repoid string, fromdate time.Time, prchan chan<- datamodel.Model, prrchan chan<- datamodel.Model, prcchan chan<- datamodel.Model, prcmchan chan<- datamodel.Model) error {
+func (api *API) FetchPullRequests(repoid string, fromdate time.Time, pullRequestChan chan<- datamodel.Model, pullRequestReviewChan chan<- datamodel.Model, pullReuqestCommentChan chan<- datamodel.Model, pullRequestCommitChan chan<- datamodel.Model) error {
 	res, err := api.fetchPullRequests(repoid)
 	if err != nil {
 		return err
 	}
 	incremental := !fromdate.IsZero()
-	a := NewAsync(api.concurrency)
+	async := NewAsync(api.concurrency)
 
 	for _, p := range res {
 		pr := pullRequestResponseWithShas{}
@@ -35,26 +35,26 @@ func (api *API) FetchPullRequests(repoid string, fromdate time.Time, prchan chan
 			for _, commit := range commits {
 				pr.commitshas = append(pr.commitshas, commit.CommitID)
 				pr := pr
-				a.Send(func() {
-					api.sendPullRequestCommitObjects(repoid, pr, prcmchan)
+				async.Do(func() {
+					api.sendPullRequestCommitObjects(repoid, pr, pullRequestCommitChan)
 				})
 			}
-			a.Send(func() {
-				api.sendPullRequestObjects(repoid, pr, prchan, prrchan)
+			async.Do(func() {
+				api.sendPullRequestObjects(repoid, pr, pullRequestChan, pullRequestReviewChan)
 			})
 		}
 		// if this is not incremental, only fetch the comments if this pr is still opened or was closed after the last processed date
 		if !incremental || (pr.Status == "active" || (incremental && pr.ClosedDate.After(fromdate))) {
-			a.Send(func() {
-				api.sendPullRequestCommentObject(repoid, pr.PullRequestID, prcchan)
+			async.Do(func() {
+				api.sendPullRequestCommentObject(repoid, pr.PullRequestID, pullReuqestCommentChan)
 			})
 		}
 	}
-	a.Wait()
+	async.Wait()
 	return nil
 }
 
-func (api *API) sendPullRequestCommentObject(repoid string, prid int64, prcchan chan<- datamodel.Model) {
+func (api *API) sendPullRequestCommentObject(repoid string, prid int64, pullReuqestCommentChan chan<- datamodel.Model) {
 	comments, err := api.fetchPullRequestComments(repoid, prid)
 	if err != nil {
 		api.logger.Error("error fetching comments for PR, skiping", "pr-id", prid, "repo-id", repoid)
@@ -70,20 +70,20 @@ func (api *API) sendPullRequestCommentObject(repoid string, prid int64, prcchan 
 			c := sourcecode.PullRequestComment{
 				Body:          e.Content,
 				CustomerID:    api.customerid,
-				PullRequestID: api.PullRequestID(fmt.Sprintf("%d", prid), refid),
+				PullRequestID: api.IDs.CodePullRequest(fmt.Sprintf("%d", prid), refid),
 				RefID:         refid,
 				RefType:       api.reftype,
-				RepoID:        api.RepoID(repoid),
+				RepoID:        api.IDs.CodeRepo(repoid),
 				UserRefID:     e.Author.ID,
 			}
 			date.ConvertToModel(e.PublishedDate, &c.CreatedDate)
 			date.ConvertToModel(e.LastUpdatedDate, &c.UpdatedDate)
-			prcchan <- &c
+			pullReuqestCommentChan <- &c
 		}
 	}
 }
 
-func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithShas, prchan chan<- datamodel.Model, prrchan chan<- datamodel.Model) {
+func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithShas, pullRequestChan chan<- datamodel.Model, pullRequestReviewChan chan<- datamodel.Model) {
 	prid := p.PullRequestID
 
 	pr := sourcecode.PullRequest{
@@ -93,13 +93,13 @@ func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithS
 		Description:    p.Description,
 		RefID:          fmt.Sprintf("%d", prid),
 		RefType:        api.reftype,
-		RepoID:         api.RepoID(p.Repository.ID),
+		RepoID:         api.IDs.CodeRepo(p.Repository.ID),
 		Title:          p.Title,
 		URL:            p.URL,
 		CommitShas:     p.commitshas,
 	}
 	if p.commitshas != nil {
-		pr.BranchID = api.BranchID(repoid, p.SourceBranch, p.commitshas[0])
+		pr.BranchID = api.IDs.CodeBranch(repoid, p.SourceBranch, p.commitshas[0])
 		pr.CommitIds = ids.CodeCommits(api.customerid, api.reftype, pr.RepoID, p.commitshas)
 	}
 
@@ -134,12 +134,12 @@ func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithS
 			state = sourcecode.PullRequestReviewStateApproved
 		}
 		refid := hash.Values(i, prid, r.ID)
-		prrchan <- &sourcecode.PullRequestReview{
+		pullRequestReviewChan <- &sourcecode.PullRequestReview{
 			CustomerID:    api.customerid,
-			PullRequestID: api.PullRequestID(fmt.Sprintf("%d", prid), refid),
+			PullRequestID: api.IDs.CodePullRequest(fmt.Sprintf("%d", prid), refid),
 			RefID:         refid,
 			RefType:       api.reftype,
-			RepoID:        api.RepoID(repoid),
+			RepoID:        api.IDs.CodeRepo(repoid),
 			State:         state,
 			URL:           r.URL,
 			UserRefID:     r.ID,
@@ -147,7 +147,7 @@ func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithS
 	}
 	date.ConvertToModel(p.ClosedDate, &pr.ClosedDate)
 	date.ConvertToModel(p.CreationDate, &pr.CreatedDate)
-	prchan <- &pr
+	pullRequestChan <- &pr
 }
 func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestResponseWithShas, commichan chan<- datamodel.Model) error {
 	sha := p.commitshas[len(p.commitshas)-1]
@@ -159,12 +159,12 @@ func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestRespons
 		commit := &sourcecode.PullRequestCommit{
 			Additions: c.ChangeCounts.Add,
 			// AuthorRefID: not provided
-			BranchID: api.BranchID(repoid, p.SourceBranch, p.commitshas[0]),
+			BranchID: api.IDs.CodeBranch(repoid, p.SourceBranch, p.commitshas[0]),
 			// CommitterRefID: not provided
 			CustomerID:    api.customerid,
 			Deletions:     c.ChangeCounts.Delete,
 			Message:       c.Comment,
-			PullRequestID: api.PullRequestID(p.Repository.ID, sha),
+			PullRequestID: api.IDs.CodePullRequest(p.Repository.ID, sha),
 			RefID:         sha,
 			RefType:       api.reftype,
 			RepoID:        p.Repository.ID,
@@ -179,37 +179,37 @@ func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestRespons
 }
 
 func (api *API) fetchPullRequests(repoid string) ([]pullRequestResponse, error) {
-	url := fmt.Sprintf(`_apis/git/repositories/%s/pullRequests`, purl.PathEscape(repoid))
+	u := fmt.Sprintf(`_apis/git/repositories/%s/pullRequests`, url.PathEscape(repoid))
 	var res []pullRequestResponse
-	if err := api.getRequest(url, stringmap{"status": "all", "$top": "1000"}, &res); err != nil {
+	if err := api.getRequest(u, stringmap{"status": "all", "$top": "1000"}, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
 func (api *API) fetchPullRequestComments(repoid string, prid int64) ([]commentsReponse, error) {
-	url := fmt.Sprintf(`_apis/git/repositories/%s/pullRequests/%d/threads`, purl.PathEscape(repoid), prid)
+	u := fmt.Sprintf(`_apis/git/repositories/%s/pullRequests/%d/threads`, url.PathEscape(repoid), prid)
 	var res []commentsReponse
-	if err := api.getRequest(url, nil, &res); err != nil {
+	if err := api.getRequest(u, nil, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
 func (api *API) fetchPullRequestCommits(repoid string, prid int64) ([]commitsResponseLight, error) {
-	url := fmt.Sprintf(`_apis/git/repositories/%s/pullRequests/%d/commits`, purl.PathEscape(repoid), prid)
+	u := fmt.Sprintf(`_apis/git/repositories/%s/pullRequests/%d/commits`, url.PathEscape(repoid), prid)
 	var res []commitsResponseLight
 	// there's a bug with paging this api in azure
-	if err := api.getRequest(url, stringmap{"$top": "1000"}, &res); err != nil {
+	if err := api.getRequest(u, stringmap{"$top": "1000"}, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
 func (api *API) fetchSingleCommit(repoid string, commitid string) ([]singleCommitResponse, error) {
-	url := fmt.Sprintf(`_apis/git/repositories/%s/commits/%s`, purl.PathEscape(repoid), purl.PathEscape(commitid))
+	u := fmt.Sprintf(`_apis/git/repositories/%s/commits/%s`, url.PathEscape(repoid), url.PathEscape(commitid))
 	var res []singleCommitResponse
-	if err := api.getRequest(url, stringmap{
+	if err := api.getRequest(u, stringmap{
 		"changeCount": "1000",
 	}, &res); err != nil {
 		return nil, err

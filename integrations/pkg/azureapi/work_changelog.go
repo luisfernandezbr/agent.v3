@@ -24,7 +24,7 @@ func (api *API) FetchChangelogs(projid string, fromdate time.Time, result chan<-
 	}
 	for _, refid := range allids {
 		refid := refid
-		async.Send(func() {
+		async.Do(func() {
 			if _, err := api.fetchChangeLog(projid, refid, result); err != nil {
 				api.logger.Error("error fetching work item updates "+refid, "err", err)
 			}
@@ -40,7 +40,7 @@ func (api *API) fetchChangeLog(projid, refid string, result chan<- datamodel.Mod
 	if err := api.getRequest(url, stringmap{"$top": "200"}, &res); err != nil {
 		return nil, err
 	}
-	issueid := api.IssueID(refid)
+	issueid := api.IDs.WorkIssue(refid)
 	for i, changelog := range res {
 		if changelog.Fields == nil {
 			continue
@@ -63,7 +63,7 @@ func (api *API) fetchChangeLog(projid, refid string, result chan<- datamodel.Mod
 					From:        from,
 					IssueID:     issueid,
 					Ordinal:     int64(i),
-					ProjectID:   api.ProjectID(projid),
+					ProjectID:   api.IDs.WorkProject(projid),
 					RefID:       fmt.Sprintf("%d", changelog.ID),
 					RefType:     api.reftype,
 					To:          to,

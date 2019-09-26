@@ -2,7 +2,7 @@ package azureapi
 
 import (
 	"fmt"
-	purl "net/url"
+	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -45,9 +45,9 @@ func (api *API) FetchAllRepos(included []string, excludedids []string, repochan 
 
 func (api *API) fetchRepos(projid string) ([]reposResponse, error) {
 	// projid is optional, can be ""
-	url := fmt.Sprintf(`%s/_apis/git/repositories/`, purl.PathEscape(projid))
+	u := fmt.Sprintf(`%s/_apis/git/repositories/`, url.PathEscape(projid))
 	var res []reposResponse
-	if err := api.getRequest(url, nil, &res); err != nil {
+	if err := api.getRequest(u, nil, &res); err != nil {
 		return nil, err
 	}
 	return res, nil

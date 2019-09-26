@@ -2,7 +2,7 @@ package azureapi
 
 import (
 	"fmt"
-	purl "net/url"
+	"net/url"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/commitusers"
@@ -44,9 +44,9 @@ func (api *API) FetchCommitUsers(repoids []string, fromdate time.Time) (map[stri
 
 // FetchLastCommit gets the last commit in a repo
 func (api *API) FetchLastCommit(repoid string) (*CommitResponse, error) {
-	url := fmt.Sprintf(`_apis/git/repositories/%s/commits`, purl.PathEscape(repoid))
+	u := fmt.Sprintf(`_apis/git/repositories/%s/commits`, url.PathEscape(repoid))
 	var res []CommitResponse
-	if err := api.getRequest(url, stringmap{"$top": "1"}, &res); err != nil {
+	if err := api.getRequest(u, stringmap{"$top": "1"}, &res); err != nil {
 		return nil, err
 	}
 	if len(res) > 0 {
@@ -56,9 +56,9 @@ func (api *API) FetchLastCommit(repoid string) (*CommitResponse, error) {
 }
 
 func (api *API) fetchCommits(repoid string, fromdate time.Time) ([]commitsResponse, error) {
-	url := fmt.Sprintf(`_apis/git/repositories/%s/commits`, purl.PathEscape(repoid))
+	u := fmt.Sprintf(`_apis/git/repositories/%s/commits`, url.PathEscape(repoid))
 	var res []commitsResponse
-	if err := api.getRequest(url, stringmap{
+	if err := api.getRequest(u, stringmap{
 		"searchCriteriapi.fromDate": fromdate.Format(time.RFC3339),
 		"$top": "3000",
 	}, &res); err != nil {

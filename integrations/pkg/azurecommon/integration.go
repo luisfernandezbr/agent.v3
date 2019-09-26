@@ -2,6 +2,7 @@ package azurecommon
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -71,19 +72,19 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	} else if s.IntegrationType == IntegrationTypeIssues {
 		err = s.exportWork()
 	} else {
-		a := azureapi.NewAsync(2)
+		async := azureapi.NewAsync(2)
 		var errors []string
-		a.Send(func() {
+		async.Do(func() {
 			if err = s.exportCode(); err != nil {
 				errors = append(errors, err.Error())
 			}
 		})
-		a.Send(func() {
+		async.Do(func() {
 			if err = s.exportWork(); err != nil {
 				errors = append(errors, err.Error())
 			}
 		})
-		a.Wait()
+		async.Wait()
 		if errors != nil {
 			err = fmt.Errorf("%v", strings.Join(errors, ", "))
 		}
@@ -129,15 +130,16 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 	if err := structmarshal.MapToStruct(config.Integration, &s); err != nil {
 		return err
 	}
-	if s.reftype == RefTypeTFS {
+	istfs := s.reftype == RefTypeTFS
+	if istfs {
 		if s.Creds.Collection == nil {
 			s.Creds.Collection = pstrings.Pointer("DefaultCollection")
 		}
 		if s.Creds.Username == "" {
-			return fmt.Errorf("missing username")
+			return errors.New("missing username")
 		}
 		if s.Creds.Password == "" {
-			return fmt.Errorf("missing password")
+			return errors.New("missing password")
 		}
 	} else { // if s.reftype == RefTypeAzure
 		if s.Creds.Organization == nil {
@@ -154,17 +156,17 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 		s.Concurrency = 10
 	}
 	if s.IntegrationType != IntegrationTypeBoth && s.IntegrationType != IntegrationTypeCode && s.IntegrationType != IntegrationTypeIssues {
-		return fmt.Errorf(`"type" must be "` + IntegrationTypeIssues.String() + `", "` + IntegrationTypeCode.String() + `", or empty for both`)
+		return errors.New(`"type" must be "` + IntegrationTypeIssues.String() + `", "` + IntegrationTypeCode.String() + `", or empty for both`)
 	}
 	if s.Creds.URL == "" {
-		return fmt.Errorf("missing url")
+		return errors.New("missing url")
 	}
 	if s.Creds.APIKey == "" {
-		return fmt.Errorf("missing api_key")
+		return errors.New("missing api_key")
 	}
 	s.customerid = config.Pinpoint.CustomerID
 	s.logger.Info("Concurrency " + fmt.Sprintf("%d", s.Concurrency))
-	s.api = azureapi.NewAPI(ctx, s.logger, s.Concurrency, s.customerid, s.reftype.String(), s.Creds)
+	s.api = azureapi.NewAPI(ctx, s.logger, s.Concurrency, s.customerid, s.reftype.String(), s.Creds, istfs)
 	return nil
 }
 

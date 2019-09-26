@@ -16,7 +16,7 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/ids"
+	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/go-common/httpdefaults"
 
 	pstrings "github.com/pinpt/go-common/strings"
@@ -49,50 +49,12 @@ type API struct {
 	tfs         bool
 	apiversion  string
 	concurrency int
-}
 
-// RepoID returns a new hashed id for the pipeline
-func (api *API) RepoID(refid string) string {
-	return ids.CodeRepo(api.customerid, api.reftype, refid)
-}
-
-// UserID returns a new hashed id for the pipeline
-func (api *API) CodeUserID(refid string) string {
-	return ids.CodeUser(api.customerid, api.reftype, refid)
-}
-
-// PullRequestID returns a new hashed id for the pipeline
-func (api *API) PullRequestID(repoid, refid string) string {
-	return ids.CodePullRequest(api.customerid, api.reftype, repoid, refid)
-}
-
-// BranchID returns a new hashed id for the pipeline
-func (api *API) BranchID(repoid, branchname, firstsha string) string {
-	return ids.CodeBranch(api.customerid, api.reftype, repoid, branchname, firstsha)
-}
-
-func (api *API) ProjectURL(projectKey string) string {
-	return pstrings.JoinURL(api.creds.URL, "browse", projectKey)
-}
-
-func (api *API) IssueURL(issueKey string) string {
-	return pstrings.JoinURL(api.creds.URL, "browse", issueKey)
-}
-
-func (api *API) ProjectID(refID string) string {
-	return ids.WorkProject(api.customerid, api.reftype, refID)
-}
-
-func (api *API) IssueID(refID string) string {
-	return ids.WorkIssue(api.customerid, api.reftype, refID)
-}
-
-func (api *API) WorkUserID(refID string) string {
-	return ids.WorkUser(api.customerid, api.reftype, refID)
+	IDs ids2.Gen
 }
 
 // NewAPI initializer
-func NewAPI(ctx context.Context, logger hclog.Logger, concurrency int, customerid, reftype string, creds *Creds) *API {
+func NewAPI(ctx context.Context, logger hclog.Logger, concurrency int, customerid, reftype string, creds *Creds, istfs bool) *API {
 	client := &http.Client{
 		Transport: httpdefaults.DefaultTransport(),
 		Timeout:   10 * time.Minute,
@@ -103,7 +65,6 @@ func NewAPI(ctx context.Context, logger hclog.Logger, concurrency int, customeri
 		},
 		Retryable: httpclient.NewBackoffRetry(10*time.Millisecond, 100*time.Millisecond, 60*time.Second, 2.0),
 	}
-	istfs := creds.Collection != nil
 	api := &API{
 		creds:       creds,
 		client:      httpclient.NewHTTPClient(ctx, conf, client),
@@ -113,6 +74,7 @@ func NewAPI(ctx context.Context, logger hclog.Logger, concurrency int, customeri
 		tfs:         istfs,
 		apiversion:  creds.APIVersion,
 		concurrency: concurrency,
+		IDs:         ids2.New(customerid, reftype),
 	}
 	if api.apiversion == "" {
 		if istfs {

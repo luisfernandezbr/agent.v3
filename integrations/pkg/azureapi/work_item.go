@@ -10,6 +10,8 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
+const whereChangeDate = ` WHERE System.ChangedDate > '%s'`
+
 // FetchWorkItems gets the work items (issues) and sends them to the items channel
 // The first step is to get the IDs of all items that changed after the fromdate
 // Then we need to get the items 200 at a time, this is done async
@@ -20,8 +22,7 @@ func (api *API) FetchWorkItems(projid string, fromdate time.Time, items chan<- d
 		return err
 	}
 	fetchitems := func(ids []string) {
-		async.Send(func() {
-			fmt.Println(ids[0])
+		async.Do(func() {
 			if _, err := api.fetchWorkItemsByIDs(projid, ids, items); err != nil {
 				api.logger.Error("error with fetchWorkItemsByIDs", "err", err)
 			}
@@ -41,6 +42,7 @@ func (api *API) FetchWorkItems(projid string, fromdate time.Time, items chan<- d
 	async.Wait()
 	return nil
 }
+
 func (api *API) fetchItemIDs(projid string, fromdate time.Time) ([]string, error) {
 	url := fmt.Sprintf(`%s/_apis/wit/wiql`, projid)
 	var q struct {
@@ -48,7 +50,7 @@ func (api *API) fetchItemIDs(projid string, fromdate time.Time) ([]string, error
 	}
 	q.Query = `Select System.ID From WorkItems`
 	if !fromdate.IsZero() {
-		q.Query += `  WHERE System.ChangedDate > '` + fromdate.Format("01/02/2006 15:04:05Z") + `'`
+		q.Query += fmt.Sprintf(whereChangeDate, fromdate.Format("01/02/2006 15:04:05Z"))
 	}
 	var res workItemsResponse
 	if err := api.postRequest(url, stringmap{"timePrecision": "true"}, q, &res); err != nil {
