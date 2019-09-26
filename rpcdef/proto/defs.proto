@@ -96,7 +96,6 @@ message SendExportedReq {
 message ExportObj {
     enum DataType {
         JSON = 0;
-        AVRO = 1;
     }
     DataType data_type = 1;
     bytes data = 2;

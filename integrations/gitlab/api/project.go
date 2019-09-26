@@ -134,7 +134,7 @@ func ReposOnboardPage(qc QueryContext, params url.Values) (page PageInfo, repos 
 		ID := fmt.Sprint(v.ID)
 		repo := &agent.RepoResponseRepos{
 			RefID:       ID,
-			RefType:     "gitlab",
+			RefType:     qc.RefType,
 			Name:        v.FullName,
 			Description: v.Description,
 			Active:      true,
@@ -203,7 +203,7 @@ func ReposOnboardPageGraphQL(qc QueryContext, groupName, pageSize, after string)
 						Cursor string `json:"cursor"`
 						Node   struct {
 							ID          string    `json:"id"`
-							FullName    string    `json:"nameWithNamespace"`
+							FullPath    string    `json:"fullPath"`
 							Description string    `json:"description"`
 							CreatedAt   time.Time `json:"createdAt"`
 							Repository  struct {
@@ -236,7 +236,7 @@ func ReposOnboardPageGraphQL(qc QueryContext, groupName, pageSize, after string)
 		repo := &agent.RepoResponseRepos{
 			RefID:       ID,
 			RefType:     qc.RefType,
-			Name:        r.FullName,
+			Name:        r.FullPath,
 			Description: r.Description,
 			Active:      true,
 		}

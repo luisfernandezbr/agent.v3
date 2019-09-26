@@ -61,14 +61,12 @@ func IssuesAndChangelogsPage(
 					Author  User   `json:"author"`
 					Created string `json:"created"`
 					Items   []struct {
-						Field         string  `json:"field"`
-						FieldType     string  `json:"fieldtype"`
-						From          string  `json:"from"`
-						FromString    string  `json:"fromString"`
-						To            string  `json:"to"`
-						ToString      string  `json:"toString"`
-						FromAccountID *string `json:"tmpFromAccountId"`
-						ToAccountID   *string `json:"tmpToAccountId"`
+						Field      string `json:"field"`
+						FieldType  string `json:"fieldtype"`
+						From       string `json:"from"`
+						FromString string `json:"fromString"`
+						To         string `json:"to"`
+						ToString   string `json:"toString"`
 					} `json:"items"`
 				} `json:"histories"`
 			} `json:"changelog"`
@@ -265,26 +263,98 @@ func IssuesAndChangelogsPage(
 				date.ConvertToModel(createdAt, &item.CreatedDate)
 				item.UserID = cl.Author.RefID()
 
-				item.Field = data.Field
+				item.FromString = data.FromString + " @ " + data.From
+				item.ToString = data.ToString + " @ " + data.To
+
 				item.FieldType = data.FieldType
-
-				item.FromString = data.FromString
-				item.ToString = data.ToString
-
-				if data.Field == "assignee" {
+				switch strings.ToLower(data.Field) {
+				case "status":
+					item.Field = work.ChangelogFieldStatus
+					item.From = data.FromString
+					item.To = data.ToString
+				case "resolution":
+					item.Field = work.ChangelogFieldResolution
+					item.From = data.FromString
+					item.To = data.ToString
+				case "assignee":
+					item.Field = work.ChangelogFieldAssigneeRefID
 					if data.From != "" {
 						item.From = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.From)
 					}
 					if data.To != "" {
 						item.To = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.To)
 					}
-					item.FromString += " @ " + data.From
-					item.ToString += " @ " + data.To
-				} else {
+				case "reporter":
+					item.Field = work.ChangelogFieldReporterRefID
 					item.From = data.From
 					item.To = data.To
+				case "summary":
+					item.Field = work.ChangelogFieldTitle
+					item.From = data.FromString
+					item.To = data.ToString
+				case "duedate":
+					item.Field = work.ChangelogFieldDueDate
+					item.From = data.FromString
+					item.To = data.ToString
+				case "issuetype":
+					item.Field = work.ChangelogFieldType
+					item.From = data.FromString
+					item.To = data.ToString
+				case "labels":
+					item.Field = work.ChangelogFieldTags
+					item.From = data.FromString
+					item.To = data.ToString
+				case "priority":
+					item.Field = work.ChangelogFieldPriority
+					item.From = data.FromString
+					item.To = data.ToString
+				case "project":
+					item.Field = work.ChangelogFieldProjectID
+					if data.From != "" {
+						item.From = work.NewProjectID(qc.CustomerID, "jira", data.From)
+					}
+					if data.To != "" {
+						item.To = work.NewProjectID(qc.CustomerID, "jira", data.To)
+					}
+				case "key":
+					item.Field = work.ChangelogFieldIdentifier
+					item.From = data.FromString
+					item.To = data.ToString
+				case "sprint":
+					item.Field = work.ChangelogFieldSprintIds
+					var from, to []string
+					if item.From != "" {
+						for _, s := range strings.Split(item.From, ",") {
+							from = append(from, work.NewSprintID(item.CustomerID, strings.TrimSpace(s), item.RefType))
+						}
+					}
+					if item.To != "" {
+						for _, s := range strings.Split(item.To, ",") {
+							to = append(to, work.NewSprintID(item.CustomerID, strings.TrimSpace(s), item.RefType))
+						}
+					}
+					item.From = strings.Join(from, ",")
+					item.To = strings.Join(to, ",")
+				case "parent":
+					item.Field = work.ChangelogFieldParentID
+					if data.From != "" {
+						item.From = work.NewIssueID(qc.CustomerID, "jira", data.From)
+					}
+					if data.To != "" {
+						item.To = work.NewIssueID(qc.CustomerID, "jira", data.To)
+					}
+				case "epic link":
+					item.Field = work.ChangelogFieldEpicID
+					if data.From != "" {
+						item.From = work.NewIssueID(qc.CustomerID, "jira", data.From)
+					}
+					if data.To != "" {
+						item.To = work.NewIssueID(qc.CustomerID, "jira", data.To)
+					}
+				default:
+					// Ignore other change types
+					continue
 				}
-
 				resChangelogs = append(resChangelogs, item)
 			}
 

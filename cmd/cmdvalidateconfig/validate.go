@@ -3,7 +3,6 @@ package cmdvalidateconfig
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"time"
 
@@ -51,8 +50,6 @@ func newValidator(opts Opts) (*validator, error) {
 		return nil, err
 	}
 	s.Opts = opts
-
-	fmt.Println("opts received", "opts", fmt.Sprintf("%+v", opts))
 
 	s.SetupIntegrations(nil)
 

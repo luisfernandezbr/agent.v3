@@ -4,8 +4,10 @@
 - GitHub Enterprise 2.15.9
 
 ## GitHub API Docs
-https://developer.github.com/v4/
-https://developer.github.com/enterprise/2.15/
+- https://developer.github.com/v4/
+- https://developer.github.com/enterprise/2.15/
+
+## [All exported data](./_docs/exported_data.md)
 
 ## Authentication
 
@@ -40,7 +42,9 @@ The permissions are the same between them. But for github.com token also need to
 
 ## API call examples
 
+```
 curl -H "Authorization: bearer $PP_GITHUB_TOKEN" -X POST -d '{"query":"query { viewer { login }}"}' https://api.github.com/graphql
+```
 
 ## Development commands
 
@@ -53,26 +57,6 @@ go run . export --agent-config-json='{"customer_id":"c1"}' --integrations-json='
 All args
 go run . export --agent-config-json='{"customer_id":"c1", "skip_git":false}' --integrations-json='[{"name":"github", "config":{"url":"https://api.github.com", "apitoken":"XXX", "excluded_repos":[],"only_git":false,"organization":"", repos:["pinpt/test_repo"], "stop_after_n":1}}]'
 ```
-
-```
-URL      string `json:"url"`
-APIToken string `json:"apitoken"`
-
-// ExcludedRepos are the repos to exclude from processing. This is based on github repo id.
-ExcludedRepos []string `json:"excluded_repos"`
-OnlyGit       bool     `json:"only_git"`
-
-// Organization specifies the organization to export. By default all account organization are exported. Set this to export only one.
-Organization string `json:"organization"`
-
-// Repos specifies the repos to export. By default all repos are exported not including the ones from ExcludedRepos. This option overrides this.
-// Use github nameWithOwner for this field.
-// Example: user1/repo1
-Repos []string `json:"repos"`
-
-// StopAfterN stops exporting after N number of repos for testing and dev purposes
-StopAfterN int `json:"stop_after_n"`
-```    
 
 ## Datamodel notes
 github.PullRequestComment does not include comments created from review, these go to github.PullRequestReview. We do not currently store the text of those.
@@ -137,7 +121,7 @@ When not using updated_at filter it is sorted by created_at by default. So the o
 
 In general this needs to be tested on case by case basic. This relies on github private api implementation details. But don't know of any better way to avoid re-fetching all data on incremental.
 
-### Exporting users
+## Exporting users
 
 We first export all users belonging to organization. The github api does not return email in that case, so we skip that.
 

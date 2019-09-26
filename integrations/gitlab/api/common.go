@@ -4,7 +4,7 @@ import (
 	"net/url"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/ids"
+	"github.com/pinpt/agent.next/pkg/ids2"
 )
 
 type QueryContext struct {
@@ -17,6 +17,7 @@ type QueryContext struct {
 	RefType    string
 
 	UserEmailMap map[string]string
+	IDs          ids2.Gen
 }
 
 type PageInfo struct {
@@ -24,16 +25,4 @@ type PageInfo struct {
 	NextPage   string
 	Page       string
 	TotalPages string
-}
-
-func (s QueryContext) RepoID(refID string) string {
-	return ids.CodeRepo(s.CustomerID, s.RefType, refID)
-}
-
-func (s QueryContext) BranchID(repoID, branchName, firstCommitSHA string) string {
-	return ids.CodeBranch(s.CustomerID, s.RefType, repoID, branchName, firstCommitSHA)
-}
-
-func (s QueryContext) PullRequestID(repoID, refID string) string {
-	return ids.CodePullRequest(s.CustomerID, s.RefType, repoID, refID)
 }

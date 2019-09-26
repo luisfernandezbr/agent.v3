@@ -57,5 +57,7 @@ func CopyToFile(cmd *cobra.Command, logger hclog.Logger, pinpointRoot string) hc
 	}
 	opts := optsFromCommand(cmd)
 	opts.Output = io.MultiWriter(os.Stdout, wr)
-	return hclog.New(opts)
+	res := hclog.New(opts)
+	res.Info("initialized logger", "cmd", os.Args[1], "file", logFile)
+	return res
 }

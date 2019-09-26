@@ -9,8 +9,7 @@
 
 - In order to get emails, the token needs to have Administrator privileges.
 
-## TODO
-- Add support for gitlab.com
+## [All exported data](./_docs/exported_data.md)
 
 ## API call examples
 

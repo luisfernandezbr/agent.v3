@@ -4,29 +4,35 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/gitlab/api"
+	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
+	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/ids"
+	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
+const (
+	CLOUD      = "cloud"
+	ON_PREMISE = "on-premise"
+)
+
 type Config struct {
-	URL                string   `json:"url"`
-	APIToken           string   `json:"apitoken"`
-	ExcludedRepos      []string `json:"excluded_repos"`
-	Repos              []string `json:"repos"`
-	StopAfterN         int      `json:"stop_after_n"`
-	OnlyGit            bool     `json:"only_git"`
-	InsecureSkipVerify bool     `json:"insecure_skip_verify"`
+	commonrepo.FilterConfig
+	URL                string `json:"url"`
+	APIToken           string `json:"apitoken"`
+	OnlyGit            bool   `json:"only_git"`
+	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
+	ServerType         string `json:"server-type"`
 }
 
 type Integration struct {
@@ -48,6 +54,7 @@ type Integration struct {
 	pullRequestCommentsSender *objsender.NotIncremental
 	pullRequestReviewsSender  *objsender.NotIncremental
 	userSender                *objsender.NotIncremental
+	pullRequestCommitsSender  *objsender.NotIncremental
 }
 
 func main() {
@@ -96,18 +103,15 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 }
 
 func (s *Integration) Export(ctx context.Context,
-	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
-	err := s.initWithConfig(exportConfig)
+	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, err error) {
+	err = s.initWithConfig(exportConfig)
 	if err != nil {
-		return res, err
+		return
 	}
 
 	err = s.export(ctx)
-	if err != nil {
-		return res, err
-	}
 
-	return res, nil
+	return
 }
 
 func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
@@ -133,6 +137,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 
 		s.qc.Request = requester.Request
 		s.qc.RequestGraphQL = requester.RequestGraphQL
+		s.qc.IDs = ids2.New(s.customerID, s.refType)
 	}
 
 	return nil
@@ -153,6 +158,13 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	if conf.APIToken == "" {
 		return rerr("api token is missing")
 	}
+	if conf.ServerType == "" {
+		return rerr("server type is missing")
+	}
+	if conf.ServerType != CLOUD && conf.ServerType != ON_PREMISE {
+		return rerr("server type invalid: type %s", conf.ServerType)
+	}
+
 	s.config = conf
 	return nil
 }
@@ -174,10 +186,13 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	s.pullRequestCommentsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
 	s.pullRequestReviewsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
 	s.userSender = objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
+	s.pullRequestCommitsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommitModelName.String())
 
-	err = api.UsersEmails(s.qc, s.commitUserSender, s.userSender)
-	if err != nil {
-		return err
+	if s.config.ServerType == ON_PREMISE {
+		err = api.UsersEmails(s.qc, s.commitUserSender, s.userSender)
+		if err != nil {
+			return err
+		}
 	}
 
 	groupNames, err := api.Groups(s.qc)
@@ -215,6 +230,10 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
+	err = s.pullRequestCommitsSender.Done()
+	if err != nil {
+		return err
+	}
 
 	return
 }
@@ -223,22 +242,14 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 	s.logger.Info("exporting group", "name", groupName)
 	logger := s.logger.With("org", groupName)
 
-	repos, err := api.ReposAllSlice(s.qc, groupName)
+	repos, err := commonrepo.ReposAllSlice(func(res chan []commonrepo.Repo) error {
+		return api.ReposAll(s.qc, groupName, res)
+	})
 	if err != nil {
 		return err
 	}
 
-	repos = s.filterRepos(logger, repos)
-
-	if s.config.StopAfterN != 0 {
-		// only leave 1 repo for export
-		stopAfter := s.config.StopAfterN
-		l := len(repos)
-		if len(repos) > stopAfter {
-			repos = repos[0:stopAfter]
-		}
-		logger.Info("stop_after_n passed", "v", stopAfter, "repos", l, "after", len(repos))
-	}
+	repos = commonrepo.Filter(logger, repos, s.config.FilterConfig)
 
 	// queue repos for processing with ripsrc
 	{
@@ -254,10 +265,10 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 
 			args := rpcdef.GitRepoFetch{}
 			args.RefType = s.refType
-			args.RepoID = s.qc.RepoID(repo.ID)
+			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
 			args.URL = repoURL
-			args.CommitURLTemplate = commitURLTemplate(repo, s.config.URL)
-			args.BranchURLTemplate = branchURLTemplate(repo, s.config.URL)
+			args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
+			args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
 			err = s.agent.ExportGitRepo(args)
 			if err != nil {
 				return err
@@ -271,11 +282,19 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 	}
 
 	// export repos
-	{
-		err := s.exportRepos(ctx, logger, groupName, repos)
-		if err != nil {
-			return err
+	err = s.exportRepos(ctx, logger, groupName, repos)
+	if err != nil {
+		return err
+	}
+
+	if s.config.ServerType == CLOUD {
+		for _, repo := range repos {
+			err = s.exportUsersFromRepos(ctx, logger, repo)
+			if err != nil {
+				return err
+			}
 		}
+
 	}
 
 	for _, repo := range repos {
@@ -288,64 +307,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 	return nil
 }
 
-func (s *Integration) filterRepos(logger hclog.Logger, repos []api.Repo) (res []api.Repo) {
-	if len(s.config.Repos) != 0 {
-		ok := map[string]bool{}
-		for _, nameWithOwner := range s.config.Repos {
-			ok[nameWithOwner] = true
-		}
-		for _, repo := range repos {
-			if !ok[repo.NameWithOwner] {
-				continue
-			}
-			res = append(res, repo)
-		}
-		logger.Info("repos", "found", len(repos), "repos_specified", len(s.config.Repos), "result", len(res))
-		return
-	}
-
-	//all := map[string]bool{}
-	//for _, repo := range repos {
-	//	all[repo.ID] = true
-	//}
-	excluded := map[string]bool{}
-	for _, id := range s.config.ExcludedRepos {
-		// This does not work because we pass excluded repos for all orgs. But filterRepos is called separately per org.
-		//if !all[id] {
-		//	return fmt.Errorf("wanted to exclude non existing repo: %v", id)
-		//}
-		excluded[id] = true
-	}
-
-	filtered := map[string]api.Repo{}
-	// filter excluded repos
-	for _, repo := range repos {
-		if excluded[repo.ID] {
-			continue
-		}
-		filtered[repo.ID] = repo
-	}
-
-	logger.Info("repos", "found", len(repos), "excluded_definition", len(s.config.ExcludedRepos), "result", len(filtered))
-	for _, repo := range filtered {
-		res = append(res, repo)
-	}
-	return
-}
-
-func commitURLTemplate(repo api.Repo, repoURLPrefix string) string {
-	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/commit/@@@sha@@@"
-}
-
-func branchURLTemplate(repo api.Repo, repoURLPrefix string) string {
-	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/tree/@@@branch@@@"
-}
-
-func urlAppend(p1, p2 string) string {
-	return strings.TrimSuffix(p1, "/") + "/" + p2
-}
-
-func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, groupName string, onlyInclude []api.Repo) error {
+func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, groupName string, onlyInclude []commonrepo.Repo) error {
 
 	sender := s.repoSender
 
@@ -378,7 +340,32 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, grou
 	return nil
 }
 
-func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Repo,
+func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Logger, repo commonrepo.Repo) error {
+
+	sender := s.userSender
+
+	err := api.PaginateStartAt(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
+		pi, users, err := api.RepoUsersPageREST(s.qc, repo, parameters)
+		if err != nil {
+			return pi, err
+		}
+		for _, user := range users {
+			err := sender.Send(user)
+			if err != nil {
+				return pi, err
+			}
+		}
+		return pi, nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
 	pullRequestSender *objsender.IncrementalDateBased,
 	commentsSender *objsender.NotIncremental,
 	reviewSender *objsender.NotIncremental) (rerr error) {
@@ -458,22 +445,35 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 		defer wg.Done()
 		for prs := range pullRequestsForCommits {
 			for _, pr := range prs {
-				commits, err := s.exportPullRequestCommits(logger, repo.ID, pr.IID)
+				commits, err := s.exportPullRequestCommits(logger, repo, pr.ID, pr.IID)
 				if err != nil {
 					setErr(fmt.Errorf("error getting commits %s", err))
 					return
 				}
-				pr.CommitShas = commits
-				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, commits)
+
+				for _, c := range commits {
+					pr.CommitShas = append(pr.CommitShas, c.Sha)
+				}
+
+				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, repo.ID, pr.CommitShas)
 				if len(pr.CommitShas) == 0 {
 					logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
 				} else {
-					pr.BranchID = s.qc.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
+					pr.BranchID = s.qc.IDs.CodeBranch(pr.RepoID, pr.BranchName, pr.CommitShas[0])
 				}
 				err = pullRequestSender.Send(pr)
 				if err != nil {
 					setErr(err)
 					return
+				}
+
+				for _, c := range commits {
+					c.BranchID = pr.BranchID
+					err := s.pullRequestCommitsSender.Send(c)
+					if err != nil {
+						setErr(err)
+						return
+					}
 				}
 			}
 		}

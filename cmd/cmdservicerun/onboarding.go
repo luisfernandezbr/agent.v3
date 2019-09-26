@@ -30,7 +30,7 @@ func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integ
 
 	//s.logger.Debug("got onboard data", "res", pjson.Stringify(res))
 
-	s.logger.Info("getting onboard data completed", "success", res.Success)
+	s.logger.Info("getting onboard data completed", "success", res.Success, "err", res.Error)
 
 	if err != nil {
 		return res, err
