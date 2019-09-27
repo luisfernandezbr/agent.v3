@@ -10,7 +10,7 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
-const whereChangeDate = ` WHERE System.ChangedDate > '%s'`
+const whereDateFormat = `01/02/2006 15:04:05Z`
 
 // FetchWorkItems gets the work items (issues) and sends them to the items channel
 // The first step is to get the IDs of all items that changed after the fromdate
@@ -50,7 +50,7 @@ func (api *API) fetchItemIDs(projid string, fromdate time.Time) ([]string, error
 	}
 	q.Query = `Select System.ID From WorkItems`
 	if !fromdate.IsZero() {
-		q.Query += fmt.Sprintf(whereChangeDate, fromdate.Format("01/02/2006 15:04:05Z"))
+		q.Query += fmt.Sprintf(` WHERE System.ChangedDate > '%s'`, fromdate.Format(whereDateFormat))
 	}
 	var res workItemsResponse
 	if err := api.postRequest(url, stringmap{"timePrecision": "true"}, q, &res); err != nil {

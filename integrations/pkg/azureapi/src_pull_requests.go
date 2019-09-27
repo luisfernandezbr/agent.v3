@@ -14,7 +14,7 @@ import (
 
 // FetchPullRequests calls the pull request api and processes the reponse sending each object to the corresponding channel async
 // sourcecode.PullRequest, sourcecode.PullRequestReview, sourcecode.PullRequestComment, and sourcecode.PullRequestCommit
-func (api *API) FetchPullRequests(repoid string, fromdate time.Time, pullRequestChan chan<- datamodel.Model, pullRequestReviewChan chan<- datamodel.Model, pullReuqestCommentChan chan<- datamodel.Model, pullRequestCommitChan chan<- datamodel.Model) error {
+func (api *API) FetchPullRequests(repoid string, fromdate time.Time, pullRequestChan chan<- datamodel.Model, pullRequestReviewChan chan<- datamodel.Model, pullRequestCommentChan chan<- datamodel.Model, pullRequestCommitChan chan<- datamodel.Model) error {
 	res, err := api.fetchPullRequests(repoid)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (api *API) FetchPullRequests(repoid string, fromdate time.Time, pullRequest
 		// if this is not incremental, only fetch the comments if this pr is still opened or was closed after the last processed date
 		if !incremental || (pr.Status == "active" || (incremental && pr.ClosedDate.After(fromdate))) {
 			async.Do(func() {
-				api.sendPullRequestCommentObject(repoid, pr.PullRequestID, pullReuqestCommentChan)
+				api.sendPullRequestCommentObject(repoid, pr.PullRequestID, pullRequestCommentChan)
 			})
 		}
 	}
@@ -54,7 +54,7 @@ func (api *API) FetchPullRequests(repoid string, fromdate time.Time, pullRequest
 	return nil
 }
 
-func (api *API) sendPullRequestCommentObject(repoid string, prid int64, pullReuqestCommentChan chan<- datamodel.Model) {
+func (api *API) sendPullRequestCommentObject(repoid string, prid int64, pullRequestCommentChan chan<- datamodel.Model) {
 	comments, err := api.fetchPullRequestComments(repoid, prid)
 	if err != nil {
 		api.logger.Error("error fetching comments for PR, skiping", "pr-id", prid, "repo-id", repoid)
@@ -78,7 +78,7 @@ func (api *API) sendPullRequestCommentObject(repoid string, prid int64, pullReuq
 			}
 			date.ConvertToModel(e.PublishedDate, &c.CreatedDate)
 			date.ConvertToModel(e.LastUpdatedDate, &c.UpdatedDate)
-			pullReuqestCommentChan <- &c
+			pullRequestCommentChan <- &c
 		}
 	}
 }
