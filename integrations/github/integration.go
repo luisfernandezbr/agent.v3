@@ -290,6 +290,11 @@ func (s *Integration) export(ctx context.Context) error {
 		return err
 	}
 
+	err = s.users.Done()
+	if err != nil {
+		return err
+	}
+
 	s.logger.Debug(s.clientManager.PrintStats())
 
 	return nil
@@ -458,11 +463,6 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 		if err != nil {
 			return err
 		}
-
-		//err = repoSender.IncProgress()
-		//if err != nil {
-		//	return err
-		//}
 	}
 
 	err = repoSender.Done()
