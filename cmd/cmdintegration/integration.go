@@ -76,7 +76,7 @@ type Command struct {
 	// pinpoint backend. Do not pass them to integrations, these are handled in agent instead.
 	OAuthRefreshTokens map[string]string
 
-	backendConf agentconf.Config
+	EnrollConf agentconf.Config
 }
 
 func NewCommand(opts Opts) (*Command, error) {
@@ -100,7 +100,7 @@ func NewCommand(opts Opts) (*Command, error) {
 
 	if opts.AgentConfig.Backend.Enable {
 		var err error
-		s.backendConf, err = agentconf.Load(s.Locs.Config2)
+		s.EnrollConf, err = agentconf.Load(s.Locs.Config2)
 		if err != nil {
 			return nil, err
 		}

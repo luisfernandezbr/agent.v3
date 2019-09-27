@@ -28,7 +28,7 @@ func (s *Command) OAuthNewAccessToken(integrationName string) (accessToken strin
 		return "", fmt.Errorf("requested oauth access token for integration %v, but we don't have refresh token for it", integrationName)
 	}
 
-	authAPIBase := api.BackendURL(api.AuthService, s.backendConf.Channel)
+	authAPIBase := api.BackendURL(api.AuthService, s.EnrollConf.Channel)
 
 	// need oauth integration name
 	url := authAPIBase + "oauth/" + oauthIntegrationNameToBackend(integrationName) + "/refresh/" + refresh

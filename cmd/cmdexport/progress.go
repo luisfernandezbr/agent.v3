@@ -1,16 +1,44 @@
 package cmdexport
 
-/*
-// SendProgressStatus sends an agent export progress status event
-func SendProgressStatus(ctx context.Context, logger log.Logger, channel string, apiKey string, mainProgress *progress.MainProgress) error {
-	data := mainProgress.GetJSONStr()
-	agentEvent := &agent.ExportResponse{
-		JobID:   mainProgress.JobID,
+import (
+	"context"
+	"encoding/json"
+	"errors"
+
+	"github.com/pinpt/integration-sdk/agent"
+
+	"github.com/pinpt/agent.next/pkg/deviceinfo"
+	"github.com/pinpt/go-common/event"
+)
+
+func (s *export) sendProgress(ctx context.Context, progressData []byte) error {
+	jobID := s.Opts.AgentConfig.Backend.ExportJobID
+	if jobID == "" {
+		return errors.New("ExportJobID is not specified in config")
+	}
+	b, err := json.Marshal(progressData)
+	if err != nil {
+		return err
+	}
+
+	if len(b) > 10*1024*1024 {
+		return errors.New("progress data is >10MB skipping send")
+	}
+	str := string(progressData)
+	data := &agent.ExportResponse{
+		JobID:   jobID,
 		RefType: "progress",
 		Type:    agent.ExportResponseTypeExport,
-		Data:    &data,
+		Data:    &str,
 		Success: true,
 	}
-	return send(ctx, logger, agentEvent, channel, apiKey, mainProgress.JobID, map[string]string{"action": "progress"})
+	deviceinfo.AppendCommonInfoFromConfig(&data, s.EnrollConf)
+	publishEvent := event.PublishEvent{
+		Object: data,
+		Headers: map[string]string{
+			"uuid": s.EnrollConf.DeviceID,
+		},
+	}
+
+	return event.Publish(ctx, publishEvent, s.EnrollConf.Channel, s.EnrollConf.APIKey)
 }
-*/

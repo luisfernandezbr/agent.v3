@@ -70,8 +70,7 @@ func TestProgressTrackerBasic(t *testing.T) {
 
 func assertProgressLines(t *testing.T, pt *ProgressTracker, want []ProgressLine) {
 	t.Helper()
-	got := pt.ProgressLines("/")
-	want = want
+	got := pt.ProgressLines("/", false)
 	if !reflect.DeepEqual(want, got) {
 		t.Errorf("wanted progress \n%v\ngot\n%v", want, got)
 	}

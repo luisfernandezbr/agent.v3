@@ -1,6 +1,9 @@
 package cmdexport
 
 import (
+	"context"
+	"encoding/json"
+	"os"
 	"strconv"
 	"time"
 
@@ -43,23 +46,33 @@ func newSessions(logger hclog.Logger, export *export, outputDir string) *session
 		},
 	})
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	go func() {
 		for {
 			<-ticker.C
 			res := s.progressTracker.InProgressString()
 			s.logger.Info("progress", "data", "\n\n"+res+"\n\n")
 
-			//res2 := s.progressTracker.ProgressLinesNested()
-			//b, err := json.Marshal(res2)
-			//if err != nil {
-			//	panic(err)
-			//}
-			//s.logger.Info("progress", "json", "\n\n"+string(b)+"\n\n")
-			// send json here
+			if s.export.Opts.AgentConfig.Backend.Enable {
+				skipDone := true
+				if os.Getenv("PP_AGENT_PROGRESS_ALL") != "" {
+					skipDone = false
+				}
+				res := s.progressTracker.ProgressLinesNested(skipDone)
+				b, err := json.Marshal(res)
+				if err != nil {
+					s.logger.Error("could not marshal progress data", err)
+					continue
+				}
+				//s.logger.Info("progress", "json", "\n\n"+string(b)+"\n\n")
+				err = s.export.sendProgress(context.Background(), b)
+				if err != nil {
+					s.logger.Error("could not send progress info to backend", "err", err)
+				}
+			}
 		}
-
 	}()
+
 	return s
 }
 

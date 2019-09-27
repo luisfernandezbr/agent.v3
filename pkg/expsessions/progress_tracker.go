@@ -205,7 +205,7 @@ type ProgressLine struct {
 	IsSummary bool   `json:"is_summary"`
 }
 
-func (s *ProgressTracker) ProgressLines(pathSep string) (res []ProgressLine) {
+func (s *ProgressTracker) ProgressLines(pathSep string, skipDone bool) (res []ProgressLine) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -248,6 +248,12 @@ func (s *ProgressTracker) ProgressLines(pathSep string) (res []ProgressLine) {
 	var rec func(node *Node, prefix string)
 
 	rec = func(node *Node, prefix string) {
+		if skipDone {
+			if node.Done {
+				return
+			}
+		}
+
 		l2(prefix+pathSep+"meta", node.Current, node.Total, node.Done, true)
 
 		subs := map[string]int{}
@@ -268,7 +274,13 @@ func (s *ProgressTracker) ProgressLines(pathSep string) (res []ProgressLine) {
 		for _, kv := range sortMap(subs) {
 			total := node.Total
 			curr := kv.V
-			l2(prefix+pathSep+kv.K, curr, total, curr == total, true)
+			done := curr == total
+			if skipDone {
+				if done {
+					continue
+				}
+			}
+			l2(prefix+pathSep+kv.K, curr, total, done, true)
 		}
 
 		for _, v := range iterSorted(node.Children) {
@@ -328,8 +340,8 @@ func progressLinesToNested(lines []ProgressLine, sep string) *ProgressStatus {
 	return res
 }
 
-func (s *ProgressTracker) ProgressLinesNested() *ProgressStatus {
+func (s *ProgressTracker) ProgressLinesNested(skipDone bool) *ProgressStatus {
 	sep := "@@@"
-	lines := s.ProgressLines(sep)
+	lines := s.ProgressLines(sep, skipDone)
 	return progressLinesToNested(lines, sep)
 }
