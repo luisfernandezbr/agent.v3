@@ -36,10 +36,10 @@ func newSessions(logger hclog.Logger, export *export, outputDir string) *session
 			return expsessions.NewFileWriter(modelName, outputDir, id)
 		},
 		SendProgress: func(progressPath expsessions.ProgressPath, current, total int) {
-			s.progressTracker.Update(progressPath.Strings(), current, total)
+			s.progressTracker.Update(progressPath.StringsWithObjectNames(), current, total)
 		},
 		SendProgressDone: func(progressPath expsessions.ProgressPath) {
-			s.progressTracker.Done(progressPath.Strings())
+			s.progressTracker.Done(progressPath.StringsWithObjectNames())
 		},
 	})
 

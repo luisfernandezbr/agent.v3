@@ -8,8 +8,7 @@ import "strings"
 // organization/pinpoint/repo/test_repo/sourcecode.PullRequest/1
 type ProgressPath []ProgressPathComponent
 
-func (s ProgressPath) StringWithObjectNames() string {
-	res := []string{}
+func (s ProgressPath) StringsWithObjectNames() (res []string) {
 	for _, c := range s {
 		if c.ModelName != "" {
 			res = append(res, c.ModelName)
@@ -23,6 +22,11 @@ func (s ProgressPath) StringWithObjectNames() string {
 			}
 		}
 	}
+	return
+}
+
+func (s ProgressPath) StringWithObjectNames() string {
+	res := s.StringsWithObjectNames()
 	return strings.Join(res, "/")
 }
 

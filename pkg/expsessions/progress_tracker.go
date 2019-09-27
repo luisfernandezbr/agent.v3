@@ -196,3 +196,140 @@ func (s *ProgressTracker) InProgressString() string {
 
 	return strings.Join(res, "")
 }
+
+type ProgressLine struct {
+	Path      string `json:"path"`
+	Current   int    `json:"current"`
+	Total     int    `json:"total"`
+	Done      bool   `json:"done"`
+	IsSummary bool   `json:"is_summary"`
+}
+
+func (s *ProgressTracker) ProgressLines(pathSep string) (res []ProgressLine) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	type sortv struct {
+		ID      string
+		Subtype string
+		Node    *Node
+	}
+
+	iterSorted := func(tree Children) (res []sortv) {
+
+		var uids []string
+		for id := range tree {
+			uids = append(uids, id)
+		}
+		sort.Strings(uids)
+		for _, id := range uids {
+			m2 := tree[id]
+			var usubs []string
+			for sub := range m2 {
+				usubs = append(usubs, sub)
+			}
+			sort.Strings(usubs)
+			for _, sub := range usubs {
+				node := m2[sub]
+				res = append(res, sortv{
+					ID:      id,
+					Subtype: sub,
+					Node:    node,
+				})
+			}
+		}
+		return
+	}
+
+	l2 := func(path string, current int, total int, done bool, isSummary bool) {
+		res = append(res, ProgressLine{path, current, total, done, isSummary})
+	}
+
+	var rec func(node *Node, prefix string)
+
+	rec = func(node *Node, prefix string) {
+		l2(prefix+pathSep+"meta", node.Current, node.Total, node.Done, true)
+
+		subs := map[string]int{}
+		for _, m2 := range node.Children {
+			for subtype, n := range m2 {
+				if subtype == "" {
+					panic("invalid")
+				}
+				if _, ok := subs[subtype]; !ok {
+					subs[subtype] = 0
+				}
+				if n.Done {
+					subs[subtype]++
+				}
+			}
+		}
+
+		for _, kv := range sortMap(subs) {
+			total := node.Total
+			curr := kv.V
+			l2(prefix+pathSep+kv.K, curr, total, curr == total, true)
+		}
+
+		for _, v := range iterSorted(node.Children) {
+			id := v.ID
+			subtype := v.Subtype
+			node := v.Node
+			if subtype == "" {
+				panic("invalid")
+			}
+			rec(node, prefix+pathSep+id+pathSep+subtype)
+		}
+	}
+
+	for _, v := range iterSorted(s.tree) {
+		rec(v.Node, v.Subtype)
+	}
+
+	return
+}
+
+type ProgressStatus struct {
+	Current   int                        `json:"c,omitempty"`
+	Total     int                        `json:"t,omitempty"`
+	Done      bool                       `json:"done,omitempty"`
+	IsSummary bool                       `json:"summary,omitempty"`
+	Nested    map[string]*ProgressStatus `json:"nested,omitempty"`
+}
+
+func progressLinesToNested(lines []ProgressLine, sep string) *ProgressStatus {
+	res := &ProgressStatus{}
+	res.Nested = map[string]*ProgressStatus{}
+	for _, l := range lines {
+		p := strings.Split(l.Path, sep)
+		c := res
+		for {
+			if len(p) == 0 {
+				break
+			}
+			h := p[0]
+			p = p[1:]
+			var ok bool
+			var node *ProgressStatus
+			node, ok = c.Nested[h]
+			if !ok {
+				nn := &ProgressStatus{}
+				nn.Nested = map[string]*ProgressStatus{}
+				c.Nested[h] = nn
+				node = nn
+			}
+			c = node
+		}
+		c.Current = l.Current
+		c.Total = l.Total
+		c.Done = l.Done
+		c.IsSummary = l.IsSummary
+	}
+	return res
+}
+
+func (s *ProgressTracker) ProgressLinesNested() *ProgressStatus {
+	sep := "@@@"
+	lines := s.ProgressLines(sep)
+	return progressLinesToNested(lines, sep)
+}
