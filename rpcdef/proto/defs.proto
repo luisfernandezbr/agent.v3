@@ -67,6 +67,10 @@ service Agent {
 
     rpc ExportGitRepo(ExportGitRepoReq) returns (Empty);
 
+    rpc SessionStart(SessionStartReq) returns (SessionStartResp);
+
+    rpc SessionProgress(SessionProgressReq) returns (Empty);
+
     rpc OAuthNewAccessToken(Empty) returns (OAuthNewAccessTokenResp);
 }
 
@@ -109,6 +113,26 @@ message ExportGitRepoReq {
     string branch_url_template = 5;
 }
 
+message SessionStartReq {
+    bool is_tracking = 1;
+    string name = 2;
+    int64 parent_session_id = 3;
+    string parent_object_id = 4;
+    string parent_object_name = 5;
+}
+
+message SessionStartResp {
+    int64 session_id = 1;
+    LastProcessed last_processed = 2;
+}
+
+message SessionProgressReq {
+    int64 id = 1;    
+    int64 current = 2;
+    int64 total = 3;
+}
+
 message OAuthNewAccessTokenResp {
     string token = 1;
 }
+

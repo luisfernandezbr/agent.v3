@@ -3,17 +3,18 @@ package main
 import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/agent.next/pkg/objsender"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportPullRequestsComments(logger hclog.Logger, sender *objsender.NotIncremental, pullRequests chan []api.PullRequest) error {
+func (s *Integration) exportPullRequestsComments(logger hclog.Logger, prSender *objsender2.Session, pullRequests chan []api.PullRequest) error {
 	for prs := range pullRequests {
 		for _, pr := range prs {
 			if !pr.HasComments {
 				// perf optimization
 				continue
 			}
-			err := s.exportPullRequestComments(logger, sender, pr.RefID)
+			err := s.exportPullRequestComments(logger, prSender, pr.RefID)
 			if err != nil {
 				return err
 			}
@@ -22,19 +23,35 @@ func (s *Integration) exportPullRequestsComments(logger hclog.Logger, sender *ob
 	return nil
 }
 
-func (s *Integration) exportPullRequestComments(logger hclog.Logger, sender *objsender.NotIncremental, prID string) error {
-	return api.PaginateRegular(func(query string) (api.PageInfo, error) {
-		pi, res, err := api.PullRequestCommentsPage(s.qc, prID, query)
+func (s *Integration) exportPullRequestComments(logger hclog.Logger, prSender *objsender2.Session, prID string) error {
+	commentsSender, err := prSender.Session(sourcecode.PullRequestCommentModelName.String(), prID, prID)
+	if err != nil {
+		return err
+	}
+
+	err = api.PaginateRegular(func(query string) (api.PageInfo, error) {
+		pi, res, totalCount, err := api.PullRequestCommentsPage(s.qc, prID, query)
+		if err != nil {
+			return pi, err
+		}
+
+		err = commentsSender.SetTotal(totalCount)
 		if err != nil {
 			return pi, err
 		}
 
 		for _, obj := range res {
-			err := sender.Send(obj)
+			err := commentsSender.Send(obj)
 			if err != nil {
 				return pi, err
 			}
 		}
 		return pi, nil
 	})
+
+	if err != nil {
+		return err
+	}
+
+	return commentsSender.Done()
 }

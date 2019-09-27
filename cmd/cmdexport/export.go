@@ -5,20 +5,15 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
-	"github.com/pinpt/agent.next/cmd/cmdexport/process"
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
-	"github.com/pinpt/agent.next/pkg/outsession"
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
@@ -75,6 +70,12 @@ func newExport(opts Opts) (*export, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		err := s.lastProcessed.Save()
+		if err != nil {
+			s.Logger.Error("could not save update last_processed file", "err", err)
+		}
+	}()
 
 	s.sessions = newSessions(s.Logger, s, s.Locs.Uploads)
 
@@ -91,7 +92,7 @@ func newExport(opts Opts) (*export, error) {
 	}()
 
 	s.SetupIntegrations(func(integrationName string) rpcdef.Agent {
-		return newAgentDelegate(s, integrationName)
+		return newAgentDelegate(s, s.sessions.expsession, integrationName)
 	})
 
 	exportRes := s.runExports()
@@ -153,7 +154,7 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 			RepoID:     fetch.RepoID,
 			RefType:    fetch.RefType,
 
-			Sessions: s.sessions.outsession,
+			Sessions: s.sessions.expsession,
 
 			LastProcessed: s.lastProcessed,
 			RepoAccess:    access,
@@ -295,88 +296,4 @@ func (s *export) Destroy() {
 			panic(err)
 		}
 	}
-}
-
-type sessions struct {
-	logger      hclog.Logger
-	export      *export
-	outsession  *outsession.Manager
-	commitUsers *process.CommitUsers
-}
-
-func newSessions(logger hclog.Logger, export *export, outputDir string) *sessions {
-
-	s := &sessions{}
-	s.logger = logger
-	s.export = export
-	s.commitUsers = process.NewCommitUsers()
-
-	s.outsession = outsession.New(outsession.Opts{
-		Logger:        logger,
-		OutputDir:     outputDir,
-		LastProcessed: export.lastProcessed,
-	})
-	return s
-}
-
-func (s *sessions) new(modelType string) (
-	sessionID string, lastProcessed interface{}, _ error) {
-
-	id, lastProcessed, err := s.outsession.NewSession(modelType)
-	if err != nil {
-		return "", nil, err
-	}
-	return idToString(id), lastProcessed, nil
-}
-
-func (s *sessions) ExportDone(sessionID string, lastProcessed interface{}) error {
-	id := idFromString(sessionID)
-	return s.outsession.Done(id, lastProcessed)
-}
-
-func idToString(id outsession.ID) string {
-	return strconv.Itoa(int(id))
-}
-
-func idFromString(str string) outsession.ID {
-	id, err := strconv.Atoi(str)
-	if err != nil {
-		panic(err)
-	}
-	return outsession.ID(id)
-}
-
-func (s *sessions) Write(sessionID string, objs []rpcdef.ExportObj) error {
-	if len(objs) == 0 {
-		s.logger.Warn("no objects passed to write")
-		return nil
-	}
-
-	id := idFromString(sessionID)
-	modelType := s.outsession.GetModelType(id)
-	//s.logger.Info("writing objects", "type", modelType, "count", len(objs))
-
-	if modelType == commitusers.TableName {
-		var res []rpcdef.ExportObj
-		for _, obj := range objs {
-			obj2, err := s.commitUsers.Transform(obj.Data.(map[string]interface{}))
-			if err != nil {
-				return err
-			}
-			if obj2 != nil {
-				res = append(res, rpcdef.ExportObj{Data: obj2})
-			}
-		}
-		if len(res) == 0 {
-			// no new users
-			return nil
-		}
-		objs = res
-	}
-
-	var data []map[string]interface{}
-	for _, obj := range objs {
-		data = append(data, obj.Data.(map[string]interface{}))
-	}
-	return s.outsession.Write(id, data)
 }

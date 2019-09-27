@@ -48,7 +48,10 @@ func (s *Store) Set(val interface{}, key ...string) error {
 	defer s.mu.Unlock()
 
 	s.data[keyStr(key...)] = val
+	return nil
+}
 
+func (s *Store) Save() error {
 	b, err := json.Marshal(s.data)
 	if err != nil {
 		return err
