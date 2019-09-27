@@ -375,7 +375,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:3ba0c45c3e3e7e0ff85c45bf69390c8a9b7abdaec2f21efe0078c67986f7fd72"
+  digest = "1:d6a7e0023589862bdb0ee37b60cda49e38d84d628ca00d1327e82272f4be29f2"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -399,8 +399,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "233e9c040e517791e0d395a2d2ce16b9804fada3"
-  version = "9.0.11"
+  revision = "25f54b8263598bb1a15260e42ee1a5aa077f9368"
+  version = "9.1.0"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
@@ -412,7 +412,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1ac10de7d1db60928e0f044261c58906ded2d9dcfaf08968436646f9c3984250"
+  digest = "1:735506fea2209c2104d2e13e06c0f1853047ab96d421af58fc533507a15f8ebe"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -424,7 +424,7 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "0d72af76aa140531be6c10eb97959f5442a59baa"
+  revision = "d185014cb48e6eaafa800e2e9dcf0456ec8cf698"
 
 [[projects]]
   branch = "master"
