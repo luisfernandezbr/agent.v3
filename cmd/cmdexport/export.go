@@ -70,6 +70,12 @@ func newExport(opts Opts) (*export, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		err := s.lastProcessed.Save()
+		if err != nil {
+			s.Logger.Error("could not save update last_processed file", "err", err)
+		}
+	}()
 
 	s.sessions = newSessions(s.Logger, s, s.Locs.Uploads)
 
