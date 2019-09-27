@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
+	"github.com/pinpt/agent.next/integrations/pkg/azureapi"
 
 	"github.com/pinpt/agent.next/pkg/encrypt"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
@@ -69,8 +70,8 @@ func convertConfig(integrationNameBackend string, configBackend map[string]inter
 		configAgent, integrationNameAgent, rerr = convertConfigJira(integrationNameBackend, configBackend, exclusions)
 	case "sonarqube":
 		configAgent, integrationNameAgent, rerr = convertConfigSonarqube(integrationNameBackend, configBackend, exclusions)
-	case "tfs":
-		configAgent, integrationNameAgent, rerr = convertConfigFTS(integrationNameBackend, configBackend, exclusions)
+	case "tfs-sourcecode", "tfs-work", "azure-sourcecode", "azure-work":
+		configAgent, integrationNameAgent, rerr = convertConfigAzureFTS(integrationNameBackend, configBackend, exclusions)
 	default:
 		rerr = fmt.Errorf("unsupported integration: %v", integrationNameBackend)
 		return
@@ -370,49 +371,43 @@ func convertConfigSonarqube(inameBackend string, cb map[string]interface{}, excl
 	return
 }
 
-func convertConfigFTS(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+func convertConfigAzureFTS(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
 	errStr := func(err string) {
 		rerr = errors.New(err)
 		return
 	}
-	inameAgent = "tfs-code"
-	var config struct {
-		URL        string `json:"url"`
-		APIToken   string `json:"api_key"`
-		Username   string `json:"username"`
-		Password   string `json:"password"`
-		Collection string `json:"collection"`
-		Hostname   string `json:"hostname"`
+	isazure := strings.HasPrefix(inameBackend, "azure")
+	var conf struct {
+		Type        string         `json:"type"`
+		Concurrency int64          `json:"concurrency"`
+		Credentials azureapi.Creds `json:"credencials"`
 	}
-
-	err := structmarshal.MapToStruct(cb, &config)
-	if err != nil {
-		rerr = err
+	rerr = structmarshal.MapToStruct(cb, &conf.Credentials)
+	if rerr != nil {
 		return
 	}
-	if config.URL == "" {
+
+	if conf.Credentials.APIKey == "" {
+		errStr("missing api_key")
+		return
+	}
+	if conf.Credentials.URL == "" {
 		errStr("missing url")
 		return
 	}
-	if config.APIToken == "" {
-		errStr("missing apitoken")
-		return
+	if isazure {
+		if conf.Credentials.Organization == nil {
+			errStr("missing organization")
+			return
+		}
+	} else {
+		if conf.Credentials.Collection == nil {
+			errStr("missing collection")
+			return
+		}
 	}
-	if config.Username == "" {
-		errStr("missing username")
-		return
-	}
-	if config.Password == "" {
-		errStr("missing password")
-		return
-	}
-	if config.Collection == "" {
-		config.Collection = "DefaultCollection"
-	}
-	res, err = structmarshal.StructToMap(config)
-	if err != nil {
-		rerr = err
-		return
-	}
+	res, rerr = structmarshal.StructToMap(conf)
+	inameAgent = strings.Replace(inameBackend, "-work", "-issues", 1)
+	inameAgent = strings.Replace(inameBackend, "-sourcecode", "-code", 1)
 	return
 }
