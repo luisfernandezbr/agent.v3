@@ -563,7 +563,6 @@ func (s *runner) sendEvent(ctx context.Context, agentEvent datamodel.Model, jobI
 func (s *runner) getAgentConfig() (res cmdintegration.AgentConfig) {
 	res.CustomerID = s.conf.CustomerID
 	res.PinpointRoot = s.opts.PinpointRoot
-	res.Channel = s.conf.Channel
-	res.EnableBackend = true
+	res.Backend.Enable = true
 	return
 }

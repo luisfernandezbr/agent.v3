@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/iloader"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -32,11 +33,15 @@ type AgentConfig struct {
 	// DevUseCompiledIntegrations set to true to use compiled integrations in dev build. They are used by default in prod builds.
 	DevUseCompiledIntegrations bool `json:"dev_use_compiled_integrations"`
 
-	// EnableBackend enabled calls to pinpoint backend. It is disabled by default, but is required for the following features:
-	// - using OAuth with refresh token
-	EnableBackend bool `json:"enable_backend"`
-	// Channel is pinpoint backend channel. Only used when EnableBackend is true.
-	Channel string `json:"channel"`
+	Backend struct {
+		// Enable enables calls to pinpoint backend. It is disabled by default, but is required for the following features:
+		// - sending progress data to backend
+		// - using OAuth with refresh token
+		Enable bool `json:"enable"`
+
+		// ExportJobID is passed to backend in progress event
+		ExportJobID string `json:"export_job_id"`
+	} `json:"backend"`
 }
 
 func (s AgentConfig) Locs() (res fsconf.Locs, _ error) {
@@ -70,15 +75,12 @@ type Command struct {
 	// using OAuth. These are allow getting new access tokens using
 	// pinpoint backend. Do not pass them to integrations, these are handled in agent instead.
 	OAuthRefreshTokens map[string]string
+
+	backendConf agentconf.Config
 }
 
 func NewCommand(opts Opts) (*Command, error) {
 	s := &Command{}
-
-	if opts.AgentConfig.Channel == "" {
-		// use edge as default
-		opts.AgentConfig.Channel = "edge"
-	}
 
 	s.Opts = opts
 	s.Logger = opts.Logger
@@ -94,6 +96,14 @@ func NewCommand(opts Opts) (*Command, error) {
 	err = s.setupConfig()
 	if err != nil {
 		return nil, err
+	}
+
+	if opts.AgentConfig.Backend.Enable {
+		var err error
+		s.backendConf, err = agentconf.Load(s.Locs.Config2)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return s, nil
