@@ -375,7 +375,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:d276935edf26a7d80d16aa3a90da5af0d811beba94d4310386e72afa5f4d3144"
+  digest = "1:3ba0c45c3e3e7e0ff85c45bf69390c8a9b7abdaec2f21efe0078c67986f7fd72"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -399,8 +399,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "665c877fa462bbde220d06a364319caf4b3e5588"
-  version = "9.0.3"
+  revision = "233e9c040e517791e0d395a2d2ce16b9804fada3"
+  version = "9.0.11"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
