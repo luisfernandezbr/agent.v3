@@ -49,6 +49,14 @@ func newSessions(logger hclog.Logger, export *export, outputDir string) *session
 			<-ticker.C
 			res := s.progressTracker.InProgressString()
 			s.logger.Info("progress", "data", "\n\n"+res+"\n\n")
+
+			//res2 := s.progressTracker.ProgressLinesNested()
+			//b, err := json.Marshal(res2)
+			//if err != nil {
+			//	panic(err)
+			//}
+			//s.logger.Info("progress", "json", "\n\n"+string(b)+"\n\n")
+			// send json here
 		}
 
 	}()

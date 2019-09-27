@@ -15,11 +15,11 @@ func (s ProgressPath) StringsWithObjectNames() (res []string) {
 		} else if c.TrackingName != "" {
 			res = append(res, c.TrackingName)
 		} else {
-			if c.ObjectName == c.ObjectID {
-				res = append(res, c.ObjectID)
-			} else {
-				res = append(res, c.ObjectName+":"+c.ObjectID)
-			}
+			objectName := strings.ReplaceAll(c.ObjectName, ":", ".")
+			objectID := strings.ReplaceAll(c.ObjectID, ":", ".")
+			// : separator has a special meaning on backend now
+			// TODO: do this without custom character merging
+			res = append(res, objectName+":"+objectID)
 		}
 	}
 	return
