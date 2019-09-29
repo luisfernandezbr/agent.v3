@@ -74,8 +74,9 @@ func (s *enroller) Run(ctx context.Context) error {
 	}
 
 	done := make(chan error)
+	ready := make(chan bool)
 	go func() {
-		res, err := s.WaitForResponse(ctx)
+		res, err := s.WaitForResponse(ctx, ready)
 		if err != nil {
 			done <- err
 			return
@@ -88,6 +89,9 @@ func (s *enroller) Run(ctx context.Context) error {
 		done <- nil
 	}()
 
+	// wait for our subscriber to be registered
+	<-ready
+
 	err := s.SendEvent(ctx)
 	if err != nil {
 		return err
@@ -97,7 +101,7 @@ func (s *enroller) Run(ctx context.Context) error {
 }
 
 func (s *enroller) SendEvent(ctx context.Context) error {
-	s.logger.Debug("sending enroll event")
+	s.logger.Debug("sending enroll event, uuid: " + s.deviceID)
 
 	data := agent.EnrollRequest{
 		Code: s.opts.Code,
@@ -133,7 +137,7 @@ func (f *modelFactory) New(name datamodel.ModelNameType) datamodel.Model {
 
 var factory action.ModelFactory = &modelFactory{}
 
-func (s *enroller) WaitForResponse(ctx context.Context) (res agent.EnrollResponse, _ error) {
+func (s *enroller) WaitForResponse(ctx context.Context, ready chan<- bool) (res agent.EnrollResponse, _ error) {
 
 	errors := make(chan error, 1)
 
@@ -146,6 +150,7 @@ func (s *enroller) WaitForResponse(ctx context.Context) (res agent.EnrollRespons
 		Headers: map[string]string{
 			"uuid": s.deviceID,
 		},
+		Offset: "latest",
 	}
 
 	done := make(chan bool)
@@ -171,6 +176,10 @@ func (s *enroller) WaitForResponse(ctx context.Context) (res agent.EnrollRespons
 	if err != nil {
 		panic(err)
 	}
+
+	// wait for the subscription to be ready before sending any events
+	sub.WaitForReady()
+	ready <- true
 
 	go func() {
 		for err := range errors {

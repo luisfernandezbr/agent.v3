@@ -44,7 +44,7 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 
 	reqs := requests.New(s.logger, s.opts.Clients.TLSInsecure)
 
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return err
 	}

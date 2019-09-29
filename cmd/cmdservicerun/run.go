@@ -63,6 +63,8 @@ func newRunner(opts Opts) (*runner, error) {
 	return s, nil
 }
 
+type closefunc func()
+
 func (s *runner) run(ctx context.Context) error {
 	s.logger.Info("starting service")
 
@@ -101,20 +103,25 @@ func (s *runner) run(ctx context.Context) error {
 		return fmt.Errorf("could not send enabled event, err: %v", err)
 	}
 
-	err = s.handleIntegrationEvents(ctx)
+	isub, err := s.handleIntegrationEvents(ctx)
 	if err != nil {
 		return fmt.Errorf("error handling integration events, err: %v", err)
 	}
+	defer isub()
 
-	err = s.handleOnboardingEvents(ctx)
+	osub, err := s.handleOnboardingEvents(ctx)
 	if err != nil {
 		return fmt.Errorf("error handling onboarding events, err: %v", err)
 	}
 
-	err = s.handleExportEvents(ctx)
+	defer osub()
+
+	esub, err := s.handleExportEvents(ctx)
 	if err != nil {
 		return fmt.Errorf("error handling export events, err: %v", err)
 	}
+
+	defer esub()
 
 	if os.Getenv("PP_AGENT_SERVICE_TEST_MOCK") != "" {
 		s.logger.Info("PP_AGENT_SERVICE_TEST_MOCK passed, running test mock export")
@@ -179,7 +186,7 @@ func (f *modelFactory) New(name datamodel.ModelNameType) datamodel.Model {
 
 var factory action.ModelFactory = &modelFactory{}
 
-func (s *runner) handleIntegrationEvents(ctx context.Context) error {
+func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for integration requests")
 
 	errorsChan := make(chan error, 1)
@@ -203,12 +210,6 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 		integration := req.Integration
 
 		s.logger.Info("received integration request", "integration", integration.Name)
-
-		//s.logger.Info("received integration request", "data", req.ToMap())
-
-		// validate the integration data here
-
-		//s.logger.Info("authorization", "data", integration.Authorization.ToMap())
 
 		s.logger.Info("sending back integration response")
 
@@ -263,16 +264,17 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) error {
 		}
 	}()
 
-	_, err := action.Register(ctx, action.NewAction(cb), actionConfig)
+	sub, err := action.Register(ctx, action.NewAction(cb), actionConfig)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return nil
+	sub.WaitForReady()
 
+	return func() { sub.Close() }, nil
 }
 
-func (s *runner) handleOnboardingEvents(ctx context.Context) error {
+func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for onboarding events")
 
 	processOnboard := func(integration map[string]interface{}, objectType string) (cmdexportonboarddata.Result, error) {
@@ -371,22 +373,30 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) error {
 		return datamodel.NewModelSendEvent(resp), nil
 	}
 
-	_, err := action.Register(ctx, action.NewAction(cbUser), s.newSubConfig(agent.UserRequestTopic.String()))
+	usub, err := action.Register(ctx, action.NewAction(cbUser), s.newSubConfig(agent.UserRequestTopic.String()))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	_, err = action.Register(ctx, action.NewAction(cbRepo), s.newSubConfig(agent.RepoRequestTopic.String()))
+	rsub, err := action.Register(ctx, action.NewAction(cbRepo), s.newSubConfig(agent.RepoRequestTopic.String()))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	_, err = action.Register(ctx, action.NewAction(cbProject), s.newSubConfig(agent.ProjectRequestTopic.String()))
+	psub, err := action.Register(ctx, action.NewAction(cbProject), s.newSubConfig(agent.ProjectRequestTopic.String()))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return nil
+	usub.WaitForReady()
+	rsub.WaitForReady()
+	psub.WaitForReady()
+
+	return func() {
+		usub.Close()
+		rsub.Close()
+		psub.Close()
+	}, nil
 }
 
 func (s *runner) newSubConfig(topic string) action.Config {
@@ -407,10 +417,11 @@ func (s *runner) newSubConfig(topic string) action.Config {
 			"customer_id": s.conf.CustomerID,
 			"uuid":        s.conf.DeviceID,
 		},
+		Offset: "earliest",
 	}
 }
 
-func (s *runner) handleExportEvents(ctx context.Context) error {
+func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for export requests")
 
 	errors := make(chan error, 1)
@@ -453,12 +464,14 @@ func (s *runner) handleExportEvents(ctx context.Context) error {
 		}
 	}()
 
-	_, err := action.Register(ctx, action.NewAction(cb), actionConfig)
+	sub, err := action.Register(ctx, action.NewAction(cb), actionConfig)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return nil
+	sub.WaitForReady()
+
+	return func() { sub.Close() }, nil
 
 }
 
@@ -505,10 +518,10 @@ func (s *runner) processExportRequest(ev *agent.ExportRequest) (res event.Publis
 }
 
 func (s *runner) sendPings() {
+	ctx := context.Background()
 	for {
 		select {
-		case <-time.After(10 * time.Second):
-			ctx := context.Background()
+		case <-time.After(30 * time.Second):
 			err := s.sendPing(ctx)
 			if err != nil {
 				s.logger.Error("could not send ping", "err", err.Error())

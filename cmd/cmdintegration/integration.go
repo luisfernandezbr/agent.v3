@@ -127,7 +127,7 @@ func (s *Command) setupConfig() error {
 		if refreshToken != "" {
 			s.OAuthRefreshTokens[name] = refreshToken
 			ec.UseOAuth = true
-			// do not pass oauth_refresh_token to instegration
+			// do not pass oauth_refresh_token to integration
 			// integrations should use
 			// NewAccessToken() to get access token instead
 			delete(ec.Integration, "oauth_refresh_token")

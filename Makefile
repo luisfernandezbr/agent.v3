@@ -5,10 +5,14 @@
 # make build-integrations PP_ROOT=~/.pinpoint/next-dev
 PP_ROOT := ~/.pinpoint/next
 
-build:
-	make macos
-	make linux
-	make windows
+build: macos linux windows
+
+clean:
+	@rm -rf logs dist
+
+dependencies:
+	@rm -rf .vendor-new
+	@dep ensure -v
 
 protobuf:
 	protoc -I rpcdef/proto/ rpcdef/proto/*.proto --go_out=plugins=grpc:rpcdef/proto/
@@ -23,6 +27,9 @@ build-integrations-local:
 
 build-prod-local:
 	go build -tags prod -o dist/agent.next
+
+osx: macos
+darwin: macos
 
 macos:
 	env GOOS=darwin go build -tags prod -o dist/macos/agent.next

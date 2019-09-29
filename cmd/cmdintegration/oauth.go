@@ -39,7 +39,7 @@ func (s *Command) OAuthNewAccessToken(integrationName string) (accessToken strin
 		AccessToken string `json:"access_token"`
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return "", fmt.Errorf("could not create a url to get a new oauth token from pinpoint backend, err: %v", err)
 	}
