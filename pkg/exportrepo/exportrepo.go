@@ -18,11 +18,11 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 
 	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent.next/pkg/expsessions"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
-	"github.com/pinpt/agent.next/pkg/outsession"
 	"github.com/pinpt/ripsrc/ripsrc"
 
 	"github.com/hashicorp/go-hclog"
@@ -38,7 +38,7 @@ type Opts struct {
 	// github, tfs
 	RefType string
 
-	Sessions *outsession.Manager
+	Sessions *expsessions.Manager
 
 	LastProcessed *jsonstore.Store
 	RepoAccess    gitclone.AccessDetails
@@ -184,7 +184,7 @@ func (s *Export) ripsrcSetup(repoDir string) {
 
 func (s *Export) branches(ctx context.Context) error {
 	sessions := s.opts.Sessions
-	sessionID, _, err := sessions.NewSession(sourcecode.BranchModelName.String())
+	sessionID, _, err := sessions.SessionRoot(sourcecode.BranchModelName.String())
 	if err != nil {
 		return err
 	}
@@ -294,11 +294,11 @@ func (s *Export) code(ctx context.Context) error {
 
 func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA string, _ error) {
 	sessions := s.opts.Sessions
-	blameSession, _, err := sessions.NewSession(sourcecode.BlameModelName.String())
+	blameSession, _, err := sessions.SessionRoot(sourcecode.BlameModelName.String())
 	if err != nil {
 		return "", err
 	}
-	commitSession, _, err := sessions.NewSession(sourcecode.CommitModelName.String())
+	commitSession, _, err := sessions.SessionRoot(sourcecode.CommitModelName.String())
 	if err != nil {
 		return "", err
 	}

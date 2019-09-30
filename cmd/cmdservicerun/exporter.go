@@ -102,7 +102,10 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 
 	exportLogSender := newExportLogSender(s.logger, s.conf, data.JobID)
 
-	err = s.execExport(ctx, s.opts.AgentConfig, integrations, data.ReprocessHistorical, exportLogSender)
+	agentConfig := s.opts.AgentConfig
+	agentConfig.Backend.ExportJobID = data.JobID
+
+	err = s.execExport(ctx, agentConfig, integrations, data.ReprocessHistorical, exportLogSender)
 	if err != nil {
 		return err
 	}

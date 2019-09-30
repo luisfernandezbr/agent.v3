@@ -21,7 +21,7 @@ func AccessibleResources(
 
 	reqs := requests.New(logger, hc.Default)
 
-	req, err := http.NewRequest("GET", "https://api.atlassian.com/oauth/token/accessible-resources", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.atlassian.com/oauth/token/accessible-resources", nil)
 	if err != nil {
 		rerr = err
 		return

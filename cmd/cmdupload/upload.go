@@ -3,6 +3,8 @@ package cmdupload
 import (
 	"context"
 	"errors"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -71,7 +73,7 @@ func upload(logger hclog.Logger, zipPath, uploadURL string) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("PUT", uploadURL, f)
+	req, err := http.NewRequest(http.MethodPut, uploadURL, f)
 	if err != nil {
 		return err
 	}
@@ -82,6 +84,7 @@ func upload(logger hclog.Logger, zipPath, uploadURL string) error {
 		return err
 	}
 	defer resp.Body.Close()
+	io.Copy(ioutil.Discard, resp.Body) // copy even if we don't read
 
 	/*
 		data, err := ioutil.ReadAll(resp.Body)

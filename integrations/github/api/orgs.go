@@ -95,7 +95,7 @@ func OrgsEnterprisePage(qc QueryContext, u string) (res []Org, header http.Heade
 		u = pstrings.JoinURL(qc.APIURL3, "organizations")
 	}
 
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		rerr = err
 		return

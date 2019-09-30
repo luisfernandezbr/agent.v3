@@ -20,15 +20,15 @@ func oauthIntegrationNameToBackend(name string) string {
 
 func (s *Command) OAuthNewAccessToken(integrationName string) (accessToken string, _ error) {
 
-	if !s.Opts.AgentConfig.EnableBackend {
-		return "", errors.New("requested oauth access token, but EnableBackend is false")
+	if !s.Opts.AgentConfig.Backend.Enable {
+		return "", errors.New("requested oauth access token, but Backend.Enable is false")
 	}
 	refresh := s.OAuthRefreshTokens[integrationName]
 	if refresh == "" {
 		return "", fmt.Errorf("requested oauth access token for integration %v, but we don't have refresh token for it", integrationName)
 	}
 
-	authAPIBase := api.BackendURL(api.AuthService, s.Opts.AgentConfig.Channel)
+	authAPIBase := api.BackendURL(api.AuthService, s.EnrollConf.Channel)
 
 	// need oauth integration name
 	url := authAPIBase + "oauth/" + oauthIntegrationNameToBackend(integrationName) + "/refresh/" + refresh
@@ -39,7 +39,7 @@ func (s *Command) OAuthNewAccessToken(integrationName string) (accessToken strin
 		AccessToken string `json:"access_token"`
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return "", fmt.Errorf("could not create a url to get a new oauth token from pinpoint backend, err: %v", err)
 	}

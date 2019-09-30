@@ -7,9 +7,9 @@ import (
 
 	"github.com/pinpt/agent.next/cmd/cmdupload"
 
+	"github.com/pinpt/agent.next/pkg/expsessions"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
-	"github.com/pinpt/agent.next/pkg/outsession"
 
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/gitclone"
@@ -91,10 +91,12 @@ var cmdExportRepo = &cobra.Command{
 			panic(err)
 		}
 
-		sessions := outsession.New(outsession.Opts{
+		sessions := expsessions.New(expsessions.Opts{
 			Logger:        logger,
-			OutputDir:     locs.Uploads,
 			LastProcessed: lastProcessed,
+			NewWriter: func(modelName string, id expsessions.ID) expsessions.Writer {
+				return expsessions.NewFileWriter(modelName, locs.Uploads, id)
+			},
 		})
 
 		opts := exportrepo.Opts{

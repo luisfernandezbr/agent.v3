@@ -19,7 +19,7 @@ func Upload(logger hclog.Logger, zipPath, uploadURL string) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("PUT", uploadURL, f)
+	req, err := http.NewRequest(http.MethodPut, uploadURL, f)
 	if err != nil {
 		return err
 	}

@@ -59,7 +59,7 @@ func (s *Requester) Request(objPath string, params url.Values, paginable bool, r
 		u += "?" + params.Encode()
 	}
 
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return
 	}

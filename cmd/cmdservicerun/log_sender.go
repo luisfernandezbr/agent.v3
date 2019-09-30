@@ -101,6 +101,7 @@ func (s *exportLogSender) upload() {
 	if resp.StatusCode != http.StatusAccepted {
 		buf, _ := ioutil.ReadAll(resp.Body)
 		s.logger.Error("error sending log", "err", err, "response", string(buf))
+		resp.Body.Close()
 		return
 	}
 	resp.Body.Close()

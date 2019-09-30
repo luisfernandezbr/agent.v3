@@ -51,7 +51,7 @@ func (s *Requester) request(objPath string, params url.Values, res interface{}, 
 
 	reqs := requests.New(s.logger, s.opts.Clients.Default)
 
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return err
 	}

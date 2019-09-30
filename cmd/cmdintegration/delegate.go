@@ -33,6 +33,14 @@ func (s agentDelegate) ExportGitRepo(fetch rpcdef.GitRepoFetch) error {
 	panic("not implemented")
 }
 
+func (s agentDelegate) SessionStart(isTracking bool, name string, parentSessionID int, parentObjectID, parentObjectName string) (sessionID int, lastProcessed interface{}, _ error) {
+	panic("not implemented")
+}
+
+func (s agentDelegate) SessionProgress(id int, current, total int) error {
+	panic("not implemented")
+}
+
 func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
 	return s.min.OAuthNewAccessToken(s.integrationName)
 }

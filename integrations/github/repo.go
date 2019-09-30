@@ -7,9 +7,10 @@ import (
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/pinpt/agent.next/integrations/github/api"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
 )
 
-func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, org api.Org, onlyInclude []api.Repo) error {
+func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender2.Session, org api.Org, onlyInclude []api.Repo) error {
 
 	// map[nameWithOwner]shouldInclude
 	shouldInclude := map[string]bool{}
@@ -17,10 +18,8 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, org 
 		shouldInclude[repo.NameWithOwner] = true
 	}
 
-	sender := s.repoSender
-
-	err := api.PaginateNewerThan(sender.LastProcessed, func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, repos, err := api.ReposPage(s.qc.WithLogger(logger), org, query, stopOnUpdatedAt)
+	err := api.PaginateNewerThan(sender.LastProcessedTime(), func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
+		pi, repos, _, err := api.ReposPage(s.qc.WithLogger(logger), org, query, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
 		}

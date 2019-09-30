@@ -17,7 +17,7 @@ type PullRequest struct {
 func PullRequestsPage(
 	qc QueryContext,
 	repoRefID string,
-	queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, res []PullRequest, _ error) {
+	queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, res []PullRequest, totalCount int, rerr error) {
 
 	qc.Logger.Debug("pull_request request", "repo", repoRefID, "q", queryParams)
 
@@ -134,7 +134,8 @@ func PullRequestsPage(
 
 	err := qc.Request(query, &requestRes)
 	if err != nil {
-		return pi, res, err
+		rerr = err
+		return
 	}
 
 	//s.logger.Info(fmt.Sprintf("%+v", res))
@@ -144,7 +145,7 @@ func PullRequestsPage(
 
 	for _, data := range pullRequestNodes {
 		if data.UpdatedAt.Before(stopOnUpdatedAt) {
-			return PageInfo{}, res, nil
+			return
 		}
 		pr := &sourcecode.PullRequest{}
 		pr.CustomerID = qc.CustomerID
@@ -216,5 +217,5 @@ func PullRequestsPage(
 		res = append(res, pr2)
 	}
 
-	return pullRequests.PageInfo, res, nil
+	return pullRequests.PageInfo, res, pullRequests.TotalCount, nil
 }
