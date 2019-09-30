@@ -323,14 +323,14 @@ func IssuesAndChangelogsPage(
 				case "sprint":
 					item.Field = work.ChangelogFieldSprintIds
 					var from, to []string
-					if item.From != "" {
-						for _, s := range strings.Split(item.From, ",") {
-							from = append(from, work.NewSprintID(item.CustomerID, strings.TrimSpace(s), item.RefType))
+					if data.From != "" {
+						for _, s := range strings.Split(data.From, ",") {
+							from = append(from, work.NewSprintID(qc.CustomerID, strings.TrimSpace(s), "jira"))
 						}
 					}
-					if item.To != "" {
-						for _, s := range strings.Split(item.To, ",") {
-							to = append(to, work.NewSprintID(item.CustomerID, strings.TrimSpace(s), item.RefType))
+					if data.To != "" {
+						for _, s := range strings.Split(data.To, ",") {
+							to = append(to, work.NewSprintID(qc.CustomerID, strings.TrimSpace(s), "jira"))
 						}
 					}
 					item.From = strings.Join(from, ",")
