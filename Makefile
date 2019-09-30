@@ -18,9 +18,8 @@ build-integrations-local:
 	go build -o ${PP_ROOT}/integrations/jira-cloud ./integrations/jira-cloud 
 	go build -o ${PP_ROOT}/integrations/jira-hosted ./integrations/jira-hosted
 	go build -o ${PP_ROOT}/integrations/sonarqube ./integrations/sonarqube
-	go build -o ${PP_ROOT}/integrations/tfs-code ./integrations/tfs-code
 	go build -o ${PP_ROOT}/integrations/mock ./integrations/mock
-	go build -o ${PP_ROOT}/integrations/azure ./integrations/azure
+	go build -o ${PP_ROOT}/integrations/azuretfs ./integrations/azuretfs
 
 build-prod-local:
 	go build -tags prod -o dist/agent.next
@@ -35,8 +34,7 @@ macos:
 	env GOOS=darwin go build -o dist/macos/integrations/jira-hosted ./integrations/jira-hosted
 	env GOOS=darwin go build -o dist/macos/integrations/mock ./integrations/mock
 	env GOOS=darwin go build -o dist/macos/integrations/sonarqube ./integrations/sonarqube
-	env GOOS=darwin go build -o dist/macos/integrations/tfs-code ./integrations/tfs-code
-	env GOOS=darwin go build -o dist/macos/integrations/azure ./integrations/azure
+	env GOOS=darwin go build -o dist/macos/integrations/azuretfs ./integrations/azuretfs
 
 linux:
 	env GOOS=linux go build -tags prod -o dist/linux/agent.next
@@ -48,8 +46,7 @@ linux:
 	env GOOS=linux go build -o dist/linux/integrations/jira-hosted ./integrations/jira-hosted
 	env GOOS=linux go build -o dist/linux/integrations/mock ./integrations/mock
 	env GOOS=linux go build -o dist/linux/integrations/sonarqube ./integrations/sonarqube
-	env GOOS=linux go build -o dist/linux/integrations/tfs-code ./integrations/tfs-code
-	env GOOS=linux go build -o dist/linux/integrations/azure ./integrations/azure
+	env GOOS=linux go build -o dist/linux/integrations/azuretfs ./integrations/azuretfs
 
 windows:
 	env GOOS=windows go build -tags prod -o dist/windows/agent-next.exe
@@ -61,7 +58,5 @@ windows:
 	env GOOS=windows go build -o dist/windows/integrations/jira-hosted.exe ./integrations/jira-hosted
 	env GOOS=windows go build -o dist/windows/integrations/mock.exe ./integrations/mock
 	env GOOS=windows go build -o dist/windows/integrations/sonarqube.exe ./integrations/sonarqube
-	env GOOS=windows go build -o dist/windows/integrations/tfs-code.exe ./integrations/tfs-code
-	env GOOS=windows go build -o dist/windows/integrations/azure.exe ./integrations/azure
-
+	env GOOS=windows go build -o dist/windows/integrations/azuretfs.exe ./integrations/azuretfs
 

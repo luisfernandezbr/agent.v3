@@ -1,9 +1,9 @@
-package azurecommon
+package main
 
 import (
 	"context"
 
-	"github.com/pinpt/agent.next/integrations/pkg/azureapi"
+	"github.com/pinpt/agent.next/integrations/azuretfs/api"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -14,7 +14,7 @@ import (
 
 func (s *Integration) onboardExportUsers(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
 
-	repochan, done := azureapi.AsyncProcess("onboard export", s.logger, func(m datamodel.Model) {
+	repochan, done := api.AsyncProcess("onboard export", s.logger, func(m datamodel.Model) {
 		// empty, nothing to do here
 	})
 	projids, err := s.api.FetchAllRepos([]string{}, []string{}, repochan)
@@ -58,7 +58,7 @@ func (s *Integration) onboardExportUsers(ctx context.Context, config rpcdef.Expo
 func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
 
 	var repos []*sourcecode.Repo
-	reposchan, done := azureapi.AsyncProcess("export repos", s.logger, func(model datamodel.Model) {
+	reposchan, done := api.AsyncProcess("export repos", s.logger, func(model datamodel.Model) {
 		repos = append(repos, model.(*sourcecode.Repo))
 	})
 	_, err = s.api.FetchAllRepos([]string{}, []string{}, reposchan)
@@ -84,7 +84,7 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 					Email: rawcommit.Author.Email,
 				},
 				CommitSha: rawcommit.CommitID,
-				CommitID:  ids.CodeCommit(s.customerid, s.reftype.String(), repo.ID, rawcommit.CommitID),
+				CommitID:  ids.CodeCommit(s.customerid, s.RefType.String(), repo.ID, rawcommit.CommitID),
 				URL:       rawcommit.URL,
 				Message:   rawcommit.Comment,
 			},

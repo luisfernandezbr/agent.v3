@@ -1,4 +1,4 @@
-package azureapi
+package api
 
 import (
 	"fmt"

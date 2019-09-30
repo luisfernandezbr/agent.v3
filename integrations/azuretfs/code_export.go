@@ -1,4 +1,4 @@
-package azurecommon
+package main
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/agent.next/integrations/pkg/azureapi"
+	"github.com/pinpt/agent.next/integrations/azuretfs/api"
 	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -49,7 +49,7 @@ func (s *Integration) processRepos() (repoids []string, projectids []string, err
 	sender := objsender.NewNotIncremental(s.agent, sourcecode.RepoModelName.String())
 	defer sender.Done()
 
-	items, done := azureapi.AsyncProcess("repos", s.logger, func(model datamodel.Model) {
+	items, done := api.AsyncProcess("repos", s.logger, func(model datamodel.Model) {
 		repo := model.(*sourcecode.Repo)
 		if err := sender.Send(repo); err != nil {
 			s.logger.Error("error sending "+repo.GetModelName().String(), "err", err)
@@ -77,7 +77,7 @@ func (s *Integration) ripSource(repo *sourcecode.Repo) error {
 	}
 	u.User = url.UserPassword(s.Creds.Username, s.Creds.Password)
 	args := rpcdef.GitRepoFetch{}
-	args.RefType = s.reftype.String()
+	args.RefType = s.RefType.String()
 	args.RepoID = s.api.IDs.CodeRepo(repo.RefID)
 	args.URL = u.String()
 	s.logger.Info("queueing repo for processing " + u.String())
@@ -102,22 +102,22 @@ func (s *Integration) processPullRequests(repoids []string) error {
 		return err
 	}
 	defer senderprcs.Done()
-	prchan, prdone := azureapi.AsyncProcess("pull requests", s.logger, func(model datamodel.Model) {
+	prchan, prdone := api.AsyncProcess("pull requests", s.logger, func(model datamodel.Model) {
 		if err := senderprs.Send(model); err != nil {
 			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
 		}
 	})
-	prrchan, prrdone := azureapi.AsyncProcess("pull request reviews", s.logger, func(model datamodel.Model) {
+	prrchan, prrdone := api.AsyncProcess("pull request reviews", s.logger, func(model datamodel.Model) {
 		if err := senderprrs.Send(model); err != nil {
 			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
 		}
 	})
-	prcchan, prcdone := azureapi.AsyncProcess("pull request comments", s.logger, func(model datamodel.Model) {
+	prcchan, prcdone := api.AsyncProcess("pull request comments", s.logger, func(model datamodel.Model) {
 		if err := senderprcs.Send(model); err != nil {
 			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
 		}
 	})
-	prcmhan, prmdone := azureapi.AsyncProcess("pull request commits", s.logger, func(model datamodel.Model) {
+	prcmhan, prmdone := api.AsyncProcess("pull request commits", s.logger, func(model datamodel.Model) {
 		if err := senderprcs.Send(model); err != nil {
 			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
 		}

@@ -1,4 +1,4 @@
-package azurecommon
+package main
 
 import (
 	"context"
@@ -10,7 +10,8 @@ import (
 	pstrings "github.com/pinpt/go-common/strings"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/pkg/azureapi"
+	"github.com/pinpt/agent.next/integrations/azuretfs/api"
+	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/rpcdef"
 )
@@ -35,9 +36,9 @@ func (r IntegrationType) String() string {
 	return string(r)
 }
 
-var IntegrationTypeCode = IntegrationType("code")
+var IntegrationTypeCode = IntegrationType("sourcecode")
 
-var IntegrationTypeIssues = IntegrationType("issues")
+var IntegrationTypeIssues = IntegrationType("work")
 
 var IntegrationTypeBoth = IntegrationType("")
 
@@ -45,11 +46,11 @@ var IntegrationTypeBoth = IntegrationType("")
 type Integration struct {
 	logger     hclog.Logger
 	agent      rpcdef.Agent
-	api        *azureapi.API
-	Creds      *azureapi.Creds `json:"credentials"`
+	api        *api.API
+	Creds      *api.Creds `json:"credentials"`
 	customerid string
-	reftype    RefType
 
+	RefType             RefType         `json:"reftype"` // azure or tfs
 	IntegrationType     IntegrationType `json:"type"`
 	ExcludedRepoIDs     []string        `json:"excluded_repo_ids"` // excluded repo ids - this comes from the admin ui
 	IncludedRepos       []string        `json:"repo_names"`        // repo_names - this is for debug and develop only
@@ -72,7 +73,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	} else if s.IntegrationType == IntegrationTypeIssues {
 		err = s.exportWork()
 	} else {
-		async := azureapi.NewAsync(2)
+		async := api.NewAsync(2)
 		var errors []string
 		async.Do(func() {
 			if err = s.exportCode(); err != nil {
@@ -97,7 +98,7 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 	if err := s.initConfig(ctx, config); err != nil {
 		return res, err
 	}
-	repochan, done := azureapi.AsyncProcess("validate", s.logger, func(m datamodel.Model) {
+	repochan, done := api.AsyncProcess("validate", s.logger, func(m datamodel.Model) {
 		// empty, nothing to do here
 	})
 	if _, err := s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs, repochan); err != nil {
@@ -130,8 +131,9 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 	if err := structmarshal.MapToStruct(config.Integration, &s); err != nil {
 		return err
 	}
-	istfs := s.reftype == RefTypeTFS
-	if istfs {
+	var istfs bool
+	if s.RefType == RefTypeTFS {
+		istfs = true
 		if s.Creds.Collection == nil {
 			s.Creds.Collection = pstrings.Pointer("DefaultCollection")
 		}
@@ -141,7 +143,7 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 		if s.Creds.Password == "" {
 			return errors.New("missing password")
 		}
-	} else { // if s.reftype == RefTypeAzure
+	} else if s.RefType == RefTypeAzure { // if s.reftype == RefTypeAzure
 		if s.Creds.Organization == nil {
 			return fmt.Errorf("missing organization %s", stringify(s))
 		}
@@ -151,6 +153,8 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 		if s.Creds.Password == "" {
 			s.Creds.Password = s.Creds.APIKey
 		}
+	} else {
+		return errors.New(`"retype" must be "` + RefTypeTFS.String() + `" or "` + RefTypeAzure.String())
 	}
 	if s.Concurrency == 0 {
 		s.Concurrency = 10
@@ -165,22 +169,14 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 		return errors.New("missing api_key")
 	}
 	s.customerid = config.Pinpoint.CustomerID
-	s.logger.Info("Concurrency " + fmt.Sprintf("%d", s.Concurrency))
-	s.api = azureapi.NewAPI(ctx, s.logger, s.Concurrency, s.customerid, s.reftype.String(), s.Creds, istfs)
+	s.api = api.NewAPI(ctx, s.logger, s.Concurrency, s.customerid, s.RefType.String(), s.Creds, istfs)
 	return nil
 }
 
-func NewTFSIntegration(logger hclog.Logger, itype IntegrationType) *Integration {
-	s := &Integration{}
-	s.logger = logger
-	s.reftype = RefTypeTFS
-	s.IntegrationType = itype
-	return s
-}
-
-func NewAzureIntegration(logger hclog.Logger) *Integration {
-	s := &Integration{}
-	s.logger = logger
-	s.reftype = RefTypeAzure
-	return s
+func main() {
+	ibase.MainFunc(func(logger hclog.Logger) rpcdef.Integration {
+		return &Integration{
+			logger: logger,
+		}
+	})
 }

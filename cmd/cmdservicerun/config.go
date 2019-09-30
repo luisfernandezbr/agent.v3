@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
-	"github.com/pinpt/agent.next/integrations/pkg/azureapi"
+	azureapi "github.com/pinpt/agent.next/integrations/azuretfs/api"
 
 	"github.com/pinpt/agent.next/pkg/encrypt"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
@@ -378,15 +378,14 @@ func convertConfigAzureFTS(inameBackend string, cb map[string]interface{}, exclu
 	}
 	isazure := strings.HasPrefix(inameBackend, "azure")
 	var conf struct {
-		Type        string         `json:"type"`
-		Concurrency int64          `json:"concurrency"`
-		Credentials azureapi.Creds `json:"credencials"`
+		Concurrency     int64          `json:"concurrency"`
+		RefType         string         `json:"reftype"` // azure or tfs
+		IntegrationType string         `json:"type"`    // sourcecode or work
+		Credentials     azureapi.Creds `json:"credencials"`
 	}
-	rerr = structmarshal.MapToStruct(cb, &conf.Credentials)
-	if rerr != nil {
+	if rerr = structmarshal.MapToStruct(cb, &conf.Credentials); rerr != nil {
 		return
 	}
-
 	if conf.Credentials.APIKey == "" {
 		errStr("missing api_key")
 		return
@@ -406,8 +405,24 @@ func convertConfigAzureFTS(inameBackend string, cb map[string]interface{}, exclu
 			return
 		}
 	}
+	if strings.HasPrefix(inameBackend, "tfs") {
+		conf.RefType = "tfs"
+	} else if strings.HasPrefix(inameBackend, "azure") {
+		conf.RefType = "azure"
+	} else {
+		errStr("reftype is wrong")
+		return
+	}
+	if strings.HasSuffix(inameBackend, "work") {
+		conf.IntegrationType = "work"
+	} else if strings.HasSuffix(inameBackend, "sourcecode") {
+		conf.IntegrationType = "sourcecode"
+	} else {
+		errStr("integration type is wrong")
+		return
+	}
+	conf.Concurrency = 10
 	res, rerr = structmarshal.StructToMap(conf)
-	inameAgent = strings.Replace(inameBackend, "-work", "-issues", 1)
-	inameAgent = strings.Replace(inameBackend, "-sourcecode", "-code", 1)
+	inameAgent = "azuretfs"
 	return
 }

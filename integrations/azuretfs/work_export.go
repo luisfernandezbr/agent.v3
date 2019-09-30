@@ -1,10 +1,10 @@
-package azurecommon
+package main
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/pinpt/agent.next/integrations/pkg/azureapi"
+	"github.com/pinpt/agent.next/integrations/azuretfs/api"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/integration-sdk/work"
@@ -35,7 +35,7 @@ func (s *Integration) exportWork() error {
 func (s *Integration) processProjects() (projids []string, err error) {
 	sender := objsender.NewNotIncremental(s.agent, work.ProjectModelName.String())
 	defer sender.Done()
-	items, done := azureapi.AsyncProcess("projects", s.logger, func(model datamodel.Model) {
+	items, done := api.AsyncProcess("projects", s.logger, func(model datamodel.Model) {
 		if err := sender.Send(model); err != nil {
 			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
 		}
@@ -49,7 +49,7 @@ func (s *Integration) processProjects() (projids []string, err error) {
 func (s *Integration) processWorkUsers(projids []string) error {
 	sender := objsender.NewNotIncremental(s.agent, work.UserModelName.String())
 	defer sender.Done()
-	items, done := azureapi.AsyncProcess("work users", s.logger, func(model datamodel.Model) {
+	items, done := api.AsyncProcess("work users", s.logger, func(model datamodel.Model) {
 		if err := sender.Send(model); err != nil {
 			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
 		}
@@ -81,7 +81,7 @@ func (s *Integration) processWorkItems(projids []string) error {
 	}
 	defer sender.Done()
 	for _, projid := range projids {
-		items, done := azureapi.AsyncProcess("work items", s.logger, func(model datamodel.Model) {
+		items, done := api.AsyncProcess("work items", s.logger, func(model datamodel.Model) {
 			if err := sender.Send(model); err != nil {
 				s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
 			}
@@ -103,7 +103,7 @@ func (s *Integration) processChangelogs(projids []string) error {
 	}
 	defer sender.Done()
 	for _, projid := range projids {
-		items, done := azureapi.AsyncProcess("changelogs", s.logger, func(model datamodel.Model) {
+		items, done := api.AsyncProcess("changelogs", s.logger, func(model datamodel.Model) {
 			if err := sender.Send(model); err != nil {
 				s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
 			}
@@ -122,7 +122,7 @@ func (s *Integration) processSprints(projids []string) error {
 	sender := objsender.NewNotIncremental(s.agent, work.SprintModelName.String())
 	defer sender.Done()
 	for _, projid := range projids {
-		items, done := azureapi.AsyncProcess("sprints", s.logger, func(model datamodel.Model) {
+		items, done := api.AsyncProcess("sprints", s.logger, func(model datamodel.Model) {
 			if err := sender.Send(model); err != nil {
 				s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
 			}
