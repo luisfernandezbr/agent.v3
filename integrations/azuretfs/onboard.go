@@ -97,3 +97,13 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 	}
 	return
 }
+
+func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
+	projectchan, done := api.AsyncProcess("export projects", s.logger, func(model datamodel.Model) {
+		res.Records = append(res.Records, model.ToMap())
+	})
+	_, err = s.api.FetchProjects(projectchan)
+	close(projectchan)
+	<-done
+	return res, err
+}

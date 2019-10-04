@@ -237,7 +237,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 
 		auth := integration.Authorization.ToMap()
 
-		res, err := s.validate(ctx, integration.Name, auth)
+		res, err := s.validate(ctx, integration.Name, IntegrationType(req.Integration.SystemType), auth)
 		if err != nil {
 			return rerr(err)
 		}
@@ -277,11 +277,11 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for onboarding events")
 
-	processOnboard := func(integration map[string]interface{}, objectType string) (cmdexportonboarddata.Result, error) {
+	processOnboard := func(integration map[string]interface{}, systemType IntegrationType, objectType string) (cmdexportonboarddata.Result, error) {
 		s.logger.Info("received onboard request", "type", objectType)
 
 		ctx := context.Background()
-		conf, err := configFromEvent(integration, s.conf.PPEncryptionKey)
+		conf, err := configFromEvent(integration, systemType, s.conf.PPEncryptionKey)
 		if err != nil {
 			panic(err)
 		}
@@ -296,7 +296,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 
 	cbUser := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		req := instance.Object().(*agent.UserRequest)
-		data, err := processOnboard(req.Integration.ToMap(), "users")
+		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "users")
 		if err != nil {
 			panic(err)
 		}
@@ -322,7 +322,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 
 	cbRepo := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		req := instance.Object().(*agent.RepoRequest)
-		data, err := processOnboard(req.Integration.ToMap(), "repos")
+		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "repos")
 		if err != nil {
 			panic(err)
 		}
@@ -349,7 +349,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 
 	cbProject := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		req := instance.Object().(*agent.ProjectRequest)
-		data, err := processOnboard(req.Integration.ToMap(), "projects")
+		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "projects")
 		if err != nil {
 			panic(err)
 		}

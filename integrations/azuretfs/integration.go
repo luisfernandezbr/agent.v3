@@ -36,9 +36,9 @@ func (r IntegrationType) String() string {
 	return string(r)
 }
 
-var IntegrationTypeCode = IntegrationType("sourcecode")
+var IntegrationTypeCode = IntegrationType("SOURCECODE")
 
-var IntegrationTypeIssues = IntegrationType("work")
+var IntegrationTypeIssues = IntegrationType("WORK")
 
 var IntegrationTypeBoth = IntegrationType("")
 
@@ -94,15 +94,16 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 }
 
 func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
-	s.logger.Info("========= ValidateConfig")
 	if err := s.initConfig(ctx, config); err != nil {
+		res.Errors = append(res.Errors, err.Error())
 		return res, err
 	}
 	repochan, done := api.AsyncProcess("validate", s.logger, func(m datamodel.Model) {
-		// empty, nothing to do here
+		// empty, nothing to do here since we're just validating
 	})
 	if _, err := s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs, repochan); err != nil {
-		res.Errors = append(res.Errors)
+		// don't return, get as many errors are possible
+		res.Errors = append(res.Errors, err.Error())
 	}
 	close(repochan)
 	<-done
@@ -119,15 +120,17 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 		return s.onboardExportUsers(ctx, config)
 	case rpcdef.OnboardExportTypeRepos:
 		return s.onboardExportRepos(ctx, config)
+	case rpcdef.OnboardExportTypeProjects:
+		return s.onboardExportProjects(ctx, config)
 	default:
+		s.logger.Error("object not supported", "object", objectType)
 		res.Error = rpcdef.ErrOnboardExportNotSupported
 	}
 	return res, nil
 }
 
 func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig) error {
-
-	// itype IntegrationType
+	// type IntegrationType
 	if err := structmarshal.MapToStruct(config.Integration, &s); err != nil {
 		return err
 	}
@@ -143,7 +146,7 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 		if s.Creds.Password == "" {
 			return errors.New("missing password")
 		}
-	} else if s.RefType == RefTypeAzure { // if s.reftype == RefTypeAzure
+	} else if s.RefType == RefTypeAzure {
 		if s.Creds.Organization == nil {
 			return fmt.Errorf("missing organization %s", stringify(s))
 		}

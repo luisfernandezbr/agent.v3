@@ -14,7 +14,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 )
 
-func configFromEvent(data map[string]interface{}, encryptionKey string) (res cmdintegration.Integration, rerr error) {
+func configFromEvent(data map[string]interface{}, systemType IntegrationType, encryptionKey string) (res cmdintegration.Integration, rerr error) {
 	var obj struct {
 		Name          string `json:"name"`
 		Authorization struct {
@@ -47,7 +47,7 @@ func configFromEvent(data map[string]interface{}, encryptionKey string) (res cmd
 		return
 	}
 
-	res.Config, res.Name, err = convertConfig(obj.Name, authObj, obj.Exclusions)
+	res.Config, res.Name, err = convertConfig(obj.Name, systemType, authObj, obj.Exclusions)
 	if err != nil {
 		rerr = fmt.Errorf("config object in event is not valid: %v", err)
 		return
@@ -56,7 +56,7 @@ func configFromEvent(data map[string]interface{}, encryptionKey string) (res cmd
 	return
 }
 
-func convertConfig(integrationNameBackend string, configBackend map[string]interface{}, exclusions []string) (configAgent map[string]interface{}, integrationNameAgent string, rerr error) {
+func convertConfig(integrationNameBackend string, systemType IntegrationType, configBackend map[string]interface{}, exclusions []string) (configAgent map[string]interface{}, integrationNameAgent string, rerr error) {
 
 	switch integrationNameBackend {
 
@@ -70,8 +70,8 @@ func convertConfig(integrationNameBackend string, configBackend map[string]inter
 		configAgent, integrationNameAgent, rerr = convertConfigJira(integrationNameBackend, configBackend, exclusions)
 	case "sonarqube":
 		configAgent, integrationNameAgent, rerr = convertConfigSonarqube(integrationNameBackend, configBackend, exclusions)
-	case "tfs-sourcecode", "tfs-work", "azure-sourcecode", "azure-work":
-		configAgent, integrationNameAgent, rerr = convertConfigAzureFTS(integrationNameBackend, configBackend, exclusions)
+	case "tfs", "azure":
+		configAgent, integrationNameAgent, rerr = convertConfigAzureFTS(integrationNameBackend, systemType, configBackend, exclusions)
 	default:
 		rerr = fmt.Errorf("unsupported integration: %v", integrationNameBackend)
 		return
@@ -371,7 +371,7 @@ func convertConfigSonarqube(inameBackend string, cb map[string]interface{}, excl
 	return
 }
 
-func convertConfigAzureFTS(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+func convertConfigAzureFTS(inameBackend string, systemType IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
 	errStr := func(err string) {
 		rerr = errors.New(err)
 		return
@@ -381,7 +381,7 @@ func convertConfigAzureFTS(inameBackend string, cb map[string]interface{}, exclu
 		Concurrency     int64          `json:"concurrency"`
 		RefType         string         `json:"reftype"` // azure or tfs
 		IntegrationType string         `json:"type"`    // sourcecode or work
-		Credentials     azureapi.Creds `json:"credencials"`
+		Credentials     azureapi.Creds `json:"credentials"`
 	}
 	if rerr = structmarshal.MapToStruct(cb, &conf.Credentials); rerr != nil {
 		return
@@ -405,22 +405,8 @@ func convertConfigAzureFTS(inameBackend string, cb map[string]interface{}, exclu
 			return
 		}
 	}
-	if strings.HasPrefix(inameBackend, "tfs") {
-		conf.RefType = "tfs"
-	} else if strings.HasPrefix(inameBackend, "azure") {
-		conf.RefType = "azure"
-	} else {
-		errStr("reftype is wrong")
-		return
-	}
-	if strings.HasSuffix(inameBackend, "work") {
-		conf.IntegrationType = "work"
-	} else if strings.HasSuffix(inameBackend, "sourcecode") {
-		conf.IntegrationType = "sourcecode"
-	} else {
-		errStr("integration type is wrong")
-		return
-	}
+	conf.RefType = inameBackend
+	conf.IntegrationType = systemType.String()
 	conf.Concurrency = 10
 	res, rerr = structmarshal.StructToMap(conf)
 	inameAgent = "azuretfs"
