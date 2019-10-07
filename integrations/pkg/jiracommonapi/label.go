@@ -4,8 +4,6 @@ func Labels(qc QueryContext) (res []string, rerr error) {
 
 	objectPath := "label"
 
-	qc.Logger.Debug("fields request")
-
 	var labelsInfo struct {
 		Values []string `json:"values"`
 	}

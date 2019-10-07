@@ -393,7 +393,9 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		}
 
 		workStatuses := &agent.WorkStatusResponseWorkConfig{}
-		workStatuses.FromMap(data.Records[0])
+		if len(data.Records) == 1 {
+			workStatuses.FromMap(data.Records[0])
+		}
 		resp.WorkConfig = *workStatuses
 
 		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)

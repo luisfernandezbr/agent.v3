@@ -4,8 +4,6 @@ func Priorities(qc QueryContext) (res []string, rerr error) {
 
 	objectPath := "priority"
 
-	qc.Logger.Debug("fields request")
-
 	var rawPriorities []struct {
 		Name string `json:"name"`
 	}

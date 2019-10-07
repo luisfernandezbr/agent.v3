@@ -4,8 +4,6 @@ func IssueTypes(qc QueryContext) (res []string, rerr error) {
 
 	objectPath := "issuetype"
 
-	qc.Logger.Debug("fields request")
-
 	var issueTypes []struct {
 		Name string `json:"name"`
 	}
@@ -16,8 +14,14 @@ func IssueTypes(qc QueryContext) (res []string, rerr error) {
 		return
 	}
 
-	for _, issueType := range issueTypes {
-		res = append(res, issueType.Name)
+	m := make(map[string]bool)
+
+	for _, typ := range issueTypes {
+		m[typ.Name] = true
+	}
+
+	for k := range m {
+		res = append(res, k)
 	}
 
 	return
