@@ -4,8 +4,6 @@ func Status(qc QueryContext) (res []string, rerr error) {
 
 	objectPath := "status"
 
-	qc.Logger.Debug("fields request")
-
 	var rawStatuses []struct {
 		Name string `json:"name"`
 	}
