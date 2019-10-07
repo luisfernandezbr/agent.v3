@@ -3,3 +3,4 @@ vendor
 dist
 logs
 config.json
+agent.next

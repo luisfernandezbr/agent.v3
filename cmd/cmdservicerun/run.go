@@ -373,6 +373,34 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		return datamodel.NewModelSendEvent(resp), nil
 	}
 
+	cbWorkconfig := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
+		req := instance.Object().(*agent.WorkStatusRequest)
+		data, err := processOnboard(req.Integration.ToMap(), "workconfig")
+		if err != nil {
+			panic(err)
+		}
+
+		resp := &agent.WorkStatusResponse{}
+		resp.Type = agent.WorkStatusResponseTypeProject
+		resp.RefType = req.RefType
+		resp.RefID = req.RefID
+		resp.RequestID = req.ID
+		resp.IntegrationID = req.Integration.ID
+
+		resp.Success = data.Success
+		if data.Error != "" {
+			resp.Error = pstrings.Pointer(data.Error)
+		}
+
+		workStatuses := &agent.WorkStatusResponseWorkConfig{}
+		workStatuses.FromMap(data.Records[0])
+		resp.WorkConfig = *workStatuses
+
+		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
+
+		return datamodel.NewModelSendEvent(resp), nil
+	}
+
 	usub, err := action.Register(ctx, action.NewAction(cbUser), s.newSubConfig(agent.UserRequestTopic.String()))
 	if err != nil {
 		return nil, err
@@ -388,14 +416,21 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		return nil, err
 	}
 
+	wsub, err := action.Register(ctx, action.NewAction(cbWorkconfig), s.newSubConfig(agent.WorkStatusRequestTopic.String()))
+	if err != nil {
+		panic(err)
+	}
+
 	usub.WaitForReady()
 	rsub.WaitForReady()
 	psub.WaitForReady()
+	wsub.WaitForReady()
 
 	return func() {
 		usub.Close()
 		rsub.Close()
 		psub.Close()
+		wsub.Close()
 	}, nil
 }
 
