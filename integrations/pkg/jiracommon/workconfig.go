@@ -7,9 +7,9 @@ import (
 	"github.com/pinpt/integration-sdk/agent"
 )
 
-func GetWorkConfig(qc jiracommonapi.QueryContext) (res rpcdef.OnboardExportResult, _ error) {
+func GetWorkConfig(qc jiracommonapi.QueryContext, typeServer string) (res rpcdef.OnboardExportResult, _ error) {
 
-	ws := GetStaticWorkConfig()
+	var ws agent.WorkStatusResponseWorkConfig
 
 	priorities, err := jiracommonapi.Priorities(qc)
 	if err != nil {
@@ -18,12 +18,14 @@ func GetWorkConfig(qc jiracommonapi.QueryContext) (res rpcdef.OnboardExportResul
 	}
 	ws.Priorities = priorities
 
-	labels, err := jiracommonapi.Labels(qc)
-	if err != nil {
-		res.Error = err
-		return
+	if typeServer == "cloud" {
+		labels, err := jiracommonapi.Labels(qc)
+		if err != nil {
+			res.Error = err
+			return
+		}
+		ws.Labels = labels
 	}
-	ws.Labels = labels
 
 	issueTypes, err := jiracommonapi.IssueTypes(qc)
 	if err != nil {
@@ -39,19 +41,39 @@ func GetWorkConfig(qc jiracommonapi.QueryContext) (res rpcdef.OnboardExportResul
 	}
 	ws.AllStatuses = allStatus
 
+	appendStaticInfo(&ws)
+
 	res.Records = append(res.Records, ws.ToMap())
 	return
 }
 
-func GetStaticWorkConfig() (ws agent.WorkStatusResponseWorkConfig) {
+func getExistedStatusesOnly(allstatus, optns []string) []string {
+
+	var res []string
+	mAll := make(map[string]bool)
+
+	for _, v := range allstatus {
+		mAll[v] = true
+	}
+
+	for _, v := range optns {
+		if _, ok := mAll[v]; ok {
+			res = append(res, v)
+		}
+	}
+
+	return res
+}
+
+func appendStaticInfo(ws *agent.WorkStatusResponseWorkConfig) {
 	ws.Statuses = agent.WorkStatusResponseWorkConfigStatuses{
-		ClosedStatus:     []string{"Work Complete", "Completed", "Closed", "Done", "Fixed"},
-		CompletedStatus:  []string{"Work Complete", "Completed", "Done", "Fixed", "Validated", "Evidence Validated"},
-		InProgressStatus: []string{"In Progress", "On Hold"},
-		OpenStatus:       []string{"Open", "Work Required", "To Do", "Backlog"},
-		InReviewStatus:   []string{"Awaiting Release", "Awaiting Validation", "In Review"},
-		ReleasedStatus:   []string{"Released"},
-		ReopenedStatus:   []string{"Reopened", "Rework"},
+		ClosedStatus:     getExistedStatusesOnly(ws.AllStatuses, []string{"Work Complete", "Completed", "Closed", "Done", "Fixed"}),
+		CompletedStatus:  getExistedStatusesOnly(ws.AllStatuses, []string{"Work Complete", "Completed", "Done", "Fixed", "Validated", "Evidence Validated"}),
+		InProgressStatus: getExistedStatusesOnly(ws.AllStatuses, []string{"In Progress", "On Hold"}),
+		OpenStatus:       getExistedStatusesOnly(ws.AllStatuses, []string{"Open", "Work Required", "To Do", "Backlog"}),
+		InReviewStatus:   getExistedStatusesOnly(ws.AllStatuses, []string{"Awaiting Release", "Awaiting Validation", "In Review"}),
+		ReleasedStatus:   getExistedStatusesOnly(ws.AllStatuses, []string{"Released"}),
+		ReopenedStatus:   getExistedStatusesOnly(ws.AllStatuses, []string{"Reopened", "Rework"}),
 	}
 	ws.TopLevelIssue = agent.WorkStatusResponseWorkConfigTopLevelIssue{
 		Name: "Epic",
@@ -89,5 +111,4 @@ func GetStaticWorkConfig() (ws agent.WorkStatusResponseWorkConfig) {
 			},
 		},
 	}
-	return
 }
