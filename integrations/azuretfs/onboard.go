@@ -2,6 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"time"
+
+	"github.com/pinpt/integration-sdk/work"
 
 	"github.com/pinpt/agent.next/integrations/azuretfs/api"
 	"github.com/pinpt/agent.next/pkg/date"
@@ -70,8 +74,12 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 	}
 	for _, repo := range repos {
 		rawcommit, err := s.api.FetchLastCommit(repo.RefID)
+		if rawcommit == nil {
+			s.logger.Error("last commit is nil, skipping", "repo ref_id", repo.RefID)
+			continue
+		}
 		if err != nil {
-			s.logger.Error("error fetching last commit for onboard, skipping", "repo ref_id", repo.RefID)
+			s.logger.Error("error fetching last commit for onboard, skipping", "repo ref_id", repo.RefID, "err", err)
 			continue
 		}
 		r := &agent.RepoResponseRepos{
@@ -100,7 +108,39 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 
 func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
 	projectchan, done := api.AsyncProcess("export projects", s.logger, func(model datamodel.Model) {
-		res.Records = append(res.Records, model.ToMap())
+		proj := model.(*work.Project)
+		itemids, err := s.api.FetchItemIDs(proj.RefID, time.Time{})
+		if err != nil {
+			s.logger.Error("error getting issue count", "err", err)
+			return
+		}
+		itemchan := make(chan datamodel.Model, 1)
+		raw, err := s.api.FetchWorkItemsByIDs(proj.RefID, append([]string{}, itemids[len(itemids)-1]), itemchan)
+		if err != nil {
+			s.logger.Error("error getting last issue", "err", err)
+			return
+		}
+		lastitem := (<-itemchan).(*work.Issue)
+		resp := &agent.ProjectResponseProjects{
+			Active:     proj.Active,
+			Identifier: proj.Identifier,
+			LastIssue: agent.ProjectResponseProjectsLastIssue{
+				IssueID:     ids.WorkIssue(s.customerid, proj.RefType, fmt.Sprintf("%d", raw[0].ID)),
+				Identifier:  lastitem.Identifier,
+				CreatedDate: agent.ProjectResponseProjectsLastIssueCreatedDate(lastitem.CreatedDate),
+				LastUser: agent.ProjectResponseProjectsLastIssueLastUser{
+					UserID:    raw[0].Fields.CreatedBy.ID,
+					Name:      raw[0].Fields.CreatedBy.DisplayName,
+					AvatarURL: raw[0].Fields.CreatedBy.ImageURL,
+				},
+			},
+			Name:        proj.Name,
+			RefID:       proj.RefID,
+			RefType:     proj.RefType,
+			TotalIssues: int64(len(itemids)),
+			URL:         proj.URL,
+		}
+		res.Records = append(res.Records, resp.ToMap())
 	})
 	_, err = s.api.FetchProjects(projectchan)
 	close(projectchan)

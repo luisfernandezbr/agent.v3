@@ -93,21 +93,21 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	return
 }
 
-func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
-	if err := s.initConfig(ctx, config); err != nil {
+func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ValidationResult, err error) {
+	if err = s.initConfig(ctx, config); err != nil {
 		res.Errors = append(res.Errors, err.Error())
 		return res, err
 	}
 	repochan, done := api.AsyncProcess("validate", s.logger, func(m datamodel.Model) {
 		// empty, nothing to do here since we're just validating
 	})
-	if _, err := s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs, repochan); err != nil {
+	if _, err = s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs, repochan); err != nil {
 		// don't return, get as many errors are possible
 		res.Errors = append(res.Errors, err.Error())
 	}
 	close(repochan)
 	<-done
-	return res, nil
+	return res, err
 }
 
 func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.OnboardExportType, config rpcdef.ExportConfig) (rpcdef.OnboardExportResult, error) {

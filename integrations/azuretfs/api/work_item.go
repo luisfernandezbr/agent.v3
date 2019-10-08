@@ -17,13 +17,13 @@ const whereDateFormat = `01/02/2006 15:04:05Z`
 // Then we need to get the items 200 at a time, this is done async
 func (api *API) FetchWorkItems(projid string, fromdate time.Time, items chan<- datamodel.Model) error {
 	async := NewAsync(api.concurrency)
-	allids, err := api.fetchItemIDs(projid, fromdate)
+	allids, err := api.FetchItemIDs(projid, fromdate)
 	if err != nil {
 		return err
 	}
 	fetchitems := func(ids []string) {
 		async.Do(func() {
-			if _, err := api.fetchWorkItemsByIDs(projid, ids, items); err != nil {
+			if _, err := api.FetchWorkItemsByIDs(projid, ids, items); err != nil {
 				api.logger.Error("error with fetchWorkItemsByIDs", "err", err)
 			}
 		})
@@ -41,6 +41,10 @@ func (api *API) FetchWorkItems(projid string, fromdate time.Time, items chan<- d
 	}
 	async.Wait()
 	return nil
+}
+
+func (api *API) FetchItemIDs(projid string, fromdate time.Time) ([]string, error) {
+	return api.fetchItemIDs(projid, fromdate)
 }
 
 func (api *API) fetchItemIDs(projid string, fromdate time.Time) ([]string, error) {
@@ -66,9 +70,13 @@ func (api *API) fetchItemIDs(projid string, fromdate time.Time) ([]string, error
 	return all, nil
 }
 
-func (api *API) fetchWorkItemsByIDs(projid string, ids []string, items chan<- datamodel.Model) ([]workItemResponse, error) {
+// FetchWorkItemsByIDs used by onboard
+func (api *API) FetchWorkItemsByIDs(projid string, ids []string, items chan<- datamodel.Model) ([]WorkItemResponse, error) {
+	return api.fetchWorkItemsByIDs(projid, ids, items)
+}
+func (api *API) fetchWorkItemsByIDs(projid string, ids []string, items chan<- datamodel.Model) ([]WorkItemResponse, error) {
 	url := fmt.Sprintf(`%s/_apis/wit/workitems?ids=%s`, projid, strings.Join(ids, ","))
-	var res []workItemResponse
+	var res []WorkItemResponse
 	if err := api.getRequest(url, stringmap{"pagingoff": "true"}, &res); err != nil {
 		return nil, err
 	}

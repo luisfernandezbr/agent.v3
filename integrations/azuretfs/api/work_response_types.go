@@ -63,7 +63,7 @@ type workItemsResponse struct {
 }
 
 // used in work_item.go - FetchWorkItems
-type workItemResponse struct {
+type WorkItemResponse struct {
 	Fields struct {
 		AssignedTo     usersResponse `json:"System.AssignedTo"`
 		CreatedDate    time.Time     `json:"System.CreatedDate"`

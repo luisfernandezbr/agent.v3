@@ -157,8 +157,7 @@ func (api *API) doRequest(method, endPoint string, params stringmap, reader io.R
 		}
 		return nil
 	}
-	return fmt.Errorf("response code: %v request url: %v\npayload: %v", res.StatusCode, res.Request.URL, string(b))
-
+	return fmt.Errorf("response code: %v request url: %v", res.StatusCode, res.Request.URL)
 }
 
 // some util functions
