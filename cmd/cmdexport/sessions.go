@@ -108,7 +108,7 @@ func idFromString(str string) expsessions.ID {
 
 func (s *sessions) Write(sessionID string, objs []rpcdef.ExportObj) error {
 	if len(objs) == 0 {
-		s.logger.Warn("no objects passed to write")
+		//s.logger.Debug("no objects passed to write")
 		return nil
 	}
 
