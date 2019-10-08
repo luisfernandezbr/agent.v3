@@ -54,6 +54,9 @@ func newSessions(logger hclog.Logger, export *export, outputDir string) *session
 			s.logger.Info("progress", "data", "\n\n"+res+"\n\n")
 
 			if s.export.Opts.AgentConfig.Backend.Enable {
+				// TODO: progress panics on edge right now, disable for now
+				continue
+
 				skipDone := true
 				if os.Getenv("PP_AGENT_PROGRESS_ALL") != "" {
 					skipDone = false
@@ -105,7 +108,7 @@ func idFromString(str string) expsessions.ID {
 
 func (s *sessions) Write(sessionID string, objs []rpcdef.ExportObj) error {
 	if len(objs) == 0 {
-		s.logger.Warn("no objects passed to write")
+		//s.logger.Debug("no objects passed to write")
 		return nil
 	}
 

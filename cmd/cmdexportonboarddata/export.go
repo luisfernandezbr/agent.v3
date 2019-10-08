@@ -53,7 +53,10 @@ func newExport(opts Opts) (*export, error) {
 	}
 	s.Opts = opts
 
-	s.SetupIntegrations(nil)
+	err = s.SetupIntegrations(nil)
+	if err != nil {
+		return nil, err
+	}
 
 	integrationName := opts.Integrations[0].Name
 	s.integration = s.Integrations[integrationName]

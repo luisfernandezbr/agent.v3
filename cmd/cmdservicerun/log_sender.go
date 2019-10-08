@@ -64,7 +64,7 @@ func (s *exportLogSender) upload() {
 
 	url += "log/agent/" + s.conf.DeviceID + "/" + s.exportJobID
 
-	s.logger.Info("uploading log", "size", len(s.buf), "url", url)
+	//s.logger.Debug("uploading log", "size", len(s.buf), "url", url)
 
 	// gzip the bytes before sending
 	buf := &bytes.Buffer{}

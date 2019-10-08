@@ -7,6 +7,10 @@ import (
 	"os/exec"
 	"runtime"
 
+	"github.com/mitchellh/go-homedir"
+
+	"github.com/pinpt/go-common/fileutil"
+
 	"path/filepath"
 	"strings"
 
@@ -74,19 +78,39 @@ func (s *Integration) RPCClient() rpcdef.Integration {
 	return s.rpcClient
 }
 
-func prodIntegrationCommand(fslocs fsconf.Locs, integrationName string) *exec.Cmd {
+func prodIntegrationCommand(fslocs fsconf.Locs, integrationName string) (*exec.Cmd, error) {
 	binName := integrationName
 	if runtime.GOOS == "windows" {
 		binName += ".exe"
 	}
 	bin := filepath.Join(fslocs.Integrations, binName)
-	return exec.Command(bin)
+	if !fileutil.FileExists(bin) {
+		return nil, fmt.Errorf("integration binary not found: %v path: %v", integrationName, bin)
+	}
+	return exec.Command(bin), nil
 }
 
-func devIntegrationCommand(integrationName string) *exec.Cmd {
+func devIntegrationCommand(integrationName string) (*exec.Cmd, error) {
+	gop := os.Getenv("GOPATH")
+	if gop == "" {
+		home, err := homedir.Dir()
+		if err != nil {
+			return nil, fmt.Errorf("could not get default gopath: %v", err)
+		}
+		gop = filepath.Join(home, "go")
+	}
+	integrationsDir := filepath.Join(gop, "src", "github.com/pinpt/agent.next/integrations")
+	integrationDir := filepath.Join(integrationsDir, integrationName)
+	if !fileutil.FileExists(integrationDir) {
+		return nil, fmt.Errorf("integration package not found: %v dir: %v", integrationName, integrationDir)
+	}
+
+	packageName := "github.com/pinpt/agent.next/integrations/" + integrationName
+
 	// build to catch compile errors
 	// we don't need the resulting binary
-	cmd := exec.Command("go", "build", "-o", filepath.Join(os.TempDir(), "out"), "github.com/pinpt/agent.next/integrations/"+integrationName)
+	cmd := exec.Command("go", "build", "-o", filepath.Join(os.TempDir(), "out"), packageName)
+
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
@@ -94,7 +118,8 @@ func devIntegrationCommand(integrationName string) *exec.Cmd {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	return exec.Command("go", "run", "github.com/pinpt/agent.next/integrations/"+integrationName)
+
+	return exec.Command("go", "run", packageName), nil
 }
 
 func (s *Integration) Close() error {
@@ -132,9 +157,17 @@ func (s *Integration) setupLogFile() error {
 func (s *Integration) setupRPC() error {
 	var cmd *exec.Cmd
 	if build.IsProd() || s.opts.DevUseCompiledIntegrations {
-		cmd = prodIntegrationCommand(s.opts.Locs, s.name)
+		var err error
+		cmd, err = prodIntegrationCommand(s.opts.Locs, s.name)
+		if err != nil {
+			return err
+		}
 	} else {
-		cmd = devIntegrationCommand(s.name)
+		var err error
+		cmd, err = devIntegrationCommand(s.name)
+		if err != nil {
+			return err
+		}
 	}
 
 	client := plugin.NewClient(&plugin.ClientConfig{

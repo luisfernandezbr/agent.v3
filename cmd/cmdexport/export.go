@@ -91,9 +91,12 @@ func newExport(opts Opts) (*export, error) {
 		gitProcessingDone <- hadErrors
 	}()
 
-	s.SetupIntegrations(func(integrationName string) rpcdef.Agent {
+	err = s.SetupIntegrations(func(integrationName string) rpcdef.Agent {
 		return newAgentDelegate(s, s.sessions.expsession, integrationName)
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	exportRes := s.runExports()
 	close(s.gitProcessingRepos)

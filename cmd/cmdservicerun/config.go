@@ -72,6 +72,8 @@ func convertConfig(integrationNameBackend string, systemType IntegrationType, co
 		configAgent, integrationNameAgent, rerr = convertConfigSonarqube(integrationNameBackend, configBackend, exclusions)
 	case "tfs", "azure":
 		configAgent, integrationNameAgent, rerr = convertConfigAzureFTS(integrationNameBackend, systemType, configBackend, exclusions)
+	case "workday":
+		configAgent, integrationNameAgent, rerr = convertConfigWorkday(integrationNameBackend, configBackend, exclusions)
 	default:
 		rerr = fmt.Errorf("unsupported integration: %v", integrationNameBackend)
 		return
@@ -410,5 +412,41 @@ func convertConfigAzureFTS(inameBackend string, systemType IntegrationType, cb m
 	conf.Concurrency = 10
 	res, rerr = structmarshal.StructToMap(conf)
 	inameAgent = "azuretfs"
+	return
+}
+
+func convertConfigWorkday(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+	errStr := func(err string) {
+		rerr = errors.New(err)
+		return
+	}
+	inameAgent = "workday"
+	var config struct {
+		URL      string `json:"url"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	err := structmarshal.MapToStruct(cb, &config)
+	if err != nil {
+		rerr = err
+		return
+	}
+	if config.URL == "" {
+		errStr("missing url")
+		return
+	}
+	if config.Username == "" {
+		errStr("missing username")
+		return
+	}
+	if config.Password == "" {
+		errStr("missing password")
+		return
+	}
+	res, err = structmarshal.StructToMap(config)
+	if err != nil {
+		rerr = err
+		return
+	}
 	return
 }
