@@ -148,7 +148,7 @@ func copyMap(data map[string]interface{}) map[string]interface{} {
 }
 
 func (s *Command) SetupIntegrations(
-	agentDelegates func(integrationName string) rpcdef.Agent) {
+	agentDelegates func(integrationName string) rpcdef.Agent) error {
 
 	if agentDelegates == nil {
 		agentDelegates = AgentDelegateMinFactory(s)
@@ -170,12 +170,17 @@ func (s *Command) SetupIntegrations(
 	opts.IntegrationsDir = s.Opts.AgentConfig.IntegrationsDir
 	opts.DevUseCompiledIntegrations = s.Opts.AgentConfig.DevUseCompiledIntegrations
 	loader := iloader.New(opts)
-	res := loader.Load(integrationNames)
+	res, err := loader.Load(integrationNames)
+	if err != nil {
+		return err
+	}
 	s.Integrations = res
 
 	go func() {
 		s.CaptureShutdown()
 	}()
+
+	return nil
 }
 
 func (s *Command) CaptureShutdown() {
