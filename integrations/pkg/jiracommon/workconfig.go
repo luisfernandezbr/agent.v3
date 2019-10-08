@@ -41,6 +41,9 @@ func GetWorkConfig(qc jiracommonapi.QueryContext, typeServer string) (res rpcdef
 	}
 	ws.AllStatuses = allStatus
 
+	resolutions, err := jiracommonapi.Resolution(qc)
+	ws.AllResolutions = resolutions
+
 	appendStaticInfo(&ws)
 
 	res.Records = append(res.Records, ws.ToMap())
@@ -68,7 +71,6 @@ func getExistedStatusesOnly(allstatus, optns []string) []string {
 func appendStaticInfo(ws *agent.WorkStatusResponseWorkConfig) {
 	ws.Statuses = agent.WorkStatusResponseWorkConfigStatuses{
 		ClosedStatus:     getExistedStatusesOnly(ws.AllStatuses, []string{"Work Complete", "Completed", "Closed", "Done", "Fixed"}),
-		CompletedStatus:  getExistedStatusesOnly(ws.AllStatuses, []string{"Work Complete", "Completed", "Done", "Fixed", "Validated", "Evidence Validated"}),
 		InProgressStatus: getExistedStatusesOnly(ws.AllStatuses, []string{"In Progress", "On Hold"}),
 		OpenStatus:       getExistedStatusesOnly(ws.AllStatuses, []string{"Open", "Work Required", "To Do", "Backlog"}),
 		InReviewStatus:   getExistedStatusesOnly(ws.AllStatuses, []string{"Awaiting Release", "Awaiting Validation", "In Review"}),
