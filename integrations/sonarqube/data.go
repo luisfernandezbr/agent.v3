@@ -5,10 +5,6 @@ import (
 	"github.com/pinpt/integration-sdk/codequality"
 )
 
-func (s *Integration) validate() (bool, error) {
-	return s.api.Validate()
-}
-
 func (s *Integration) exportAll() (err error) {
 	var projects []*codequality.Project
 	if projects, err = s.exportProjects(); err != nil {
