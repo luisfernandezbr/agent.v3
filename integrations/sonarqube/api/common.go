@@ -38,11 +38,10 @@ func NewSonarqubeAPI(ctx context.Context, logger hclog.Logger, url string, authT
 	}
 	hcConfig := &httpclient.Config{
 		Paginator: httpclient.InBodyPaginator(),
-		Retryable: httpclient.NewBackoffRetry(10*time.Millisecond, 100*time.Millisecond, 60*time.Second, 2.0),
+		Retryable: httpclient.NewNoRetry(),
 	}
 	client := &http.Client{
 		Transport: transport,
-		Timeout:   10 * time.Minute,
 	}
 	a := &SonarqubeAPI{
 		url:       url,
