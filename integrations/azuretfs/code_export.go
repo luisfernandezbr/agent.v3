@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/pinpt/agent.next/integrations/azuretfs/api"
-	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-common/datamodel"
@@ -144,12 +142,8 @@ func (s *Integration) processPullRequests(repoids []string) error {
 }
 
 func (s *Integration) processUsers(repoids []string, projectids []string) error {
-	// not sure if we should call the incremental sender in commit users,
-	// this is the only api with incremental, but we're only fething users to match the other user api
-	sendercomm := objsender.NewNotIncremental(s.agent, commitusers.TableName)
 	senderproj := objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
 	defer senderproj.Done()
-	defer sendercomm.Done()
 
 	projusers := make(map[string]*sourcecode.User)
 	for _, projid := range projectids {
@@ -159,27 +153,6 @@ func (s *Integration) processUsers(repoids []string, projectids []string) error 
 		}
 		if err := s.api.FetchSourcecodeUsers(projid, teamids, projusers); err != nil {
 			return err
-		}
-	}
-	commusers, err := s.api.FetchCommitUsers(repoids, time.Time{} /* sendercomm.LastProcessed */)
-	if err != nil {
-		return err
-	}
-	// Commit Users:
-	// only send the commit users who's email matches the UniqueName of a project user
-	// the key of the commit user map is the email
-	// the key of the project user map is the UniqueName, which is usually the user's email
-	for email, commitusr := range commusers {
-		if u, o := projusers[email]; o {
-			commitusr.SourceID = u.RefID
-			if err := commitusr.Validate(); err != nil {
-				s.logger.Error("error validating commit user, skipping", "data", commitusr.Stringify())
-				continue
-			}
-			s.logger.Info("sending commit user", "data", commitusr.Stringify())
-			if err := sendercomm.SendMap(commitusr.ToMap()); err != nil {
-				s.logger.Error("error sending commit user", "data", commitusr.Stringify())
-			}
 		}
 	}
 	// Project Users:
