@@ -152,11 +152,11 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 
 	}
 
-	s.config.Concurrency = def.Concurrency
+	res.Concurrency = def.Concurrency
 	if def.Concurrency == 0 {
-		s.config.Concurrency = 1
+		res.Concurrency = 1
 	}
-	s.logger.Info("Using concurrency", "concurrency", s.config.Concurrency)
+	s.logger.Info("Using concurrency", "concurrency", res.Concurrency)
 
 	s.config = res
 
