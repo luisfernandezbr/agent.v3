@@ -18,7 +18,7 @@ In both cases pass the token as apitoken.
 - [Create auth token](https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line)
 - [OAuth docs](https://developer.github.com/v3/oauth_authorizations/)
 
-Github OAuth tokens do not expire, so not need to use pinpoint token refresh api, which is difference from jira.
+Github OAuth tokens do not expire, so not need to use pinpoint token refresh api, which is different from jira.
 
 ### Token permissions required for github.com and enterprise
 
@@ -53,11 +53,6 @@ Minimal required args
 go run . export --agent-config-json='{"customer_id":"c1"}' --integrations-json='[{"name":"github", "config":{"url":"https://api.github.com", "apitoken":"XXX"}}]'
 ```
 
-```
-All args
-go run . export --agent-config-json='{"customer_id":"c1", "skip_git":false}' --integrations-json='[{"name":"github", "config":{"url":"https://api.github.com", "apitoken":"XXX", "excluded_repos":[],"only_git":false,"organization":"", repos:["pinpt/test_repo"], "stop_after_n":1}}]'
-```
-
 ## Datamodel notes
 github.PullRequestComment does not include comments created from review, these go to github.PullRequestReview. We do not currently store the text of those.
 
@@ -72,7 +67,7 @@ Possible performance optimization is to limit the number of records returned to 
 
 ## Performance
 
-It takes ~10m on pinpoint organization for initial export and ~2m for incremental immediately after. Using ~1000 requests, which is 1/5 of hourly quota.
+It takes ~?m on pinpoint organization for initial export and ~?m for incremental immediately after. Using ?% of github.com hourly quota.
 
 ## How to iterate on initial export and possibly continue on interruption?
 

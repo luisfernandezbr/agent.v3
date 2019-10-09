@@ -19,7 +19,6 @@ type tfsPaginator struct {
 var _ httpclient.Paginator = (*tfsPaginator)(nil)
 
 func (p tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) (bool, *http.Request) {
-	var skippaging bool
 	var err error
 	var mapBody struct {
 		Count int64         `json:"count"`
@@ -30,7 +29,8 @@ func (p tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) 
 		return false, nil
 	}
 	err = json.Unmarshal(raw, &mapBody)
-	if err != nil {
+	if err != nil || mapBody.Value == nil {
+		resp.Body = ioutil.NopCloser(bytes.NewReader(raw))
 		return false, nil
 	}
 	body, _ := json.Marshal(mapBody.Value)
@@ -40,9 +40,16 @@ func (p tfsPaginator) HasMore(page int, req *http.Request, resp *http.Response) 
 		body = append([]byte{','}, body...)
 	}
 	resp.Body = ioutil.NopCloser(bytes.NewReader(body))
-	if !skippaging && mapBody.Count == int64(maxResults) {
+	if mapBody.Count == int64(maxResults) {
 		urlquery := req.URL.Query()
-		urlquery.Set("$skip", strconv.Itoa(maxResults*page))
+		if urlquery.Get("pagingoff") != "" {
+			return false, nil
+		}
+		top := maxResults
+		if t := urlquery.Get("$top"); t != "" {
+			top, _ = strconv.Atoi(t)
+		}
+		urlquery.Set("$skip", strconv.Itoa(top*page))
 		req.URL.RawQuery = urlquery.Encode()
 		newreq, _ := http.NewRequest(req.Method, req.URL.String(), nil)
 		if user, pass, ok := req.BasicAuth(); ok {

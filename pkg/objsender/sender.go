@@ -43,6 +43,12 @@ func (s *batch) Flush() error {
 	return s.flushNoLock(data)
 }
 
+type Sender interface {
+	Send(obj Model) error
+	SendMap(m map[string]interface{}) error
+	Done() error
+}
+
 type NotIncremental struct {
 	RefType   string
 	SessionID string

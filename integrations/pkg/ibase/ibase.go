@@ -8,8 +8,7 @@ import (
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
-func MainFunc(
-	construct func(logger hclog.Logger) rpcdef.Integration) {
+func MainFunc(construct func(logger hclog.Logger) rpcdef.Integration) {
 
 	logger := hclog.New(&hclog.LoggerOptions{
 		Level:      hclog.Debug,

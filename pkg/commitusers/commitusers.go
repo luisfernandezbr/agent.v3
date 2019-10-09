@@ -1,6 +1,9 @@
 package commitusers
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 const TableName = "sourcecode.CommitUser"
 
@@ -16,6 +19,11 @@ func (s CommitUser) Validate() error {
 		return fmt.Errorf("missing required field for user: %+v", s)
 	}
 	return nil
+}
+
+func (s CommitUser) Stringify() string {
+	b, _ := json.Marshal(s.ToMap())
+	return string(b)
 }
 
 func (s CommitUser) ToMap() map[string]interface{} {

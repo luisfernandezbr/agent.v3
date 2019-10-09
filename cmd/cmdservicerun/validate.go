@@ -24,14 +24,14 @@ func depointer(data map[string]interface{}) (map[string]interface{}, error) {
 	return res, nil
 }
 
-func (s *runner) validate(ctx context.Context, name string, config map[string]interface{}) (res cmdvalidateconfig.Result, _ error) {
+func (s *runner) validate(ctx context.Context, name string, systemType IntegrationType, config map[string]interface{}) (res cmdvalidateconfig.Result, _ error) {
 	s.logger.Info("validating config for integration", "name", name)
 	// convert to non pointer strings
 	config, err := depointer(config)
 	if err != nil {
 		return res, err
 	}
-	inConf, name2, err := convertConfig(name, config, []string{})
+	inConf, name2, err := convertConfig(name, systemType, config, []string{})
 	if err != nil {
 		return res, err
 	}
@@ -55,7 +55,9 @@ func (s *runner) validate(ctx context.Context, name string, config map[string]in
 
 	err = s.runCommand(ctx, &res, args)
 	s.logger.Info("validation completed", "success", res.Success)
-
+	if !res.Success {
+		s.logger.Info("validation failed", "err", res.Errors)
+	}
 	if err != nil {
 		return res, err
 	}

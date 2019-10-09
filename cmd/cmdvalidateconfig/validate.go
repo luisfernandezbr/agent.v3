@@ -60,8 +60,8 @@ func newValidator(opts Opts) (*validator, error) {
 	s.integration = s.Integrations[integrationName]
 	s.exportConfig = s.ExportConfigs[integrationName]
 
-	s.runValidate()
-	return s, nil
+	err = s.runValidate()
+	return s, err
 }
 
 type Result struct {
