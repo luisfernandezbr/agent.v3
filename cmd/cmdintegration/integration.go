@@ -17,7 +17,8 @@ import (
 )
 
 type Opts struct {
-	Logger       hclog.Logger
+	Logger hclog.Logger
+
 	AgentConfig  AgentConfig
 	Integrations []Integration
 }
@@ -180,6 +181,19 @@ func (s *Command) SetupIntegrations(
 		s.CaptureShutdown()
 	}()
 
+	return nil
+}
+
+func (s *Command) CloseOnlyIntegrationAndHandlePanic(integration *iloader.Integration) error {
+	panicOut, err := integration.CloseAndDetectPanic()
+	if panicOut != "" {
+		// This is already printed in integration logs, but easier to debug if it's repeated in stdout.
+		fmt.Println("Panic in integration")
+		fmt.Println(panicOut)
+	}
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
