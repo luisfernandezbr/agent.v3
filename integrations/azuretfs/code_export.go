@@ -100,6 +100,11 @@ func (s *Integration) processPullRequests(repoids []string) error {
 		return err
 	}
 	defer senderprcs.Done()
+	senderprcms, err := objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestCommentModelName.String())
+	if err != nil {
+		return err
+	}
+	defer senderprcms.Done()
 	prchan, prdone := api.AsyncProcess("pull requests", s.logger, func(model datamodel.Model) {
 		if err := senderprs.Send(model); err != nil {
 			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
@@ -116,7 +121,7 @@ func (s *Integration) processPullRequests(repoids []string) error {
 		}
 	})
 	prcmhan, prmdone := api.AsyncProcess("pull request commits", s.logger, func(model datamodel.Model) {
-		if err := senderprcs.Send(model); err != nil {
+		if err := senderprcms.Send(model); err != nil {
 			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
 		}
 	})
