@@ -125,7 +125,7 @@ var cmdExportOboardData = &cobra.Command{
 			if v == "" {
 				exitWithErr(logger, errors.New("provide object-type arg"))
 			}
-			if v == "users" || v == "repos" || v == "projects" {
+			if v == "users" || v == "repos" || v == "projects" || v == "workconfig" {
 				opts.ExportType = rpcdef.OnboardExportType(v)
 			} else {
 				exitWithErr(logger, fmt.Errorf("object-type must be one of: users, repos, projects, got %v", v))
