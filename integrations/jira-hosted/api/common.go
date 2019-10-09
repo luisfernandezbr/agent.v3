@@ -25,7 +25,7 @@ type Project struct {
 	Key    string
 }
 
-func (s *QueryContext) Common() jiracommonapi.QueryContext {
+func (s *QueryContext) common() jiracommonapi.QueryContext {
 	res := jiracommonapi.QueryContext{}
 	res.BaseURL = s.BaseURL
 	res.CustomerID = s.CustomerID

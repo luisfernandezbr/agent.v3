@@ -45,7 +45,6 @@ message IntegrationOnboardExportReq {
         USERS = 0;
         REPOS = 1;
         PROJECTS = 2;
-        WORKCONFIG = 3;
     }
     Kind kind = 2;
 }

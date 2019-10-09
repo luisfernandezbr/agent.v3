@@ -70,7 +70,7 @@ func ProjectsOnboardPage(
 
 		project := jiracommonapi.Project{JiraID: data.ID, Key: data.Key}
 
-		lastIssue, totalIssues, err := jiracommonapi.GetProjectLastIssue(qc.Common(), project)
+		lastIssue, totalIssues, err := jiracommonapi.GetProjectLastIssue(qc.common(), project)
 		if err != nil {
 			rerr = err
 			return
