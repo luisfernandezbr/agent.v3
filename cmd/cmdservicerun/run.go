@@ -379,7 +379,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 
 	cbWorkconfig := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		req := instance.Object().(*agent.WorkStatusRequest)
-		data, err := processOnboard(req.Integration.ToMap(), "workconfig")
+		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "workconfig")
 		if err != nil {
 			panic(err)
 		}
