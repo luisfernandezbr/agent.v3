@@ -5,7 +5,7 @@ import (
 	"github.com/pinpt/integration-sdk/agent"
 )
 
-func UsersAll(qc QueryContext) (res []*agent.UserResponseUsers, rerr error) {
+func UsersAllx(qc QueryContext) (res []*agent.UserResponseUsers, rerr error) {
 
 	objectPath := "user/search?query="
 

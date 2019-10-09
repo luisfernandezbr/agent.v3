@@ -296,28 +296,32 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 
 	cbUser := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		req := instance.Object().(*agent.UserRequest)
-		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "users")
-		if err != nil {
-			panic(err)
-		}
-		resp := &agent.UserResponse{}
-		resp.Type = agent.UserResponseTypeUser
-		resp.RefType = req.RefType
-		resp.RefID = req.RefID
-		resp.RequestID = req.ID
-		resp.IntegrationID = req.Integration.ID
+		s.logger.Error("received agent.UserRequest for integration. this is not supported TODO:support this for workday", "name", req.Integration.Name)
+		return nil, nil
+		/*
+			data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "users")
+			if err != nil {
+				panic(err)
+			}
+			resp := &agent.UserResponse{}
+			resp.Type = agent.UserResponseTypeUser
+			resp.RefType = req.RefType
+			resp.RefID = req.RefID
+			resp.RequestID = req.ID
+			resp.IntegrationID = req.Integration.ID
 
-		resp.Success = data.Success
-		if data.Error != "" {
-			resp.Error = pstrings.Pointer(data.Error)
-		}
-		for _, rec := range data.Records {
-			user := &agent.UserResponseUsers{}
-			user.FromMap(rec)
-			resp.Users = append(resp.Users, *user)
-		}
-		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
-		return datamodel.NewModelSendEvent(resp), nil
+			resp.Success = data.Success
+			if data.Error != "" {
+				resp.Error = pstrings.Pointer(data.Error)
+			}
+			for _, rec := range data.Records {
+				user := &agent.UserResponseUsers{}
+				user.FromMap(rec)
+				resp.Users = append(resp.Users, *user)
+			}
+			deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
+			return datamodel.NewModelSendEvent(resp), nil
+		*/
 	}
 
 	cbRepo := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {

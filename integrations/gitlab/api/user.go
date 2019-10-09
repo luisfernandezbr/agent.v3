@@ -91,46 +91,6 @@ func emailsUser(qc QueryContext, username string) (emails []string, err error) {
 	return
 }
 
-func UsersOnboardPage(qc QueryContext, params url.Values) (page PageInfo, users []*agent.UserResponseUsers, err error) {
-	qc.Logger.Debug("users request")
-
-	objectPath := pstrings.JoinURL("/users")
-
-	var rawUsers []struct {
-		ID        int    `json:"id"`
-		Name      string `json:"name"`
-		Username  string `json:"username"`
-		AvatarURL string `json:"avatar_url"`
-		Email     string `json:"email"`
-	}
-
-	params.Set("membership", "true")
-	params.Set("per_page", "100")
-
-	page, err = qc.Request(objectPath, params, &rawUsers)
-	if err != nil {
-		return
-	}
-
-	for _, user := range rawUsers {
-		nUser := &agent.UserResponseUsers{
-			RefID:      fmt.Sprint(user.ID),
-			RefType:    qc.RefType,
-			CustomerID: qc.CustomerID,
-			Username:   user.Username,
-			AvatarURL:  pstrings.Pointer(user.AvatarURL),
-			Active:     true,
-			Name:       user.Name,
-			Emails:     []string{user.Email},
-		}
-
-		users = append(users, nUser)
-
-	}
-
-	return
-}
-
 func UsersPage(qc QueryContext, params url.Values) (page PageInfo, users []User, err error) {
 	qc.Logger.Debug("users request")
 
