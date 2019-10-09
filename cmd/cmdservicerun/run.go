@@ -100,25 +100,25 @@ func (s *runner) run(ctx context.Context) error {
 
 	err = s.sendEnabled(ctx)
 	if err != nil {
-		return fmt.Errorf("could not send enabled event, err: %v", err)
+		return fmt.Errorf("could not send enabled request, err: %v", err)
 	}
 
 	isub, err := s.handleIntegrationEvents(ctx)
 	if err != nil {
-		return fmt.Errorf("error handling integration events, err: %v", err)
+		return fmt.Errorf("error handling integration requests, err: %v", err)
 	}
 	defer isub()
 
 	osub, err := s.handleOnboardingEvents(ctx)
 	if err != nil {
-		return fmt.Errorf("error handling onboarding events, err: %v", err)
+		return fmt.Errorf("error handling onboarding requests, err: %v", err)
 	}
 
 	defer osub()
 
 	esub, err := s.handleExportEvents(ctx)
 	if err != nil {
-		return fmt.Errorf("error handling export events, err: %v", err)
+		return fmt.Errorf("error handling export requests, err: %v", err)
 	}
 
 	defer esub()
@@ -131,7 +131,7 @@ func (s *runner) run(ctx context.Context) error {
 		}
 	}
 
-	s.logger.Info("waiting for events...")
+	s.logger.Info("waiting for requests...")
 
 	block := make(chan bool)
 	<-block
@@ -260,7 +260,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 
 	go func() {
 		for err := range errorsChan {
-			s.logger.Error("error in integration events", "err", err)
+			s.logger.Error("error in integration requests", "err", err)
 		}
 	}()
 
@@ -407,7 +407,7 @@ func (s *runner) newSubConfig(topic string) action.Config {
 	errorsChan := make(chan error, 1)
 	go func() {
 		for err := range errorsChan {
-			s.logger.Error("error in integration events", "err", err)
+			s.logger.Error("error in integration requests", "err", err)
 		}
 	}()
 	return action.Config{
@@ -463,7 +463,7 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 
 	go func() {
 		for err := range errors {
-			s.logger.Error("error in integration events", "err", err)
+			s.logger.Error("error in integration requests", "err", err)
 		}
 	}()
 
