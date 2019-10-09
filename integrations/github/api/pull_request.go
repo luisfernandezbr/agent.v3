@@ -21,7 +21,10 @@ func PullRequestsPage(
 
 	qc.Logger.Debug("pull_request request", "repo", repoRefID, "q", queryParams)
 
-	useClosedEvents := !qc.IsEnterprise()
+	//useClosedEvents := !qc.IsEnterprise()
+	// TODO: if we want to support GitHub Enterprise 2.15.9 we need to get this info in another way. Also need to be able to check the api version.
+	// For not we only support Github Enterprise 2.16 and higher.
+	useClosedEvents := true
 
 	closedEventsQ := ``
 
