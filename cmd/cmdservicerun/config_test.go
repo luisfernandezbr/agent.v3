@@ -29,7 +29,7 @@ func TestConfigFromEvent(t *testing.T) {
 	e.Authorization.Authorization = pstrings.Pointer(data)
 	e.Exclusions = []string{"e1", "e2"}
 
-	got, err := configFromEvent(e.ToMap(), encryptionKey)
+	got, err := configFromEvent(e.ToMap(), IntegrationTypeSourcecode, encryptionKey)
 	if err != nil {
 		t.Fatal(err)
 	}
