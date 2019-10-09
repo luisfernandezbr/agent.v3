@@ -275,7 +275,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 }
 
 func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) {
-	s.logger.Info("listening for onboarding events")
+	s.logger.Info("listening for onboarding requests")
 
 	processOnboard := func(integration map[string]interface{}, systemType IntegrationType, objectType string) (cmdexportonboarddata.Result, error) {
 		s.logger.Info("received onboard request", "type", objectType)
