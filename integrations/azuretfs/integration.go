@@ -119,14 +119,12 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 		return res, err
 	}
 	switch objectType {
-	case rpcdef.OnboardExportTypeUsers:
-		return s.onboardExportUsers(ctx, config)
 	case rpcdef.OnboardExportTypeRepos:
 		return s.onboardExportRepos(ctx, config)
 	case rpcdef.OnboardExportTypeProjects:
 		return s.onboardExportProjects(ctx, config)
 	default:
-		s.logger.Error("object not supported", "object", objectType)
+		s.logger.Error("objectType not supported", "objectType", objectType)
 		res.Error = rpcdef.ErrOnboardExportNotSupported
 	}
 	return res, nil
