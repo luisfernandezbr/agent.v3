@@ -23,7 +23,7 @@ func StructToMap(s interface{}) (map[string]interface{}, error) {
 	return res, nil
 }
 
-func StructToObject(in interface{}, out interface{}) error {
+func StructToStruct(in interface{}, out interface{}) error {
 	b, err := json.Marshal(in)
 	if err != nil {
 		return err

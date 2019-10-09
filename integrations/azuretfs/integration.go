@@ -50,12 +50,15 @@ type Integration struct {
 	Creds      *api.Creds `json:"credentials"`
 	customerid string
 
-	RefType             RefType         `json:"reftype"` // azure or tfs
-	IntegrationType     IntegrationType `json:"type"`
-	ExcludedRepoIDs     []string        `json:"excluded_repo_ids"` // excluded repo ids - this comes from the admin ui
-	IncludedRepos       []string        `json:"repo_names"`        // repo_names - this is for debug and develop only
-	OverrideGitHostName string          `json:"git_host_name"`
-	Concurrency         int             `json:"concurrency"` // add it
+	// RefType switches between azure and tfs
+	RefType         RefType         `json:"reftype"`
+	IntegrationType IntegrationType `json:"type"`
+	// ExcludedRepoIDs this comes from the admin UI
+	ExcludedRepoIDs []string `json:"excluded_repo_ids"`
+	// IncludedRepos names of repos to process. Used for debugging and development.
+	IncludedRepos       []string `json:"included_repos"`
+	OverrideGitHostName string   `json:"git_host_name"`
+	Concurrency         int      `json:"concurrency"`
 }
 
 // Init the init function

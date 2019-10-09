@@ -409,7 +409,6 @@ func convertConfigAzureFTS(inameBackend string, systemType IntegrationType, cb m
 	}
 	conf.RefType = inameBackend
 	conf.IntegrationType = systemType.String()
-	conf.Concurrency = 10
 	res, rerr = structmarshal.StructToMap(conf)
 	inameAgent = "azuretfs"
 	return

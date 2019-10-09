@@ -139,12 +139,12 @@ type changeogFieldExtractor func(item changelogField) (name work.ChangelogField,
 func extractUsers(item changelogField) (from string, to string) {
 	if item.OldValue != nil {
 		var user usersResponse
-		structmarshal.StructToObject(item.OldValue, &user)
+		structmarshal.StructToStruct(item.OldValue, &user)
 		from = user.ID
 	}
 	if item.NewValue != nil {
 		var user usersResponse
-		structmarshal.StructToObject(item.NewValue, &user)
+		structmarshal.StructToStruct(item.NewValue, &user)
 		to = user.ID
 	}
 	return
