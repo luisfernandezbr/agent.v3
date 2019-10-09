@@ -412,7 +412,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8e6c76a1ca579fc267b5d80d51d7a3a4473ea1be3429b4745d0a61f311a83b0f"
+  digest = "1:735506fea2209c2104d2e13e06c0f1853047ab96d421af58fc533507a15f8ebe"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -424,7 +424,7 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "29197e002a06751dbb64400cf0ca6d5d60c0189a"
+  revision = "d185014cb48e6eaafa800e2e9dcf0456ec8cf698"
 
 [[projects]]
   branch = "master"
@@ -952,9 +952,8 @@
     "github.com/pinpt/ripsrc/ripsrc",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
+    "golang.org/x/net/context",
     "google.golang.org/grpc",
-    "google.golang.org/grpc/codes",
-    "google.golang.org/grpc/status",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -68,10 +68,9 @@ type ValidationResult struct {
 type OnboardExportType string
 
 const (
-	OnboardExportTypeUsers      OnboardExportType = "users"
-	OnboardExportTypeRepos                        = "repos"
-	OnboardExportTypeProjects                     = "projects"
-	OnboardExportTypeWorkConfig                   = "workconfig"
+	OnboardExportTypeUsers    OnboardExportType = "users"
+	OnboardExportTypeRepos                      = "repos"
+	OnboardExportTypeProjects                   = "projects"
 )
 
 func onboardExportTypeFromProto(k proto.IntegrationOnboardExportReq_Kind) (res OnboardExportType) {
@@ -82,8 +81,6 @@ func onboardExportTypeFromProto(k proto.IntegrationOnboardExportReq_Kind) (res O
 		return OnboardExportTypeRepos
 	case proto.IntegrationOnboardExportReq_PROJECTS:
 		return OnboardExportTypeProjects
-	case proto.IntegrationOnboardExportReq_WORKCONFIG:
-		return OnboardExportTypeWorkConfig
 	default:
 		panic(fmt.Errorf("unsupported object type: %v", k))
 	}
@@ -97,8 +94,6 @@ func (s OnboardExportType) proto() proto.IntegrationOnboardExportReq_Kind {
 		return proto.IntegrationOnboardExportReq_REPOS
 	case OnboardExportTypeProjects:
 		return proto.IntegrationOnboardExportReq_PROJECTS
-	case OnboardExportTypeWorkConfig:
-		return proto.IntegrationOnboardExportReq_WORKCONFIG
 	default:
 		panic(fmt.Errorf("unsupported object type: %v", s))
 	}

@@ -38,7 +38,7 @@ func Projects(qc QueryContext) (res []*work.Project, rerr error) {
 		item.CustomerID = qc.CustomerID
 		item.RefID = data.ID
 		item.RefType = "jira"
-		item.URL = qc.Common().ProjectURL(data.Key)
+		item.URL = qc.common().ProjectURL(data.Key)
 		item.Name = data.Name
 		item.Identifier = data.Key
 		item.Active = true
