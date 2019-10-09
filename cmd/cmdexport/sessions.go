@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -51,7 +52,10 @@ func newSessions(logger hclog.Logger, export *export, outputDir string) *session
 		for {
 			<-ticker.C
 			res := s.progressTracker.InProgressString()
-			s.logger.Info("progress", "data", "\n\n"+res+"\n\n")
+
+			if strings.TrimSpace(res) != "" { // do not print empty progress data
+				s.logger.Info("progress", "data", "\n\n"+res+"\n\n")
+			}
 
 			if s.export.Opts.AgentConfig.Backend.Enable {
 				// TODO: progress panics on edge right now, disable for now
