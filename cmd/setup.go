@@ -152,6 +152,7 @@ func integrationCommandOpts(cmd *cobra.Command) (hclog.Logger, cmdintegration.Op
 	}
 
 	opts.Logger = cmdlogger.CopyToFile(cmd, logger, opts.AgentConfig.PinpointRoot)
+
 	return opts.Logger, opts
 }
 

@@ -60,8 +60,11 @@ func newValidator(opts Opts) (*validator, error) {
 	s.integration = s.Integrations[integrationName]
 	s.exportConfig = s.ExportConfigs[integrationName]
 
-	err = s.runValidate()
-	return s, err
+	err = s.runValidateAndPrint()
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 type Result struct {
@@ -70,16 +73,11 @@ type Result struct {
 	Success bool `json:"success"`
 }
 
-func (s *validator) runValidate() error {
-	ctx := context.Background()
-	client := s.integration.RPCClient()
+func (s *validator) runValidateAndPrint() error {
+	errs := s.runValidate()
 
-	res0, err := client.ValidateConfig(ctx, s.exportConfig)
-	if err != nil {
-		return err
-	}
-
-	res := Result{ValidationResult: res0}
+	res := Result{}
+	res.Errors = errs
 
 	if len(res.Errors) == 0 {
 		res.Success = true
@@ -94,10 +92,35 @@ func (s *validator) runValidate() error {
 		return err
 	}
 
+	s.Logger.Info("validate-config completed", "errors", res.Errors)
+
 	// BUG: last log message is missing without this
 	time.Sleep(100 * time.Millisecond)
 
 	return nil
+}
+
+func (s *validator) runValidate() (errs []string) {
+	ctx := context.Background()
+	client := s.integration.RPCClient()
+
+	rerr := func(err error) {
+		errs = append(errs, err.Error())
+	}
+
+	res0, err := client.ValidateConfig(ctx, s.exportConfig)
+	if err != nil {
+		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
+		rerr(err)
+		return
+	}
+	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
+	if err != nil {
+		rerr(err)
+		return
+	}
+
+	return res0.Errors
 }
 
 func (s *validator) Destroy() {
