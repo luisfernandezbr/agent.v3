@@ -19,12 +19,7 @@ import (
 func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
 
 	var repos []*sourcecode.Repo
-	reposchan, done := api.AsyncProcess("export repos", s.logger, func(model datamodel.Model) {
-		repos = append(repos, model.(*sourcecode.Repo))
-	})
-	_, err = s.api.FetchAllRepos([]string{}, []string{}, reposchan)
-	close(reposchan)
-	<-done
+	_, repos, err = s.api.FetchAllRepos([]string{}, []string{})
 	if err != nil {
 		s.logger.Error("error fetching repos for onboard export repos")
 		return

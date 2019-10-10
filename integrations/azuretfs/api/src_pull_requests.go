@@ -3,63 +3,96 @@ package api
 import (
 	"fmt"
 	"net/url"
-	"time"
 
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/ids"
-	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 // FetchPullRequests calls the pull request api and processes the reponse sending each object to the corresponding channel async
 // sourcecode.PullRequest, sourcecode.PullRequestReview, sourcecode.PullRequestComment, and sourcecode.PullRequestCommit
-func (api *API) FetchPullRequests(repoid string, fromdate time.Time, pullRequestChan chan<- datamodel.Model, pullRequestReviewChan chan<- datamodel.Model, pullRequestCommentChan chan<- datamodel.Model, pullRequestCommitChan chan<- datamodel.Model) error {
+func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsender2.Session) error {
 	res, err := api.fetchPullRequests(repoid)
 	if err != nil {
 		return err
 	}
+	fromdate := sender.LastProcessedTime()
 	incremental := !fromdate.IsZero()
-	async := NewAsync(api.concurrency)
-
+	var pullrequests []pullRequestResponse
+	var pullrequestcomments []pullRequestResponse
 	for _, p := range res {
+		// if this is not incremental, return only the objects created after the fromdate
+		if !incremental || p.CreationDate.After(fromdate) {
+			pullrequests = append(pullrequests, p)
+		}
+		// if this is not incremental, only fetch the comments if this pr is still opened or was closed after the last processed date
+		if !incremental || (p.Status == "active" || (incremental && p.ClosedDate.After(fromdate))) {
+			pullrequestcomments = append(pullrequestcomments, p)
+		}
+	}
+
+	prsender, err := sender.Session(sourcecode.PullRequestModelName.String(), repoid, reponame)
+	prsender.SetTotal(len(pullrequests))
+	async := NewAsync(api.concurrency)
+	for _, p := range pullrequests {
 		pr := pullRequestResponseWithShas{}
 		pr.pullRequestResponse = p
-		// if this is not incremental, return only the objects created after the fromdate
-		if !incremental || pr.CreationDate.After(fromdate) {
+		async.Do(func() {
 			commits, err := api.fetchPullRequestCommits(repoid, pr.PullRequestID)
+			pridstring := fmt.Sprintf("%d", pr.PullRequestID)
 			if err != nil {
 				api.logger.Error("error fetching commits for PR, skiping", "pr-id", pr.PullRequestID, "repo-id", repoid)
-				continue
+				return
 			}
+			prcsender, err := prsender.Session(sourcecode.PullRequestCommitModelName.String(), pridstring, pridstring)
+			if err != nil {
+				api.logger.Error("error creating sender session for pull request commits", "pr-id", pr.PullRequestID, "repo-id", repoid)
+				return
+			}
+			prcsender.SetTotal(len(commits))
 			for _, commit := range commits {
 				pr.commitshas = append(pr.commitshas, commit.CommitID)
 				pr := pr
-				async.Do(func() {
-					api.sendPullRequestCommitObjects(repoid, pr, pullRequestCommitChan)
-				})
+				api.sendPullRequestCommitObjects(repoid, pr, prcsender)
 			}
-			async.Do(func() {
-				api.sendPullRequestObjects(repoid, pr, pullRequestChan, pullRequestReviewChan)
-			})
-		}
-		// if this is not incremental, only fetch the comments if this pr is still opened or was closed after the last processed date
-		if !incremental || (pr.Status == "active" || (incremental && pr.ClosedDate.After(fromdate))) {
-			async.Do(func() {
-				api.sendPullRequestCommentObject(repoid, pr.PullRequestID, pullRequestCommentChan)
-			})
-		}
+			prcsender.Done()
+			prrsender, err := prsender.Session(sourcecode.PullRequestReviewModelName.String(), pridstring, pridstring)
+			if err != nil {
+				api.logger.Error("error creating sender session for pull request reviews", "pr-id", pr.PullRequestID, "repo-id", repoid)
+				return
+			}
+			prrsender.SetTotal(len(pr.Reviewers))
+			api.sendPullRequestObjects(repoid, pr, prsender, prrsender)
+			prrsender.Done()
+		})
+	}
+
+	for _, pr := range pullrequestcomments {
+		pr := pr
+		async.Do(func() {
+			prcsender, err := prsender.Session(sourcecode.PullRequestCommentModelName.String(), fmt.Sprintf("%d", pr.PullRequestID), pr.Title)
+			if err != nil {
+				api.logger.Error("error creating sender session for pull request comments", "pr-id", pr.PullRequestID, "repo-id", repoid)
+				return
+			}
+			api.sendPullRequestCommentObject(repoid, pr.PullRequestID, prcsender)
+			prcsender.Done()
+		})
 	}
 	async.Wait()
+	prsender.Done()
 	return nil
 }
 
-func (api *API) sendPullRequestCommentObject(repoid string, prid int64, pullRequestCommentChan chan<- datamodel.Model) {
+func (api *API) sendPullRequestCommentObject(repoid string, prid int64, sender *objsender2.Session) {
 	comments, err := api.fetchPullRequestComments(repoid, prid)
 	if err != nil {
 		api.logger.Error("error fetching comments for PR, skiping", "pr-id", prid, "repo-id", repoid)
 		return
 	}
+	var total []*sourcecode.PullRequestComment
 	for _, cm := range comments {
 		for _, e := range cm.Comments {
 			// comment type "text" means it's a real user instead of system
@@ -67,7 +100,7 @@ func (api *API) sendPullRequestCommentObject(repoid string, prid int64, pullRequ
 				continue
 			}
 			refid := fmt.Sprintf("%d_%d", cm.ID, e.ID)
-			c := sourcecode.PullRequestComment{
+			c := &sourcecode.PullRequestComment{
 				Body:          e.Content,
 				CustomerID:    api.customerid,
 				PullRequestID: api.IDs.CodePullRequest(fmt.Sprintf("%d", prid), refid),
@@ -78,20 +111,23 @@ func (api *API) sendPullRequestCommentObject(repoid string, prid int64, pullRequ
 			}
 			date.ConvertToModel(e.PublishedDate, &c.CreatedDate)
 			date.ConvertToModel(e.LastUpdatedDate, &c.UpdatedDate)
-			pullRequestCommentChan <- &c
+			total = append(total, c)
 		}
+	}
+	sender.SetTotal(len(total))
+	for _, c := range total {
+		sender.Send(c)
 	}
 }
 
-func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithShas, pullRequestChan chan<- datamodel.Model, pullRequestReviewChan chan<- datamodel.Model) {
-	prid := p.PullRequestID
+func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithShas, prsender *objsender2.Session, prrsender *objsender2.Session) {
 
-	pr := sourcecode.PullRequest{
+	pr := &sourcecode.PullRequest{
 		BranchName:     p.SourceBranch,
 		CreatedByRefID: p.CreatedBy.ID,
 		CustomerID:     api.customerid,
 		Description:    p.Description,
-		RefID:          fmt.Sprintf("%d", prid),
+		RefID:          fmt.Sprintf("%d", p.PullRequestID),
 		RefType:        api.reftype,
 		RepoID:         api.IDs.CodeRepo(p.Repository.ID),
 		Title:          p.Title,
@@ -133,23 +169,23 @@ func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithS
 			pr.MergedByRefID = r.ID
 			state = sourcecode.PullRequestReviewStateApproved
 		}
-		refid := hash.Values(i, prid, r.ID)
-		pullRequestReviewChan <- &sourcecode.PullRequestReview{
+		refid := hash.Values(i, p.PullRequestID, r.ID)
+		prrsender.Send(&sourcecode.PullRequestReview{
 			CustomerID:    api.customerid,
-			PullRequestID: api.IDs.CodePullRequest(fmt.Sprintf("%d", prid), refid),
+			PullRequestID: api.IDs.CodePullRequest(fmt.Sprintf("%d", p.PullRequestID), refid),
 			RefID:         refid,
 			RefType:       api.reftype,
 			RepoID:        api.IDs.CodeRepo(repoid),
 			State:         state,
 			URL:           r.URL,
 			UserRefID:     r.ID,
-		}
+		})
 	}
 	date.ConvertToModel(p.ClosedDate, &pr.ClosedDate)
 	date.ConvertToModel(p.CreationDate, &pr.CreatedDate)
-	pullRequestChan <- &pr
+	prsender.Send(pr)
 }
-func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestResponseWithShas, commichan chan<- datamodel.Model) error {
+func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestResponseWithShas, sender *objsender2.Session) error {
 	sha := p.commitshas[len(p.commitshas)-1]
 	commits, err := api.fetchSingleCommit(repoid, sha)
 	if err != nil {
@@ -172,7 +208,7 @@ func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestRespons
 			URL:           c.RemoteURL,
 		}
 		date.ConvertToModel(c.Push.Date, &commit.CreatedDate)
-		commichan <- commit
+		sender.Send(commit)
 
 	}
 	return nil
