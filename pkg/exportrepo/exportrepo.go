@@ -33,6 +33,9 @@ type Opts struct {
 	CustomerID string
 	RepoID     string
 
+	// UniqueName is a name for the repo that is unique for this customer and integration. We use this as a folder name in repo cache.
+	UniqueName string
+
 	// RefType to use when creating objects.
 	// For example:
 	// github, tfs
@@ -61,8 +64,6 @@ type Export struct {
 	lastProcessedKey       []string
 
 	rip *ripsrc.Ripsrc
-
-	refType string
 }
 
 func New(opts Opts, locs fsconf.Locs) *Export {
@@ -85,7 +86,8 @@ func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, rerr e
 		return
 	}
 
-	checkoutDir, cacheDir, err := s.clone(ctx)
+	uniqueName := s.opts.RefType + "-" + s.opts.UniqueName
+	checkoutDir, cacheDir, err := s.clone(ctx, uniqueName)
 	if err != nil {
 		rerr = err
 		return
@@ -131,7 +133,7 @@ func hasHeadCommit(ctx context.Context, repoDir string) bool {
 	return true
 }
 
-func (s *Export) clone(ctx context.Context) (
+func (s *Export) clone(ctx context.Context, uniqueName string) (
 	checkoutDir string,
 	cacheDir string,
 	_ error) {
@@ -145,13 +147,11 @@ func (s *Export) clone(ctx context.Context) (
 		CacheRoot: s.locs.RepoCache,
 		Checkout:  tempDir,
 	}
-	res, err := gitclone.CloneWithCache(ctx, s.logger, s.opts.RepoAccess, dirs)
+	res, err := gitclone.CloneWithCache(ctx, s.logger, s.opts.RepoAccess, dirs, uniqueName)
 
 	if err != nil {
 		return "", "", err
 	}
-
-	//s.defaultBranch = res.DefaultBranch
 
 	return tempDir, res.CacheDir, nil
 }

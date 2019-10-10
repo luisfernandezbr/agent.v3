@@ -3,12 +3,7 @@ package gitclone
 import (
 	"bytes"
 	"context"
-	"crypto/sha1"
-	"encoding/hex"
-	"errors"
 	"fmt"
-	"io"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -34,16 +29,13 @@ type CloneResults struct {
 	CacheDir string
 }
 
-// CloneWithCache mirrors a provided repo into dirs.CacheRoot/repo.host-repo.path. And then checkout a copy into dirs.Checkout
+// CloneWithCache mirrors a provided repo into dirs.CacheRoot/uniqueName. And then checkout a copy into dirs.Checkout
 // Automatically retries on errors.
-func CloneWithCache(ctx context.Context, logger hclog.Logger, access AccessDetails, dirs Dirs) (res CloneResults, rerr error) {
+func CloneWithCache(ctx context.Context, logger hclog.Logger, access AccessDetails, dirs Dirs, uniqueName string) (res CloneResults, rerr error) {
 	logger = logger.Named("git")
 
-	maskedURL, err := maskURL(access.URL)
-	if err != nil {
-		return res, err
-	}
-	logger = logger.With("repo", maskedURL)
+	dirName := escapeForFS(uniqueName)
+	logger = logger.With("repo", dirName)
 
 	started := time.Now()
 	logger.Debug("CloneWithCache")
@@ -62,7 +54,7 @@ func CloneWithCache(ctx context.Context, logger hclog.Logger, access AccessDetai
 		if i != 0 {
 			time.Sleep(time.Duration(i*i) * time.Minute)
 		}
-		res, err := cloneWithCacheNoRetries(ctx, logger, access, dirs)
+		res, err := cloneWithCacheNoRetries(ctx, logger, access, dirs, dirName)
 		if err == nil {
 			return res, nil
 		}
@@ -74,12 +66,15 @@ func CloneWithCache(ctx context.Context, logger hclog.Logger, access AccessDetai
 	return
 }
 
-func cloneWithCacheNoRetries(ctx context.Context, logger hclog.Logger, access AccessDetails, dirs Dirs) (res CloneResults, rerr error) {
+func cloneWithCacheNoRetries(ctx context.Context, logger hclog.Logger, access AccessDetails, dirs Dirs, cacheDirName string) (res CloneResults, rerr error) {
 	if dirs.CacheRoot == "" {
 		panic("provide CacheRoot")
 	}
 	if dirs.Checkout == "" {
-		panic("privide Checkout")
+		panic("provide Checkout")
+	}
+	if cacheDirName == "" {
+		panic("provide cacheDirName")
 	}
 	started := time.Now()
 	logger.Debug("cloneWithCacheNoRetries")
@@ -91,12 +86,6 @@ func cloneWithCacheNoRetries(ctx context.Context, logger hclog.Logger, access Ac
 		}
 		logger.Debug("cloneWithCacheNoRetries success")
 	}()
-
-	cacheDirName, err := dirNameFromURL(access.URL)
-	if err != nil {
-		rerr = fmt.Errorf("could not clone, the url passed is not valid %v", err)
-		return
-	}
 
 	cacheDir := filepath.Join(dirs.CacheRoot, cacheDirName)
 
@@ -114,7 +103,7 @@ func cloneWithCacheNoRetries(ctx context.Context, logger hclog.Logger, access Ac
 		}
 	}
 
-	res, err = checkoutCopy(ctx, logger, access, dirs, cacheDirName)
+	res, err := checkoutCopy(ctx, logger, access, dirs, cacheDirName)
 	if err != nil {
 		rerr = err
 		return
@@ -280,39 +269,6 @@ func setRepoConfig(ctx context.Context, logger hclog.Logger, repoURL, repoDir st
 		}
 	}
 	return nil
-}
-
-// markURL returns url suitable for logging by removing passwords
-func maskURL(urlString string) (string, error) {
-	if urlString == "" {
-		return "", errors.New("empty url passed")
-	}
-	u, err := url.Parse(urlString)
-	if err != nil {
-		return "", err
-	}
-	return u.Host + u.Path, nil
-}
-
-func dirNameFromURL(urlString string) (string, error) {
-	if urlString == "" {
-		return "", errors.New("empty url passed")
-	}
-	u, err := url.Parse(urlString)
-	if err != nil {
-		return "", err
-	}
-	// get rid of passwords, query params, protocol, we ensure that this is unique by appending sha1 hash
-	// remove .git for brevity
-	pathNoGit := strings.TrimSuffix(u.Path, ".git")
-	dirName := u.Host + pathNoGit
-	return escapeForFS(dirName) + "-" + sha1hash(urlString), nil
-}
-
-func sha1hash(str string) string {
-	h := sha1.New()
-	io.WriteString(h, str)
-	return hex.EncodeToString(h.Sum(nil))
 }
 
 var alphaNumericRe = regexp.MustCompile(`[^a-zA-Z\d]`)

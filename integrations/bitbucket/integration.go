@@ -249,8 +249,9 @@ func (s *Integration) exportTeam(ctx context.Context, teamName string) error {
 			repoURL := u.Scheme + "://" + u.User.String() + "@" + strings.TrimPrefix(u.Host, "api.") + u.EscapedPath()
 
 			args := rpcdef.GitRepoFetch{}
-			args.RefType = s.refType
 			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
+			args.UniqueName = repo.NameWithOwner
+			args.RefType = s.refType
 			args.URL = repoURL
 			args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
 			args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
