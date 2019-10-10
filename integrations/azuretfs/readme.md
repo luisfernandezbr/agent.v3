@@ -1,5 +1,12 @@
 ## Azure DevOps and TFS integration
 
+### Contents
+
+- [Exported data for sourcecode](./_docs/exported_data_code.md)
+- [Exported data for work](./_docs/exported_data_work.md)
+- [TFS API Docs](https://docs.microsoft.com/en-us/azure/devops/integrate/previous-apis/overview?view=azure-devops-2019)
+- [Azure API Docs](https://docs.microsoft.com/en-us/rest/api/azure/devops/?view=azure-devops-rest-5.1)
+
 ### Export command
 
 Create an `export.json` file in the root of the agent repo with the following
