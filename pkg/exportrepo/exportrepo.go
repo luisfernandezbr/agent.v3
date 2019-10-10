@@ -33,7 +33,7 @@ type Opts struct {
 	CustomerID string
 	RepoID     string
 
-	// UniqueName is a name for the repo that is unique for this customer and integration. We use this as a folder name in repo cache.
+	// UniqueName is a name that will be used in the cache folder name. It should include the all info needed to find the repo in customer org. For example for github it should be NameWithOwner. It's preferrable to have a unique name for integration, but not required since we add id (and also refType) when storing in cache dir.
 	UniqueName string
 
 	// RefType to use when creating objects.
@@ -86,8 +86,7 @@ func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, rerr e
 		return
 	}
 
-	uniqueName := s.opts.RefType + "-" + s.opts.UniqueName
-	checkoutDir, cacheDir, err := s.clone(ctx, uniqueName)
+	checkoutDir, cacheDir, err := s.clone(ctx)
 	if err != nil {
 		rerr = err
 		return
@@ -133,10 +132,12 @@ func hasHeadCommit(ctx context.Context, repoDir string) bool {
 	return true
 }
 
-func (s *Export) clone(ctx context.Context, uniqueName string) (
+func (s *Export) clone(ctx context.Context) (
 	checkoutDir string,
 	cacheDir string,
 	_ error) {
+
+	uniqueName := s.opts.RefType + "-" + s.opts.UniqueName
 
 	tempDir, err := ioutil.TempDir(s.locs.Temp, "")
 	if err != nil {
@@ -147,7 +148,7 @@ func (s *Export) clone(ctx context.Context, uniqueName string) (
 		CacheRoot: s.locs.RepoCache,
 		Checkout:  tempDir,
 	}
-	res, err := gitclone.CloneWithCache(ctx, s.logger, s.opts.RepoAccess, dirs, uniqueName)
+	res, err := gitclone.CloneWithCache(ctx, s.logger, s.opts.RepoAccess, dirs, s.opts.RepoID, uniqueName)
 
 	if err != nil {
 		return "", "", err
