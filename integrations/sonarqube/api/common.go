@@ -72,7 +72,7 @@ func (a *SonarqubeAPI) Validate() (bool, error) {
 		url:       a.url,
 		authToken: a.authToken,
 		metrics:   a.metrics,
-		client:    newClient(a.context, a.url, true),
+		client:    newClient(a.context, a.url, false),
 		logger:    a.logger,
 	}
 	err := a.doRequest("GET", "/authentication/validate", time.Time{}, &val)
