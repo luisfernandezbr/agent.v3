@@ -99,7 +99,7 @@ func (s *export) runExport() error {
 		return err
 	}
 
-	s.Logger.Info("export-onboard-data completed", "success", cmdRes.Success, "err", res.Error)
+	s.Logger.Info("export-onboard-data completed", "success", cmdRes.Success, "err", cmdRes.Error)
 
 	// BUG: last log message is missing without this
 	time.Sleep(100 * time.Millisecond)
