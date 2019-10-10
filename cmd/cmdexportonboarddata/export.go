@@ -62,35 +62,24 @@ func newExport(opts Opts) (*export, error) {
 	s.integration = s.Integrations[integrationName]
 	s.exportConfig = s.ExportConfigs[integrationName]
 
-	err = s.runExport()
+	err = s.runExportAndPrint()
 	if err != nil {
 		return nil, err
 	}
 	return s, nil
 }
 
-func (s *export) runExport() error {
-	ctx := context.Background()
-	client := s.integration.RPCClient()
-
-	cmdRes := Result{}
-
-	res, err := client.OnboardExport(ctx, s.Opts.ExportType, s.exportConfig)
+func (s *export) runExportAndPrint() error {
+	records, err := s.runExport()
+	res := Result{}
 	if err != nil {
-		cmdRes.Error = err.Error()
+		res.Error = err.Error()
 	} else {
-		if res.Error != nil {
-			cmdRes.Error = fmt.Sprintf("could not retrive data for onboard type: %v integration: %v err: %v", s.Opts.ExportType, s.integration.Name(), res.Error.Error())
-		}
+		res.Records = records
+		res.Success = true
 	}
 
-	if cmdRes.Error == "" {
-		cmdRes.Success = true
-	}
-
-	cmdRes.Records = res.Records
-
-	b, err := json.Marshal(cmdRes)
+	b, err := json.Marshal(res)
 	if err != nil {
 		return err
 	}
@@ -99,12 +88,32 @@ func (s *export) runExport() error {
 		return err
 	}
 
-	s.Logger.Info("export-onboard-data completed", "success", cmdRes.Success, "err", res.Error)
+	s.Logger.Info("export-onboard-data completed", "success", res.Success, "err", res.Error)
 
 	// BUG: last log message is missing without this
 	time.Sleep(100 * time.Millisecond)
-
 	return nil
+}
+
+func (s *export) runExport() (records []map[string]interface{}, _ error) {
+	ctx := context.Background()
+	client := s.integration.RPCClient()
+
+	res, err := client.OnboardExport(ctx, s.Opts.ExportType, s.exportConfig)
+	if err != nil {
+		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
+		return nil, err
+	}
+	if res.Error != nil {
+		return nil, fmt.Errorf("could not retrive data for onboard type: %v integration: %v err: %v", s.Opts.ExportType, s.integration.Name(), res.Error.Error())
+	}
+
+	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
+	if err != nil {
+		return nil, fmt.Errorf("error closing integration, err: %v", err)
+	}
+
+	return res.Records, nil
 }
 
 type Result struct {

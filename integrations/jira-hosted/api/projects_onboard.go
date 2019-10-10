@@ -54,7 +54,7 @@ func ProjectsOnboard(qc QueryContext) (res []*agent.ProjectResponseProjects, rer
 
 		project := jiracommonapi.Project{JiraID: data.ID, Key: data.Key}
 
-		lastIssue, totalIssues, err := jiracommonapi.GetProjectLastIssue(qc.common(), project)
+		lastIssue, totalIssues, err := jiracommonapi.GetProjectLastIssue(qc.Common(), project)
 		if err != nil {
 			rerr = err
 			return

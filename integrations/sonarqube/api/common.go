@@ -25,10 +25,10 @@ type SonarqubeAPI struct {
 	metrics   []string
 	client    *httpclient.HTTPClient
 	logger    hclog.Logger
+	context   context.Context
 }
 
-func NewSonarqubeAPI(ctx context.Context, logger hclog.Logger, url string, authToken string, metrics []string) *SonarqubeAPI {
-
+func newClient(ctx context.Context, url string, retryable bool) *httpclient.HTTPClient {
 	transport := httpdefaults.DefaultTransport()
 	if !strings.Contains(url, "sonarcloud.io") {
 		// if a self-service installation allow self-signed certificates
@@ -38,18 +38,26 @@ func NewSonarqubeAPI(ctx context.Context, logger hclog.Logger, url string, authT
 	}
 	hcConfig := &httpclient.Config{
 		Paginator: httpclient.InBodyPaginator(),
-		Retryable: httpclient.NewBackoffRetry(10*time.Millisecond, 100*time.Millisecond, 60*time.Second, 2.0),
+	}
+	if retryable {
+		hcConfig.Retryable = httpclient.NewBackoffRetry(10*time.Millisecond, 100*time.Millisecond, 60*time.Second, 2.0)
 	}
 	client := &http.Client{
 		Transport: transport,
-		Timeout:   10 * time.Minute,
+		Timeout:   1 * time.Minute,
 	}
+	return httpclient.NewHTTPClient(ctx, hcConfig, client)
+}
+
+func NewSonarqubeAPI(ctx context.Context, logger hclog.Logger, url string, authToken string, metrics []string) *SonarqubeAPI {
+
 	a := &SonarqubeAPI{
 		url:       url,
 		authToken: authToken,
 		metrics:   metrics,
-		client:    httpclient.NewHTTPClient(ctx, hcConfig, client),
 		logger:    logger,
+		context:   ctx,
+		client:    newClient(ctx, url, true),
 	}
 	return a
 }
@@ -59,6 +67,13 @@ func (a *SonarqubeAPI) Validate() (bool, error) {
 
 	var val struct {
 		Valid bool `json:"valid"`
+	}
+	a = &SonarqubeAPI{
+		url:       a.url,
+		authToken: a.authToken,
+		metrics:   a.metrics,
+		client:    newClient(a.context, a.url, false),
+		logger:    a.logger,
 	}
 	err := a.doRequest("GET", "/authentication/validate", time.Time{}, &val)
 	if err != nil {

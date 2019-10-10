@@ -20,7 +20,7 @@ type PageInfo struct {
 	HasMore    bool
 }
 
-func (s *QueryContext) common() jiracommonapi.QueryContext {
+func (s *QueryContext) Common() jiracommonapi.QueryContext {
 	res := jiracommonapi.QueryContext{}
 	res.BaseURL = s.BaseURL
 	res.CustomerID = s.CustomerID
