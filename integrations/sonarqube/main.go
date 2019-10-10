@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"net/url"
 
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/integrations/sonarqube/api"
@@ -32,7 +34,6 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 }
 
 func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
-
 	if err := s.initConfig(ctx, config); err != nil {
 		return res, err
 	}
@@ -43,7 +44,9 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 }
 
 func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
-	s.initConfig(ctx, config)
+	if err := s.initConfig(ctx, config); err != nil {
+		return res, err
+	}
 	valid, err := s.api.Validate()
 	if err != nil {
 		res.Errors = append(res.Errors, "Sonarqube validation failed. Error: "+err.Error())
@@ -70,6 +73,15 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 	}
 	if err := structmarshal.MapToStruct(config.Integration, &conf); err != nil {
 		return err
+	}
+	if conf.URL == "" {
+		return errors.New("url missing")
+	}
+	if _, err := url.ParseRequestURI(conf.URL); err != nil {
+		return errors.New("invalid url")
+	}
+	if conf.APIToken == "" {
+		return errors.New("apitoken missing")
 	}
 	if len(conf.Metrics) == 0 {
 		conf.Metrics = defaultMetrics
