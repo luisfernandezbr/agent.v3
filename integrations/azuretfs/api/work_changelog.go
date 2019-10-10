@@ -8,33 +8,11 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
-	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/integration-sdk/work"
 )
 
-// FetchChangelogs gets the changelogs for a single project and sends them to the result channel
-// First we need to get the IDs of the items that hav changed after the fromdate
-// Then we need to get each changelog individually.
-func (api *API) FetchChangelogs(projid string, fromdate time.Time, result chan<- datamodel.Model) error {
-	async := NewAsync(api.concurrency)
-	allids, err := api.fetchItemIDs(projid, fromdate)
-	if err != nil {
-		api.logger.Error("error fetching item ids", "err", err)
-	}
-	for _, refid := range allids {
-		refid := refid
-		async.Do(func() {
-			if _, err := api.fetchChangeLog(projid, refid, result); err != nil {
-				api.logger.Error("error fetching work item updates "+refid, "err", err)
-			}
-		})
-	}
-	async.Wait()
-	return nil
-}
-
-func (api *API) fetchChangeLog(projid, refid string, result chan<- datamodel.Model) ([]changelogResponse, error) {
+func (api *API) FetchChangeLog(projid, refid string) (changelogs []*work.Changelog, err error) {
 	var res []changelogResponse
 	url := fmt.Sprintf(`%s/_apis/wit/workItems/%s/updates`, projid, refid)
 	if err := api.getRequest(url, stringmap{"$top": "200"}, &res); err != nil {
@@ -55,7 +33,7 @@ func (api *API) fetchChangeLog(projid, refid string, result chan<- datamodel.Mod
 				if from == "" && to == "" {
 					continue
 				}
-				result <- &work.Changelog{
+				changelogs = append(changelogs, &work.Changelog{
 					CreatedDate: createdDate,
 					CustomerID:  api.customerid,
 					Field:       name,
@@ -68,11 +46,11 @@ func (api *API) fetchChangeLog(projid, refid string, result chan<- datamodel.Mod
 					RefType:     api.reftype,
 					To:          to,
 					UserID:      changelog.RevisedBy.ID,
-				}
+				})
 			}
 		}
 	}
-	return res, nil
+	return
 }
 
 func changeLogExtractCreatedDate(changelog changelogResponse) work.ChangelogCreatedDate {

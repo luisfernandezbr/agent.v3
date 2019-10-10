@@ -112,7 +112,7 @@ func (s *Integration) processUsers(projectids []string) error {
 	sender, err := s.orgSession.Session(sourcecode.UserModelName.String(), orgname, orgname)
 	if err != nil {
 		s.logger.Error("error creating sender session for sourcecode user")
-		return nil
+		return err
 	}
 	for _, user := range projusers {
 		if err := sender.Send(user); err != nil {
