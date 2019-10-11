@@ -12,10 +12,9 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
-	"github.com/pinpt/agent.next/pkg/commitusers"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/ids2"
-	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -47,14 +46,6 @@ type Integration struct {
 	requestConcurrencyChan chan bool
 
 	refType string
-
-	repoSender                *objsender.IncrementalDateBased
-	commitUserSender          *objsender.IncrementalDateBased
-	pullRequestSender         *objsender.IncrementalDateBased
-	pullRequestCommentsSender *objsender.NotIncremental
-	pullRequestReviewsSender  *objsender.NotIncremental
-	userSender                *objsender.NotIncremental
-	pullRequestCommitsSender  *objsender.NotIncremental
 }
 
 func main() {
@@ -171,25 +162,8 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 
 func (s *Integration) export(ctx context.Context) (err error) {
 
-	s.repoSender, err = objsender.NewIncrementalDateBased(s.agent, sourcecode.RepoModelName.String())
-	if err != nil {
-		return err
-	}
-	s.commitUserSender, err = objsender.NewIncrementalDateBased(s.agent, commitusers.TableName)
-	if err != nil {
-		return err
-	}
-	s.pullRequestSender, err = objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestModelName.String())
-	if err != nil {
-		return err
-	}
-	s.pullRequestCommentsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
-	s.pullRequestReviewsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
-	s.userSender = objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
-	s.pullRequestCommitsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommitModelName.String())
-
 	if s.config.ServerType == ON_PREMISE {
-		err = api.UsersEmails(s.qc, s.commitUserSender, s.userSender)
+		err = api.UsersEmails(s)
 		if err != nil {
 			return err
 		}
@@ -200,37 +174,22 @@ func (s *Integration) export(ctx context.Context) (err error) {
 		return err
 	}
 
+	groupSession, err := objsender2.RootTracking(s.agent, "group")
+	if err != nil {
+		return err
+	}
+	err = groupSession.SetTotal(len(groupNames))
+	if err != nil {
+		return err
+	}
+
 	for _, groupName := range groupNames {
-		if err := s.exportGroup(ctx, groupName); err != nil {
+		if err := s.exportGroup(ctx, groupSession, groupName); err != nil {
 			return err
 		}
 	}
 
-	err = s.repoSender.Done()
-	if err != nil {
-		return err
-	}
-	err = s.commitUserSender.Done()
-	if err != nil {
-		return err
-	}
-	err = s.pullRequestSender.Done()
-	if err != nil {
-		return err
-	}
-	err = s.pullRequestCommentsSender.Done()
-	if err != nil {
-		return err
-	}
-	err = s.pullRequestReviewsSender.Done()
-	if err != nil {
-		return err
-	}
-	err = s.userSender.Done()
-	if err != nil {
-		return err
-	}
-	err = s.pullRequestCommitsSender.Done()
+	err = groupSession.Done()
 	if err != nil {
 		return err
 	}
@@ -238,7 +197,7 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	return
 }
 
-func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
+func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender2.Session, groupName string) error {
 	s.logger.Info("exporting group", "name", groupName)
 	logger := s.logger.With("org", groupName)
 
@@ -282,8 +241,17 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 		return nil
 	}
 
+	repoSender, err := groupSession.Session(sourcecode.RepoModelName.String(), groupName, groupName)
+	if err != nil {
+		return err
+	}
+
 	// export repos
-	err = s.exportRepos(ctx, logger, groupName, repos)
+	err = s.exportRepos(ctx, logger, repoSender, groupName, repos)
+	if err != nil {
+		return err
+	}
+	err = repoSender.SetTotal(len(repos))
 	if err != nil {
 		return err
 	}
@@ -299,7 +267,28 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 	}
 
 	for _, repo := range repos {
-		err := s.exportPullRequestsForRepo(logger, repo, s.pullRequestSender, s.pullRequestCommentsSender, s.pullRequestReviewsSender)
+
+		prSender, err := repoSender.Session(sourcecode.PullRequestModelName.String(), repo.ID, repo.NameWithOwner)
+		if err != nil {
+			return err
+		}
+
+		prCommitsSender, err := repoSender.Session(sourcecode.PullRequestCommitModelName.String(), repo.ID, repo.NameWithOwner)
+		if err != nil {
+			return err
+		}
+
+		err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
+		if err != nil {
+			return err
+		}
+
+		err = prSender.Done()
+		if err != nil {
+			return err
+		}
+
+		err = prCommitsSender.Done()
 		if err != nil {
 			return err
 		}
@@ -308,9 +297,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 	return nil
 }
 
-func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, groupName string, onlyInclude []commonrepo.Repo) error {
-
-	sender := s.repoSender
+func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender2.Session, groupName string, onlyInclude []commonrepo.Repo) error {
 
 	shouldInclude := map[string]bool{}
 	for _, repo := range onlyInclude {
@@ -367,9 +354,8 @@ func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Log
 }
 
 func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
-	pullRequestSender *objsender.IncrementalDateBased,
-	commentsSender *objsender.NotIncremental,
-	reviewSender *objsender.NotIncremental) (rerr error) {
+	pullRequestSender *objsender2.Session,
+	commitsSender *objsender2.Session) (rerr error) {
 
 	logger = logger.With("repo", repo.NameWithOwner)
 	logger.Info("exporting")
@@ -379,7 +365,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	pullRequestsInitial := make(chan []api.PullRequest)
 	go func() {
 		defer close(pullRequestsInitial)
-		err := s.exportPullRequestsRepo(logger, repo, pullRequestsInitial, pullRequestSender.LastProcessed)
+		err := s.exportPullRequestsRepo(logger, repo, pullRequestSender, pullRequestsInitial, pullRequestSender.LastProcessedTime())
 		if err != nil {
 			pullRequestsErr = err
 		}
@@ -426,7 +412,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := s.exportPullRequestsComments(logger, commentsSender, repo, pullRequestsForComments)
+		err := s.exportPullRequestsComments(logger, pullRequestSender, repo, pullRequestsForComments)
 		if err != nil {
 			setErr(fmt.Errorf("error getting comments %s", err))
 		}
@@ -434,7 +420,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := s.exportPullRequestsReviews(logger, reviewSender, repo, pullRequestsForReviews)
+		err := s.exportPullRequestsReviews(logger, pullRequestSender, repo, pullRequestsForReviews)
 		if err != nil {
 			setErr(fmt.Errorf("error getting reviews %s", err))
 		}

@@ -6,13 +6,14 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/gitlab/api"
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
-	"github.com/pinpt/agent.next/pkg/objsender"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportPullRequestsComments(logger hclog.Logger, sender *objsender.NotIncremental, repo commonrepo.Repo, pullRequests chan []api.PullRequest) error {
+func (s *Integration) exportPullRequestsComments(logger hclog.Logger, prSender *objsender2.Session, repo commonrepo.Repo, pullRequests chan []api.PullRequest) error {
 	for prs := range pullRequests {
 		for _, pr := range prs {
-			err := s.exportPullRequestComments(logger, sender, repo, pr)
+			err := s.exportPullRequestComments(logger, prSender, repo, pr)
 			if err != nil {
 				return err
 			}
@@ -21,19 +22,36 @@ func (s *Integration) exportPullRequestsComments(logger hclog.Logger, sender *ob
 	return nil
 }
 
-func (s *Integration) exportPullRequestComments(logger hclog.Logger, sender *objsender.NotIncremental, repo commonrepo.Repo, pr api.PullRequest) error {
-	return api.PaginateStartAt(logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
+func (s *Integration) exportPullRequestComments(logger hclog.Logger, prSender *objsender2.Session, repo commonrepo.Repo, pr api.PullRequest) error {
+
+	commentsSender, err := prSender.Session(sourcecode.PullRequestCommentModelName.String(), pr.RefID, pr.RefID)
+	if err != nil {
+		return err
+	}
+
+	allComments := make([]*sourcecode.PullRequestComment)
+	err := api.PaginateStartAt(logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
 		pi, res, err := api.PullRequestCommentsPage(s.qc, repo, pr, paginationParams)
 		if err != nil {
 			return pi, err
 		}
 
 		for _, obj := range res {
-			err := sender.Send(obj)
-			if err != nil {
-				return pi, err
-			}
+			allComments = append(allComments, obj)
 		}
+
 		return pi, nil
 	})
+	if err != nil {
+		return err
+	}
+	allComments.SetTotal(len(allComments))
+	for _, obj := range allComments {
+		err := commentsSender.Send(obj)
+		if err != nil {
+			return pi, err
+		}
+	}
+
+	return
 }

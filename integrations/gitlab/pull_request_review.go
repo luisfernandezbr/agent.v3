@@ -9,10 +9,10 @@ import (
 	"github.com/pinpt/agent.next/pkg/objsender"
 )
 
-func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, sender *objsender.NotIncremental, repo commonrepo.Repo, pullRequests chan []api.PullRequest) error {
+func (s *Integration) exportPullRequestsReviews(logger hclog.Logger,  prSender *objsender2.Session,, repo commonrepo.Repo, pullRequests chan []api.PullRequest) error {
 	for prs := range pullRequests {
 		for _, pr := range prs {
-			err := s.exportPullRequestReviews(logger, sender, repo, pr)
+			err := s.exportPullRequestReviews(logger, prSender, repo, pr)
 			if err != nil {
 				return err
 			}

@@ -5,13 +5,15 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent/integrations/gitlab"
+
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 
 	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/integration-sdk/sourcecode"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/objsender"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/agent"
 )
@@ -149,7 +151,13 @@ func UserEmails(qc QueryContext, userID int64) (emails []string, err error) {
 	return
 }
 
-func UsersEmails(qc QueryContext, commitUsersSender *objsender.IncrementalDateBased, usersSender *objsender.NotIncremental) error {
+func UsersEmails(s *gitlab.Integration) error {
+
+	userSender, err := objsender2.Root(s.agent, sourcecode.UserModelName.String())
+	if err != nil {
+		return err
+	}
+
 	return PaginateStartAt(qc.Logger, func(log hclog.Logger, paginationParams url.Values) (page PageInfo, _ error) {
 		page, users, err := UsersPage(qc, paginationParams)
 		if err != nil {
@@ -204,7 +212,7 @@ func UsersEmails(qc QueryContext, commitUsersSender *objsender.IncrementalDateBa
 			sourceUser.Type = sourcecode.UserTypeHuman
 			sourceUser.AssociatedRefID = pstrings.Pointer(user.Username)
 
-			if err := usersSender.Send(&sourceUser); err != nil {
+			if err := userSender.Send(&sourceUser); err != nil {
 				return page, err
 			}
 
