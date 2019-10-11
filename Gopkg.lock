@@ -165,12 +165,13 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:e62657cca9badaa308d86e7716083e4c5933bb78e30a17743fc67f50be26f6f4"
+  branch = "httpsproxy"
+  digest = "1:7ea409445a7e8c0b0f6e32fec8c57969555c2bdc1a0534515edc01e33e87a764"
   name = "github.com/gorilla/websocket"
   packages = ["."]
   pruneopts = "UT"
-  revision = "c3e18be99d19e6b3e8f1559eea2c161a665c4b6b"
-  version = "v1.4.1"
+  revision = "d9055c4295fd7dd351660927cf9d8ab5232d0e9f"
+  source = "github.com/pinpt/websocket"
 
 [[projects]]
   digest = "1:cf6b61e1b4c26b0c7526cee4a0cee6d8302b17798af4b2a56a90eedac0aef11a"
@@ -375,7 +376,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:f189f61429f37f874d4aa72ab9ca5b2661cc3c96b8af0d384a5745110da20c53"
+  digest = "1:d7b6ddc3053462d26495ea8b247139bf1b7a9568711b6eb57308d4e7db1978bf"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -399,8 +400,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "7f19491a9c5928551eb5011e114ef4b7141a6d3a"
-  version = "9.1.5"
+  revision = "f77879b09cf62c9d444f7a7fbb0fbf40f76dbc7d"
+  version = "9.1.8"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
