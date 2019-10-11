@@ -264,8 +264,9 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 			repoURL := u.String()
 
 			args := rpcdef.GitRepoFetch{}
-			args.RefType = s.refType
 			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
+			args.UniqueName = repo.NameWithOwner
+			args.RefType = s.refType
 			args.URL = repoURL
 			args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
 			args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
