@@ -1,51 +1,51 @@
 package main
 
 import (
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/integration-sdk/codequality"
 )
 
-func (s *Integration) exportAll() error {
-	session, err := objsender2.RootTracking(s.agent, "organization")
-	if err != nil {
-		s.logger.Error("error creating root tracking for sonarqube", "err", err)
-		return err
+func (s *Integration) exportAll() (err error) {
+	var projects []*codequality.Project
+	if projects, err = s.exportProjects(); err != nil {
+		return
 	}
-	projects, err := s.api.FetchProjects()
-	if err != nil {
-		s.logger.Error("error fetching projects", "err", err)
-		return err
+	if err = s.exportMetrics(projects); err != nil {
+		return
 	}
-	projsession, err := session.Session(codequality.ProjectModelName.String(), "root", "root")
+	return
+}
+
+func (s *Integration) exportProjects() (projects []*codequality.Project, err error) {
+	sender := objsender.NewNotIncremental(s.agent, codequality.ProjectModelName.String())
+	projects, err = s.api.FetchProjects()
 	if err != nil {
-		s.logger.Error("error creating project session", "err", err)
-		return err
+		return nil, err
 	}
-	projsession.SetTotal(len(projects))
+
 	for _, project := range projects {
 		project.CustomerID = s.customerID
-		if err := projsession.Send(project); err != nil {
-			s.logger.Error("error sending project to agent", "err", err)
-			continue
+		if err := sender.Send(project); err != nil {
+			return nil, err
 		}
-		metricsession, err := session.Session(codequality.MetricModelName.String(), project.RefID, project.Name)
-		if err != nil {
-			s.logger.Error("error creating metric session", "err", err)
-			continue
-		}
-		metrics, err := s.api.FetchMetrics(project, session.LastProcessedTime())
-		if err != nil {
-			metricsession.Done()
-			s.logger.Error("error fetching metrics", "err", err)
-			continue
-		}
-		metricsession.SetTotal(len(metrics))
-		for _, metric := range metrics {
-			metric.CustomerID = s.customerID
-			metricsession.Send(metric)
-		}
-		metricsession.Done()
 	}
-	projsession.Done()
-	return session.Done()
+	return projects, sender.Done()
+}
+
+func (s *Integration) exportMetrics(projects []*codequality.Project) error {
+	sender, err := objsender.NewIncrementalDateBased(s.agent, codequality.MetricModelName.String())
+	if err != nil {
+		return err
+	}
+	metrics, err := s.api.FetchAllMetrics(projects, sender.LastProcessed)
+	if err != nil {
+		return err
+	}
+	for _, metric := range metrics {
+		metric.CustomerID = s.customerID
+		if err := sender.Send(metric); err != nil {
+			return err
+		}
+	}
+	return sender.Done()
 }
