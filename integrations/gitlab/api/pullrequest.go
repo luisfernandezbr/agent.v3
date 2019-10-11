@@ -1,8 +1,8 @@
 package api
 
 import (
-	"fmt"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
@@ -64,7 +64,7 @@ func PullRequestPage(
 		pr := &sourcecode.PullRequest{}
 		pr.CustomerID = qc.CustomerID
 		pr.RefType = qc.RefType
-		pr.RefID = fmt.Sprint(rpr.ID)
+		pr.RefID = strconv.FormatInt(rpr.ID, 10)
 		pr.RepoID = qc.IDs.CodeRepo(repoRefID)
 		pr.BranchName = rpr.SourceBranch
 		pr.Title = rpr.Title
@@ -91,7 +91,7 @@ func PullRequestPage(
 		pr.CreatedByRefID = rpr.Author.Username
 
 		spr := PullRequest{}
-		spr.IID = fmt.Sprint(rpr.IID)
+		spr.IID = strconv.FormatInt(rpr.IID, 10)
 		spr.PullRequest = pr
 		res = append(res, spr)
 	}

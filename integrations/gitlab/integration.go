@@ -446,7 +446,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 		defer wg.Done()
 		for prs := range pullRequestsForCommits {
 			for _, pr := range prs {
-				commits, err := s.exportPullRequestCommits(logger, repo, pr.ID, pr.IID)
+				commits, err := s.exportPullRequestCommits(logger, repo, pr.RefID, pr.IID)
 				if err != nil {
 					setErr(fmt.Errorf("error getting commits %s", err))
 					return
@@ -456,7 +456,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 					pr.CommitShas = append(pr.CommitShas, c.Sha)
 				}
 
-				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, repo.ID, pr.CommitShas)
+				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, pr.CommitShas)
 				if len(pr.CommitShas) == 0 {
 					logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
 				} else {
