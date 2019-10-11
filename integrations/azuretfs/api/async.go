@@ -1,11 +1,7 @@
 package api
 
 import (
-	"fmt"
 	"sync"
-
-	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/go-common/datamodel"
 )
 
 // Async simple async interface
@@ -42,29 +38,4 @@ func (a *async) Do(f func()) {
 func (a *async) Wait() {
 	close(a.funcs)
 	a.wg.Wait()
-}
-
-// AsyncProcessCallback callback function definition
-type AsyncProcessCallback func(datamodel.Model)
-
-// AsyncProcess proceses the channel reponse. Returns the channel to be used and the done chan bool
-func AsyncProcess(name string, logger hclog.Logger, callback AsyncProcessCallback) (channel chan datamodel.Model, done chan bool) {
-	channel = make(chan datamodel.Model)
-	done = make(chan bool)
-	go func() {
-		logger.Info("started with " + name)
-		count := 0
-		for each := range channel {
-			if callback != nil {
-				callback(each)
-			}
-			count++
-			if (count % 1000) == 0 {
-				logger.Info(fmt.Sprintf("%d", count) + " " + name + " processed")
-			}
-		}
-		logger.Info("ended with "+name, "count", count)
-		done <- true
-	}()
-	return
 }
