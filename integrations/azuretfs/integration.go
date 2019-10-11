@@ -72,6 +72,16 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	if err = s.initConfig(ctx, config); err != nil {
 		return
 	}
+	var orgtype string
+	if s.RefType == RefTypeTFS {
+		orgtype = "collection"
+	} else {
+		orgtype = "organization"
+	}
+	if s.orgSession, err = objsender2.RootTracking(s.agent, orgtype); err != nil {
+		return
+	}
+
 	if s.IntegrationType == IntegrationTypeCode {
 		err = s.exportCode()
 	} else if s.IntegrationType == IntegrationTypeIssues {
@@ -143,10 +153,6 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 		if s.Creds.Password == "" {
 			return errors.New("missing password")
 		}
-		s.orgSession, err = objsender2.RootTracking(s.agent, "collection")
-		if err != nil {
-			return err
-		}
 	} else if s.RefType == RefTypeAzure {
 		if s.Creds.Organization == nil {
 			return fmt.Errorf("missing organization %s", stringify(s))
@@ -156,10 +162,6 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 		}
 		if s.Creds.Password == "" {
 			s.Creds.Password = s.Creds.APIKey
-		}
-		s.orgSession, err = objsender2.RootTracking(s.agent, "organization")
-		if err != nil {
-			return err
 		}
 	} else {
 		return errors.New(`"retype" must be "` + RefTypeTFS.String() + `" or "` + RefTypeAzure.String())
