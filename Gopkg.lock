@@ -404,14 +404,6 @@
   version = "9.1.8"
 
 [[projects]]
-  digest = "1:4cf0cfea722adb1c1d276983dc4a7c0c2ce6c1d814c24f08de6eca251fb4eec8"
-  name = "github.com/pinpt/go-datamodel"
-  packages = ["customer"]
-  pruneopts = "UT"
-  revision = "0993c8644b3a4e42883cf7beee23b309c417d09a"
-  version = "0.0.521"
-
-[[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
   name = "github.com/pinpt/httpclient"
   packages = ["."]
@@ -952,7 +944,6 @@
     "github.com/pinpt/go-common/log",
     "github.com/pinpt/go-common/os",
     "github.com/pinpt/go-common/strings",
-    "github.com/pinpt/go-datamodel/customer",
     "github.com/pinpt/httpclient",
     "github.com/pinpt/integration-sdk",
     "github.com/pinpt/integration-sdk/agent",
