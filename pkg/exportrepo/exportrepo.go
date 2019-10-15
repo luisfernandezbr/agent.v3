@@ -196,25 +196,21 @@ func (s *Export) wantedBranches(ctx context.Context, reponame string, checkoutdi
 	remotebranches := make(map[string]string)
 	cachedbranches := make(map[string]string)
 	wantedbranches := make(map[string]branchmeta.Branch)
-	{
-		raw := s.opts.LastProcessed.Get(reponame, "branches")
-		structmarshal.StructToStruct(raw, &cachedbranches)
+	cached := s.opts.LastProcessed.Get(reponame, "branches")
+	structmarshal.StructToStruct(cached, &cachedbranches)
+	opts := branchmeta.Opts{
+		Logger:    s.logger,
+		RepoDir:   checkoutdir,
+		UseOrigin: true,
 	}
-	{
-		opts := branchmeta.Opts{
-			Logger:    s.logger,
-			RepoDir:   checkoutdir,
-			UseOrigin: true,
-		}
-		br, err := branchmeta.Get(ctx, opts)
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, b := range br {
-			remotebranches[b.Name] = b.Commit
-			if sha, ok := cachedbranches[b.Name]; !ok || (ok && sha != b.Commit) {
-				wantedbranches[b.Name] = b
-			}
+	br, err := branchmeta.Get(ctx, opts)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, b := range br {
+		remotebranches[b.Name] = b.Commit
+		if sha, ok := cachedbranches[b.Name]; !ok || (ok && sha != b.Commit) {
+			wantedbranches[b.Name] = b
 		}
 	}
 	return wantedbranches, remotebranches, nil
