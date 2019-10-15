@@ -23,4 +23,5 @@ type PageInfo struct {
 	PageSize int64
 	NextPage string
 	Page     int64
+	Total    int
 }

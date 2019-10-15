@@ -94,6 +94,7 @@ func (s *Requester) Request(objPath string, params url.Values, paginable bool, r
 		page.PageSize = response.PageLen
 		page.Page = response.Page
 		page.NextPage = u.Query().Get("page")
+		page.Total = response.TotalValues
 
 	} else {
 		if err = json.NewDecoder(resp.Body).Decode(&res); err != nil {
@@ -105,7 +106,7 @@ func (s *Requester) Request(objPath string, params url.Values, paginable bool, r
 }
 
 type Response struct {
-	TotalValues int64           `json:"size"`
+	TotalValues int             `json:"size"`
 	Page        int64           `json:"page"`
 	PageLen     int64           `json:"pagelen"`
 	Next        string          `json:"next"`
