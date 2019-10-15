@@ -404,6 +404,14 @@
   version = "9.1.8"
 
 [[projects]]
+  digest = "1:4cf0cfea722adb1c1d276983dc4a7c0c2ce6c1d814c24f08de6eca251fb4eec8"
+  name = "github.com/pinpt/go-datamodel"
+  packages = ["customer"]
+  pruneopts = "UT"
+  revision = "0993c8644b3a4e42883cf7beee23b309c417d09a"
+  version = "0.0.521"
+
+[[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
   name = "github.com/pinpt/httpclient"
   packages = ["."]
@@ -413,7 +421,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8e6c76a1ca579fc267b5d80d51d7a3a4473ea1be3429b4745d0a61f311a83b0f"
+  digest = "1:d393ab363535d8fcbd6ef93fa2001b8f43ffeb078a5e85d31fa346b3e6ed34d5"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -425,7 +433,7 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "29197e002a06751dbb64400cf0ca6d5d60c0189a"
+  revision = "d05fd9353f4cc867b2c46031426dac9f32079c60"
 
 [[projects]]
   branch = "master"
@@ -944,10 +952,12 @@
     "github.com/pinpt/go-common/log",
     "github.com/pinpt/go-common/os",
     "github.com/pinpt/go-common/strings",
+    "github.com/pinpt/go-datamodel/customer",
     "github.com/pinpt/httpclient",
     "github.com/pinpt/integration-sdk",
     "github.com/pinpt/integration-sdk/agent",
     "github.com/pinpt/integration-sdk/codequality",
+    "github.com/pinpt/integration-sdk/customer",
     "github.com/pinpt/integration-sdk/sourcecode",
     "github.com/pinpt/integration-sdk/work",
     "github.com/pinpt/ripsrc/ripsrc",

@@ -56,7 +56,7 @@ message IntegrationOnboardExportResp {
         NOT_SUPPORTED = 1;
     }
     Error error = 1;
-    bytes records_json = 2;
+    bytes data_json = 2;
 }
 
 service Agent {

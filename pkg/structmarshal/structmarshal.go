@@ -7,7 +7,7 @@ func MapToStruct(m map[string]interface{}, target interface{}) error {
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(b, &target)
+	return json.Unmarshal(b, target)
 }
 
 func StructToMap(s interface{}) (map[string]interface{}, error) {
@@ -23,11 +23,15 @@ func StructToMap(s interface{}) (map[string]interface{}, error) {
 	return res, nil
 }
 
-func StructToStruct(in interface{}, out interface{}) error {
+func AnyToAny(in interface{}, out interface{}) error {
 	b, err := json.Marshal(in)
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(b, &out)
+	err = json.Unmarshal(b, out)
 	return err
+}
+
+func StructToStruct(in interface{}, out interface{}) error {
+	return AnyToAny(in, out)
 }
