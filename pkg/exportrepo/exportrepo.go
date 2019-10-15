@@ -280,7 +280,6 @@ func (s *Export) branches(ctx context.Context, wantedbranches map[string]branchm
 		}
 		done <- true
 	}()
-
 	err = s.rip.Branches(ctx, res)
 	<-done
 
