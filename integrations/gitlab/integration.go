@@ -353,8 +353,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	pullRequestsInitial := make(chan []api.PullRequest)
 	go func() {
 		defer close(pullRequestsInitial)
-		err := s.exportPullRequestsRepo(logger, repo, pullRequestSender, pullRequestsInitial, pullRequestSender.LastProcessedTime())
-		if err != nil {
+		if err := s.exportPullRequestsRepo(logger, repo, pullRequestSender, pullRequestsInitial, pullRequestSender.LastProcessedTime()); err != nil {
 			pullRequestsErr = err
 		}
 	}()

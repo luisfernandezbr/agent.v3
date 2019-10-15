@@ -35,7 +35,9 @@ func (s *Integration) exportPullRequestComments(logger hclog.Logger, prSender *o
 			return pi, err
 		}
 
-		commentsSender.SetTotal(pi.Total)
+		if err = commentsSender.SetTotal(pi.Total); err != nil {
+			return pi, err
+		}
 
 		for _, obj := range res {
 			err := commentsSender.Send(obj)

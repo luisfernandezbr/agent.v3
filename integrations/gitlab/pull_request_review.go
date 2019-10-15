@@ -35,7 +35,9 @@ func (s *Integration) exportPullRequestReviews(logger hclog.Logger, prSender *ob
 			return pi, err
 		}
 
-		reviewsSender.SetTotal(pi.Total)
+		if err = reviewsSender.SetTotal(pi.Total); err != nil {
+			return pi, err
+		}
 
 		for _, obj := range res {
 			if err := reviewsSender.Send(obj); err != nil {

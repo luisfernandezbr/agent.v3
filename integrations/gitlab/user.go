@@ -29,6 +29,9 @@ func UsersEmails(s *Integration) error {
 		if err != nil {
 			return page, err
 		}
+		if err = userSender.SetTotal(page.Total); err != nil {
+			return page, err
+		}
 		for _, user := range users {
 			cUser := commitusers.CommitUser{
 				CustomerID: s.qc.CustomerID,
@@ -36,8 +39,7 @@ func UsersEmails(s *Integration) error {
 				Name:       user.Name,
 				SourceID:   user.Username,
 			}
-			err = cUser.Validate()
-			if err != nil {
+			if err = cUser.Validate(); err != nil {
 				return page, err
 			}
 
@@ -56,8 +58,7 @@ func UsersEmails(s *Integration) error {
 					Name:       user.Name,
 					SourceID:   user.Username,
 				}
-				err := cUser.Validate()
-				if err != nil {
+				if err := cUser.Validate(); err != nil {
 					return page, err
 				}
 
