@@ -82,11 +82,22 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 		}
 	}
 
+	rawTotalSize := resp.Header.Get("X-Total")
+
+	var total int
+	if rawTotalSize != "" {
+		total, err = strconv.Atoi(resp.Header.Get("X-Total"))
+		if err != nil {
+			return page, err
+		}
+	}
+
 	return PageInfo{
 		PageSize:   pageSize,
 		NextPage:   resp.Header.Get("X-Next-Page"),
 		Page:       resp.Header.Get("X-Page"),
 		TotalPages: resp.Header.Get("X-Total-Pages"),
+		Total:      total,
 	}, nil
 }
 

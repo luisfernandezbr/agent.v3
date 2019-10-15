@@ -163,8 +163,7 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 func (s *Integration) export(ctx context.Context) (err error) {
 
 	if s.config.ServerType == ON_PREMISE {
-		err = api.UsersEmails(s)
-		if err != nil {
+		if err = UsersEmails(s); err != nil {
 			return err
 		}
 	}
@@ -178,8 +177,7 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	err = groupSession.SetTotal(len(groupNames))
-	if err != nil {
+	if err = groupSession.SetTotal(len(groupNames)); err != nil {
 		return err
 	}
 
@@ -187,14 +185,12 @@ func (s *Integration) export(ctx context.Context) (err error) {
 		if err := s.exportGroup(ctx, groupSession, groupName); err != nil {
 			return err
 		}
+		if err := groupSession.IncProgress(); err != nil {
+			return err
+		}
 	}
 
-	err = groupSession.Done()
-	if err != nil {
-		return err
-	}
-
-	return
+	return groupSession.Done()
 }
 
 func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender2.Session, groupName string) error {
@@ -229,8 +225,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender2.
 			args.URL = repoURL
 			args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
 			args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
-			err = s.agent.ExportGitRepo(args)
-			if err != nil {
+			if err = s.agent.ExportGitRepo(args); err != nil {
 				return err
 			}
 		}
@@ -247,23 +242,28 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender2.
 	}
 
 	// export repos
-	err = s.exportRepos(ctx, logger, repoSender, groupName, repos)
-	if err != nil {
+	if err = s.exportRepos(ctx, logger, repoSender, groupName, repos); err != nil {
 		return err
 	}
-	err = repoSender.SetTotal(len(repos))
-	if err != nil {
+	if err = repoSender.SetTotal(len(repos)); err != nil {
 		return err
 	}
 
 	if s.config.ServerType == CLOUD {
+		userSender, err := objsender2.Root(s.agent, sourcecode.UserModelName.String())
+		if err != nil {
+			return err
+		}
 		for _, repo := range repos {
-			err = s.exportUsersFromRepos(ctx, logger, repo)
+			err = s.exportUsersFromRepos(ctx, logger, userSender, repo)
 			if err != nil {
 				return err
 			}
 		}
 
+		if err := userSender.Done(); err != nil {
+			return err
+		}
 	}
 
 	for _, repo := range repos {
@@ -278,23 +278,20 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender2.
 			return err
 		}
 
-		err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
-		if err != nil {
+		if err = s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender); err != nil {
 			return err
 		}
 
-		err = prSender.Done()
-		if err != nil {
+		if err = prSender.Done(); err != nil {
 			return err
 		}
 
-		err = prCommitsSender.Done()
-		if err != nil {
+		if err = prCommitsSender.Done(); err != nil {
 			return err
 		}
 	}
 
-	return nil
+	return repoSender.Done()
 }
 
 func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender2.Session, groupName string, onlyInclude []commonrepo.Repo) error {
@@ -304,7 +301,7 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 		shouldInclude[repo.NameWithOwner] = true
 	}
 
-	err := api.PaginateNewerThan(s.logger, sender.LastProcessed, func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
+	err := api.PaginateNewerThan(s.logger, sender.LastProcessedTime(), func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
 		pi, repos, err := api.ReposPageREST(s.qc, groupName, parameters, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
@@ -328,11 +325,8 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 	return nil
 }
 
-func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Logger, repo commonrepo.Repo) error {
-
-	sender := s.userSender
-
-	err := api.PaginateStartAt(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
+func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Logger, sender *objsender2.Session, repo commonrepo.Repo) error {
+	return api.PaginateStartAt(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
 		pi, users, err := api.RepoUsersPageREST(s.qc, repo, parameters)
 		if err != nil {
 			return pi, err
@@ -345,12 +339,6 @@ func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Log
 		}
 		return pi, nil
 	})
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
@@ -412,16 +400,14 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := s.exportPullRequestsComments(logger, pullRequestSender, repo, pullRequestsForComments)
-		if err != nil {
+		if err := s.exportPullRequestsComments(logger, pullRequestSender, repo, pullRequestsForComments); err != nil {
 			setErr(fmt.Errorf("error getting comments %s", err))
 		}
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := s.exportPullRequestsReviews(logger, pullRequestSender, repo, pullRequestsForReviews)
-		if err != nil {
+		if err := s.exportPullRequestsReviews(logger, pullRequestSender, repo, pullRequestsForReviews); err != nil {
 			setErr(fmt.Errorf("error getting reviews %s", err))
 		}
 	}()
@@ -438,6 +424,8 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 					return
 				}
 
+				commitsSender.SetTotal(len(commits))
+
 				for _, c := range commits {
 					pr.CommitShas = append(pr.CommitShas, c.Sha)
 				}
@@ -448,16 +436,14 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 				} else {
 					pr.BranchID = s.qc.IDs.CodeBranch(pr.RepoID, pr.BranchName, pr.CommitShas[0])
 				}
-				err = pullRequestSender.Send(pr)
-				if err != nil {
+				if err = pullRequestSender.Send(pr); err != nil {
 					setErr(err)
 					return
 				}
 
 				for _, c := range commits {
 					c.BranchID = pr.BranchID
-					err := s.pullRequestCommitsSender.Send(c)
-					if err != nil {
+					if err := commitsSender.Send(c); err != nil {
 						setErr(err)
 						return
 					}

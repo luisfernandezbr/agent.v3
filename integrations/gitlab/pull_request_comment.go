@@ -29,15 +29,19 @@ func (s *Integration) exportPullRequestComments(logger hclog.Logger, prSender *o
 		return err
 	}
 
-	allComments := make([]*sourcecode.PullRequestComment)
-	err := api.PaginateStartAt(logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
+	err = api.PaginateStartAt(logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
 		pi, res, err := api.PullRequestCommentsPage(s.qc, repo, pr, paginationParams)
 		if err != nil {
 			return pi, err
 		}
 
+		commentsSender.SetTotal(pi.Total)
+
 		for _, obj := range res {
-			allComments = append(allComments, obj)
+			err := commentsSender.Send(obj)
+			if err != nil {
+				return pi, err
+			}
 		}
 
 		return pi, nil
@@ -45,13 +49,6 @@ func (s *Integration) exportPullRequestComments(logger hclog.Logger, prSender *o
 	if err != nil {
 		return err
 	}
-	allComments.SetTotal(len(allComments))
-	for _, obj := range allComments {
-		err := commentsSender.Send(obj)
-		if err != nil {
-			return pi, err
-		}
-	}
 
-	return
+	return commentsSender.Done()
 }
