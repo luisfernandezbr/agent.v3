@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/ids"
-	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/go-common/hash"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -16,11 +17,11 @@ import (
 
 func PullRequestPage(
 	qc QueryContext,
+	sender *objsender2.Session,
 	repoID string,
 	repoName string,
 	params url.Values,
-	stopOnUpdatedAt time.Time,
-	reviewsSender *objsender.NotIncremental) (pi PageInfo, res []sourcecode.PullRequest, err error) {
+	stopOnUpdatedAt time.Time) (pi PageInfo, res []sourcecode.PullRequest, err error) {
 
 	qc.Logger.Debug("repo pull requests", "repo", repoName)
 
@@ -109,6 +110,11 @@ func PullRequestPage(
 
 		res = append(res, pr)
 
+		reviewsSender, err := sender.Session(sourcecode.PullRequestCommentModelName.String(), pr.RefID, pr.RefID)
+		if err != nil {
+			return pi, res, err
+		}
+
 		for _, participant := range rpr.Participants {
 			if participant.Role == "REVIEWER" {
 				review := sourcecode.PullRequestReview{}
@@ -128,10 +134,15 @@ func PullRequestPage(
 
 				review.UserRefID = participant.User.AccountID
 
-				reviewsSender.Send(&review)
+				if err = reviewsSender.Send(&review); err != nil {
+					return pi, res, err
+				}
 			}
 		}
 
+		if err = reviewsSender.Done(); err != nil {
+			break
+		}
 	}
 
 	return
