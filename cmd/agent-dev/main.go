@@ -82,10 +82,10 @@ var cmdExportRepo = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		started := time.Now()
-		defer func() {
-			fmt.Println("duration:", time.Since(started))
-		}()
 		logger := defaultLogger()
+		defer func() {
+			logger.Info(fmt.Sprintf("duration: %v", time.Since(started)))
+		}()
 		ctx := context.Background()
 		url, _ := cmd.Flags().GetString("url")
 		pinpointRoot, _ := cmd.Flags().GetString("pinpoint-root")
@@ -114,7 +114,7 @@ var cmdExportRepo = &cobra.Command{
 		} else {
 			dummyRepo.NameWithOwner = strings.Replace(filepath.Base(url), ".git", "", 1)
 		}
-		reftype, _ := cmd.Flags().GetString("reft-type")
+		reftype, _ := cmd.Flags().GetString("ref-type")
 
 		opts := exportrepo.Opts{
 			Logger:            logger,
@@ -141,7 +141,7 @@ var cmdExportRepo = &cobra.Command{
 func init() {
 	cmdExportRepo.Flags().String("url", "", "repo url")
 	cmdExportRepo.Flags().String("pinpoint-root", "", "pinpoint-root")
-	cmdExportRepo.Flags().String("reft-type", "git", "ref-type")
+	cmdExportRepo.Flags().String("ref-type", "git", "ref-type")
 	cmdExportRepo.Flags().String("repo-name", "", "repo-name")
 	cmdRoot.AddCommand(cmdExportRepo)
 }
