@@ -1,12 +1,15 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
 	"github.com/pinpt/integration-sdk/codequality"
 )
 
 func (s *Integration) exportAll() error {
-	session, err := objsender2.RootTracking(s.agent, "organization")
+	session, err := objsender2.Root(s.agent, "sonarqube")
 	if err != nil {
 		s.logger.Error("error creating root tracking for sonarqube", "err", err)
 		return err
@@ -21,11 +24,14 @@ func (s *Integration) exportAll() error {
 		s.logger.Error("error creating project session", "err", err)
 		return err
 	}
-	projsession.SetTotal(len(projects))
+	if err := projsession.SetTotal(len(projects)); err != nil {
+		s.logger.Error("error setting total projects on exportAll", "err", err)
+	}
+	var errors []string
 	for _, project := range projects {
 		project.CustomerID = s.customerID
 		if err := projsession.Send(project); err != nil {
-			s.logger.Error("error sending project to agent", "err", err)
+			s.logger.Error("error sending project to agent", "err", err, "id", project.RefID)
 			continue
 		}
 		metricsession, err := session.Session(codequality.MetricModelName.String(), project.RefID, project.Name)
@@ -35,17 +41,30 @@ func (s *Integration) exportAll() error {
 		}
 		metrics, err := s.api.FetchMetrics(project, session.LastProcessedTime())
 		if err != nil {
-			metricsession.Done()
+			if err := metricsession.Done(); err != nil {
+				errors = append(errors, err.Error())
+			}
 			s.logger.Error("error fetching metrics", "err", err)
 			continue
 		}
-		metricsession.SetTotal(len(metrics))
 		for _, metric := range metrics {
 			metric.CustomerID = s.customerID
-			metricsession.Send(metric)
+			if err := metricsession.Send(metric); err != nil {
+				s.logger.Error("error sending metric to agent", "err", err, "id", metric.RefID)
+			}
 		}
-		metricsession.Done()
+		if err := metricsession.Done(); err != nil {
+			errors = append(errors, err.Error())
+		}
 	}
-	projsession.Done()
-	return session.Done()
+	if err := projsession.Done(); err != nil {
+		errors = append(errors, err.Error())
+	}
+	if err := session.Done(); err != nil {
+		errors = append(errors, err.Error())
+	}
+	if errors != nil {
+		return fmt.Errorf("error with session done. %v", strings.Join(errors, ", "))
+	}
+	return nil
 }
