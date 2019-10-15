@@ -359,10 +359,11 @@ type PaginateNewerThanFn func(log hclog.Logger, parameters url.Values, stopOnUpd
 func PaginateNewerThan(log hclog.Logger, lastProcessed time.Time, fn PaginateNewerThanFn) error {
 	pageOffset := 0
 	nextPage := "1"
+	p := url.Values{}
+	p.Set("per_page", "100")
 
 	if lastProcessed.IsZero() {
 		for {
-			p := url.Values{}
 			p.Add("page", nextPage)
 			pageInfo, err := fn(log, p, lastProcessed)
 			if err != nil {
@@ -380,7 +381,6 @@ func PaginateNewerThan(log hclog.Logger, lastProcessed time.Time, fn PaginateNew
 	}
 
 	for {
-		p := url.Values{}
 		p.Add("page", nextPage)
 		p.Add("order_by", "last_activity_at")
 		pageInfo, err := fn(log, p, lastProcessed)

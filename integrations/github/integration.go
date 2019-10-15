@@ -196,7 +196,7 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 		return err
 	}
 	s.qc.APIURL3 = s.config.APIURL3
-
+	s.qc.AuthToken = s.config.Token
 	s.clientManager = reqstats.New(reqstats.Opts{
 		Logger:                s.logger,
 		TLSInsecureSkipVerify: false,
@@ -389,6 +389,7 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 
 			args := rpcdef.GitRepoFetch{}
 			args.RepoID = s.qc.RepoID(repo.ID)
+			args.UniqueName = repo.NameWithOwner
 			args.RefType = s.refType
 			args.URL = repoURL
 			args.CommitURLTemplate = commitURLTemplate(repo, s.config.RepoURLPrefix)

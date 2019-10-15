@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
@@ -20,6 +21,7 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 		s.logger.Error("error fetching repos for onboard export repos")
 		return
 	}
+	var records []map[string]interface{}
 	for _, repo := range repos {
 		rawcommit, err := s.api.FetchLastCommit(repo.RefID)
 		if rawcommit == nil {
@@ -49,8 +51,9 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 			RefType: repo.RefType,
 		}
 		date.ConvertToModel(rawcommit.Author.Date, &r.LastCommit.CreatedDate)
-		res.Records = append(res.Records, r.ToMap())
+		records = append(records, r.ToMap())
 	}
+	res.Data = records
 	return
 }
 

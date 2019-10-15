@@ -50,6 +50,7 @@ type ExportObj struct {
 
 type GitRepoFetch struct {
 	RepoID            string
+	UniqueName        string
 	RefType           string
 	URL               string
 	CommitURLTemplate string
@@ -57,20 +58,23 @@ type GitRepoFetch struct {
 }
 
 func (s GitRepoFetch) Validate() error {
-	if s.RepoID == "" || s.URL == "" || s.CommitURLTemplate == "" || s.BranchURLTemplate == "" {
-		var missing []string
-		if s.RepoID == "" {
-			missing = append(missing, "RepoID")
-		}
-		if s.URL == "" {
-			missing = append(missing, "URL")
-		}
-		if s.CommitURLTemplate == "" {
-			missing = append(missing, "CommitURLTemplate")
-		}
-		if s.BranchURLTemplate == "" {
-			missing = append(missing, "BranchURLTemplate")
-		}
+	var missing []string
+	if s.RepoID == "" {
+		missing = append(missing, "RepoID")
+	}
+	if s.UniqueName == "" {
+		missing = append(missing, "UniqueName")
+	}
+	if s.URL == "" {
+		missing = append(missing, "URL")
+	}
+	if s.CommitURLTemplate == "" {
+		missing = append(missing, "CommitURLTemplate")
+	}
+	if s.BranchURLTemplate == "" {
+		missing = append(missing, "BranchURLTemplate")
+	}
+	if len(missing) != 0 {
 		return fmt.Errorf("missing required param for GitRepoFetch: %s", strings.Join(missing, ", "))
 	}
 	return nil
@@ -142,6 +146,7 @@ func (s *AgentServer) ExportGitRepo(ctx context.Context, req *proto.ExportGitRep
 	resp = &proto.Empty{}
 	fetch := GitRepoFetch{}
 	fetch.RepoID = req.RepoId
+	fetch.UniqueName = req.UniqueName
 	fetch.RefType = req.RefType
 	fetch.URL = req.Url
 	fetch.CommitURLTemplate = req.CommitUrlTemplate
@@ -232,6 +237,7 @@ func (s *AgentClient) ExportGitRepo(fetch GitRepoFetch) error {
 	}
 	args := &proto.ExportGitRepoReq{}
 	args.RepoId = fetch.RepoID
+	args.UniqueName = fetch.UniqueName
 	args.RefType = fetch.RefType
 	args.Url = fetch.URL
 	args.CommitUrlTemplate = fetch.CommitURLTemplate

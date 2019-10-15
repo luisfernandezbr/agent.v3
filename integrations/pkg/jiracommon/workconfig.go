@@ -46,7 +46,7 @@ func GetWorkConfig(qc jiracommonapi.QueryContext, typeServer string) (res rpcdef
 
 	appendStaticInfo(&ws)
 
-	res.Records = append(res.Records, ws.ToMap())
+	res.Data = ws.ToMap()
 	return
 }
 

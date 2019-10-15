@@ -100,6 +100,10 @@ func OrgsEnterprisePage(qc QueryContext, u string) (res []Org, header http.Heade
 		rerr = err
 		return
 	}
+
+	// This is not necessary in certain server configurations.
+	req.Header.Set("Authorization", "token "+qc.AuthToken)
+
 	var respJSON []struct {
 		Login string `json:"login"`
 	}

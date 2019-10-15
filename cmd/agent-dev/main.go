@@ -56,7 +56,7 @@ var cmdCloneRepo = &cobra.Command{
 		}, gitclone.Dirs{
 			CacheRoot: cacheDir,
 			Checkout:  checkoutDir,
-		})
+		}, "1", "main-repo")
 		fmt.Println("res", res)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -104,6 +104,7 @@ var cmdExportRepo = &cobra.Command{
 			RepoAccess:    gitclone.AccessDetails{URL: url},
 			Sessions:      sessions,
 			RepoID:        "r1",
+			UniqueName:    "repo1",
 			CustomerID:    "c1",
 			LastProcessed: lastProcessed,
 		}

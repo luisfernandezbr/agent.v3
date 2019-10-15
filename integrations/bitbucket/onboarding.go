@@ -28,6 +28,7 @@ func (s *Integration) onboardExportRepos(ctx context.Context) (res rpcdef.Onboar
 	if err != nil {
 		return res, err
 	}
+	var records []map[string]interface{}
 
 	for _, teamName := range teamNames {
 		api.Paginate(s.logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
@@ -36,11 +37,13 @@ func (s *Integration) onboardExportRepos(ctx context.Context) (res rpcdef.Onboar
 				return page, err
 			}
 			for _, repo := range repos {
-				res.Records = append(res.Records, repo.ToMap())
+				records = append(records, repo.ToMap())
 			}
 			return pageInfo, nil
 		})
 	}
+
+	res.Data = records
 
 	return res, nil
 }
