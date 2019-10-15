@@ -12,10 +12,9 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
-	"github.com/pinpt/agent.next/pkg/commitusers"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/ids2"
-	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -47,14 +46,6 @@ type Integration struct {
 	requestConcurrencyChan chan bool
 
 	refType string
-
-	repoSender                *objsender.IncrementalDateBased
-	commitUserSender          *objsender.IncrementalDateBased
-	pullRequestSender         *objsender.IncrementalDateBased
-	pullRequestCommentsSender *objsender.NotIncremental
-	pullRequestReviewsSender  *objsender.NotIncremental
-	userSender                *objsender.NotIncremental
-	pullRequestCommitsSender  *objsender.NotIncremental
 }
 
 func main() {
@@ -171,26 +162,8 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 
 func (s *Integration) export(ctx context.Context) (err error) {
 
-	s.repoSender, err = objsender.NewIncrementalDateBased(s.agent, sourcecode.RepoModelName.String())
-	if err != nil {
-		return err
-	}
-	s.commitUserSender, err = objsender.NewIncrementalDateBased(s.agent, commitusers.TableName)
-	if err != nil {
-		return err
-	}
-	s.pullRequestSender, err = objsender.NewIncrementalDateBased(s.agent, sourcecode.PullRequestModelName.String())
-	if err != nil {
-		return err
-	}
-	s.pullRequestCommentsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommentModelName.String())
-	s.pullRequestReviewsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestReviewModelName.String())
-	s.userSender = objsender.NewNotIncremental(s.agent, sourcecode.UserModelName.String())
-	s.pullRequestCommitsSender = objsender.NewNotIncremental(s.agent, sourcecode.PullRequestCommitModelName.String())
-
 	if s.config.ServerType == ON_PREMISE {
-		err = api.UsersEmails(s.qc, s.commitUserSender, s.userSender)
-		if err != nil {
+		if err = UsersEmails(s); err != nil {
 			return err
 		}
 	}
@@ -200,45 +173,27 @@ func (s *Integration) export(ctx context.Context) (err error) {
 		return err
 	}
 
+	groupSession, err := objsender2.RootTracking(s.agent, "group")
+	if err != nil {
+		return err
+	}
+	if err = groupSession.SetTotal(len(groupNames)); err != nil {
+		return err
+	}
+
 	for _, groupName := range groupNames {
-		if err := s.exportGroup(ctx, groupName); err != nil {
+		if err := s.exportGroup(ctx, groupSession, groupName); err != nil {
+			return err
+		}
+		if err := groupSession.IncProgress(); err != nil {
 			return err
 		}
 	}
 
-	err = s.repoSender.Done()
-	if err != nil {
-		return err
-	}
-	err = s.commitUserSender.Done()
-	if err != nil {
-		return err
-	}
-	err = s.pullRequestSender.Done()
-	if err != nil {
-		return err
-	}
-	err = s.pullRequestCommentsSender.Done()
-	if err != nil {
-		return err
-	}
-	err = s.pullRequestReviewsSender.Done()
-	if err != nil {
-		return err
-	}
-	err = s.userSender.Done()
-	if err != nil {
-		return err
-	}
-	err = s.pullRequestCommitsSender.Done()
-	if err != nil {
-		return err
-	}
-
-	return
+	return groupSession.Done()
 }
 
-func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
+func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender2.Session, groupName string) error {
 	s.logger.Info("exporting group", "name", groupName)
 	logger := s.logger.With("org", groupName)
 
@@ -270,8 +225,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 			args.URL = repoURL
 			args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
 			args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
-			err = s.agent.ExportGitRepo(args)
-			if err != nil {
+			if err = s.agent.ExportGitRepo(args); err != nil {
 				return err
 			}
 		}
@@ -282,42 +236,72 @@ func (s *Integration) exportGroup(ctx context.Context, groupName string) error {
 		return nil
 	}
 
-	// export repos
-	err = s.exportRepos(ctx, logger, groupName, repos)
+	repoSender, err := groupSession.Session(sourcecode.RepoModelName.String(), groupName, groupName)
 	if err != nil {
 		return err
 	}
 
+	// export repos
+	if err = s.exportRepos(ctx, logger, repoSender, groupName, repos); err != nil {
+		return err
+	}
+	if err = repoSender.SetTotal(len(repos)); err != nil {
+		return err
+	}
+
 	if s.config.ServerType == CLOUD {
+		userSender, err := objsender2.Root(s.agent, sourcecode.UserModelName.String())
+		if err != nil {
+			return err
+		}
 		for _, repo := range repos {
-			err = s.exportUsersFromRepos(ctx, logger, repo)
+			err = s.exportUsersFromRepos(ctx, logger, userSender, repo)
 			if err != nil {
 				return err
 			}
 		}
 
-	}
-
-	for _, repo := range repos {
-		err := s.exportPullRequestsForRepo(logger, repo, s.pullRequestSender, s.pullRequestCommentsSender, s.pullRequestReviewsSender)
-		if err != nil {
+		if err := userSender.Done(); err != nil {
 			return err
 		}
 	}
 
-	return nil
+	for _, repo := range repos {
+
+		prSender, err := repoSender.Session(sourcecode.PullRequestModelName.String(), repo.ID, repo.NameWithOwner)
+		if err != nil {
+			return err
+		}
+
+		prCommitsSender, err := repoSender.Session(sourcecode.PullRequestCommitModelName.String(), repo.ID, repo.NameWithOwner)
+		if err != nil {
+			return err
+		}
+
+		if err = s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender); err != nil {
+			return err
+		}
+
+		if err = prSender.Done(); err != nil {
+			return err
+		}
+
+		if err = prCommitsSender.Done(); err != nil {
+			return err
+		}
+	}
+
+	return repoSender.Done()
 }
 
-func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, groupName string, onlyInclude []commonrepo.Repo) error {
-
-	sender := s.repoSender
+func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender2.Session, groupName string, onlyInclude []commonrepo.Repo) error {
 
 	shouldInclude := map[string]bool{}
 	for _, repo := range onlyInclude {
 		shouldInclude[repo.NameWithOwner] = true
 	}
 
-	err := api.PaginateNewerThan(s.logger, sender.LastProcessed, func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
+	err := api.PaginateNewerThan(s.logger, sender.LastProcessedTime(), func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
 		pi, repos, err := api.ReposPageREST(s.qc, groupName, parameters, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
@@ -341,11 +325,8 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, grou
 	return nil
 }
 
-func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Logger, repo commonrepo.Repo) error {
-
-	sender := s.userSender
-
-	err := api.PaginateStartAt(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
+func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Logger, sender *objsender2.Session, repo commonrepo.Repo) error {
+	return api.PaginateStartAt(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
 		pi, users, err := api.RepoUsersPageREST(s.qc, repo, parameters)
 		if err != nil {
 			return pi, err
@@ -358,18 +339,11 @@ func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Log
 		}
 		return pi, nil
 	})
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
-	pullRequestSender *objsender.IncrementalDateBased,
-	commentsSender *objsender.NotIncremental,
-	reviewSender *objsender.NotIncremental) (rerr error) {
+	pullRequestSender *objsender2.Session,
+	commitsSender *objsender2.Session) (rerr error) {
 
 	logger = logger.With("repo", repo.NameWithOwner)
 	logger.Info("exporting")
@@ -379,8 +353,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	pullRequestsInitial := make(chan []api.PullRequest)
 	go func() {
 		defer close(pullRequestsInitial)
-		err := s.exportPullRequestsRepo(logger, repo, pullRequestsInitial, pullRequestSender.LastProcessed)
-		if err != nil {
+		if err := s.exportPullRequestsRepo(logger, repo, pullRequestSender, pullRequestsInitial, pullRequestSender.LastProcessedTime()); err != nil {
 			pullRequestsErr = err
 		}
 	}()
@@ -426,16 +399,14 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := s.exportPullRequestsComments(logger, commentsSender, repo, pullRequestsForComments)
-		if err != nil {
+		if err := s.exportPullRequestsComments(logger, pullRequestSender, repo, pullRequestsForComments); err != nil {
 			setErr(fmt.Errorf("error getting comments %s", err))
 		}
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := s.exportPullRequestsReviews(logger, reviewSender, repo, pullRequestsForReviews)
-		if err != nil {
+		if err := s.exportPullRequestsReviews(logger, pullRequestSender, repo, pullRequestsForReviews); err != nil {
 			setErr(fmt.Errorf("error getting reviews %s", err))
 		}
 	}()
@@ -452,6 +423,8 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 					return
 				}
 
+				commitsSender.SetTotal(len(commits))
+
 				for _, c := range commits {
 					pr.CommitShas = append(pr.CommitShas, c.Sha)
 				}
@@ -462,16 +435,14 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 				} else {
 					pr.BranchID = s.qc.IDs.CodeBranch(pr.RepoID, pr.BranchName, pr.CommitShas[0])
 				}
-				err = pullRequestSender.Send(pr)
-				if err != nil {
+				if err = pullRequestSender.Send(pr); err != nil {
 					setErr(err)
 					return
 				}
 
 				for _, c := range commits {
 					c.BranchID = pr.BranchID
-					err := s.pullRequestCommitsSender.Send(c)
-					if err != nil {
+					if err := commitsSender.Send(c); err != nil {
 						setErr(err)
 						return
 					}

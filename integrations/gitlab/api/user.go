@@ -7,11 +7,8 @@ import (
 
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 
-	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/integration-sdk/sourcecode"
 
-	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/objsender"
 	pstrings "github.com/pinpt/go-common/strings"
 )
 
@@ -101,71 +98,6 @@ func UserEmails(qc QueryContext, userID int64) (emails []string, err error) {
 	}
 
 	return
-}
-
-func UsersEmails(qc QueryContext, commitUsersSender *objsender.IncrementalDateBased, usersSender *objsender.NotIncremental) error {
-	return PaginateStartAt(qc.Logger, func(log hclog.Logger, paginationParams url.Values) (page PageInfo, _ error) {
-		page, users, err := UsersPage(qc, paginationParams)
-		if err != nil {
-			return page, err
-		}
-		for _, user := range users {
-			cUser := commitusers.CommitUser{
-				CustomerID: qc.CustomerID,
-				Email:      user.Email,
-				Name:       user.Name,
-				SourceID:   user.Username,
-			}
-			err = cUser.Validate()
-			if err != nil {
-				return page, err
-			}
-
-			if err := commitUsersSender.SendMap(cUser.ToMap()); err != nil {
-				return page, err
-			}
-
-			emails, err := UserEmails(qc, user.ID)
-			if err != nil {
-				return page, err
-			}
-			for _, email := range emails {
-				cUser := commitusers.CommitUser{
-					CustomerID: qc.CustomerID,
-					Email:      email,
-					Name:       user.Name,
-					SourceID:   user.Username,
-				}
-				err := cUser.Validate()
-				if err != nil {
-					return page, err
-				}
-
-				if err := commitUsersSender.SendMap(cUser.ToMap()); err != nil {
-					return page, err
-				}
-			}
-
-			sourceUser := sourcecode.User{}
-			sourceUser.RefType = qc.RefType
-			sourceUser.Email = pstrings.Pointer(user.Email)
-			sourceUser.CustomerID = qc.CustomerID
-			sourceUser.RefID = strconv.FormatInt(user.ID, 10)
-			sourceUser.Name = user.Name
-			sourceUser.AvatarURL = pstrings.Pointer(user.AvatarURL)
-			sourceUser.Username = pstrings.Pointer(user.Username)
-			sourceUser.Member = true
-			sourceUser.Type = sourcecode.UserTypeHuman
-			sourceUser.AssociatedRefID = pstrings.Pointer(user.Username)
-
-			if err := usersSender.Send(&sourceUser); err != nil {
-				return page, err
-			}
-
-		}
-
-		return page, nil
-	})
 }
 
 func RepoUsersPageREST(qc QueryContext, repo commonrepo.Repo, params url.Values) (page PageInfo, repos []*sourcecode.User, err error) {
