@@ -53,18 +53,25 @@ func (s *Integration) processRepos() (projectids []string, err error) {
 	if err != nil {
 		return
 	}
-	sender.SetTotal(len(repos))
+	if err = sender.SetTotal(len(repos)); err != nil {
+		s.logger.Error("error setting total repos on processRepos", "err", err)
+	}
 	var errors []string
 	for _, repo := range repos {
-		sender.Send(repo)
-		if err := s.api.FetchPullRequests(repo.RefID, repo.Name, sender); err != nil {
+		if err = sender.Send(repo); err != nil {
+			s.logger.Error("error sending repo", "repo_id", repo.RefID, "err", err)
+			return
+		}
+		if err = s.api.FetchPullRequests(repo.RefID, repo.Name, sender); err != nil {
 			errors = append(errors, err.Error())
 		}
 		if err := s.ripSource(repo); err != nil {
 			s.logger.Error("error with ripsrc in repo", "data", repo.Stringify())
 		}
 	}
-	sender.Done()
+	if err = sender.Done(); err != nil {
+		errors = append(errors, err.Error())
+	}
 	if len(errors) > 0 {
 		err = fmt.Errorf("errors: %v", strings.Join(errors, ", "))
 	}
@@ -119,6 +126,5 @@ func (s *Integration) processUsers(projectids []string) error {
 			s.logger.Error("error sending project user", "data", user.Stringify())
 		}
 	}
-	sender.Done()
-	return nil
+	return sender.Done()
 }

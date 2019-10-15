@@ -34,7 +34,13 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 	}
 
 	prsender, err := sender.Session(sourcecode.PullRequestModelName.String(), repoid, reponame)
-	prsender.SetTotal(len(pullrequests))
+	if err != nil {
+		api.logger.Error("error creating sender session for pull request", "err", err, "repo_id", repoid, "repo_name", reponame)
+		return err
+	}
+	if err := prsender.SetTotal(len(pullrequests)); err != nil {
+		api.logger.Error("error setting total pullrequests on FetchPullRequests", "err", err)
+	}
 	async := NewAsync(api.concurrency)
 	for _, p := range pullrequests {
 		pr := pullRequestResponseWithShas{}
@@ -43,29 +49,38 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 			commits, err := api.fetchPullRequestCommits(repoid, pr.PullRequestID)
 			pridstring := fmt.Sprintf("%d", pr.PullRequestID)
 			if err != nil {
-				api.logger.Error("error fetching commits for PR, skiping", "pr-id", pr.PullRequestID, "repo-id", repoid)
+				api.logger.Error("error fetching commits for PR, skiping", "pr_id", pr.PullRequestID, "repo_id", repoid)
 				return
 			}
 			prcsender, err := prsender.Session(sourcecode.PullRequestCommitModelName.String(), pridstring, pridstring)
 			if err != nil {
-				api.logger.Error("error creating sender session for pull request commits", "pr-id", pr.PullRequestID, "repo-id", repoid)
+				api.logger.Error("error creating sender session for pull request commits", "pr_id", pr.PullRequestID, "repo_id", repoid)
 				return
 			}
-			prcsender.SetTotal(len(commits))
+			if err := prcsender.SetTotal(len(commits)); err != nil {
+				api.logger.Error("error setting total pull request commits on FetchPullRequests", "err", err)
+			}
 			for _, commit := range commits {
 				pr.commitshas = append(pr.commitshas, commit.CommitID)
 				pr := pr
 				api.sendPullRequestCommitObjects(repoid, pr, prcsender)
 			}
-			prcsender.Done()
+			if err := prcsender.Done(); err != nil {
+				api.logger.Error("error with sender done in pull request commits", "err", err)
+			}
 			prrsender, err := prsender.Session(sourcecode.PullRequestReviewModelName.String(), pridstring, pridstring)
 			if err != nil {
-				api.logger.Error("error creating sender session for pull request reviews", "pr-id", pr.PullRequestID, "repo-id", repoid)
+				api.logger.Error("error creating sender session for pull request reviews", "pr_id", pr.PullRequestID, "repo_id", repoid)
 				return
 			}
-			prrsender.SetTotal(len(pr.Reviewers))
+			if err := prrsender.SetTotal(len(pr.Reviewers)); err != nil {
+				api.logger.Error("error setting total pull request reviews on FetchPullRequests", "err", err)
+			}
 			api.sendPullRequestObjects(repoid, pr, prsender, prrsender)
-			prrsender.Done()
+			if err := prrsender.Done(); err != nil {
+				api.logger.Error("error with sender done in pull request reviews", "err", err)
+
+			}
 		})
 	}
 
@@ -74,22 +89,24 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 		async.Do(func() {
 			prcsender, err := prsender.Session(sourcecode.PullRequestCommentModelName.String(), fmt.Sprintf("%d", pr.PullRequestID), pr.Title)
 			if err != nil {
-				api.logger.Error("error creating sender session for pull request comments", "pr-id", pr.PullRequestID, "repo-id", repoid)
+				api.logger.Error("error creating sender session for pull request comments", "pr_id", pr.PullRequestID, "repo_id", repoid)
 				return
 			}
 			api.sendPullRequestCommentObject(repoid, pr.PullRequestID, prcsender)
-			prcsender.Done()
+			if err := prcsender.Done(); err != nil {
+				api.logger.Error("error with sender done in pull request comments", "err", err)
+			}
 		})
 	}
 	async.Wait()
-	prsender.Done()
-	return nil
+
+	return prsender.Done()
 }
 
 func (api *API) sendPullRequestCommentObject(repoid string, prid int64, sender *objsender2.Session) {
 	comments, err := api.fetchPullRequestComments(repoid, prid)
 	if err != nil {
-		api.logger.Error("error fetching comments for PR, skiping", "pr-id", prid, "repo-id", repoid)
+		api.logger.Error("error fetching comments for PR, skiping", "pr_id", prid, "repo_id", repoid)
 		return
 	}
 	var total []*sourcecode.PullRequestComment
@@ -114,9 +131,13 @@ func (api *API) sendPullRequestCommentObject(repoid string, prid int64, sender *
 			total = append(total, c)
 		}
 	}
-	sender.SetTotal(len(total))
+	if err := sender.SetTotal(len(total)); err != nil {
+		api.logger.Error("error setting total pull request comments on sendPullRequestCommentObject", "err", err)
+	}
 	for _, c := range total {
-		sender.Send(c)
+		if err := sender.Send(c); err != nil {
+			api.logger.Error("error sending pull request comments", "id", c.RefID, "err", err)
+		}
 	}
 }
 
@@ -170,7 +191,7 @@ func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithS
 			state = sourcecode.PullRequestReviewStateApproved
 		}
 		refid := hash.Values(i, p.PullRequestID, r.ID)
-		prrsender.Send(&sourcecode.PullRequestReview{
+		if err := prrsender.Send(&sourcecode.PullRequestReview{
 			CustomerID:    api.customerid,
 			PullRequestID: api.IDs.CodePullRequest(fmt.Sprintf("%d", p.PullRequestID), refid),
 			RefID:         refid,
@@ -179,11 +200,15 @@ func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithS
 			State:         state,
 			URL:           r.URL,
 			UserRefID:     r.ID,
-		})
+		}); err != nil {
+			api.logger.Error("error sending pull request review", "id", pr.RefID, "err", err)
+		}
 	}
 	date.ConvertToModel(p.ClosedDate, &pr.ClosedDate)
 	date.ConvertToModel(p.CreationDate, &pr.CreatedDate)
-	prsender.Send(pr)
+	if err := prsender.Send(pr); err != nil {
+		api.logger.Error("error sending pull request", "id", pr.RefID, "err", err)
+	}
 }
 func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestResponseWithShas, sender *objsender2.Session) error {
 	sha := p.commitshas[len(p.commitshas)-1]
@@ -208,8 +233,9 @@ func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestRespons
 			URL:           c.RemoteURL,
 		}
 		date.ConvertToModel(c.Push.Date, &commit.CreatedDate)
-		sender.Send(commit)
-
+		if err := sender.Send(commit); err != nil {
+			api.logger.Error("error sending pull request commit", "id", commit.RefID, "err", err)
+		}
 	}
 	return nil
 }

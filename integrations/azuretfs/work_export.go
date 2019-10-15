@@ -25,9 +25,14 @@ func (s *Integration) exportWork() error {
 	if err != nil {
 		return err
 	}
-	sender.SetTotal(len(projects))
+	if err := sender.SetTotal(len(projects)); err != nil {
+		s.logger.Error("error setting total projects on exportWork", "err", err)
+	}
 	for _, proj := range projects {
-		sender.Send(proj)
+		if err := sender.Send(proj); err != nil {
+			s.logger.Error("error sending project", "id", proj.RefID, "err", err)
+			return err
+		}
 		teamids, err := s.api.FetchTeamIDs(proj.RefID)
 		if err != nil {
 			return err
@@ -55,9 +60,13 @@ func (s *Integration) processWorkUsers(projid, projname string, teamids []string
 	if err != nil {
 		return fmt.Errorf("error fetching users. err %s", err.Error())
 	}
-	sender.SetTotal(len(users))
+	if err := sender.SetTotal(len(users)); err != nil {
+		s.logger.Error("error setting total users on processWorkUsers", "err", err)
+	}
 	for _, user := range users {
-		sender.Send(user)
+		if err := sender.Send(user); err != nil {
+			s.logger.Error("error sending users", "err", err, "id", user.RefID)
+		}
 	}
 	return sender.Done()
 }
@@ -77,7 +86,9 @@ func (s *Integration) processWorkItems(projid, projname string, sender *objsende
 	if err != nil {
 		return err
 	}
-	sender.SetTotal(len(allids))
+	if err := sender.SetTotal(len(allids)); err != nil {
+		s.logger.Error("error setting total ids on processWorkItems", "err", err)
+	}
 	fetchitems := func(ids []string) {
 		async.Do(func() {
 			_, items, err := s.api.FetchWorkItemsByIDs(projid, ids)
@@ -86,7 +97,9 @@ func (s *Integration) processWorkItems(projid, projname string, sender *objsende
 				return
 			}
 			for _, i := range items {
-				sender.Send(i)
+				if err := sender.Send(i); err != nil {
+					s.logger.Error("error sending work item", "err", err, "id", i.RefID)
+				}
 				s.processChangelogs(projid, i.Identifier, i.RefID, sender)
 			}
 		})
@@ -116,13 +129,17 @@ func (s *Integration) processChangelogs(projid, identifier, itemid string, sende
 		return err
 	}
 	changelogs, err := s.api.FetchChangeLog(projid, itemid)
-	sender.SetTotal(len(changelogs))
+	if err := sender.SetTotal(len(changelogs)); err != nil {
+		s.logger.Error("error setting total changelogs on processChangelogs", "err", err)
+	}
 	if err != nil {
-		s.logger.Error("error fetching work item updates "+itemid, "err", err)
+		s.logger.Error("error fetching changlogs for item id "+itemid, "err", err)
 		return err
 	}
 	for _, c := range changelogs {
-		sender.Send(c)
+		if err := sender.Send(c); err != nil {
+			s.logger.Error("error sending changlog", "err", err, "id", c.RefID)
+		}
 	}
 
 	return sender.Done()
@@ -143,7 +160,9 @@ func (s *Integration) processSprints(projid, projname string, teamids []string, 
 				return
 			}
 			for _, sp := range sprints {
-				sender.Send(sp)
+				if err := sender.Send(sp); err != nil {
+					s.logger.Error("error sending sprint", "err", err, "id", sp.RefID)
+				}
 			}
 		})
 	}
