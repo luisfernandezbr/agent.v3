@@ -106,8 +106,8 @@ func (s OnboardExportType) proto() proto.IntegrationOnboardExportReq_Kind {
 
 // OnboardExportResult is the result of the onboard call. If the particular data type is not supported by integration, return Error will be equal to OnboardExportErrNotSupported.
 type OnboardExportResult struct {
-	Error   error
-	Records []map[string]interface{}
+	Error error
+	Data  interface{}
 }
 
 var ErrOnboardExportNotSupported = errors.New("onboard for integration does not support requested object type")
@@ -193,7 +193,7 @@ func (s *IntegrationClient) OnboardExport(ctx context.Context, objectType Onboar
 		res.Error = ErrOnboardExportNotSupported
 	}
 
-	err = json.Unmarshal(resp.RecordsJson, &res.Records)
+	err = json.Unmarshal(resp.DataJson, &res.Data)
 	if err != nil {
 		return res, err
 	}
@@ -277,7 +277,7 @@ func (s *IntegrationServer) OnboardExport(ctx context.Context, req *proto.Integr
 	default:
 		return res, r0.Error
 	}
-	res.RecordsJson, err = json.Marshal(r0.Records)
+	res.DataJson, err = json.Marshal(r0.Data)
 	if err != nil {
 		return res, err
 	}

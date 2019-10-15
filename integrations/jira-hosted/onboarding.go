@@ -29,9 +29,11 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 	if err != nil {
 		return res, err
 	}
+	var records []map[string]interface{}
 	for _, obj := range projects {
-		res.Records = append(res.Records, obj.ToMap())
+		records = append(records, obj.ToMap())
 	}
+	res.Data = records
 	return res, nil
 }
 
