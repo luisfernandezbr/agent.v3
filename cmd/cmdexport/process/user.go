@@ -2,6 +2,7 @@ package process
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -9,6 +10,7 @@ import (
 
 type CommitUsers struct {
 	data map[string]bool
+	mu   sync.Mutex
 }
 
 func NewCommitUsers() *CommitUsers {
@@ -18,6 +20,9 @@ func NewCommitUsers() *CommitUsers {
 }
 
 func (s *CommitUsers) Transform(data map[string]interface{}) (_ map[string]interface{}, _ error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	customerID, _ := data["customer_id"].(string)
 	if customerID == "" {
 		return nil, errors.New("customer_id is required")

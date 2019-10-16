@@ -50,10 +50,6 @@ func NewIntegration(logger hclog.Logger) *Integration {
 	return s
 }
 
-// setting higher to 1 starts returning the following error, even though the hourly limit is not used up yet.
-// 403: You have triggered an abuse detection mechanism. Please wait a few minutes before you try again.
-const maxRequestConcurrency = 1
-
 func (s *Integration) Init(agent rpcdef.Agent) error {
 	s.agent = agent
 	s.refType = "github"
@@ -65,7 +61,6 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 		return s.config.Enterprise
 	}
 	s.qc = qc
-	s.requestConcurrencyChan = make(chan bool, maxRequestConcurrency)
 
 	return nil
 }
@@ -81,6 +76,7 @@ type Config struct {
 	StopAfterN            int
 	Enterprise            bool
 	Repos                 []string
+	Concurrency           int
 	TLSInsecureSkipVerify bool
 }
 
@@ -102,6 +98,14 @@ type configDef struct {
 
 	// StopAfterN stops exporting after N number of repos for testing and dev purposes
 	StopAfterN int `json:"stop_after_n"`
+
+	// Concurrency set higher concurrency.
+	// github.com
+	// setting higher to 1 starts returning the following error, even though the hourly limit is not used up yet.
+	// 403: You have triggered an abuse detection mechanism. Please wait a few minutes before you try again.
+	// github enterprise
+	// Needs testing.
+	Concurrency int `json:"concurrency"`
 }
 
 func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
@@ -150,6 +154,12 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 		}
 	}
 
+	res.Concurrency = def.Concurrency
+	if def.Concurrency == 0 {
+		res.Concurrency = 1
+	}
+	s.logger.Info("Using concurrency", "concurrency", res.Concurrency)
+
 	s.config = res
 
 	return nil
@@ -197,6 +207,9 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	if err != nil {
 		return err
 	}
+
+	s.requestConcurrencyChan = make(chan bool, s.config.Concurrency)
+
 	s.qc.APIURL3 = s.config.APIURL3
 	s.qc.AuthToken = s.config.Token
 	s.clientManager = reqstats.New(reqstats.Opts{
@@ -431,40 +444,72 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 	// This is much slower than the rest
 	// for pinpoint takes 3.5m for initial, 47s for incremental
 	{
-		// higher concurrency does not make any real difference
-		commitConcurrency := 1
+		commitConcurrency := s.config.Concurrency
 
 		err = s.exportCommitUsers(logger, repoSender, repos, commitConcurrency)
 		if err != nil {
 			return err
 		}
-
 	}
 
-	for _, repo := range repos {
-		prSender, err := repoSender.Session(sourcecode.PullRequestModelName.String(), repo.ID, repo.NameWithOwner)
-		if err != nil {
-			return err
-		}
+	{
+		wg := sync.WaitGroup{}
+		var wgErr error
+		var wgErrMu sync.Mutex
 
-		prCommitsSender, err := repoSender.Session(sourcecode.PullRequestCommitModelName.String(), repo.ID, repo.NameWithOwner)
-		if err != nil {
-			return err
-		}
+		reposChan := reposToChan(repos, 0)
 
-		err = s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
-		if err != nil {
-			return err
+		for i := 0; i < s.config.Concurrency; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				rerr := func(err error) {
+					wgErrMu.Lock()
+					// only keep the first err
+					if wgErr != nil {
+						wgErr = err
+					}
+					wgErrMu.Unlock()
+				}
+				for repo := range reposChan {
+					hasErr := false
+					wgErrMu.Lock()
+					hasErr = wgErr != nil
+					wgErrMu.Unlock()
+					if hasErr {
+						return
+					}
+					prSender, err := repoSender.Session(sourcecode.PullRequestModelName.String(), repo.ID, repo.NameWithOwner)
+					if err != nil {
+						rerr(err)
+						return
+					}
+					prCommitsSender, err := repoSender.Session(sourcecode.PullRequestCommitModelName.String(), repo.ID, repo.NameWithOwner)
+					if err != nil {
+						rerr(err)
+						return
+					}
+					err = s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
+					if err != nil {
+						rerr(err)
+						return
+					}
+					err = prSender.Done()
+					if err != nil {
+						rerr(err)
+						return
+					}
+					err = prCommitsSender.Done()
+					if err != nil {
+						rerr(err)
+						return
+					}
+				}
+			}()
 		}
-
-		err = prSender.Done()
-		if err != nil {
-			return err
-		}
-
-		err = prCommitsSender.Done()
-		if err != nil {
-			return err
+		wg.Wait()
+		if wgErr != nil {
+			return wgErr
 		}
 	}
 
