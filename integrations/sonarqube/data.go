@@ -47,5 +47,5 @@ func (s *Integration) exportAll() error {
 			return err
 		}
 	}
-	return nil
+	return session.Done()
 }
