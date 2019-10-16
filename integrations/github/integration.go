@@ -71,16 +71,17 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 }
 
 type Config struct {
-	APIURL        string
-	APIURL3       string
-	RepoURLPrefix string
-	Token         string
-	Organization  string
-	ExcludedRepos []string
-	OnlyGit       bool
-	StopAfterN    int
-	Enterprise    bool
-	Repos         []string
+	APIURL                string
+	APIURL3               string
+	RepoURLPrefix         string
+	Token                 string
+	Organization          string
+	ExcludedRepos         []string
+	OnlyGit               bool
+	StopAfterN            int
+	Enterprise            bool
+	Repos                 []string
+	TLSInsecureSkipVerify bool
 }
 
 type configDef struct {
@@ -144,8 +145,9 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 			res.APIURL3 = urlAppend(u.String(), "api/v3")
 			res.RepoURLPrefix = u.String()
 			res.Enterprise = true
+			// TODO: make it configurable in admin
+			res.TLSInsecureSkipVerify = true
 		}
-
 	}
 
 	s.config = res
@@ -199,7 +201,7 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	s.qc.AuthToken = s.config.Token
 	s.clientManager = reqstats.New(reqstats.Opts{
 		Logger:                s.logger,
-		TLSInsecureSkipVerify: false,
+		TLSInsecureSkipVerify: s.config.TLSInsecureSkipVerify,
 	})
 	s.clients = s.clientManager.Clients
 	s.qc.Clients = s.clients
