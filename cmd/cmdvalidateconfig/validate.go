@@ -53,7 +53,11 @@ func newValidator(opts Opts) (*validator, error) {
 
 	err = s.SetupIntegrations(nil)
 	if err != nil {
-		return nil, err
+		err := s.outputErr(err)
+		if err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 
 	integrationName := opts.Integrations[0].Name
@@ -75,7 +79,14 @@ type Result struct {
 
 func (s *validator) runValidateAndPrint() error {
 	errs := s.runValidate()
+	return s.output(errs)
+}
 
+func (s *validator) outputErr(err error) error {
+	return s.output([]string{err.Error()})
+}
+
+func (s *validator) output(errs []string) error {
 	res := Result{}
 	res.Errors = errs
 
@@ -96,7 +107,6 @@ func (s *validator) runValidateAndPrint() error {
 
 	// BUG: last log message is missing without this
 	time.Sleep(100 * time.Millisecond)
-
 	return nil
 }
 
