@@ -10,14 +10,6 @@
   version = "v2.8.0"
 
 [[projects]]
-  digest = "1:ce834ee7eff3bbf47931b5f1ca7a406ae92b0448d1b26e0480ad53958c37c0a5"
-  name = "github.com/bsm/redislock"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "60529f1f500dc4067b939a981172b79be43705b2"
-  version = "v0.3.0"
-
-[[projects]]
   digest = "1:c952f10089bb57d6e6d56d8880bcbb4d444b1d40b091354cb25b10a6c23b211a"
   name = "github.com/bxcodec/faker"
   packages = [
@@ -117,22 +109,6 @@
   pruneopts = "UT"
   revision = "07c9b44f60d7ffdfb7d8efe1ad539965737836dc"
   version = "v0.4.0"
-
-[[projects]]
-  digest = "1:61a8ca58fee5891ccd5e9e0503d3cb0636fe15505a7b758d51fe38d38bfce32f"
-  name = "github.com/go-redis/redis"
-  packages = [
-    ".",
-    "internal",
-    "internal/consistenthash",
-    "internal/hashtag",
-    "internal/pool",
-    "internal/proto",
-    "internal/util",
-  ]
-  pruneopts = "UT"
-  revision = "17c058513b3e03c5e23136c18582fdd8ac8a3645"
-  version = "v6.15.5"
 
 [[projects]]
   digest = "1:586ea76dbd0374d6fb649a91d70d652b7fe0ccffb8910a77468e7702e7901f3d"
@@ -376,7 +352,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:d7b6ddc3053462d26495ea8b247139bf1b7a9568711b6eb57308d4e7db1978bf"
+  digest = "1:1f0096aeb5325ccd4e11b146077a8849b42c33b67bf4da2b492534cba632a139"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -391,7 +367,6 @@
     "httpdefaults",
     "io",
     "json",
-    "kafka",
     "log",
     "number",
     "os",
@@ -755,14 +730,6 @@
   version = "v1.23.1"
 
 [[projects]]
-  digest = "1:9169e569b3e6517da7de4476059f8fa889d508007e53fa5fc6a2ea4ffc5ae199"
-  name = "gopkg.in/confluentinc/confluent-kafka-go.v1"
-  packages = ["kafka"]
-  pruneopts = "UT"
-  revision = "48acc03b9ddd85b5c8c268b480d5a9a3d523b9ad"
-  version = "v1.1.0"
-
-[[projects]]
   digest = "1:85b60f4403e2aae0eee2ac2ba50e4124dea766b582c6ec0d94fb1335d9c0d16e"
   name = "gopkg.in/neurosnap/sentences.v1"
   packages = [
@@ -940,9 +907,7 @@
     "github.com/pinpt/go-common/httpdefaults",
     "github.com/pinpt/go-common/io",
     "github.com/pinpt/go-common/json",
-    "github.com/pinpt/go-common/kafka",
     "github.com/pinpt/go-common/log",
-    "github.com/pinpt/go-common/os",
     "github.com/pinpt/go-common/strings",
     "github.com/pinpt/httpclient",
     "github.com/pinpt/integration-sdk",
@@ -952,6 +917,7 @@
     "github.com/pinpt/integration-sdk/sourcecode",
     "github.com/pinpt/integration-sdk/work",
     "github.com/pinpt/ripsrc/ripsrc",
+    "github.com/pinpt/ripsrc/ripsrc/branchmeta",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
     "google.golang.org/grpc",
