@@ -83,25 +83,26 @@ func New(opts Opts, locs fsconf.Locs) *Export {
 
 var ErrRevParseFailed = errors.New("git rev-parse HEAD failed")
 
-func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, rerr error) {
-	started := time.Now()
-	s.logger.Info("export repo started", "repo", s.opts.UniqueName)
-	defer func() {
-		s.logger.Info("export repo finished", "duration", time.Since(started), "repo", s.opts.UniqueName)
-	}()
+type ExportDuration struct {
+	Clone  time.Duration
+	Ripsrc time.Duration
+}
+
+func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, duration ExportDuration, rerr error) {
 	err := os.MkdirAll(s.locs.Temp, 0777)
 	if err != nil {
 		rerr = err
 		return
 	}
-	s.logger.Info("git clone started", "repo", s.opts.UniqueName)
+	s.logger.Debug("git clone started", "repo", s.opts.UniqueName)
 	clonestarted := time.Now()
 	checkoutDir, cacheDir, err := s.clone(ctx)
 	if err != nil {
 		rerr = err
 		return
 	}
-	s.logger.Info("git clone finished", "duration", time.Since(clonestarted), "repo", s.opts.UniqueName)
+	duration.Clone = time.Since(clonestarted)
+	s.logger.Debug("git clone finished", "duration", duration.Clone, "repo", s.opts.UniqueName)
 	if !hasHeadCommit(ctx, checkoutDir) {
 		rerr = ErrRevParseFailed
 		return
@@ -122,6 +123,8 @@ func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, rerr e
 		s.logger.Info("no changes to this repo, skipping ripsrc")
 		return
 	}
+	ripsrcstarted := time.Now()
+	s.logger.Info("ripsrc started", "repo", s.opts.UniqueName)
 	if err = s.branches(ctx); err != nil {
 		rerr = err
 		return
@@ -131,6 +134,8 @@ func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, rerr e
 		rerr = err
 		return
 	}
+	duration.Ripsrc = time.Since(ripsrcstarted)
+	s.logger.Info("ripsrc finished", "duration", duration.Ripsrc, "repo", s.opts.UniqueName)
 
 	rerr = s.opts.LastProcessed.Set(remotebranches, repoNameUsedInCacheDir, "branches")
 	return

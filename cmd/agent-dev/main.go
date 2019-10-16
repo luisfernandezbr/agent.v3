@@ -83,9 +83,6 @@ var cmdExportRepo = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		started := time.Now()
 		logger := defaultLogger()
-		defer func() {
-			logger.Info("completed", "duration", time.Since(started))
-		}()
 		ctx := context.Background()
 		url, _ := cmd.Flags().GetString("url")
 		pinpointRoot, _ := cmd.Flags().GetString("pinpoint-root")
@@ -130,12 +127,15 @@ var cmdExportRepo = &cobra.Command{
 		}
 
 		exp := exportrepo.New(opts, locs)
-		if _, err := exp.Run(ctx); err != nil {
+		_, dur, err := exp.Run(ctx)
+		if err != nil {
 			exitWithErr(logger, err)
 		}
 		if err := lastProcessed.Save(); err != nil {
 			exitWithErr(logger, err)
 		}
+		logger.Info("export-repo completed", "duration", time.Since(started), "gitclone", dur.Clone.String(), "ripsrc", dur.Ripsrc.String())
+
 	},
 }
 
