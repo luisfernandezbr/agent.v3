@@ -23,11 +23,17 @@ func (api *API) FetchAllRepos(included []string, excludedids []string) (projecti
 		// 1. check if there are any in included
 		// 2. check if the repo name is in the included
 		if len(included) == 0 || exists(filepath.Base(repo.Name), included) {
+			var reponame string
+			if strings.HasPrefix(repo.Name, repo.Project.Name) {
+				reponame = repo.Name
+			} else {
+				reponame = repo.Project.Name + "/" + repo.Name
+			}
 			repos = append(repos, &sourcecode.Repo{
 				Active:        true,
 				CustomerID:    api.customerid,
 				DefaultBranch: strings.Replace(repo.DefaultBranch, "refs/heads/", "", 1),
-				Name:          repo.Name,
+				Name:          reponame,
 				RefID:         repo.ID,
 				RefType:       api.reftype,
 				URL:           repo.RemoteURL,
