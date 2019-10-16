@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pinpt/ripsrc/ripsrc/branchmeta"
@@ -107,16 +106,19 @@ func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, rerr e
 	s.logger = s.logger.With("repo", s.repoNameUsedInCacheDir)
 	s.ripsrcSetup(checkoutDir)
 
-	wantedbranches, remotebranches, err := s.wantedBranches(ctx, repoNameUsedInCacheDir, checkoutDir)
+	skipsrc, remotebranches, err := s.skipRipsrc(ctx, repoNameUsedInCacheDir, checkoutDir)
 	if err != nil {
 		panic(err)
 	}
-
-	if err = s.branches(ctx, wantedbranches); err != nil {
+	if skipsrc {
+		s.logger.Info("no changes to this repo, skipping ripsrc")
+		return
+	}
+	if err = s.branches(ctx); err != nil {
 		rerr = err
 		return
 	}
-	err = s.code(ctx, wantedbranches)
+	err = s.code(ctx)
 	if err != nil {
 		rerr = err
 		return
@@ -192,10 +194,9 @@ func (s *Export) ripsrcSetup(repoDir string) {
 	s.rip = ripsrc.New(opts)
 }
 
-func (s *Export) wantedBranches(ctx context.Context, reponame string, checkoutdir string) (map[string]branchmeta.Branch, map[string]string, error) {
-	remotebranches := make(map[string]string)
+func (s *Export) skipRipsrc(ctx context.Context, reponame string, checkoutdir string) (bool, map[string]branchmeta.Branch, error) {
 	cachedbranches := make(map[string]string)
-	wantedbranches := make(map[string]branchmeta.Branch)
+	remotebranches := make(map[string]branchmeta.Branch)
 	cached := s.opts.LastProcessed.Get(reponame, "branches")
 	structmarshal.StructToStruct(cached, &cachedbranches)
 	opts := branchmeta.Opts{
@@ -205,18 +206,22 @@ func (s *Export) wantedBranches(ctx context.Context, reponame string, checkoutdi
 	}
 	br, err := branchmeta.Get(ctx, opts)
 	if err != nil {
-		return nil, nil, err
+		return true, nil, err
 	}
+	var skip bool
 	for _, b := range br {
-		remotebranches[b.Name] = b.Commit
-		if sha, ok := cachedbranches[b.Name]; !ok || (ok && sha != b.Commit) {
-			wantedbranches[b.Name] = b
+		remotebranches[b.Name] = b
+		if sha, o := cachedbranches[b.Name]; !o || (sha != b.Commit) {
+			skip = true
 		}
 	}
-	return wantedbranches, remotebranches, nil
+	if !skip && len(cachedbranches) != len(remotebranches) {
+		skip = true
+	}
+	return skip, remotebranches, nil
 }
 
-func (s *Export) branches(ctx context.Context, wantedbranches map[string]branchmeta.Branch) error {
+func (s *Export) branches(ctx context.Context) error {
 	sessions := s.opts.Sessions
 	sessionID, _, err := sessions.SessionRoot(sourcecode.BranchModelName.String())
 	if err != nil {
@@ -227,18 +232,10 @@ func (s *Export) branches(ctx context.Context, wantedbranches map[string]branchm
 	res := make(chan ripsrc.Branch)
 	done := make(chan bool)
 
-	var mutex sync.Mutex
 	go func() {
 		for data := range res {
 			if len(data.Commits) == 0 {
 				// we do not export branches with no commits, especially since branch id depends on first commit
-				continue
-			}
-			var ok bool
-			mutex.Lock()
-			_, ok = wantedbranches[data.Name]
-			mutex.Unlock()
-			if !ok {
 				continue
 			}
 			obj := sourcecode.Branch{}
@@ -297,7 +294,7 @@ func (s *Export) commitIDs(shas []string) (res []string) {
 	return ids.CodeCommits(s.opts.CustomerID, s.opts.RefType, s.opts.RepoID, shas)
 }
 
-func (s *Export) code(ctx context.Context, wantedbranches map[string]branchmeta.Branch) error {
+func (s *Export) code(ctx context.Context) error {
 	started := time.Now()
 
 	res := make(chan ripsrc.CommitCode, 100)
@@ -313,7 +310,7 @@ func (s *Export) code(ctx context.Context, wantedbranches map[string]branchmeta.
 		}
 	}()
 
-	err := s.rip.CodeByCommit(ctx, res, wantedbranches)
+	err := s.rip.CodeByCommit(ctx, res)
 	if err != nil {
 		return err
 	}
