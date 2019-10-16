@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"context"
 	"fmt"
@@ -630,3 +631,4 @@ func init() {
 	cmd := cmdTestBackendMock
 	cmdRoot.AddCommand(cmd)
 }
+*/

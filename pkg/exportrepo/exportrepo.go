@@ -9,8 +9,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
+
+	"github.com/pinpt/ripsrc/ripsrc/branchmeta"
 
 	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/go-common/fileutil"
@@ -23,6 +26,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
+	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/ripsrc/ripsrc"
 
 	"github.com/hashicorp/go-hclog"
@@ -101,21 +105,28 @@ func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, rerr e
 	repoNameUsedInCacheDir = s.repoNameUsedInCacheDir
 
 	s.logger = s.logger.With("repo", s.repoNameUsedInCacheDir)
-
 	s.ripsrcSetup(checkoutDir)
 
-	err = s.branches(ctx)
+	skipsrc, remotebranches, err := s.skipRipsrc(ctx, repoNameUsedInCacheDir, checkoutDir)
 	if err != nil {
 		rerr = err
 		return
 	}
-
+	if skipsrc {
+		s.logger.Info("no changes to this repo, skipping ripsrc")
+		return
+	}
+	if err = s.branches(ctx); err != nil {
+		rerr = err
+		return
+	}
 	err = s.code(ctx)
 	if err != nil {
 		rerr = err
 		return
 	}
 
+	rerr = s.opts.LastProcessed.Set(remotebranches, repoNameUsedInCacheDir, "branches")
 	return
 }
 
@@ -183,6 +194,31 @@ func (s *Export) ripsrcSetup(repoDir string) {
 	s.rip = ripsrc.New(opts)
 }
 
+func (s *Export) skipRipsrc(ctx context.Context, reponame string, checkoutdir string) (bool, map[string]branchmeta.Branch, error) {
+	cachedbranches := make(map[string]branchmeta.Branch)
+	remotebranches := make(map[string]branchmeta.Branch)
+	cached := s.opts.LastProcessed.Get(reponame, "branches")
+	if cached != nil {
+		if err := structmarshal.StructToStruct(cached, &cachedbranches); err != nil {
+			return true, nil, err
+		}
+	}
+	opts := branchmeta.Opts{
+		Logger:    s.logger,
+		RepoDir:   checkoutdir,
+		UseOrigin: true,
+	}
+	br, err := branchmeta.Get(ctx, opts)
+	if err != nil {
+		return true, nil, err
+	}
+	for _, b := range br {
+		remotebranches[b.Name] = b
+	}
+	skip := reflect.DeepEqual(cachedbranches, remotebranches)
+	return skip, remotebranches, nil
+}
+
 func (s *Export) branches(ctx context.Context) error {
 	sessions := s.opts.Sessions
 	sessionID, _, err := sessions.SessionRoot(sourcecode.BranchModelName.String())
@@ -200,7 +236,6 @@ func (s *Export) branches(ctx context.Context) error {
 				// we do not export branches with no commits, especially since branch id depends on first commit
 				continue
 			}
-
 			obj := sourcecode.Branch{}
 			obj.RefID = data.Name
 			obj.RefType = s.opts.RefType
@@ -236,7 +271,6 @@ func (s *Export) branches(ctx context.Context) error {
 		}
 		done <- true
 	}()
-
 	err = s.rip.Branches(ctx, res)
 	<-done
 

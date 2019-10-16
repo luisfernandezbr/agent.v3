@@ -4,8 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/pinpt/agent.next/cmd/cmdupload"
+	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
+	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 
 	"github.com/pinpt/agent.next/pkg/expsessions"
 	"github.com/pinpt/agent.next/pkg/fsconf"
@@ -76,8 +81,11 @@ var cmdExportRepo = &cobra.Command{
 	Short: "Clone the repo and run ripsrc and write the output",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
+		started := time.Now()
 		logger := defaultLogger()
-
+		defer func() {
+			logger.Info("completed", "duration", time.Since(started))
+		}()
 		ctx := context.Background()
 		url, _ := cmd.Flags().GetString("url")
 		pinpointRoot, _ := cmd.Flags().GetString("pinpoint-root")
@@ -99,28 +107,43 @@ var cmdExportRepo = &cobra.Command{
 			},
 		})
 
+		repoName, _ := cmd.Flags().GetString("repo-name")
+		dummyRepo := commonrepo.Repo{}
+		if repoName != "" {
+			dummyRepo.NameWithOwner = repoName
+		} else {
+			dummyRepo.NameWithOwner = strings.Replace(filepath.Base(url), ".git", "", 1)
+		}
+		reftype, _ := cmd.Flags().GetString("ref-type")
+
 		opts := exportrepo.Opts{
-			Logger:        logger,
-			RepoAccess:    gitclone.AccessDetails{URL: url},
-			Sessions:      sessions,
-			RepoID:        "r1",
-			UniqueName:    "repo1",
-			CustomerID:    "c1",
-			LastProcessed: lastProcessed,
+			Logger:            logger,
+			RepoAccess:        gitclone.AccessDetails{URL: url},
+			Sessions:          sessions,
+			RepoID:            "r1",
+			UniqueName:        "repo1",
+			CustomerID:        "c1",
+			LastProcessed:     lastProcessed,
+			CommitURLTemplate: commiturl.CommitURLTemplate(dummyRepo, url),
+			BranchURLTemplate: commiturl.BranchURLTemplate(dummyRepo, url),
+			RefType:           reftype,
 		}
 
 		exp := exportrepo.New(opts, locs)
-		_, err = exp.Run(ctx)
-		if err != nil {
+		if _, err := exp.Run(ctx); err != nil {
 			exitWithErr(logger, err)
 		}
-
+		if err := lastProcessed.Save(); err != nil {
+			exitWithErr(logger, err)
+		}
 	},
 }
 
 func init() {
 	cmdExportRepo.Flags().String("url", "", "repo url")
 	cmdExportRepo.Flags().String("pinpoint-root", "", "pinpoint-root")
+	cmdExportRepo.Flags().String("ref-type", "git", "ref-type")
+	cmdExportRepo.Flags().String("repo-name", "", "repo-name")
 	cmdRoot.AddCommand(cmdExportRepo)
 }
 
