@@ -457,6 +457,8 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 		var wgErr error
 		var wgErrMu sync.Mutex
 
+		reposChan := reposToChan(repos, 0)
+
 		for i := 0; i < s.config.Concurrency; i++ {
 			wg.Add(1)
 			go func() {
@@ -469,7 +471,7 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 					}
 					wgErrMu.Unlock()
 				}
-				for _, repo := range repos {
+				for repo := range reposChan {
 					hasErr := false
 					wgErrMu.Lock()
 					hasErr = wgErr != nil
