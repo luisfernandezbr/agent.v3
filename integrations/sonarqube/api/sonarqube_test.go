@@ -64,13 +64,3 @@ func TestFetchMetrics(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, measures)
 }
-
-func TestFetchAllMetrics(t *testing.T) {
-	if skipTests(t) {
-		return
-	}
-	sonarapi := NewSonarqubeAPI(context.Background(), hclog.NewNullLogger(), url, authToken, metricsArray)
-	metrics, err := sonarapi.FetchAllMetrics(nil, time.Time{})
-	assert.NoError(t, err)
-	assert.NotEmpty(t, metrics)
-}

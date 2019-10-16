@@ -1,51 +1,51 @@
 package main
 
 import (
-	"github.com/pinpt/agent.next/pkg/objsender"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
 	"github.com/pinpt/integration-sdk/codequality"
 )
 
-func (s *Integration) exportAll() (err error) {
-	var projects []*codequality.Project
-	if projects, err = s.exportProjects(); err != nil {
-		return
-	}
-	if err = s.exportMetrics(projects); err != nil {
-		return
-	}
-	return
-}
-
-func (s *Integration) exportProjects() (projects []*codequality.Project, err error) {
-	sender := objsender.NewNotIncremental(s.agent, codequality.ProjectModelName.String())
-	projects, err = s.api.FetchProjects()
+func (s *Integration) exportAll() error {
+	projects, err := s.api.FetchProjects()
 	if err != nil {
-		return nil, err
+		s.logger.Error("error fetching projects", "err", err)
+		return err
 	}
-
+	session, err := objsender2.Root(s.agent, codequality.ProjectModelName.String())
+	if err != nil {
+		s.logger.Error("error creating project session", "err", err)
+		return err
+	}
+	if err := session.SetTotal(len(projects)); err != nil {
+		s.logger.Error("error setting total projects on exportAll", "err", err)
+		return err
+	}
 	for _, project := range projects {
 		project.CustomerID = s.customerID
-		if err := sender.Send(project); err != nil {
-			return nil, err
+		if err := session.Send(project); err != nil {
+			s.logger.Error("error sending project to agent", "err", err, "id", project.RefID)
+			return err
 		}
-	}
-	return projects, sender.Done()
-}
-
-func (s *Integration) exportMetrics(projects []*codequality.Project) error {
-	sender, err := objsender.NewIncrementalDateBased(s.agent, codequality.MetricModelName.String())
-	if err != nil {
-		return err
-	}
-	metrics, err := s.api.FetchAllMetrics(projects, sender.LastProcessed)
-	if err != nil {
-		return err
-	}
-	for _, metric := range metrics {
-		metric.CustomerID = s.customerID
-		if err := sender.Send(metric); err != nil {
+		metricsession, err := session.Session(codequality.MetricModelName.String(), project.RefID, project.Name)
+		if err != nil {
+			s.logger.Error("error creating metric session", "err", err)
+			return err
+		}
+		metrics, err := s.api.FetchMetrics(project, session.LastProcessedTime())
+		if err != nil {
+			s.logger.Error("error fetching metrics", "err", err)
+			return err
+		}
+		for _, metric := range metrics {
+			metric.CustomerID = s.customerID
+			if err := metricsession.Send(metric); err != nil {
+				s.logger.Error("error sending metric to agent", "err", err, "id", metric.RefID)
+				return err
+			}
+		}
+		if err := metricsession.Done(); err != nil {
 			return err
 		}
 	}
-	return sender.Done()
+	return session.Done()
 }
