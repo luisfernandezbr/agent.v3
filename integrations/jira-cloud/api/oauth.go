@@ -29,7 +29,7 @@ func AccessibleResources(
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	resp, err := reqs.JSON(req, &res)
-	if resp.StatusCode == 401 {
+	if resp != nil && resp.StatusCode == 401 {
 		rerr = errors.New("Auth token provided is not correct. Getting status 401 when trying to call api.atlassian.com/oauth/token/accessible-resources.")
 		return
 	}
