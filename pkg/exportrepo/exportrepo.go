@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -195,10 +196,12 @@ func (s *Export) ripsrcSetup(repoDir string) {
 }
 
 func (s *Export) skipRipsrc(ctx context.Context, reponame string, checkoutdir string) (bool, map[string]branchmeta.Branch, error) {
-	cachedbranches := make(map[string]string)
+	cachedbranches := make(map[string]branchmeta.Branch)
 	remotebranches := make(map[string]branchmeta.Branch)
 	cached := s.opts.LastProcessed.Get(reponame, "branches")
-	structmarshal.StructToStruct(cached, &cachedbranches)
+	if cached != nil {
+		structmarshal.StructToStruct(cached, &cachedbranches)
+	}
 	opts := branchmeta.Opts{
 		Logger:    s.logger,
 		RepoDir:   checkoutdir,
@@ -208,16 +211,10 @@ func (s *Export) skipRipsrc(ctx context.Context, reponame string, checkoutdir st
 	if err != nil {
 		return true, nil, err
 	}
-	var skip bool
 	for _, b := range br {
 		remotebranches[b.Name] = b
-		if sha, o := cachedbranches[b.Name]; !o || (sha != b.Commit) {
-			skip = true
-		}
 	}
-	if !skip && len(cachedbranches) != len(remotebranches) {
-		skip = true
-	}
+	skip := reflect.DeepEqual(cachedbranches, remotebranches)
 	return skip, remotebranches, nil
 }
 
