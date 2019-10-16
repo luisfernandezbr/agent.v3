@@ -20,7 +20,6 @@ func (s *export) sendProgress(ctx context.Context, progressData []byte) error {
 	if err != nil {
 		return err
 	}
-
 	if len(b) > 10*1024*1024 {
 		return errors.New("progress data is >10MB skipping send")
 	}
@@ -32,7 +31,7 @@ func (s *export) sendProgress(ctx context.Context, progressData []byte) error {
 		Data:    &str,
 		Success: true,
 	}
-	deviceinfo.AppendCommonInfoFromConfig(&data, s.EnrollConf)
+	deviceinfo.AppendCommonInfoFromConfig(data, s.EnrollConf)
 	publishEvent := event.PublishEvent{
 		Object: data,
 		Headers: map[string]string{

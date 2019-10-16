@@ -58,9 +58,6 @@ func newSessions(logger hclog.Logger, export *export, outputDir string) *session
 			}
 
 			if s.export.Opts.AgentConfig.Backend.Enable {
-				// TODO: progress panics on edge right now, disable for now
-				continue
-
 				skipDone := true
 				if os.Getenv("PP_AGENT_PROGRESS_ALL") != "" {
 					skipDone = false
