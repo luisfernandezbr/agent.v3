@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
@@ -59,6 +58,7 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 
 func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
 	projects, err := s.api.FetchProjects()
+	var records []map[string]interface{}
 	for _, proj := range projects {
 		itemids, err := s.api.FetchItemIDs(proj.RefID, time.Time{})
 		if err != nil {
@@ -89,7 +89,8 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 			TotalIssues: int64(len(itemids)),
 			URL:         proj.URL,
 		}
-		res.Records = append(res.Records, resp.ToMap())
+		records = append(records, resp.ToMap())
 	}
+	res.Data = records
 	return res, err
 }
