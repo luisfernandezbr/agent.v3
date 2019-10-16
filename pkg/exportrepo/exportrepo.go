@@ -84,18 +84,24 @@ func New(opts Opts, locs fsconf.Locs) *Export {
 var ErrRevParseFailed = errors.New("git rev-parse HEAD failed")
 
 func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, rerr error) {
+	started := time.Now()
+	s.logger.Info("export repo started", "repo", s.opts.UniqueName)
+	defer func() {
+		s.logger.Info("export repo finished", "duration", time.Since(started), "repo", s.opts.UniqueName)
+	}()
 	err := os.MkdirAll(s.locs.Temp, 0777)
 	if err != nil {
 		rerr = err
 		return
 	}
-
+	s.logger.Info("git clone started", "repo", s.opts.UniqueName)
+	clonestarted := time.Now()
 	checkoutDir, cacheDir, err := s.clone(ctx)
 	if err != nil {
 		rerr = err
 		return
 	}
-
+	s.logger.Info("git clone finished", "duration", time.Since(clonestarted), "repo", s.opts.UniqueName)
 	if !hasHeadCommit(ctx, checkoutDir) {
 		rerr = ErrRevParseFailed
 		return
