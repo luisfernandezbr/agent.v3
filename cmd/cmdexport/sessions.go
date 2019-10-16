@@ -62,13 +62,16 @@ func newSessions(logger hclog.Logger, export *export, outputDir string) *session
 				if os.Getenv("PP_AGENT_PROGRESS_ALL") != "" {
 					skipDone = false
 				}
-				res := s.progressTracker.ProgressLinesNested(skipDone)
+				res := s.progressTracker.ProgressLinesNestedMap(skipDone)
 				b, err := json.Marshal(res)
 				if err != nil {
 					s.logger.Error("could not marshal progress data", err)
 					continue
 				}
+
 				//s.logger.Info("progress", "json", "\n\n"+string(b)+"\n\n")
+				//continue
+
 				err = s.export.sendProgress(context.Background(), b)
 				if err != nil {
 					s.logger.Error("could not send progress info to backend", "err", err)

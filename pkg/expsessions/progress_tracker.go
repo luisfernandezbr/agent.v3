@@ -340,8 +340,47 @@ func progressLinesToNested(lines []ProgressLine, sep string) *ProgressStatus {
 	return res
 }
 
+func progressLinesToNestedMap(lines []ProgressLine, sep string) map[string]interface{} {
+	data := progressLinesToNested(lines, sep)
+	var rec func(data *ProgressStatus, cont bool) map[string]interface{}
+	rec = func(data *ProgressStatus, cont bool) map[string]interface{} {
+		res := map[string]interface{}{}
+		totals := map[string]interface{}{}
+		for k, v := range data.Nested {
+			if k == "meta" {
+				res[k] = map[string]interface{}{
+					"c":    v.Current,
+					"t":    v.Total,
+					"done": v.Done,
+				}
+				continue
+			}
+			if !cont && !strings.Contains(k, ":") {
+				totals[k] = map[string]interface{}{
+					"c":    v.Current,
+					"t":    v.Total,
+					"done": v.Done,
+				}
+				continue
+			}
+			res[k] = rec(v, !cont)
+		}
+		if len(totals) != 0 {
+			res["totals"] = totals
+		}
+		return res
+	}
+	return rec(data, true)
+}
+
 func (s *ProgressTracker) ProgressLinesNested(skipDone bool) *ProgressStatus {
 	sep := "@@@"
 	lines := s.ProgressLines(sep, skipDone)
 	return progressLinesToNested(lines, sep)
+}
+
+func (s *ProgressTracker) ProgressLinesNestedMap(skipDone bool) map[string]interface{} {
+	sep := "@@@"
+	lines := s.ProgressLines(sep, skipDone)
+	return progressLinesToNestedMap(lines, sep)
 }

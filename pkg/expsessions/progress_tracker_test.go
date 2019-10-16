@@ -129,7 +129,7 @@ func TestProgressTrackerProgressLines(t *testing.T) {
 	})
 }
 
-func TestProgressLinesToNested(t *testing.T) {
+func TestProgressLinesToNested1(t *testing.T) {
 	lines := []ProgressLine{
 		{"org/meta", 2, 2, true, true},
 		{"org/repos", 2, 2, true, true},
@@ -168,6 +168,80 @@ func TestProgressLinesToNested(t *testing.T) {
 	}	
 	`
 	var wantObj *ProgressStatus
+	err := json.Unmarshal([]byte(want), &wantObj)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotJSON := jsonp.Stringify(got, true)
+	wantJSON := jsonp.Stringify(wantObj, true)
+	if gotJSON != wantJSON {
+		t.Errorf("want != got, got data\n%v\nwant\n%v", gotJSON, wantJSON)
+	}
+}
+
+func TestProgressLinesToNested2(t *testing.T) {
+	lines := []ProgressLine{
+		{"org/meta", 2, 2, true, true},
+		{"org/repos", 1, 2, false, true},
+		{"org/1/repos/meta", 3, 3, true, true},
+	}
+	got := progressLinesToNested(lines, "/")
+	want := `
+	{
+		"nested": {
+			"org": {
+				"nested": {
+					"meta": {"c":2,"t":2,"done":true,"summary":true},
+					"repos": {"c":1,"t":2,"done":false,"summary":true},
+					"1": {
+						"nested": {
+							"repos": {
+								"nested": {
+									"meta": {"c":3,"t":3,"done":true,"summary":true}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}	
+	`
+	var wantObj *ProgressStatus
+	err := json.Unmarshal([]byte(want), &wantObj)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotJSON := jsonp.Stringify(got, true)
+	wantJSON := jsonp.Stringify(wantObj, true)
+	if gotJSON != wantJSON {
+		t.Errorf("want != got, got data\n%v\nwant\n%v", gotJSON, wantJSON)
+	}
+}
+
+func TestProgressLinesToNestedMap(t *testing.T) {
+	lines := []ProgressLine{
+		{"org/meta", 2, 2, true, true},
+		{"org/repos", 1, 2, false, true},
+		{"org/org1:pp/repos/meta", 3, 3, true, true},
+	}
+	got := progressLinesToNestedMap(lines, "/")
+	want := `
+	{
+		"org": {
+			"meta": {"c":2,"t":2,"done":true},
+			"totals": {
+				"repos": {"c":1,"t":2,"done":false}
+			},
+			"org1:pp": {
+				"repos": {
+					"meta": {"c":3,"t":3,"done":true}
+				}
+			}
+		}
+	}	
+	`
+	var wantObj interface{}
 	err := json.Unmarshal([]byte(want), &wantObj)
 	if err != nil {
 		t.Fatal(err)
