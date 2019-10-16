@@ -142,7 +142,8 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 	ctx := context.Background()
 
 	resErrors := map[string]error{}
-
+	var ripsrcDuration time.Duration
+	var gitClonecDuration time.Duration
 	for fetch := range s.gitProcessingRepos {
 		if i == 0 {
 			start = time.Now()
@@ -167,7 +168,7 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 			BranchURLTemplate: fetch.BranchURLTemplate,
 		}
 		exp := exportrepo.New(opts, s.Locs)
-		repoDirName, err := exp.Run(ctx)
+		repoDirName, duration, err := exp.Run(ctx)
 		if err == exportrepo.ErrRevParseFailed {
 			reposFailedRevParse++
 			continue
@@ -178,6 +179,8 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 		} else {
 			logger.Info("Finished processing git repo", "repo", repoDirName)
 		}
+		ripsrcDuration += duration.Ripsrc
+		gitClonecDuration += duration.Clone
 	}
 
 	if i == 0 {
@@ -198,7 +201,12 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 
 	}
 
-	logger.Info("Finished git repo processing", "count", i, "dur", time.Since(start).String())
+	logger.Info("Finished git repo processing", "count", i,
+		"duration", time.Since(start).String(),
+		"gitclone", gitClonecDuration.String(),
+		"ripsrc", ripsrcDuration.String(),
+	)
+
 	return false, nil
 }
 
