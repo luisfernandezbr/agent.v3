@@ -130,11 +130,12 @@ var cmdExportRepo = &cobra.Command{
 		}
 
 		exp := exportrepo.New(opts, locs)
-		_, err = exp.Run(ctx)
-		if err != nil {
+		if _, err := exp.Run(ctx); err != nil {
 			exitWithErr(logger, err)
 		}
-		lastProcessed.Save()
+		if err := lastProcessed.Save(); err != nil {
+			exitWithErr(logger, err)
+		}
 	},
 }
 
