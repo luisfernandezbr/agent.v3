@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pinpt/go-common/datamodel"
 	pstrings "github.com/pinpt/go-common/strings"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/azuretfs/api"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/rpcdef"
 )
@@ -49,6 +49,7 @@ type Integration struct {
 	api        *api.API
 	Creds      *api.Creds `json:"credentials"`
 	customerid string
+	orgSession *objsender2.Session
 
 	// RefType switches between azure and tfs
 	RefType         RefType         `json:"reftype"`
@@ -71,6 +72,16 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	if err = s.initConfig(ctx, config); err != nil {
 		return
 	}
+	var orgtype string
+	if s.RefType == RefTypeTFS {
+		orgtype = "collection"
+	} else {
+		orgtype = "organization"
+	}
+	if s.orgSession, err = objsender2.RootTracking(s.agent, orgtype); err != nil {
+		return
+	}
+
 	if s.IntegrationType == IntegrationTypeCode {
 		err = s.exportCode()
 	} else if s.IntegrationType == IntegrationTypeIssues {
@@ -101,15 +112,10 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 		res.Errors = append(res.Errors, err.Error())
 		return res, err
 	}
-	repochan, done := api.AsyncProcess("validate", s.logger, func(m datamodel.Model) {
-		// empty, nothing to do here since we're just validating
-	})
-	if _, err = s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs, repochan); err != nil {
+	if _, _, err = s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs); err != nil {
 		// don't return, get as many errors are possible
 		res.Errors = append(res.Errors, err.Error())
 	}
-	close(repochan)
-	<-done
 	return res, err
 }
 
@@ -130,9 +136,9 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 	return res, nil
 }
 
-func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig) error {
+func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig) (err error) {
 	// type IntegrationType
-	if err := structmarshal.MapToStruct(config.Integration, &s); err != nil {
+	if err = structmarshal.MapToStruct(config.Integration, &s); err != nil {
 		return err
 	}
 	var istfs bool

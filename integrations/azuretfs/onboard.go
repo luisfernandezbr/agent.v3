@@ -6,13 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pinpt/integration-sdk/work"
-
-	"github.com/pinpt/agent.next/integrations/azuretfs/api"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/rpcdef"
-	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/integration-sdk/agent"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
@@ -20,12 +16,7 @@ import (
 func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
 
 	var repos []*sourcecode.Repo
-	reposchan, done := api.AsyncProcess("export repos", s.logger, func(model datamodel.Model) {
-		repos = append(repos, model.(*sourcecode.Repo))
-	})
-	_, err = s.api.FetchAllRepos([]string{}, []string{}, reposchan)
-	close(reposchan)
-	<-done
+	_, repos, err = s.api.FetchAllRepos([]string{}, []string{})
 	if err != nil {
 		s.logger.Error("error fetching repos for onboard export repos")
 		return
@@ -67,31 +58,25 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 }
 
 func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
-	var records []map[string]interface{}
-	// needed in case api.AsyncProcess below is processing items in parallel
-	var recordsMu sync.Mutex
-
-	projectchan, done := api.AsyncProcess("export projects", s.logger, func(model datamodel.Model) {
-		proj := model.(*work.Project)
+	projects, err := s.api.FetchProjects()
+	for _, proj := range projects {
 		itemids, err := s.api.FetchItemIDs(proj.RefID, time.Time{})
 		if err != nil {
 			s.logger.Error("error getting issue count", "err", err)
-			return
+			return res, err
 		}
-		itemchan := make(chan datamodel.Model, 1)
-		raw, err := s.api.FetchWorkItemsByIDs(proj.RefID, append([]string{}, itemids[len(itemids)-1]), itemchan)
+		raw, lastitem, err := s.api.FetchWorkItemsByIDs(proj.RefID, append([]string{}, itemids[len(itemids)-1]))
 		if err != nil {
 			s.logger.Error("error getting last issue", "err", err)
-			return
+			return res, err
 		}
-		lastitem := (<-itemchan).(*work.Issue)
 		resp := &agent.ProjectResponseProjects{
 			Active:     proj.Active,
 			Identifier: proj.Identifier,
 			LastIssue: agent.ProjectResponseProjectsLastIssue{
 				IssueID:     ids.WorkIssue(s.customerid, proj.RefType, fmt.Sprintf("%d", raw[0].ID)),
-				Identifier:  lastitem.Identifier,
-				CreatedDate: agent.ProjectResponseProjectsLastIssueCreatedDate(lastitem.CreatedDate),
+				Identifier:  lastitem[0].Identifier,
+				CreatedDate: agent.ProjectResponseProjectsLastIssueCreatedDate(lastitem[0].CreatedDate),
 				LastUser: agent.ProjectResponseProjectsLastIssueLastUser{
 					UserID:    raw[0].Fields.CreatedBy.ID,
 					Name:      raw[0].Fields.CreatedBy.DisplayName,
@@ -104,13 +89,7 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 			TotalIssues: int64(len(itemids)),
 			URL:         proj.URL,
 		}
-		recordsMu.Lock()
-		records = append(records, resp.ToMap())
-		recordsMu.Unlock()
-	})
-	_, err = s.api.FetchProjects(projectchan)
-	close(projectchan)
-	<-done
-	res.Data = records
+		res.Records = append(res.Records, resp.ToMap())
+	}
 	return res, err
 }

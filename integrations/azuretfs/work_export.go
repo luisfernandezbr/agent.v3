@@ -2,137 +2,170 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/pinpt/agent.next/integrations/azuretfs/api"
-	"github.com/pinpt/agent.next/pkg/objsender"
-	"github.com/pinpt/go-common/datamodel"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+
+	azureapi "github.com/pinpt/agent.next/integrations/azuretfs/api"
 	"github.com/pinpt/integration-sdk/work"
 )
 
 func (s *Integration) exportWork() error {
-	var err error
-	var projids []string
-	projids, err = s.processProjects()
+
+	var orgname string
+	if s.Creds.Organization != nil {
+		orgname = *s.Creds.Organization
+	} else {
+		orgname = *s.Creds.Collection
+	}
+	sender, err := s.orgSession.Session(work.ProjectModelName.String(), orgname, orgname)
 	if err != nil {
 		return err
 	}
-	if err = s.processWorkUsers(projids); err != nil {
-		return err
-	}
-	if err = s.processWorkItems(projids); err != nil {
-		return err
-	}
-	if err = s.processChangelogs(projids); err != nil {
-		return err
-	}
-	if err = s.processSprints(projids); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *Integration) processProjects() (projids []string, err error) {
-	sender := objsender.NewNotIncremental(s.agent, work.ProjectModelName.String())
-	defer sender.Done()
-	items, done := api.AsyncProcess("projects", s.logger, func(model datamodel.Model) {
-		if err := sender.Send(model); err != nil {
-			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
-		}
-	})
-	projids, err = s.api.FetchProjects(items)
-	close(items)
-	<-done
-	return
-}
-
-func (s *Integration) processWorkUsers(projids []string) error {
-	sender := objsender.NewNotIncremental(s.agent, work.UserModelName.String())
-	defer sender.Done()
-	items, done := api.AsyncProcess("work users", s.logger, func(model datamodel.Model) {
-		if err := sender.Send(model); err != nil {
-			s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
-		}
-	})
-	var errors []string
-	for _, projid := range projids {
-		teamids, err := s.api.FetchTeamIDs(projid)
-		if err != nil {
-			errors = append(errors, err.Error())
-			continue
-		}
-		err = s.api.FetchWorkUsers(projid, teamids, items)
-		if err != nil {
-			errors = append(errors, err.Error())
-		}
-	}
-	close(items)
-	<-done
-	if errors != nil {
-		return fmt.Errorf("error fetching users. err %s", strings.Join(errors, ", "))
-	}
-	return nil
-}
-
-func (s *Integration) processWorkItems(projids []string) error {
-	sender, err := objsender.NewIncrementalDateBased(s.agent, work.IssueModelName.String())
+	projects, err := s.api.FetchProjects()
 	if err != nil {
 		return err
 	}
-	defer sender.Done()
-	for _, projid := range projids {
-		items, done := api.AsyncProcess("work items", s.logger, func(model datamodel.Model) {
-			if err := sender.Send(model); err != nil {
-				s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
-			}
-		})
-		err = s.api.FetchWorkItems(projid, sender.LastProcessed, items)
-		close(items)
-		<-done
+	if err := sender.SetTotal(len(projects)); err != nil {
+		s.logger.Error("error setting total projects on exportWork", "err", err)
+	}
+	for _, proj := range projects {
+		if err := sender.Send(proj); err != nil {
+			s.logger.Error("error sending project", "id", proj.RefID, "err", err)
+			return err
+		}
+		teamids, err := s.api.FetchTeamIDs(proj.RefID)
 		if err != nil {
 			return err
 		}
+		if err = s.processWorkUsers(proj.RefID, proj.Name, teamids, sender); err != nil {
+			return err
+		}
+		if err = s.processWorkItems(proj.RefID, proj.Name, sender); err != nil {
+			return err
+		}
+		if err = s.processSprints(proj.RefID, proj.Name, teamids, sender); err != nil {
+			return err
+		}
 	}
-	return nil
+	return sender.Done()
 }
 
-func (s *Integration) processChangelogs(projids []string) error {
-	sender, err := objsender.NewIncrementalDateBased(s.agent, work.ChangelogModelName.String())
+func (s *Integration) processWorkUsers(projid, projname string, teamids []string, sender *objsender2.Session) error {
+	sender, err := sender.Session(work.UserModelName.String(), projid, projname)
+	if err != nil {
+		s.logger.Error("error creating sender session for work user")
+		return err
+	}
+	users, err := s.api.FetchWorkUsers(projid, teamids)
+	if err != nil {
+		return fmt.Errorf("error fetching users. err %s", err.Error())
+	}
+	if err := sender.SetTotal(len(users)); err != nil {
+		s.logger.Error("error setting total users on processWorkUsers", "err", err)
+	}
+	for _, user := range users {
+		if err := sender.Send(user); err != nil {
+			s.logger.Error("error sending users", "err", err, "id", user.RefID)
+		}
+	}
+	return sender.Done()
+}
+
+func (s *Integration) processWorkItems(projid, projname string, sender *objsender2.Session) error {
+	sender, err := sender.Session(work.IssueModelName.String(), projid, projname)
+	if err != nil {
+		s.logger.Error("error creating sender session for work user")
+		return err
+	}
+
+	// gets the work items (issues) and sends them to the items channel
+	// The first step is to get the IDs of all items that changed after the fromdate
+	// Then we need to get the items 200 at a time, this is done async
+	async := azureapi.NewAsync(s.Concurrency)
+	allids, err := s.api.FetchItemIDs(projid, sender.LastProcessedTime())
 	if err != nil {
 		return err
 	}
-	defer sender.Done()
-	for _, projid := range projids {
-		items, done := api.AsyncProcess("changelogs", s.logger, func(model datamodel.Model) {
-			if err := sender.Send(model); err != nil {
-				s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
+	if err := sender.SetTotal(len(allids)); err != nil {
+		s.logger.Error("error setting total ids on processWorkItems", "err", err)
+	}
+	fetchitems := func(ids []string) {
+		async.Do(func() {
+			_, items, err := s.api.FetchWorkItemsByIDs(projid, ids)
+			if err != nil {
+				s.logger.Error("error with fetchWorkItemsByIDs", "err", err)
+				return
+			}
+			for _, i := range items {
+				if err := sender.Send(i); err != nil {
+					s.logger.Error("error sending work item", "err", err, "id", i.RefID)
+				}
+				s.processChangelogs(projid, i.Identifier, i.RefID, sender)
 			}
 		})
-		err = s.api.FetchChangelogs(projid, sender.LastProcessed, items)
-		close(items)
-		<-done
-		if err != nil {
-			return err
+	}
+	var ids []string
+	for _, id := range allids {
+		ids = append(ids, id)
+		if len(ids) == 200 {
+			fetchitems(ids)
+			ids = []string{}
 		}
 	}
-	return err
+	if len(ids) > 0 {
+		fetchitems(ids)
+	}
+	async.Wait()
+	return sender.Done()
 }
 
-func (s *Integration) processSprints(projids []string) error {
-	sender := objsender.NewNotIncremental(s.agent, work.SprintModelName.String())
-	defer sender.Done()
-	for _, projid := range projids {
-		items, done := api.AsyncProcess("sprints", s.logger, func(model datamodel.Model) {
-			if err := sender.Send(model); err != nil {
-				s.logger.Error("error sending "+model.GetModelName().String(), "err", err)
-			}
-		})
-		err := s.api.FetchSprints(projid, items)
-		close(items)
-		<-done
-		if err != nil {
-			return err
+func (s *Integration) processChangelogs(projid, identifier, itemid string, sender *objsender2.Session) error {
+
+	// First we need to get the IDs of the items that hav changed after the fromdate
+	// Then we need to get each changelog individually.
+	sender, err := sender.Session(work.ChangelogModelName.String(), itemid, identifier)
+	if err != nil {
+		s.logger.Error("error creating sender session for work changelog")
+		return err
+	}
+	changelogs, err := s.api.FetchChangeLog(projid, itemid)
+	if err := sender.SetTotal(len(changelogs)); err != nil {
+		s.logger.Error("error setting total changelogs on processChangelogs", "err", err)
+	}
+	if err != nil {
+		s.logger.Error("error fetching changlogs for item id "+itemid, "err", err)
+		return err
+	}
+	for _, c := range changelogs {
+		if err := sender.Send(c); err != nil {
+			s.logger.Error("error sending changlog", "err", err, "id", c.RefID)
 		}
 	}
-	return nil
+
+	return sender.Done()
+}
+
+func (s *Integration) processSprints(projid, projname string, teamids []string, sender *objsender2.Session) error {
+	sender, err := sender.Session(work.SprintModelName.String(), projid, projname)
+	if err != nil {
+		s.logger.Error("error creating sender session for work sprint")
+		return err
+	}
+	async := azureapi.NewAsync(s.Concurrency)
+	for _, teamid := range teamids {
+		teamid := teamid
+		async.Do(func() {
+			sprints, err := s.api.FetchSprint(projid, teamid)
+			if err != nil {
+				return
+			}
+			for _, sp := range sprints {
+				if err := sender.Send(sp); err != nil {
+					s.logger.Error("error sending sprint", "err", err, "id", sp.RefID)
+				}
+			}
+		})
+	}
+	async.Wait()
+	return sender.Done()
 }

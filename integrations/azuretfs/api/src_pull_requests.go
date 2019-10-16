@@ -3,63 +3,113 @@ package api
 import (
 	"fmt"
 	"net/url"
-	"time"
 
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/ids"
-	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 // FetchPullRequests calls the pull request api and processes the reponse sending each object to the corresponding channel async
 // sourcecode.PullRequest, sourcecode.PullRequestReview, sourcecode.PullRequestComment, and sourcecode.PullRequestCommit
-func (api *API) FetchPullRequests(repoid string, fromdate time.Time, pullRequestChan chan<- datamodel.Model, pullRequestReviewChan chan<- datamodel.Model, pullRequestCommentChan chan<- datamodel.Model, pullRequestCommitChan chan<- datamodel.Model) error {
+func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsender2.Session) error {
 	res, err := api.fetchPullRequests(repoid)
 	if err != nil {
 		return err
 	}
+	fromdate := sender.LastProcessedTime()
 	incremental := !fromdate.IsZero()
-	async := NewAsync(api.concurrency)
-
+	var pullrequests []pullRequestResponse
+	var pullrequestcomments []pullRequestResponse
 	for _, p := range res {
+		// if this is not incremental, return only the objects created after the fromdate
+		if !incremental || p.CreationDate.After(fromdate) {
+			pullrequests = append(pullrequests, p)
+		}
+		// if this is not incremental, only fetch the comments if this pr is still opened or was closed after the last processed date
+		if !incremental || (p.Status == "active" || (incremental && p.ClosedDate.After(fromdate))) {
+			pullrequestcomments = append(pullrequestcomments, p)
+		}
+	}
+
+	prsender, err := sender.Session(sourcecode.PullRequestModelName.String(), repoid, reponame)
+	if err != nil {
+		api.logger.Error("error creating sender session for pull request", "err", err, "repo_id", repoid, "repo_name", reponame)
+		return err
+	}
+	if err := prsender.SetTotal(len(pullrequests)); err != nil {
+		api.logger.Error("error setting total pullrequests on FetchPullRequests", "err", err)
+	}
+	async := NewAsync(api.concurrency)
+	for _, p := range pullrequests {
 		pr := pullRequestResponseWithShas{}
 		pr.pullRequestResponse = p
-		// if this is not incremental, return only the objects created after the fromdate
-		if !incremental || pr.CreationDate.After(fromdate) {
+		async.Do(func() {
 			commits, err := api.fetchPullRequestCommits(repoid, pr.PullRequestID)
+			pridstring := fmt.Sprintf("%d", pr.PullRequestID)
 			if err != nil {
-				api.logger.Error("error fetching commits for PR, skiping", "pr-id", pr.PullRequestID, "repo-id", repoid)
-				continue
+				api.logger.Error("error fetching commits for PR, skiping", "pr_id", pr.PullRequestID, "repo_id", repoid)
+				return
+			}
+			prcsender, err := prsender.Session(sourcecode.PullRequestCommitModelName.String(), pridstring, pridstring)
+			if err != nil {
+				api.logger.Error("error creating sender session for pull request commits", "pr_id", pr.PullRequestID, "repo_id", repoid)
+				return
+			}
+			if err := prcsender.SetTotal(len(commits)); err != nil {
+				api.logger.Error("error setting total pull request commits on FetchPullRequests", "err", err)
 			}
 			for _, commit := range commits {
 				pr.commitshas = append(pr.commitshas, commit.CommitID)
 				pr := pr
-				async.Do(func() {
-					api.sendPullRequestCommitObjects(repoid, pr, pullRequestCommitChan)
-				})
+				api.sendPullRequestCommitObjects(repoid, pr, prcsender)
 			}
-			async.Do(func() {
-				api.sendPullRequestObjects(repoid, pr, pullRequestChan, pullRequestReviewChan)
-			})
-		}
-		// if this is not incremental, only fetch the comments if this pr is still opened or was closed after the last processed date
-		if !incremental || (pr.Status == "active" || (incremental && pr.ClosedDate.After(fromdate))) {
-			async.Do(func() {
-				api.sendPullRequestCommentObject(repoid, pr.PullRequestID, pullRequestCommentChan)
-			})
-		}
+			if err := prcsender.Done(); err != nil {
+				api.logger.Error("error with sender done in pull request commits", "err", err)
+			}
+			prrsender, err := prsender.Session(sourcecode.PullRequestReviewModelName.String(), pridstring, pridstring)
+			if err != nil {
+				api.logger.Error("error creating sender session for pull request reviews", "pr_id", pr.PullRequestID, "repo_id", repoid)
+				return
+			}
+			if err := prrsender.SetTotal(len(pr.Reviewers)); err != nil {
+				api.logger.Error("error setting total pull request reviews on FetchPullRequests", "err", err)
+			}
+			api.sendPullRequestObjects(repoid, pr, prsender, prrsender)
+			if err := prrsender.Done(); err != nil {
+				api.logger.Error("error with sender done in pull request reviews", "err", err)
+
+			}
+		})
+	}
+
+	for _, pr := range pullrequestcomments {
+		pr := pr
+		async.Do(func() {
+			prcsender, err := prsender.Session(sourcecode.PullRequestCommentModelName.String(), fmt.Sprintf("%d", pr.PullRequestID), pr.Title)
+			if err != nil {
+				api.logger.Error("error creating sender session for pull request comments", "pr_id", pr.PullRequestID, "repo_id", repoid)
+				return
+			}
+			api.sendPullRequestCommentObject(repoid, pr.PullRequestID, prcsender)
+			if err := prcsender.Done(); err != nil {
+				api.logger.Error("error with sender done in pull request comments", "err", err)
+			}
+		})
 	}
 	async.Wait()
-	return nil
+
+	return prsender.Done()
 }
 
-func (api *API) sendPullRequestCommentObject(repoid string, prid int64, pullRequestCommentChan chan<- datamodel.Model) {
+func (api *API) sendPullRequestCommentObject(repoid string, prid int64, sender *objsender2.Session) {
 	comments, err := api.fetchPullRequestComments(repoid, prid)
 	if err != nil {
-		api.logger.Error("error fetching comments for PR, skiping", "pr-id", prid, "repo-id", repoid)
+		api.logger.Error("error fetching comments for PR, skiping", "pr_id", prid, "repo_id", repoid)
 		return
 	}
+	var total []*sourcecode.PullRequestComment
 	for _, cm := range comments {
 		for _, e := range cm.Comments {
 			// comment type "text" means it's a real user instead of system
@@ -67,7 +117,7 @@ func (api *API) sendPullRequestCommentObject(repoid string, prid int64, pullRequ
 				continue
 			}
 			refid := fmt.Sprintf("%d_%d", cm.ID, e.ID)
-			c := sourcecode.PullRequestComment{
+			c := &sourcecode.PullRequestComment{
 				Body:          e.Content,
 				CustomerID:    api.customerid,
 				PullRequestID: api.IDs.CodePullRequest(fmt.Sprintf("%d", prid), refid),
@@ -78,20 +128,27 @@ func (api *API) sendPullRequestCommentObject(repoid string, prid int64, pullRequ
 			}
 			date.ConvertToModel(e.PublishedDate, &c.CreatedDate)
 			date.ConvertToModel(e.LastUpdatedDate, &c.UpdatedDate)
-			pullRequestCommentChan <- &c
+			total = append(total, c)
+		}
+	}
+	if err := sender.SetTotal(len(total)); err != nil {
+		api.logger.Error("error setting total pull request comments on sendPullRequestCommentObject", "err", err)
+	}
+	for _, c := range total {
+		if err := sender.Send(c); err != nil {
+			api.logger.Error("error sending pull request comments", "id", c.RefID, "err", err)
 		}
 	}
 }
 
-func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithShas, pullRequestChan chan<- datamodel.Model, pullRequestReviewChan chan<- datamodel.Model) {
-	prid := p.PullRequestID
+func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithShas, prsender *objsender2.Session, prrsender *objsender2.Session) {
 
-	pr := sourcecode.PullRequest{
+	pr := &sourcecode.PullRequest{
 		BranchName:     p.SourceBranch,
 		CreatedByRefID: p.CreatedBy.ID,
 		CustomerID:     api.customerid,
 		Description:    p.Description,
-		RefID:          fmt.Sprintf("%d", prid),
+		RefID:          fmt.Sprintf("%d", p.PullRequestID),
 		RefType:        api.reftype,
 		RepoID:         api.IDs.CodeRepo(p.Repository.ID),
 		Title:          p.Title,
@@ -133,23 +190,27 @@ func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithS
 			pr.MergedByRefID = r.ID
 			state = sourcecode.PullRequestReviewStateApproved
 		}
-		refid := hash.Values(i, prid, r.ID)
-		pullRequestReviewChan <- &sourcecode.PullRequestReview{
+		refid := hash.Values(i, p.PullRequestID, r.ID)
+		if err := prrsender.Send(&sourcecode.PullRequestReview{
 			CustomerID:    api.customerid,
-			PullRequestID: api.IDs.CodePullRequest(fmt.Sprintf("%d", prid), refid),
+			PullRequestID: api.IDs.CodePullRequest(fmt.Sprintf("%d", p.PullRequestID), refid),
 			RefID:         refid,
 			RefType:       api.reftype,
 			RepoID:        api.IDs.CodeRepo(repoid),
 			State:         state,
 			URL:           r.URL,
 			UserRefID:     r.ID,
+		}); err != nil {
+			api.logger.Error("error sending pull request review", "id", pr.RefID, "err", err)
 		}
 	}
 	date.ConvertToModel(p.ClosedDate, &pr.ClosedDate)
 	date.ConvertToModel(p.CreationDate, &pr.CreatedDate)
-	pullRequestChan <- &pr
+	if err := prsender.Send(pr); err != nil {
+		api.logger.Error("error sending pull request", "id", pr.RefID, "err", err)
+	}
 }
-func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestResponseWithShas, commichan chan<- datamodel.Model) error {
+func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestResponseWithShas, sender *objsender2.Session) error {
 	sha := p.commitshas[len(p.commitshas)-1]
 	commits, err := api.fetchSingleCommit(repoid, sha)
 	if err != nil {
@@ -172,8 +233,9 @@ func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestRespons
 			URL:           c.RemoteURL,
 		}
 		date.ConvertToModel(c.Push.Date, &commit.CreatedDate)
-		commichan <- commit
-
+		if err := sender.Send(commit); err != nil {
+			api.logger.Error("error sending pull request commit", "id", commit.RefID, "err", err)
+		}
 	}
 	return nil
 }

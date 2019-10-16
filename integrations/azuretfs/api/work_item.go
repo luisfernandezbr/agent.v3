@@ -6,42 +6,10 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/integration-sdk/work"
 )
 
 const whereDateFormat = `01/02/2006 15:04:05Z`
-
-// FetchWorkItems gets the work items (issues) and sends them to the items channel
-// The first step is to get the IDs of all items that changed after the fromdate
-// Then we need to get the items 200 at a time, this is done async
-func (api *API) FetchWorkItems(projid string, fromdate time.Time, items chan<- datamodel.Model) error {
-	async := NewAsync(api.concurrency)
-	allids, err := api.FetchItemIDs(projid, fromdate)
-	if err != nil {
-		return err
-	}
-	fetchitems := func(ids []string) {
-		async.Do(func() {
-			if _, err := api.FetchWorkItemsByIDs(projid, ids, items); err != nil {
-				api.logger.Error("error with fetchWorkItemsByIDs", "err", err)
-			}
-		})
-	}
-	var ids []string
-	for _, id := range allids {
-		ids = append(ids, id)
-		if len(ids) == 200 {
-			fetchitems(ids)
-			ids = []string{}
-		}
-	}
-	if len(ids) > 0 {
-		fetchitems(ids)
-	}
-	async.Wait()
-	return nil
-}
 
 func (api *API) FetchItemIDs(projid string, fromdate time.Time) ([]string, error) {
 	return api.fetchItemIDs(projid, fromdate)
@@ -70,16 +38,14 @@ func (api *API) fetchItemIDs(projid string, fromdate time.Time) ([]string, error
 	return all, nil
 }
 
-// FetchWorkItemsByIDs used by onboard
-func (api *API) FetchWorkItemsByIDs(projid string, ids []string, items chan<- datamodel.Model) ([]WorkItemResponse, error) {
-	return api.fetchWorkItemsByIDs(projid, ids, items)
-}
-func (api *API) fetchWorkItemsByIDs(projid string, ids []string, items chan<- datamodel.Model) ([]WorkItemResponse, error) {
+// FetchWorkItemsByIDs used by onboard and export
+func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResponse, []*work.Issue, error) {
 	url := fmt.Sprintf(`%s/_apis/wit/workitems?ids=%s`, projid, strings.Join(ids, ","))
 	var res []WorkItemResponse
 	if err := api.getRequest(url, stringmap{"pagingoff": "true"}, &res); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	var res2 []*work.Issue
 	for _, each := range res {
 		fields := each.Fields
 		issue := work.Issue{
@@ -102,7 +68,7 @@ func (api *API) fetchWorkItemsByIDs(projid string, ids []string, items chan<- da
 		date.ConvertToModel(fields.CreatedDate, &issue.CreatedDate)
 		date.ConvertToModel(fields.DueDate, &issue.DueDate)
 		date.ConvertToModel(fields.ChangedDate, &issue.UpdatedDate)
-		items <- &issue
+		res2 = append(res2, &issue)
 	}
-	return res, nil
+	return res, res2, nil
 }

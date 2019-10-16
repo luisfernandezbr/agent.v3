@@ -5,34 +5,15 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/integration-sdk/work"
 )
 
-// FetchSprints gets sprints from a single project and multiple teams async, and sends them to the sprint channel
-func (api *API) FetchSprints(projid string, sprints chan<- datamodel.Model) error {
-	teams, err := api.fetchTeams(projid)
-	if err != nil {
-		return err
-	}
-	async := NewAsync(api.concurrency)
-	for _, team := range teams {
-		teamid := team.ID
-		async.Do(func() {
-			if _, err := api.fetchSprint(projid, teamid, sprints); err != nil {
-				api.logger.Error("error fetching sprints for project "+projid+" and team "+teamid, "err", err)
-				return
-			}
-		})
-	}
-	async.Wait()
-	return err
-}
-
-func (api *API) fetchSprint(projid string, teamid string, sprints chan<- datamodel.Model) ([]sprintsResponse, error) {
+func (api *API) FetchSprint(projid string, teamid string) (sprints []*work.Sprint, err error) {
 	url := fmt.Sprintf(`%s/%s/_apis/work/teamsettings/iterations`, projid, teamid)
 	var res []sprintsResponse
-	err := api.getRequest(url, nil, &res)
+	if err = api.getRequest(url, nil, &res); err != nil {
+		return nil, err
+	}
 	for _, r := range res {
 		sprint := work.Sprint{
 			CustomerID: api.customerid,
@@ -55,7 +36,7 @@ func (api *API) fetchSprint(projid string, teamid string, sprints chan<- datamod
 		date.ConvertToModel(r.Attributes.FinishDate, &sprint.EndedDate)
 		date.ConvertToModel(r.Attributes.FinishDate, &sprint.CompletedDate)
 		date.ConvertToModel(time.Now(), &sprint.FetchedDate)
-		sprints <- &sprint
+		sprints = append(sprints, &sprint)
 	}
-	return res, err
+	return sprints, err
 }
