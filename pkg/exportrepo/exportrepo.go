@@ -109,7 +109,8 @@ func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, rerr e
 
 	skipsrc, remotebranches, err := s.skipRipsrc(ctx, repoNameUsedInCacheDir, checkoutDir)
 	if err != nil {
-		panic(err)
+		rerr = err
+		return
 	}
 	if skipsrc {
 		s.logger.Info("no changes to this repo, skipping ripsrc")
@@ -125,9 +126,7 @@ func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, rerr e
 		return
 	}
 
-	s.opts.LastProcessed.Set(remotebranches, repoNameUsedInCacheDir, "branches")
-	s.opts.LastProcessed.Save()
-
+	rerr = s.opts.LastProcessed.Set(remotebranches, repoNameUsedInCacheDir, "branches")
 	return
 }
 
@@ -200,7 +199,9 @@ func (s *Export) skipRipsrc(ctx context.Context, reponame string, checkoutdir st
 	remotebranches := make(map[string]branchmeta.Branch)
 	cached := s.opts.LastProcessed.Get(reponame, "branches")
 	if cached != nil {
-		structmarshal.StructToStruct(cached, &cachedbranches)
+		if err := structmarshal.StructToStruct(cached, &cachedbranches); err != nil {
+			return true, nil, err
+		}
 	}
 	opts := branchmeta.Opts{
 		Logger:    s.logger,

@@ -84,7 +84,7 @@ var cmdExportRepo = &cobra.Command{
 		started := time.Now()
 		logger := defaultLogger()
 		defer func() {
-			logger.Info(fmt.Sprintf("duration: %v", time.Since(started)))
+			logger.Info("completed", "duration", time.Since(started)))
 		}()
 		ctx := context.Background()
 		url, _ := cmd.Flags().GetString("url")
@@ -134,7 +134,7 @@ var cmdExportRepo = &cobra.Command{
 		if err != nil {
 			exitWithErr(logger, err)
 		}
-
+		lastProcessed.Save()
 	},
 }
 
