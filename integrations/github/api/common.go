@@ -30,6 +30,8 @@ type QueryContext struct {
 	IsEnterprise func() bool
 
 	Clients reqstats.Clients
+
+	AuthToken string
 }
 
 func (s QueryContext) WithLogger(logger hclog.Logger) QueryContext {

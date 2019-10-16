@@ -2,9 +2,6 @@ package main
 
 import (
 	"context"
-	"strconv"
-
-	"github.com/pinpt/integration-sdk/agent"
 
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -36,24 +33,6 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
 	res.Errors = append(res.Errors, "example validation error")
 	return res, nil
-}
-
-func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.OnboardExportType, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
-	if objectType != rpcdef.OnboardExportTypeUsers {
-		res.Error = rpcdef.ErrOnboardExportNotSupported
-		return
-	}
-
-	var rows []map[string]interface{}
-
-	for j := 0; j < 10; j++ {
-		row := agent.UserResponseUsers{}
-		row.Name = "User " + strconv.Itoa(j)
-		rows = append(rows, row.ToMap())
-	}
-
-	res.Records = rows
-	return
 }
 
 func main() {

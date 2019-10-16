@@ -28,6 +28,8 @@ func (s *Integration) onboardExportRepos(ctx context.Context) (res rpcdef.Onboar
 		return res, err
 	}
 
+	var records []map[string]interface{}
+
 	for _, groupName := range groupNames {
 		api.PaginateGraphQL(s.logger, func(log hclog.Logger, pageSize string, after string) (string, error) {
 			afterCursor, repos, err := api.ReposOnboardPageGraphQL(s.qc, groupName, pageSize, after)
@@ -35,11 +37,13 @@ func (s *Integration) onboardExportRepos(ctx context.Context) (res rpcdef.Onboar
 				return "", err
 			}
 			for _, repo := range repos {
-				res.Records = append(res.Records, repo.ToMap())
+				records = append(records, repo.ToMap())
 			}
 			return afterCursor, nil
 		})
 	}
+
+	res.Data = records
 
 	return res, nil
 }

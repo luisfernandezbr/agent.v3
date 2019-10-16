@@ -44,7 +44,7 @@ func PullRequestCommitsPage(
 		item.RefType = qc.RefType
 		item.RefID = rcommit.ID
 		item.RepoID = qc.IDs.CodeRepo(repo.ID)
-		item.PullRequestID = qc.IDs.CodePullRequest(repo.ID, prID)
+		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, prID)
 		item.Sha = rcommit.ID
 		item.Message = rcommit.Message
 		url, err := url.Parse(qc.BaseURL)

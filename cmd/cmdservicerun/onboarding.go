@@ -28,7 +28,7 @@ func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integ
 
 	err = s.runCommand(ctx, &res, args)
 
-	//s.logger.Debug("got onboard data", "res", pjson.Stringify(res))
+	//s.logger.Info("got onboard data", "res", pjson.Stringify(res))
 
 	s.logger.Info("getting onboard data completed", "success", res.Success, "err", res.Error)
 

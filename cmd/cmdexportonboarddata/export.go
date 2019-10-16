@@ -70,12 +70,12 @@ func newExport(opts Opts) (*export, error) {
 }
 
 func (s *export) runExportAndPrint() error {
-	records, err := s.runExport()
+	data, err := s.runExport()
 	res := Result{}
 	if err != nil {
 		res.Error = err.Error()
 	} else {
-		res.Records = records
+		res.Data = data
 		res.Success = true
 	}
 
@@ -95,7 +95,7 @@ func (s *export) runExportAndPrint() error {
 	return nil
 }
 
-func (s *export) runExport() (records []map[string]interface{}, _ error) {
+func (s *export) runExport() (data interface{}, _ error) {
 	ctx := context.Background()
 	client := s.integration.RPCClient()
 
@@ -113,13 +113,22 @@ func (s *export) runExport() (records []map[string]interface{}, _ error) {
 		return nil, fmt.Errorf("error closing integration, err: %v", err)
 	}
 
-	return res.Records, nil
+	return res.Data, nil
 }
 
 type Result struct {
-	Success bool                     `json:"success"`
-	Error   string                   `json:"error"`
-	Records []map[string]interface{} `json:"records"`
+	Success bool        `json:"success"`
+	Error   string      `json:"error"`
+	Data    interface{} `json:"data"`
+}
+
+type DataRepos []map[string]interface{}
+type DataProjects []map[string]interface{}
+type DataWorkConfig map[string]interface{}
+
+type DataUsers struct {
+	Users []map[string]interface{} `json:"users"`
+	Teams []map[string]interface{} `json:"teams"`
 }
 
 func (s *export) Destroy() {

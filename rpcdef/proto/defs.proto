@@ -56,7 +56,7 @@ message IntegrationOnboardExportResp {
         NOT_SUPPORTED = 1;
     }
     Error error = 1;
-    bytes records_json = 2;
+    bytes data_json = 2;
 }
 
 service Agent {
@@ -108,10 +108,11 @@ message ExportObj {
 
 message ExportGitRepoReq {
     string repo_id = 1;    
-    string ref_type = 2;
-    string url = 3;
-    string commit_url_template = 4;
-    string branch_url_template = 5;
+    string unique_name = 2;
+    string ref_type = 3;    
+    string url = 4;
+    string commit_url_template = 5;
+    string branch_url_template = 6;
 }
 
 message SessionStartReq {

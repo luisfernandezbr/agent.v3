@@ -6,17 +6,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/bitbucket/api"
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
-	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
-	pullRequestSender *objsender.IncrementalDateBased,
-	commentsSender *objsender.NotIncremental,
-	reviewSender *objsender.NotIncremental) (rerr error) {
+	pullRequestSender *objsender2.Session,
+	commitsSender *objsender2.Session) (rerr error) {
 
 	logger = logger.With("repo", repo.NameWithOwner)
 	logger.Info("exporting")
@@ -26,8 +26,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	pullRequestsInitial := make(chan []sourcecode.PullRequest)
 	go func() {
 		defer close(pullRequestsInitial)
-		err := s.exportPullRequestsRepo(logger, repo, pullRequestsInitial, pullRequestSender.LastProcessed, s.pullRequestReviewsSender)
-		if err != nil {
+		if err := s.exportPullRequestsRepo(logger, repo, pullRequestSender, pullRequestsInitial, pullRequestSender.LastProcessedTime()); err != nil {
 			pullRequestsErr = err
 		}
 	}()
@@ -68,7 +67,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := s.exportPullRequestsComments(logger, commentsSender, repo, pullRequestsForComments)
+		err := s.exportPullRequestsComments(logger, pullRequestSender, repo, pullRequestsForComments)
 		if err != nil {
 			setErr(fmt.Errorf("error getting comments %s", err))
 		}
@@ -96,15 +95,15 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 				} else {
 					pr.BranchID = s.qc.IDs.CodeBranch(pr.RepoID, pr.BranchName, pr.CommitShas[0])
 				}
-				err = pullRequestSender.Send(&pr)
-				if err != nil {
+
+				if err = pullRequestSender.Send(&pr); err != nil {
 					setErr(err)
 					return
 				}
 
 				for _, c := range commits {
 					c.BranchID = pr.BranchID
-					err := s.pullRequestCommitsSender.Send(c)
+					err := commitsSender.Send(c)
 					if err != nil {
 						setErr(err)
 						return
@@ -117,10 +116,13 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	return
 }
 
-func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, repo commonrepo.Repo, pullRequests chan []sourcecode.PullRequest, lastProcessed time.Time, reviewsSender *objsender.NotIncremental) error {
+func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, repo commonrepo.Repo, sender *objsender2.Session, pullRequests chan []sourcecode.PullRequest, lastProcessed time.Time) error {
 	return api.PaginateNewerThan(logger, lastProcessed, func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, res, err := api.PullRequestPage(s.qc, repo.ID, repo.NameWithOwner, parameters, stopOnUpdatedAt, reviewsSender)
+		pi, res, err := api.PullRequestPage(s.qc, sender, repo.ID, repo.NameWithOwner, parameters, stopOnUpdatedAt)
 		if err != nil {
+			return pi, err
+		}
+		if err = sender.SetTotal(pi.Total); err != nil {
 			return pi, err
 		}
 		pullRequests <- res

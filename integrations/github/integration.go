@@ -66,17 +66,18 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 }
 
 type Config struct {
-	APIURL        string
-	APIURL3       string
-	RepoURLPrefix string
-	Token         string
-	Organization  string
-	ExcludedRepos []string
-	OnlyGit       bool
-	StopAfterN    int
-	Enterprise    bool
-	Repos         []string
-	Concurrency   int
+	APIURL                string
+	APIURL3               string
+	RepoURLPrefix         string
+	Token                 string
+	Organization          string
+	ExcludedRepos         []string
+	OnlyGit               bool
+	StopAfterN            int
+	Enterprise            bool
+	Repos                 []string
+	Concurrency           int
+	TLSInsecureSkipVerify bool
 }
 
 type configDef struct {
@@ -148,8 +149,9 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 			res.APIURL3 = urlAppend(u.String(), "api/v3")
 			res.RepoURLPrefix = u.String()
 			res.Enterprise = true
+			// TODO: make it configurable in admin
+			res.TLSInsecureSkipVerify = true
 		}
-
 	}
 
 	res.Concurrency = def.Concurrency
@@ -209,10 +211,10 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	s.requestConcurrencyChan = make(chan bool, s.config.Concurrency)
 
 	s.qc.APIURL3 = s.config.APIURL3
-
+	s.qc.AuthToken = s.config.Token
 	s.clientManager = reqstats.New(reqstats.Opts{
 		Logger:                s.logger,
-		TLSInsecureSkipVerify: false,
+		TLSInsecureSkipVerify: s.config.TLSInsecureSkipVerify,
 	})
 	s.clients = s.clientManager.Clients
 	s.qc.Clients = s.clients
@@ -402,6 +404,7 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 
 			args := rpcdef.GitRepoFetch{}
 			args.RepoID = s.qc.RepoID(repo.ID)
+			args.UniqueName = repo.NameWithOwner
 			args.RefType = s.refType
 			args.URL = repoURL
 			args.CommitURLTemplate = commitURLTemplate(repo, s.config.RepoURLPrefix)

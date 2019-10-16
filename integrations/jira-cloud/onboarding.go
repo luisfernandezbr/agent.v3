@@ -22,24 +22,29 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 	}
 }
 
-func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
+func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, rerr error) {
 	err := s.initWithConfig(config)
 	if err != nil {
-		return res, err
+		rerr = err
+		return
 	}
-	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
+	var records []map[string]interface{}
+	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
 		pi, projects, err := api.ProjectsOnboardPage(s.qc, paginationParams)
 		if err != nil {
-			return false, 0, err
+			rerr = err
+			return
 		}
 		for _, obj := range projects {
-			res.Records = append(res.Records, obj.ToMap())
+			records = append(records, obj.ToMap())
 		}
 		return pi.HasMore, pi.MaxResults, nil
 	})
 	if err != nil {
-		return res, err
+		rerr = err
+		return
 	}
+	res.Data = records
 	return res, nil
 }
 

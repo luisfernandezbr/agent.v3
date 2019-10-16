@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent.next/pkg/structmarshal"
 
 	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
@@ -277,59 +278,81 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for onboarding requests")
 
-	processOnboard := func(integration map[string]interface{}, systemType IntegrationType, objectType string) (cmdexportonboarddata.Result, error) {
+	processOnboard := func(integration map[string]interface{}, systemType IntegrationType, objectType string) (_ cmdexportonboarddata.Result, rerr error) {
 		s.logger.Info("received onboard request", "type", objectType)
 
 		ctx := context.Background()
 		conf, err := configFromEvent(integration, systemType, s.conf.PPEncryptionKey)
 		if err != nil {
-			panic(err)
+			rerr = err
+			return
 		}
 
 		data, err := s.getOnboardData(ctx, conf, objectType)
 		if err != nil {
-			panic(err)
+			rerr = err
+			return
 		}
 
 		return data, nil
 	}
 
-	cbUser := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
-		req := instance.Object().(*agent.UserRequest)
-		s.logger.Error("received agent.UserRequest for integration. this is not supported TODO:support this for workday", "name", req.Integration.Name)
-		return nil, nil
-		/*
-			data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "users")
-			if err != nil {
-				panic(err)
-			}
-			resp := &agent.UserResponse{}
-			resp.Type = agent.UserResponseTypeUser
-			resp.RefType = req.RefType
-			resp.RefID = req.RefID
-			resp.RequestID = req.ID
-			resp.IntegrationID = req.Integration.ID
+	cbUser := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
+		rerr := func(err error) {
+			s.logger.Error("could not process onboard event", "err", err)
+		}
 
-			resp.Success = data.Success
-			if data.Error != "" {
-				resp.Error = pstrings.Pointer(data.Error)
+		req := instance.Object().(*agent.UserRequest)
+		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "users")
+		if err != nil {
+			rerr(err)
+			return
+		}
+		resp := &agent.UserResponse{}
+		resp.Type = agent.UserResponseTypeUser
+		resp.RefType = req.RefType
+		resp.RefID = req.RefID
+		resp.RequestID = req.ID
+		resp.IntegrationID = req.Integration.ID
+
+		resp.Success = data.Success
+		if data.Error != "" {
+			resp.Error = pstrings.Pointer(data.Error)
+		}
+		if data.Data != nil {
+			var obj cmdexportonboarddata.DataUsers
+			err := structmarshal.AnyToAny(data.Data, &obj)
+			if err != nil {
+				rerr(fmt.Errorf("invalid data format returned in agent onboard: %v", err))
 			}
-			for _, rec := range data.Records {
-				user := &agent.UserResponseUsers{}
+			for _, rec := range obj.Users {
+				user := agent.UserResponseUsers{}
 				user.FromMap(rec)
-				resp.Users = append(resp.Users, *user)
+				resp.Users = append(resp.Users, user)
 			}
-			deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
-			return datamodel.NewModelSendEvent(resp), nil
-		*/
+			for _, rec := range obj.Teams {
+				team := agent.UserResponseTeams{}
+				team.FromMap(rec)
+				resp.Teams = append(resp.Teams, team)
+			}
+		}
+		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
+		return datamodel.NewModelSendEvent(resp), nil
 	}
 
-	cbRepo := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
+	cbRepo := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
+		rerr := func(err error) {
+			s.logger.Error("could not process onboard event", "err", err)
+		}
+
 		req := instance.Object().(*agent.RepoRequest)
 		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "repos")
+
 		if err != nil {
-			panic(err)
+			rerr(err)
+			return
 		}
+
 		resp := &agent.RepoResponse{}
 		resp.Type = agent.RepoResponseTypeRepo
 		resp.RefType = req.RefType
@@ -342,21 +365,35 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 			resp.Error = pstrings.Pointer(data.Error)
 		}
 
-		for _, rec := range data.Records {
-			repo := &agent.RepoResponseRepos{}
-			repo.FromMap(rec)
-			resp.Repos = append(resp.Repos, *repo)
+		if data.Data != nil {
+			var records cmdexportonboarddata.DataRepos
+			err := structmarshal.AnyToAny(data.Data, &records)
+			if err != nil {
+				rerr(fmt.Errorf("invalid data format returned in agent onboard: %v", err))
+			}
+			for _, rec := range records {
+				repo := &agent.RepoResponseRepos{}
+				repo.FromMap(rec)
+				resp.Repos = append(resp.Repos, *repo)
+			}
 		}
+
 		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
 		return datamodel.NewModelSendEvent(resp), nil
 	}
 
-	cbProject := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
+	cbProject := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
+		rerr := func(err error) {
+			s.logger.Error("could not process onboard event", "err", err)
+		}
+
 		req := instance.Object().(*agent.ProjectRequest)
 		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "projects")
 		if err != nil {
-			panic(err)
+			rerr(err)
+			return
 		}
+
 		resp := &agent.ProjectResponse{}
 		resp.Type = agent.ProjectResponseTypeProject
 		resp.RefType = req.RefType
@@ -368,20 +405,33 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		if data.Error != "" {
 			resp.Error = pstrings.Pointer(data.Error)
 		}
-		for _, rec := range data.Records {
-			project := &agent.ProjectResponseProjects{}
-			project.FromMap(rec)
-			resp.Projects = append(resp.Projects, *project)
+
+		if data.Data != nil {
+			var records cmdexportonboarddata.DataProjects
+			err := structmarshal.AnyToAny(data.Data, &records)
+			if err != nil {
+				rerr(fmt.Errorf("invalid data format returned in agent onboard: %v", err))
+			}
+			for _, rec := range records {
+				project := &agent.ProjectResponseProjects{}
+				project.FromMap(rec)
+				resp.Projects = append(resp.Projects, *project)
+			}
 		}
 		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
 		return datamodel.NewModelSendEvent(resp), nil
 	}
 
-	cbWorkconfig := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
+	cbWorkconfig := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
+		rerr := func(err error) {
+			s.logger.Error("could not process onboard event", "err", err)
+		}
+
 		req := instance.Object().(*agent.WorkStatusRequest)
 		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "workconfig")
 		if err != nil {
-			panic(err)
+			rerr(err)
+			return
 		}
 
 		resp := &agent.WorkStatusResponse{}
@@ -397,10 +447,15 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		}
 
 		workStatuses := &agent.WorkStatusResponseWorkConfig{}
-		if len(data.Records) == 1 {
-			workStatuses.FromMap(data.Records[0])
+		if data.Data != nil {
+			var m cmdexportonboarddata.DataWorkConfig
+			err := structmarshal.AnyToAny(data.Data, &m)
+			if err != nil {
+				rerr(fmt.Errorf("invalid data format returned in agent onboard: %v", err))
+			}
+			workStatuses.FromMap(m)
+			resp.WorkConfig = *workStatuses
 		}
-		resp.WorkConfig = *workStatuses
 
 		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
 

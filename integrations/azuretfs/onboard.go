@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/pinpt/integration-sdk/work"
@@ -29,6 +30,7 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 		s.logger.Error("error fetching repos for onboard export repos")
 		return
 	}
+	var records []map[string]interface{}
 	for _, repo := range repos {
 		rawcommit, err := s.api.FetchLastCommit(repo.RefID)
 		if rawcommit == nil {
@@ -58,12 +60,17 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 			RefType: repo.RefType,
 		}
 		date.ConvertToModel(rawcommit.Author.Date, &r.LastCommit.CreatedDate)
-		res.Records = append(res.Records, r.ToMap())
+		records = append(records, r.ToMap())
 	}
+	res.Data = records
 	return
 }
 
 func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
+	var records []map[string]interface{}
+	// needed in case api.AsyncProcess below is processing items in parallel
+	var recordsMu sync.Mutex
+
 	projectchan, done := api.AsyncProcess("export projects", s.logger, func(model datamodel.Model) {
 		proj := model.(*work.Project)
 		itemids, err := s.api.FetchItemIDs(proj.RefID, time.Time{})
@@ -97,10 +104,13 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 			TotalIssues: int64(len(itemids)),
 			URL:         proj.URL,
 		}
-		res.Records = append(res.Records, resp.ToMap())
+		recordsMu.Lock()
+		records = append(records, resp.ToMap())
+		recordsMu.Unlock()
 	})
 	_, err = s.api.FetchProjects(projectchan)
 	close(projectchan)
 	<-done
+	res.Data = records
 	return res, err
 }
