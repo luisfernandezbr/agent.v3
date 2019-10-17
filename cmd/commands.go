@@ -30,7 +30,10 @@ var cmdEnroll = &cobra.Command{
 		}
 
 		// once we have pinpoint root, we can also log to a file
-		logger = cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
+		logger, _, ok := cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
+		if !ok {
+			return
+		}
 
 		channel, _ := cmd.Flags().GetString("channel")
 		ctx := context.Background()
@@ -194,10 +197,14 @@ var cmdServiceRun = &cobra.Command{
 		if err != nil {
 			exitWithErr(logger, err)
 		}
-		logger = cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
+		logger, level, ok := cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
+		if !ok {
+			return
+		}
 		ctx := context.Background()
 		opts := cmdservicerun.Opts{}
 		opts.Logger = logger
+		opts.LogLevelSubcommands = level
 		opts.PinpointRoot = pinpointRoot
 		err = cmdservicerun.Run(ctx, opts)
 		if err != nil {

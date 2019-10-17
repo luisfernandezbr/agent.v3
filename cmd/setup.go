@@ -151,7 +151,11 @@ func integrationCommandOpts(cmd *cobra.Command) (hclog.Logger, cmdintegration.Op
 		exitWithErr(logger, errors.New("missing integrations-json"))
 	}
 
-	opts.Logger = cmdlogger.CopyToFile(cmd, logger, opts.AgentConfig.PinpointRoot)
+	var ok bool
+	opts.Logger, _, ok = cmdlogger.CopyToFile(cmd, logger, opts.AgentConfig.PinpointRoot)
+	if !ok {
+		os.Exit(1)
+	}
 
 	return opts.Logger, opts
 }

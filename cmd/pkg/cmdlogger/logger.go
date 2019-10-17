@@ -36,28 +36,47 @@ func optsFromCommand(cmd *cobra.Command) *hclog.LoggerOptions {
 	return opts
 }
 
-func CopyToFile(cmd *cobra.Command, logger hclog.Logger, pinpointRoot string) hclog.Logger {
+func CopyToFile(cmd *cobra.Command, logger hclog.Logger, pinpointRoot string) (_ hclog.Logger, _ hclog.Level, ok bool) {
 	if pinpointRoot == "" {
 		var err error
 		pinpointRoot, err = fsconf.DefaultRoot()
 		if err != nil {
 			logger.Error("could not get default pinpoint-root", "err", err)
+			return
 		}
 	}
 	fsloc := fsconf.New(pinpointRoot)
 	if len(os.Args) <= 1 {
 		logger.Error("could not create log file, len(os.Args) <= 1, and we use subcommand as name")
-		return logger
+		return
 	}
 	logFile := filepath.Join(fsloc.Logs, os.Args[1])
 	wr, err := filelog.NewSyncWriter(logFile)
 	if err != nil {
 		logger.Error("could not create log file", "err", err)
-		return logger
+		return
 	}
 	opts := optsFromCommand(cmd)
 	opts.Output = io.MultiWriter(os.Stdout, wr)
 	res := hclog.New(opts)
 	res.Info("initialized logger", "cmd", os.Args[1], "file", logFile)
-	return res
+	return res, opts.Level, true
+
+}
+
+func LogLevelToString(lvl hclog.Level) string {
+	switch lvl {
+	case hclog.Trace:
+		return "trace"
+	case hclog.Debug:
+		return "debug"
+	case hclog.Info:
+		return "info"
+	case hclog.Warn:
+		return "warn"
+	case hclog.Error:
+		return "error"
+	default:
+		return ""
+	}
 }
