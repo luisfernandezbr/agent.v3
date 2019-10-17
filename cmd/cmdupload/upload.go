@@ -22,32 +22,32 @@ import (
 func Run(ctx context.Context,
 	logger hclog.Logger,
 	pinpointRoot string,
-	uploadURL string) error {
+	uploadURL string) (zipPath string, err error) {
 
 	fsc := fsconf.New(pinpointRoot)
 
-	err := os.MkdirAll(fsc.UploadZips, 0777)
+	err = os.MkdirAll(fsc.UploadZips, 0777)
 	if err != nil {
-		return err
+		return
 	}
 
 	fileName := time.Now().Format(time.RFC3339)
 	fileName = strings.ReplaceAll(fileName, ":", "_")
 
-	zipPath := filepath.Join(fsc.UploadZips, fileName+".zip")
+	zipPath = filepath.Join(fsc.UploadZips, fileName+".zip")
 
 	err = zipFilesJSON(logger, zipPath, fsc.Uploads)
 	if err != nil {
-		return err
+		return
 	}
 	logger.Info("uploading export result", "upload_url", uploadURL, "zip_path", zipPath)
 
 	err = upload(logger, zipPath, uploadURL)
 	if err != nil {
-		return err
+		return
 	}
 
-	return nil
+	return
 }
 
 func zipFilesJSON(logger hclog.Logger, target, source string) error {

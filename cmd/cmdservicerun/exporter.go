@@ -135,15 +135,15 @@ func (s *exporter) sendStartExportEvent(ctx context.Context, jobID string, ints 
 	return s.sendExportEvent(ctx, jobID, data, ints)
 }
 
-func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, ints []agent.ExportRequestIntegrations, success bool, started, ended time.Time) error {
+func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started, ended time.Time, filesize int64, uploadurl *string, ints []agent.ExportRequestIntegrations, success bool) error {
 	if !s.opts.AgentConfig.Backend.Enable {
 		return nil
 	}
 	data := &agent.ExportResponse{
-		JobID:   jobID,
-		RefType: "export",
-		State:   agent.ExportResponseStateCompleted,
-		Success: true,
+		State:     agent.ExportResponseStateCompleted,
+		Success:   true,
+		Size:      filesize,
+		UploadURL: uploadurl,
 	}
 	date.ConvertToModel(started, &data.StartDate)
 	date.ConvertToModel(ended, &data.EndDate)
@@ -198,7 +198,7 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 
 	err = s.execExport(ctx, agentConfig, integrations, data.ReprocessHistorical, exportLogSender)
 	if err != nil {
-		e := s.sendEndExportEvent(ctx, data.JobID, data.Integrations, false, started, time.Now())
+		e := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), 0, nil, data.Integrations, false)
 		if e != nil {
 			s.logger.Error("error sending export response stop event (1)", "err", e)
 		}
@@ -207,7 +207,7 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 
 	err = exportLogSender.FlushAndClose()
 	if err != nil {
-		e := s.sendEndExportEvent(ctx, data.JobID, data.Integrations, false, started, time.Now())
+		e := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), 0, nil, data.Integrations, false)
 		if e != nil {
 			s.logger.Error("error sending export response stop event (2)", "err", e)
 		}
@@ -217,15 +217,20 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 
 	s.logger.Info("export finished, running upload")
 
-	err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL)
+	fileName, err := cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL)
 	if err != nil {
-		e := s.sendEndExportEvent(ctx, data.JobID, data.Integrations, false, started, time.Now())
+		e := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), 0, nil, data.Integrations, false)
 		if e != nil {
 			s.logger.Error("error sending export response stop event (3)", "err", e)
 		}
 		return err
 	}
-	e := s.sendEndExportEvent(ctx, data.JobID, data.Integrations, true, started, time.Now())
+	stat, err := os.Stat(fileName)
+	if err != nil {
+		s.logger.Error("can't get file size", "err", err)
+		// stat.Size() = 0
+	}
+	e := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), stat.Size(), data.UploadURL, data.Integrations, true)
 	if e != nil {
 		s.logger.Error("error sending export response stop event (4)", "err", e)
 	}
