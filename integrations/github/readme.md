@@ -4,7 +4,7 @@
 | -------------                       | -------- 
 | GitHub.com (2019-10-09)             | Tested
 | Github Enterprise 2.17.9            | Tested. Client 1 was using this version on 2019-10-09.
-| Github Enterprise 2.16              | Should work, not tested. Has PullRequest.timelineItems.
+| Github Enterprise 2.16              | Should work, not tested. Has PullRequest.timelineItems. But require preview accept header set. We are setting it.
 | GitHub Enterprise 2.15.9            | Not supported. Client 1 was using this version on 2019-08-21. Does not have PullRequest.timelineItems -> can't get PullRequest.ClosedByRefID. Will break now, since we aren't checking versions.
 
 You can see GitHub Enterprise version number in the webapp by hovering GitHub Octocat logo in the footer. It should be shown in the tooltip.
