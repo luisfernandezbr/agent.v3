@@ -48,6 +48,14 @@ Service waits for commands from a backend to validate integrations, start export
 
 ### [Exported data](./_docs/exported_data.md)
 
+### Required git version
+
+| Version                             | Notes  
+| -------------                       | -------- 
+| 2.20.1             | Default macos version. Works fine.
+| 2.13               | Released on 2017-05. Introduced clone --no-tags flag. Should work.
+| <2.13              | We do not support older versions.
+
 ### Testing integrations without backend
 
 ```
