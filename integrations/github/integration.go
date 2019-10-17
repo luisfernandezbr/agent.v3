@@ -160,6 +160,7 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 			// github.com starts to return errors with more than 1 concurrency
 			res.Concurrency = 1
 		} else {
+			// 2x faster with concurrency 10 than 1
 			res.Concurrency = 10
 		}
 	}
