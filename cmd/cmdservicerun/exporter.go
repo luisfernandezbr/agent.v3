@@ -7,11 +7,15 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/cmd/cmdupload"
+	"github.com/pinpt/go-common/event"
 
 	"github.com/pinpt/agent.next/pkg/agentconf"
+	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent.next/pkg/deviceinfo"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/logutils"
 
@@ -93,9 +97,68 @@ func (s *exporter) Run() {
 	return
 }
 
-func (s *exporter) export(data *agent.ExportRequest) error {
-	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
+func (s *exporter) sendExportEvent(ctx context.Context, jobID string, data *agent.ExportResponse, ints []agent.ExportRequestIntegrations) error {
+	data.JobID = jobID
+	data.RefType = "export"
+	data.Type = agent.ExportResponseTypeExport
+	for _, i := range ints {
+		data.Integrations = append(data.Integrations, agent.ExportResponseIntegrations{
+			IntegrationID: i.ID, // i.RefID ?
+			Name:          i.Name,
+			SystemType:    agent.ExportResponseIntegrationsSystemType(i.SystemType),
+			// ExportType:    agent.ExportResponseIntegrationsExportTypeHistorical or TypeIncremental,
+		})
+	}
+	enrollConf, err := agentconf.Load(s.opts.FSConf.Config2)
+	if err != nil {
+		return err
+	}
 
+	deviceinfo.AppendCommonInfoFromConfig(data, enrollConf)
+	publishEvent := event.PublishEvent{
+		Object: data,
+		Headers: map[string]string{
+			"uuid": enrollConf.DeviceID,
+		},
+	}
+	return event.Publish(ctx, publishEvent, enrollConf.Channel, enrollConf.APIKey)
+}
+
+func (s *exporter) sendStartExportEvent(ctx context.Context, jobID string, ints []agent.ExportRequestIntegrations) error {
+	if !s.opts.AgentConfig.Backend.Enable {
+		return nil
+	}
+	data := &agent.ExportResponse{
+		State:   agent.ExportResponseStateStarting,
+		Success: true,
+	}
+	return s.sendExportEvent(ctx, jobID, data, ints)
+}
+
+func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, ints []agent.ExportRequestIntegrations, success bool, started, ended time.Time) error {
+	if !s.opts.AgentConfig.Backend.Enable {
+		return nil
+	}
+	data := &agent.ExportResponse{
+		JobID:   jobID,
+		RefType: "export",
+		State:   agent.ExportResponseStateCompleted,
+		Success: true,
+	}
+	date.ConvertToModel(started, &data.StartDate)
+	date.ConvertToModel(ended, &data.EndDate)
+
+	return s.sendExportEvent(ctx, jobID, data, ints)
+}
+
+func (s *exporter) export(data *agent.ExportRequest) error {
+	ctx := context.Background()
+	started := time.Now()
+	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
+	err := s.sendStartExportEvent(ctx, data.JobID, data.Integrations)
+	if err != nil {
+		s.logger.Error("error sending export response start event", "err", err)
+	}
 	var integrations []cmdexport.Integration
 
 	// add in additional integrations defined in config
@@ -121,13 +184,10 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 		integrations = append(integrations, conf)
 	}
 
-	ctx := context.Background()
-
 	fsconf := s.opts.FSConf
 
 	// delete existing uploads
-	err := os.RemoveAll(fsconf.Uploads)
-	if err != nil {
+	if err = os.RemoveAll(fsconf.Uploads); err != nil {
 		return err
 	}
 
@@ -138,19 +198,36 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 
 	err = s.execExport(ctx, agentConfig, integrations, data.ReprocessHistorical, exportLogSender)
 	if err != nil {
+		e := s.sendEndExportEvent(ctx, data.JobID, data.Integrations, false, started, time.Now())
+		if e != nil {
+			s.logger.Error("error sending export response stop event (1)", "err", e)
+		}
 		return err
 	}
 
 	err = exportLogSender.FlushAndClose()
 	if err != nil {
+		e := s.sendEndExportEvent(ctx, data.JobID, data.Integrations, false, started, time.Now())
+		if e != nil {
+			s.logger.Error("error sending export response stop event (2)", "err", e)
+		}
 		s.logger.Error("could not send export logs to the server", "err", err)
+		return err
 	}
 
 	s.logger.Info("export finished, running upload")
 
 	err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL)
 	if err != nil {
+		e := s.sendEndExportEvent(ctx, data.JobID, data.Integrations, false, started, time.Now())
+		if e != nil {
+			s.logger.Error("error sending export response stop event (3)", "err", e)
+		}
 		return err
+	}
+	e := s.sendEndExportEvent(ctx, data.JobID, data.Integrations, true, started, time.Now())
+	if e != nil {
+		s.logger.Error("error sending export response stop event (4)", "err", e)
 	}
 	return nil
 }

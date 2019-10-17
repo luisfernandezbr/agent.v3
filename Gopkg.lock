@@ -388,7 +388,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d393ab363535d8fcbd6ef93fa2001b8f43ffeb078a5e85d31fa346b3e6ed34d5"
+  digest = "1:a88d5ee6933bc9fbed893bdbec94bb82df78e80eb1724ba8fd5d94967cb63882"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -400,7 +400,7 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "d05fd9353f4cc867b2c46031426dac9f32079c60"
+  revision = "7b3b85c54b0e9403ed092c1ccf315c62a73e44fc"
 
 [[projects]]
   branch = "master"
