@@ -200,7 +200,6 @@ func IssuesAndChangelogsPage(
 		item.URL = qc.IssueURL(data.Key)
 		item.Tags = fields.Labels
 
-		// TODO: this is different from previous agent and is currently handled in pipeline repo. pkg/legacy/jira
 		for k, d := range data.Fields {
 			if !strings.HasPrefix(k, "customfield_") {
 				continue
@@ -208,8 +207,8 @@ func IssuesAndChangelogsPage(
 
 			fd, ok := fieldByKey[k]
 			if !ok {
-				rerr = fmt.Errorf("could not find field defintion using key: %v", k)
-				return
+				qc.Logger.Error("when processing jira issues, could not find field definition by key", "project", project.Key, "key", k)
+				continue
 			}
 			v := ""
 			if d != nil {
