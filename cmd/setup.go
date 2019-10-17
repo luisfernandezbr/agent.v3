@@ -73,7 +73,7 @@ func flagPinpointRoot(cmd *cobra.Command) {
 
 func flagsLogger(cmd *cobra.Command) {
 	cmd.Flags().String("log-format", "", "Set to json to see log output in json")
-	cmd.Flags().String("log-level", "info", "Log level (debug or info)")
+	cmd.Flags().String("log-level", "debug", "Log level (debug or info)")
 }
 
 func integrationCommandFlags(cmd *cobra.Command) {
