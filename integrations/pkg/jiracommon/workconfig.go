@@ -18,14 +18,18 @@ func GetWorkConfig(qc jiracommonapi.QueryContext, typeServer string) (res rpcdef
 	}
 	ws.Priorities = priorities
 
-	if typeServer == "cloud" {
-		labels, err := jiracommonapi.Labels(qc)
-		if err != nil {
-			res.Error = err
-			return
+	/*
+		if typeServer == "cloud" {
+			// This doesn't work with hosted, and doesn't work with cloud with oauthm only works with cloud + token
+			// Disabled for now
+			labels, err := jiracommonapi.Labels(qc)
+			if err != nil {
+				res.Error = err
+				return
+			}
+			ws.Labels = labels
 		}
-		ws.Labels = labels
-	}
+	*/
 
 	issueTypes, err := jiracommonapi.IssueTypes(qc)
 	if err != nil {
