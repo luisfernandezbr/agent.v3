@@ -156,7 +156,12 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 
 	res.Concurrency = def.Concurrency
 	if def.Concurrency == 0 {
-		res.Concurrency = 1
+		if !res.Enterprise {
+			// github.com starts to return errors with more than 1 concurrency
+			res.Concurrency = 1
+		} else {
+			res.Concurrency = 10
+		}
 	}
 	s.logger.Info("Using concurrency", "concurrency", res.Concurrency)
 
