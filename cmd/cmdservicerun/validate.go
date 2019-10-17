@@ -9,6 +9,7 @@ import (
 	"os/exec"
 
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
+	"github.com/pinpt/agent.next/pkg/logutils"
 )
 
 func depointer(data map[string]interface{}) (map[string]interface{}, error) {
@@ -82,6 +83,7 @@ func (s *runner) runCommand(ctx context.Context, res interface{}, args []string)
 	defer os.Remove(out)
 
 	args = append(args, "--log-format", "json")
+	args = append(args, "--log-level", logutils.LogLevelToString(s.opts.LogLevelSubcommands))
 	args = append(args, "--output-file", out)
 	cmd := exec.CommandContext(ctx, os.Args[0], args...)
 	cmd.Stdout = os.Stdout

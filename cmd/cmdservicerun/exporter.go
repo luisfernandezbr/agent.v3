@@ -13,6 +13,7 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent.next/pkg/logutils"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/cmd/cmdexport"
@@ -45,7 +46,12 @@ func (v IntegrationType) String() string {
 }
 
 type exporterOpts struct {
-	Logger       hclog.Logger
+	Logger hclog.Logger
+	// LogLevelSubcommands specifies the log level to pass to sub commands.
+	// Pass the same as used for logger.
+	// We need it here, because there is no way to get it from logger.
+	LogLevelSubcommands hclog.Level
+
 	PinpointRoot string
 	FSConf       fsconf.Locs
 	Conf         agentconf.Config
@@ -158,7 +164,11 @@ func (s *exporter) execExport(ctx context.Context, agentConfig cmdexport.AgentCo
 		logWriter = io.MultiWriter(os.Stdout, exportLogWriter)
 	}
 
-	args := []string{"export", "--log-format", "json"}
+	args := []string{
+		"export",
+		"--log-format", "json",
+		"--log-level", logutils.LogLevelToString(s.opts.LogLevelSubcommands),
+	}
 
 	if reprocessHistorical {
 		args = append(args, "--reprocess-historical=true")

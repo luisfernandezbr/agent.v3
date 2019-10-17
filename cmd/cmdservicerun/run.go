@@ -34,8 +34,12 @@ import (
 )
 
 type Opts struct {
-	Logger       hclog.Logger
-	PinpointRoot string
+	Logger hclog.Logger
+	// LogLevelSubcommands specifies the log level to pass to sub commands.
+	// Pass the same as used for logger.
+	// We need it here, because there is no way to get it from logger.
+	LogLevelSubcommands hclog.Level
+	PinpointRoot        string
 }
 
 func Run(ctx context.Context, opts Opts) error {
@@ -87,12 +91,13 @@ func (s *runner) run(ctx context.Context) error {
 	}
 
 	s.exporter = newExporter(exporterOpts{
-		Logger:          s.logger,
-		PinpointRoot:    s.opts.PinpointRoot,
-		Conf:            s.conf,
-		FSConf:          s.fsconf,
-		PPEncryptionKey: s.conf.PPEncryptionKey,
-		AgentConfig:     s.agentConfig,
+		Logger:              s.logger,
+		LogLevelSubcommands: s.opts.LogLevelSubcommands,
+		PinpointRoot:        s.opts.PinpointRoot,
+		Conf:                s.conf,
+		FSConf:              s.fsconf,
+		PPEncryptionKey:     s.conf.PPEncryptionKey,
+		AgentConfig:         s.agentConfig,
 	})
 
 	go func() {

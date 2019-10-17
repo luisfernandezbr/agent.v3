@@ -14,7 +14,8 @@ func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integ
 
 	integrations := []cmdvalidateconfig.Integration{config}
 
-	args := []string{"export-onboard-data", "--object-type", objectType}
+	args := []string{"export-onboard-data",
+		"--object-type", objectType}
 
 	fs, err := newFsPassedParams(s.fsconf.Temp, []kv{
 		{"--agent-config-file", s.agentConfig},
