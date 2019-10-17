@@ -173,7 +173,7 @@ var cmdUpload = &cobra.Command{
 			exitWithErr(logger, err)
 		}
 
-		_, err = cmdupload.Run(ctx, logger, pinpointRoot, filename, uploadURL)
+		_, err = cmdupload.Run(ctx, logger, pinpointRoot, uploadURL)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
