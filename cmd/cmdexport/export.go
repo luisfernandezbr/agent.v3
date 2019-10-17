@@ -66,6 +66,11 @@ func newExport(opts Opts) (*export, error) {
 		s.Logger.Info("Starting export. ReprocessHistorical is false, will use incremental checkpoints if available.")
 	}
 
+	err = os.MkdirAll(s.Locs.State, 0777)
+	if err != nil {
+		return nil, fmt.Errorf("could not create dir to save state, err: %v", err)
+	}
+
 	s.lastProcessed, err = jsonstore.New(s.Locs.LastProcessedFile)
 	if err != nil {
 		return nil, err
