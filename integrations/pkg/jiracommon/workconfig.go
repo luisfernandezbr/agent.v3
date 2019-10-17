@@ -7,7 +7,7 @@ import (
 	"github.com/pinpt/integration-sdk/agent"
 )
 
-func GetWorkConfig(qc jiracommonapi.QueryContext, typeServer string) (res rpcdef.OnboardExportResult, _ error) {
+func GetWorkConfig(qc jiracommonapi.QueryContext, isCloud bool, usesOauth bool) (res rpcdef.OnboardExportResult, _ error) {
 
 	var ws agent.WorkStatusResponseWorkConfig
 
@@ -18,18 +18,16 @@ func GetWorkConfig(qc jiracommonapi.QueryContext, typeServer string) (res rpcdef
 	}
 	ws.Priorities = priorities
 
-	/*
-		if typeServer == "cloud" {
-			// This doesn't work with hosted, and doesn't work with cloud with oauthm only works with cloud + token
-			// Disabled for now
-			labels, err := jiracommonapi.Labels(qc)
-			if err != nil {
-				res.Error = err
-				return
-			}
-			ws.Labels = labels
+	if isCloud && !usesOauth {
+		// This doesn't work with hosted
+		// This doesn't work with cloud with oauth, server response: "OAuth 2.0 is not enabled for this method."
+		labels, err := jiracommonapi.Labels(qc)
+		if err != nil {
+			res.Error = err
+			return
 		}
-	*/
+		ws.Labels = labels
+	}
 
 	issueTypes, err := jiracommonapi.IssueTypes(qc)
 	if err != nil {

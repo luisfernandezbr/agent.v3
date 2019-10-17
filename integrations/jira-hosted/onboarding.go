@@ -44,5 +44,5 @@ func (s *Integration) onboardWorkConfig(ctx context.Context, config rpcdef.Expor
 		return res, err
 	}
 
-	return jiracommon.GetWorkConfig(s.qc.Common(), "hosted")
+	return jiracommon.GetWorkConfig(s.qc.Common(), false, false)
 }
