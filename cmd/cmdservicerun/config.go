@@ -11,6 +11,7 @@ import (
 	azureapi "github.com/pinpt/agent.next/integrations/azuretfs/api"
 
 	"github.com/pinpt/agent.next/pkg/encrypt"
+	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 )
 
@@ -47,46 +48,57 @@ func configFromEvent(data map[string]interface{}, systemType IntegrationType, en
 		return
 	}
 
-	res.Config, res.Name, err = convertConfig(obj.Name, systemType, authObj, obj.Exclusions)
+	configAgent, agentIn, err := convertConfig(obj.Name, systemType, authObj, obj.Exclusions)
 	if err != nil {
 		rerr = fmt.Errorf("config object in event is not valid: %v", err)
 		return
 	}
+	res.Name = agentIn.Name
+	res.Type = agentIn.Type
+	res.Config = configAgent
 
 	return
 }
 
-func convertConfig(integrationNameBackend string, systemType IntegrationType, configBackend map[string]interface{}, exclusions []string) (configAgent map[string]interface{}, integrationNameAgent string, rerr error) {
+type agentIntegration struct {
+	Name string
+	Type string
+}
+
+func convertConfig(integrationNameBackend string, systemTypeBackend IntegrationType, configBackend map[string]interface{}, exclusions []string) (configAgent map[string]interface{}, agentIn agentIntegration, rerr error) {
+
+	var fn func(integrationNameBackend string, systemTypeBackend IntegrationType, configBackend map[string]interface{}, exclusions []string) (configAgent map[string]interface{}, agentIn agentIntegration, rerr error)
 
 	switch integrationNameBackend {
-
 	case "github":
-		configAgent, integrationNameAgent, rerr = convertConfigGithub(integrationNameBackend, configBackend, exclusions)
+		fn = convertConfigGithub
 	case "bitbucket":
-		configAgent, integrationNameAgent, rerr = convertConfigBitbucket(integrationNameBackend, configBackend, exclusions)
+		fn = convertConfigBitbucket
 	case "gitlab":
-		configAgent, integrationNameAgent, rerr = convertConfigGitlab(integrationNameBackend, configBackend, exclusions)
+		fn = convertConfigGitlab
 	case "jira":
-		configAgent, integrationNameAgent, rerr = convertConfigJira(integrationNameBackend, configBackend, exclusions)
+		fn = convertConfigJira
 	case "sonarqube":
-		configAgent, integrationNameAgent, rerr = convertConfigSonarqube(integrationNameBackend, configBackend, exclusions)
+		fn = convertConfigSonarqube
 	case "tfs", "azure":
-		configAgent, integrationNameAgent, rerr = convertConfigAzureFTS(integrationNameBackend, systemType, configBackend, exclusions)
+		fn = convertConfigAzureTFS
 	case "workday":
-		configAgent, integrationNameAgent, rerr = convertConfigWorkday(integrationNameBackend, configBackend, exclusions)
+		fn = convertConfigWorkday
 	default:
 		rerr = fmt.Errorf("unsupported integration: %v", integrationNameBackend)
 		return
 	}
 
-	if integrationNameAgent == "" {
-		integrationNameAgent = integrationNameBackend
+	configAgent, agentIn, rerr = fn(integrationNameBackend, systemTypeBackend, configBackend, exclusions)
+
+	if agentIn.Name == "" {
+		agentIn.Name = integrationNameBackend
 	}
 
 	return
 }
 
-func convertConfigGithub(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+func convertConfigGithub(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 
 	errStr := func(err string) {
 		rerr = errors.New(err)
@@ -143,7 +155,7 @@ func convertConfigGithub(inameBackend string, cb map[string]interface{}, exclusi
 	return
 }
 
-func convertConfigGitlab(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+func convertConfigGitlab(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 
 	errStr := func(err string) {
 		rerr = errors.New(err)
@@ -200,7 +212,7 @@ func convertConfigGitlab(inameBackend string, cb map[string]interface{}, exclusi
 	return
 }
 
-func convertConfigBitbucket(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+func convertConfigBitbucket(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 
 	errStr := func(err string) {
 		rerr = errors.New(err)
@@ -260,7 +272,7 @@ func convertConfigBitbucket(inameBackend string, cb map[string]interface{}, excl
 	return
 }
 
-func convertConfigJira(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+func convertConfigJira(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 	errStr := func(err string) {
 		rerr = errors.New(err)
 		return
@@ -289,9 +301,9 @@ func convertConfigJira(inameBackend string, cb map[string]interface{}, exclusion
 		rerr = fmt.Errorf("invalid jira url: %v", err)
 		return
 	}
-	inameAgent = "jira-hosted"
+	agentIn.Name = "jira-hosted"
 	if strings.HasSuffix(u.Host, ".atlassian.net") {
-		inameAgent = "jira-cloud"
+		agentIn.Name = "jira-cloud"
 	}
 	config.URL = us
 
@@ -326,7 +338,7 @@ func convertConfigJira(inameBackend string, cb map[string]interface{}, exclusion
 	return
 }
 
-func convertConfigSonarqube(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+func convertConfigSonarqube(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 	errStr := func(err string) {
 		rerr = errors.New(err)
 		return
@@ -373,12 +385,12 @@ func convertConfigSonarqube(inameBackend string, cb map[string]interface{}, excl
 	return
 }
 
-func convertConfigAzureFTS(inameBackend string, systemType IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+func convertConfigAzureTFS(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 	errStr := func(err string) {
 		rerr = errors.New(err)
 		return
 	}
-	isazure := strings.HasPrefix(inameBackend, "azure")
+	isazure := strings.HasPrefix(integrationNameBackend, "azure")
 	var conf struct {
 		Concurrency     int64          `json:"concurrency"`
 		RefType         string         `json:"reftype"` // azure or tfs
@@ -407,19 +419,27 @@ func convertConfigAzureFTS(inameBackend string, systemType IntegrationType, cb m
 			return
 		}
 	}
-	conf.RefType = inameBackend
-	conf.IntegrationType = systemType.String()
+	conf.RefType = integrationNameBackend
+	conf.IntegrationType = systemTypeBackend.String()
 	res, rerr = structmarshal.StructToMap(conf)
-	inameAgent = "azuretfs"
+	agentIn.Name = "azuretfs"
+	switch systemTypeBackend {
+	case IntegrationTypeSourcecode:
+		agentIn.Type = integrationid.TypeSourcecode
+	case IntegrationTypeWork:
+		agentIn.Type = integrationid.TypeWork
+	default:
+		rerr = fmt.Errorf("invalid systemtype received from backend: %v", systemTypeBackend)
+		return
+	}
 	return
 }
 
-func convertConfigWorkday(inameBackend string, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, inameAgent string, rerr error) {
+func convertConfigWorkday(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 	errStr := func(err string) {
 		rerr = errors.New(err)
 		return
 	}
-	inameAgent = "workday"
 	var config struct {
 		URL      string `json:"url"`
 		Username string `json:"username"`

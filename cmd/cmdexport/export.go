@@ -10,6 +10,7 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/gitclone"
+	"github.com/pinpt/agent.next/pkg/integrationid"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
@@ -90,8 +91,8 @@ func newExport(opts Opts) (*export, error) {
 		gitProcessingDone <- hadErrors
 	}()
 
-	err = s.SetupIntegrations(func(integrationName string) rpcdef.Agent {
-		return newAgentDelegate(s, s.sessions.expsession, integrationName)
+	err = s.SetupIntegrations(func(in integrationid.ID) rpcdef.Agent {
+		return newAgentDelegate(s, s.sessions.expsession, in)
 	})
 	if err != nil {
 		return nil, err
@@ -145,6 +146,13 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 	var start time.Time
 
 	ctx := context.Background()
+	sessionRoot, _, err := s.sessions.expsession.SessionRootTracking(integrationid.ID{
+		Name: "git",
+	}, "repos")
+	if err != nil {
+		logger.Error("could not create session for git export", "err", err.Error())
+		return true, nil
+	}
 
 	resErrors := map[string]error{}
 	var ripsrcDuration time.Duration
@@ -164,13 +172,14 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 			UniqueName: fetch.UniqueName,
 			RefType:    fetch.RefType,
 
-			Sessions: s.sessions.expsession,
-
 			LastProcessed: s.lastProcessed,
 			RepoAccess:    access,
 
 			CommitURLTemplate: fetch.CommitURLTemplate,
 			BranchURLTemplate: fetch.BranchURLTemplate,
+
+			Sessions:      s.sessions.expsession,
+			SessionRootID: sessionRoot,
 		}
 		exp := exportrepo.New(opts, s.Locs)
 		repoDirName, duration, err := exp.Run(ctx)
@@ -204,6 +213,12 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 		logger.Error("Error in git repo processing", "count", i, "dur", time.Since(start).String(), "repos_failed", len(resErrors))
 		return true, nil
 
+	}
+
+	err = s.sessions.expsession.Done(sessionRoot, nil)
+	if err != nil {
+		logger.Error("could not close session for git export", "err", err.Error())
+		return true, nil
 	}
 
 	logger.Info("Finished git repo processing", "count", i,

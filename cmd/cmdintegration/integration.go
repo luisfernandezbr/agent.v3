@@ -13,6 +13,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/iloader"
+	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
@@ -59,7 +60,17 @@ func (s AgentConfig) Locs() (res fsconf.Locs, _ error) {
 
 type Integration struct {
 	Name   string                 `json:"name"`
+	Type   string                 `json:"type"` // sourcecode or work
 	Config map[string]interface{} `json:"config"`
+}
+
+func (s Integration) ID() (res integrationid.ID, err error) {
+	res.Name = s.Name
+	res.Type, err = integrationid.TypeFromString(s.Type)
+	if err != nil {
+		return res, fmt.Errorf("invalid integration config, integration: %v, err: %v", s.Name, err)
+	}
+	return
 }
 
 type Command struct {
@@ -115,9 +126,9 @@ func (s *Command) setupConfig() error {
 	s.OAuthRefreshTokens = map[string]string{}
 
 	for _, obj := range s.Opts.Integrations {
-		name := obj.Name
-		if len(obj.Config) == 0 {
-			return fmt.Errorf("empty config for integration: %v", name)
+		in, err := obj.ID()
+		if err != nil {
+			return err
 		}
 
 		ec := rpcdef.ExportConfig{}
@@ -126,7 +137,8 @@ func (s *Command) setupConfig() error {
 
 		refreshToken, _ := obj.Config["oauth_refresh_token"].(string)
 		if refreshToken != "" {
-			s.OAuthRefreshTokens[name] = refreshToken
+			// TODO: switch to using ID instead of name as key, so we could have azure issues and azure work to use different refresh tokens
+			s.OAuthRefreshTokens[in.Name] = refreshToken
 			ec.UseOAuth = true
 			// do not pass oauth_refresh_token to integration
 			// integrations should use
@@ -149,19 +161,19 @@ func copyMap(data map[string]interface{}) map[string]interface{} {
 }
 
 func (s *Command) SetupIntegrations(
-	agentDelegates func(integrationName string) rpcdef.Agent) error {
+	agentDelegates func(in integrationid.ID) rpcdef.Agent) error {
 
 	if agentDelegates == nil {
 		agentDelegates = AgentDelegateMinFactory(s)
 	}
 
-	var integrationNames []string
+	var ins []integrationid.ID
 	for _, integration := range s.Opts.Integrations {
-		name := integration.Name
-		if name == "" {
-			panic("integration name is empty")
+		in, err := integration.ID()
+		if err != nil {
+			return err
 		}
-		integrationNames = append(integrationNames, name)
+		ins = append(ins, in)
 	}
 
 	opts := iloader.Opts{}
@@ -171,7 +183,7 @@ func (s *Command) SetupIntegrations(
 	opts.IntegrationsDir = s.Opts.AgentConfig.IntegrationsDir
 	opts.DevUseCompiledIntegrations = s.Opts.AgentConfig.DevUseCompiledIntegrations
 	loader := iloader.New(opts)
-	res, err := loader.Load(integrationNames)
+	res, err := loader.Load(ins)
 	if err != nil {
 		return err
 	}

@@ -25,6 +25,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/ids"
+	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/ripsrc/ripsrc"
@@ -45,8 +46,6 @@ type Opts struct {
 	// github, tfs
 	RefType string
 
-	Sessions *expsessions.Manager
-
 	LastProcessed *jsonstore.Store
 	RepoAccess    gitclone.AccessDetails
 
@@ -56,6 +55,9 @@ type Opts struct {
 	// BranchURLTemplate is a template for building branch url
 	// https://example.com/repo1/@@@branch@@@
 	BranchURLTemplate string
+
+	Sessions      *expsessions.Manager
+	SessionRootID expsessions.ID
 }
 
 type Export struct {
@@ -230,9 +232,18 @@ func (s *Export) skipRipsrc(ctx context.Context, reponame string, checkoutdir st
 	return skip, remotebranches, nil
 }
 
+var sessionsIn = integrationid.ID{
+	Name: "git",
+}
+
+func (s *Export) session(model string) (expsessions.ID, error) {
+	id, _, err := s.opts.Sessions.Session(model, s.opts.SessionRootID, s.repoNameUsedInCacheDir, s.repoNameUsedInCacheDir)
+	return id, err
+}
+
 func (s *Export) branches(ctx context.Context) error {
 	sessions := s.opts.Sessions
-	sessionID, _, err := sessions.SessionRoot(sourcecode.BranchModelName.String())
+	sessionID, err := s.session(sourcecode.BranchModelName.String())
 	if err != nil {
 		return err
 	}
@@ -340,11 +351,11 @@ func (s *Export) code(ctx context.Context) error {
 
 func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA string, _ error) {
 	sessions := s.opts.Sessions
-	blameSession, _, err := sessions.SessionRoot(sourcecode.BlameModelName.String())
+	blameSession, err := s.session(sourcecode.BlameModelName.String())
 	if err != nil {
 		return "", err
 	}
-	commitSession, _, err := sessions.SessionRoot(sourcecode.CommitModelName.String())
+	commitSession, err := s.session(sourcecode.CommitModelName.String())
 	if err != nil {
 		return "", err
 	}

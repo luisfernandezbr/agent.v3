@@ -2,25 +2,26 @@ package cmdexport
 
 import (
 	"github.com/pinpt/agent.next/pkg/expsessions"
+	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
 type agentDelegate struct {
-	export          *export
-	integrationName string
-	expsession      *expsessions.Manager
+	export     *export
+	in         integrationid.ID
+	expsession *expsessions.Manager
 }
 
-func newAgentDelegate(export *export, expsession *expsessions.Manager, integrationName string) *agentDelegate {
+func newAgentDelegate(export *export, expsession *expsessions.Manager, in integrationid.ID) *agentDelegate {
 	s := &agentDelegate{}
 	s.export = export
 	s.expsession = expsession
-	s.integrationName = integrationName
+	s.in = in
 	return s
 }
 
 func (s agentDelegate) ExportStarted(modelType string) (sessionID string, lastProcessed interface{}) {
-	sessionID, lastProcessed, err := s.export.sessions.new(modelType)
+	sessionID, lastProcessed, err := s.export.sessions.new(s.in, modelType)
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +48,7 @@ func (s agentDelegate) ExportGitRepo(fetch rpcdef.GitRepoFetch) error {
 }
 
 func (s agentDelegate) SessionStart(isTracking bool, name string, parentSessionID int, parentObjectID, parentObjectName string) (sessionID int, lastProcessed interface{}, _ error) {
-	id, lastProcessed, err := s.expsession.SessionFlex(isTracking, name, expsessions.ID(parentSessionID), parentObjectID, parentObjectName)
+	id, lastProcessed, err := s.expsession.SessionFlex(s.in, isTracking, name, expsessions.ID(parentSessionID), parentObjectID, parentObjectName)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -60,5 +61,5 @@ func (s agentDelegate) SessionProgress(id int, current, total int) error {
 }
 
 func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
-	return s.export.OAuthNewAccessToken(s.integrationName)
+	return s.export.OAuthNewAccessToken(s.in.Name)
 }

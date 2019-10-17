@@ -1,17 +1,19 @@
 package iloader
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
 type Opts struct {
 	Logger         hclog.Logger
 	Locs           fsconf.Locs
-	AgentDelegates func(integrationName string) rpcdef.Agent
+	AgentDelegates func(in integrationid.ID) rpcdef.Agent
 
 	// IntegrationsDir is a custom location of the integrations binaries
 	IntegrationsDir string `json:"integrations_dir"`
@@ -39,8 +41,8 @@ func New(opts Opts) *Loader {
 	return s
 }
 
-func (s *Loader) Load(names []string) (map[string]*Integration, error) {
-	s.logger.Info("Loading integrations", "names", names)
+func (s *Loader) Load(ins []integrationid.ID) (map[string]*Integration, error) {
+	s.logger.Info("Loading integrations", "ins", fmt.Sprintf("%+v", ins))
 
 	res := make(chan *Integration)
 	var rerr error
@@ -48,12 +50,12 @@ func (s *Loader) Load(names []string) (map[string]*Integration, error) {
 
 	go func() {
 		wg := sync.WaitGroup{}
-		for _, name := range names {
+		for _, in := range ins {
 			wg.Add(1)
-			name := name
+			in := in
 			go func() {
 				defer wg.Done()
-				one, err := s.load(name)
+				one, err := s.load(in)
 				if err != nil {
 					errMu.Lock()
 					rerr = err
@@ -73,11 +75,11 @@ func (s *Loader) Load(names []string) (map[string]*Integration, error) {
 	return loaded, rerr
 }
 
-func (s *Loader) load(integrationName string) (*Integration, error) {
+func (s *Loader) load(in integrationid.ID) (*Integration, error) {
 	opts := IntegrationOpts{}
 	opts.Logger = s.opts.Logger
-	opts.Agent = s.opts.AgentDelegates(integrationName)
-	opts.Name = integrationName
+	opts.Agent = s.opts.AgentDelegates(in)
+	opts.Name = in.Name
 	opts.Locs = s.locs
 	opts.DevUseCompiledIntegrations = s.opts.DevUseCompiledIntegrations
 	return NewIntegration(opts)

@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/integrationid"
 )
 
 // Opts are options for New call
@@ -51,23 +52,23 @@ type Manager struct {
 	lastID ID
 }
 
-func (s *Manager) SessionRoot(modelType string) (_ ID, lastProcessed interface{}, _ error) {
-	return s.SessionFlex(false, modelType, 0, "", "")
+func (s *Manager) SessionRoot(in integrationid.ID, modelType string) (_ ID, lastProcessed interface{}, _ error) {
+	return s.SessionFlex(in, false, modelType, 0, "", "")
 }
 
-func (s *Manager) SessionRootTracking(modelType string) (_ ID, lastProcessed interface{}, _ error) {
-	return s.SessionFlex(true, modelType, 0, "", "")
+func (s *Manager) SessionRootTracking(in integrationid.ID, modelType string) (_ ID, lastProcessed interface{}, _ error) {
+	return s.SessionFlex(in, true, modelType, 0, "", "")
 }
 
 func (s *Manager) Session(modelType string, parentSessionID ID, parentObjectID, parentObjectName string) (_ ID, lastProcessed interface{}, _ error) {
-	return s.SessionFlex(false, modelType, parentSessionID, parentObjectID, parentObjectName)
+	return s.SessionFlex(integrationid.ID{}, false, modelType, parentSessionID, parentObjectID, parentObjectName)
 }
 
 func (s *Manager) SessionTracking(modelType string, parentSessionID ID, parentObjectID, parentObjectName string) (_ ID, lastProcessed interface{}, _ error) {
-	return s.SessionFlex(true, modelType, parentSessionID, parentObjectID, parentObjectName)
+	return s.SessionFlex(integrationid.ID{}, true, modelType, parentSessionID, parentObjectID, parentObjectName)
 }
 
-func (s *Manager) SessionFlex(isTracking bool, name string, parentSessionID ID, parentObjectID, parentObjectName string) (_ ID, lastProcessed interface{}, _ error) {
+func (s *Manager) SessionFlex(in integrationid.ID, isTracking bool, name string, parentSessionID ID, parentObjectID, parentObjectName string) (_ ID, lastProcessed interface{}, _ error) {
 	s.sessionsMu.Lock()
 	defer s.sessionsMu.Unlock()
 
@@ -81,7 +82,7 @@ func (s *Manager) SessionFlex(isTracking bool, name string, parentSessionID ID, 
 	}
 
 	id := s.newID()
-	sess := newSession(isTracking, name, id, s.opts.NewWriter, s.opts.SendProgress, parent, parentObjectID, parentObjectName)
+	sess := newSession(in, isTracking, name, id, s.opts.NewWriter, s.opts.SendProgress, parent, parentObjectID, parentObjectName)
 	s.sessions[id] = sess
 
 	if s.opts.LastProcessed != nil {

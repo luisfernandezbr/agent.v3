@@ -1,19 +1,22 @@
 package cmdintegration
 
-import "github.com/pinpt/agent.next/rpcdef"
+import (
+	"github.com/pinpt/agent.next/pkg/integrationid"
+	"github.com/pinpt/agent.next/rpcdef"
+)
 
 type AgentDelegateMinimal interface {
 	OAuthNewAccessToken(integrationName string) (token string, _ error)
 }
 
 type agentDelegate struct {
-	min             AgentDelegateMinimal
-	integrationName string
+	min AgentDelegateMinimal
+	in  integrationid.ID
 }
 
-func AgentDelegateMinFactory(min AgentDelegateMinimal) func(integrationName string) rpcdef.Agent {
-	return func(integrationName string) rpcdef.Agent {
-		return &agentDelegate{min: min, integrationName: integrationName}
+func AgentDelegateMinFactory(min AgentDelegateMinimal) func(in integrationid.ID) rpcdef.Agent {
+	return func(in integrationid.ID) rpcdef.Agent {
+		return &agentDelegate{min: min, in: in}
 	}
 }
 
@@ -42,5 +45,5 @@ func (s agentDelegate) SessionProgress(id int, current, total int) error {
 }
 
 func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
-	return s.min.OAuthNewAccessToken(s.integrationName)
+	return s.min.OAuthNewAccessToken(s.in.Name)
 }
