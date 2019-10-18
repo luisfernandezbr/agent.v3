@@ -14,6 +14,13 @@ type ID struct {
 	Type Type
 }
 
+func (s ID) String() string {
+	if s.Type == "" {
+		return s.Name
+	}
+	return s.Name + "@" + s.Type.String()
+}
+
 type Type string
 
 func (s Type) String() string {

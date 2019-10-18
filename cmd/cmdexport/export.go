@@ -3,6 +3,7 @@ package cmdexport
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -51,6 +52,8 @@ type export struct {
 func newExport(opts Opts) (*export, error) {
 	s := &export{}
 
+	startTime := time.Now()
+
 	var err error
 	s.Command, err = cmdintegration.NewCommand(opts.Opts)
 	if err != nil {
@@ -73,6 +76,11 @@ func newExport(opts Opts) (*export, error) {
 	}
 
 	s.lastProcessed, err = jsonstore.New(s.Locs.LastProcessedFile)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.logLastProcessedTimeStamps()
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +118,11 @@ func newExport(opts Opts) (*export, error) {
 		hadErrors = <-gitProcessingDone
 	}
 
+	err = s.updateLastProcessedTimestamps(startTime)
+	if err != nil {
+		return nil, err
+	}
+
 	err = s.lastProcessed.Save()
 	if err != nil {
 		s.Logger.Error("could not save updated last_processed file", "err", err)
@@ -127,6 +140,43 @@ func (s *export) discardIncrementalData() error {
 		return err
 	}
 	return os.RemoveAll(s.Locs.RipsrcCheckpoints)
+}
+
+func (s *export) logLastProcessedTimeStamps() error {
+	lastExport := map[integrationid.ID]string{}
+	for _, ino := range s.Opts.Integrations {
+		in, err := ino.ID()
+		if err != nil {
+			return err
+		}
+		v := s.lastProcessed.Get(in.String())
+		if v != nil {
+			ts, ok := v.(string)
+			if !ok {
+				return errors.New("not a valid value saved in last processed key")
+			}
+			lastExport[in] = ts
+		} else {
+			lastExport[in] = ""
+		}
+	}
+
+	s.Logger.Info("Last processed timestamps", "v", lastExport)
+	return nil
+}
+
+func (s *export) updateLastProcessedTimestamps(startTime time.Time) error {
+	for _, ino := range s.Opts.Integrations {
+		in, err := ino.ID()
+		if err != nil {
+			return err
+		}
+		err = s.lastProcessed.Set(startTime.Format(time.RFC3339), in.String())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *export) gitProcessing() (hadErrors bool, _ error) {
