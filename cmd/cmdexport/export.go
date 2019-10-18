@@ -80,7 +80,7 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
-	err = s.logLastProcessedTimeStamps()
+	err = s.logLastProcessedTimestamps()
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func (s *export) discardIncrementalData() error {
 	return os.RemoveAll(s.Locs.RipsrcCheckpoints)
 }
 
-func (s *export) logLastProcessedTimeStamps() error {
+func (s *export) logLastProcessedTimestamps() error {
 	lastExport := map[integrationid.ID]string{}
 	for _, ino := range s.Opts.Integrations {
 		in, err := ino.ID()
