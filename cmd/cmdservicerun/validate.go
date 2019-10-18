@@ -32,12 +32,13 @@ func (s *runner) validate(ctx context.Context, name string, systemType Integrati
 	if err != nil {
 		return res, err
 	}
-	inConf, name2, err := convertConfig(name, systemType, config, []string{})
+	inConf, agentIn, err := convertConfig(name, systemType, config, []string{})
 	if err != nil {
 		return res, err
 	}
 	in := cmdvalidateconfig.Integration{}
-	in.Name = name2
+	in.Name = agentIn.Name
+	in.Type = agentIn.Type
 	in.Config = inConf
 
 	integrations := []cmdvalidateconfig.Integration{in}

@@ -12,6 +12,7 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdexport/process"
 	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/expsessions"
+	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
@@ -83,10 +84,10 @@ func newSessions(logger hclog.Logger, export *export, outputDir string) *session
 	return s
 }
 
-func (s *sessions) new(modelType string) (
+func (s *sessions) new(in integrationid.ID, modelType string) (
 	sessionID string, lastProcessed interface{}, _ error) {
 
-	id, lastProcessed, err := s.expsession.SessionRoot(modelType)
+	id, lastProcessed, err := s.expsession.SessionRoot(in, modelType)
 	if err != nil {
 		return "", nil, err
 	}

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,6 +21,8 @@ func (s lastProcessedMock) Set(value interface{}, key ...string) error {
 	return nil
 }
 
+var testIn = integrationid.ID{Name: "in1"}
+
 func TestExpSessionsBasic(t *testing.T) {
 	opts := Opts{}
 	opts.Logger = hclog.Default()
@@ -31,7 +34,7 @@ func TestExpSessionsBasic(t *testing.T) {
 	opts.LastProcessed = lpm
 	m := New(opts)
 
-	id, _, err := m.SessionRoot("m1")
+	id, _, err := m.SessionRoot(testIn, "m1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +63,7 @@ func TestExpSessionsWrittenData(t *testing.T) {
 
 	m := New(opts)
 
-	id, _, err := m.SessionRoot("m1")
+	id, _, err := m.SessionRoot(testIn, "m1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +99,7 @@ func TestExpSessionsLastProcessed(t *testing.T) {
 	opts.LastProcessed = lpm
 	m := New(opts)
 
-	id, lp1, err := m.SessionRoot("m1")
+	id, lp1, err := m.SessionRoot(testIn, "m1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +111,7 @@ func TestExpSessionsLastProcessed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	id, lp1, err = m.SessionRoot("m1")
+	id, lp1, err = m.SessionRoot(testIn, "m1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +132,7 @@ func TestExpSessionsLastProcessedNested(t *testing.T) {
 	opts.LastProcessed = lpm
 	m := New(opts)
 
-	m1, _, err := m.SessionRoot("m1")
+	m1, _, err := m.SessionRoot(testIn, "m1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +142,8 @@ func TestExpSessionsLastProcessedNested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lpm.Set("id1", "m1/m1obj1/m2/m2obj1/m3")
+	inPre := "in1/"
+	lpm.Set("id1", inPre+"m1/m1obj1/m2/m2obj1/m3")
 
 	m3, lp, err := m.Session("m3", m2, "m2obj1", "")
 	if err != nil {
@@ -154,9 +158,9 @@ func TestExpSessionsLastProcessedNested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Equal("id1v2", lpm.Get("m1/m1obj1/m2/m2obj1/m3"))
+	assert.Equal("id1v2", lpm.Get(inPre+"m1/m1obj1/m2/m2obj1/m3"))
 
-	lpm.Set("id2", "m1/m1obj1/m2/m2obj2/m3")
+	lpm.Set("id2", inPre+"m1/m1obj1/m2/m2obj2/m3")
 
 	_, lp, err = m.Session("m3", m2, "m2obj2", "")
 	if err != nil {
@@ -176,8 +180,9 @@ func TestExpSessionsProgress(t *testing.T) {
 	}
 	current := 0
 	total := 0
+	inPre := "in1/"
 	opts.SendProgress = func(pp ProgressPath, c, to int) {
-		if pp.String() != "m1" {
+		if pp.String() != inPre+"m1" {
 			t.Fatal("invalid progress path")
 		}
 		current = c
@@ -186,7 +191,7 @@ func TestExpSessionsProgress(t *testing.T) {
 
 	m := New(opts)
 
-	id, _, err := m.SessionRoot("m1")
+	id, _, err := m.SessionRoot(testIn, "m1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,8 +228,9 @@ func TestExpSessionsProgressNested(t *testing.T) {
 	}
 	current := 0
 	total := 0
+	inPre := "in1/"
 	opts.SendProgress = func(pp ProgressPath, c, to int) {
-		if pp.String() != "m1/m1obj1/m2" {
+		if pp.String() != inPre+"m1/m1obj1/m2" {
 			t.Fatal("invalid progress path")
 		}
 		current = c
@@ -233,7 +239,7 @@ func TestExpSessionsProgressNested(t *testing.T) {
 
 	m := New(opts)
 
-	m1, _, err := m.SessionRoot("m1")
+	m1, _, err := m.SessionRoot(testIn, "m1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -275,7 +281,8 @@ func TestExpSessionsTracking(t *testing.T) {
 		return NewMockWriter()
 	}
 	m := New(opts)
-	id, _, err := m.SessionRootTracking("m1")
+
+	id, _, err := m.SessionRootTracking(testIn, "m1")
 	if err != nil {
 		t.Fatal(err)
 	}

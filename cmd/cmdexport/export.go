@@ -3,6 +3,7 @@ package cmdexport
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/gitclone"
+	"github.com/pinpt/agent.next/pkg/integrationid"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
@@ -50,6 +52,8 @@ type export struct {
 func newExport(opts Opts) (*export, error) {
 	s := &export{}
 
+	startTime := time.Now()
+
 	var err error
 	s.Command, err = cmdintegration.NewCommand(opts.Opts)
 	if err != nil {
@@ -76,6 +80,11 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
+	err = s.logLastProcessedTimeStamps()
+	if err != nil {
+		return nil, err
+	}
+
 	s.sessions = newSessions(s.Logger, s, s.Locs.Uploads)
 
 	s.gitProcessingRepos = make(chan rpcdef.GitRepoFetch, 100000)
@@ -90,8 +99,8 @@ func newExport(opts Opts) (*export, error) {
 		gitProcessingDone <- hadErrors
 	}()
 
-	err = s.SetupIntegrations(func(integrationName string) rpcdef.Agent {
-		return newAgentDelegate(s, s.sessions.expsession, integrationName)
+	err = s.SetupIntegrations(func(in integrationid.ID) rpcdef.Agent {
+		return newAgentDelegate(s, s.sessions.expsession, in)
 	})
 	if err != nil {
 		return nil, err
@@ -107,6 +116,11 @@ func newExport(opts Opts) (*export, error) {
 		// only log this is there is actual work needed for git repos
 		s.Logger.Info("Waiting for git repo processing to complete")
 		hadErrors = <-gitProcessingDone
+	}
+
+	err = s.updateLastProcessedTimestamps(startTime)
+	if err != nil {
+		return nil, err
 	}
 
 	err = s.lastProcessed.Save()
@@ -128,6 +142,43 @@ func (s *export) discardIncrementalData() error {
 	return os.RemoveAll(s.Locs.RipsrcCheckpoints)
 }
 
+func (s *export) logLastProcessedTimeStamps() error {
+	lastExport := map[integrationid.ID]string{}
+	for _, ino := range s.Opts.Integrations {
+		in, err := ino.ID()
+		if err != nil {
+			return err
+		}
+		v := s.lastProcessed.Get(in.String())
+		if v != nil {
+			ts, ok := v.(string)
+			if !ok {
+				return errors.New("not a valid value saved in last processed key")
+			}
+			lastExport[in] = ts
+		} else {
+			lastExport[in] = ""
+		}
+	}
+
+	s.Logger.Info("Last processed timestamps", "v", lastExport)
+	return nil
+}
+
+func (s *export) updateLastProcessedTimestamps(startTime time.Time) error {
+	for _, ino := range s.Opts.Integrations {
+		in, err := ino.ID()
+		if err != nil {
+			return err
+		}
+		err = s.lastProcessed.Set(startTime.Format(time.RFC3339), in.String())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *export) gitProcessing() (hadErrors bool, _ error) {
 	logger := s.Logger.Named("git")
 
@@ -145,6 +196,13 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 	var start time.Time
 
 	ctx := context.Background()
+	sessionRoot, _, err := s.sessions.expsession.SessionRootTracking(integrationid.ID{
+		Name: "git",
+	}, "repos")
+	if err != nil {
+		logger.Error("could not create session for git export", "err", err.Error())
+		return true, nil
+	}
 
 	resErrors := map[string]error{}
 	var ripsrcDuration time.Duration
@@ -164,13 +222,14 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 			UniqueName: fetch.UniqueName,
 			RefType:    fetch.RefType,
 
-			Sessions: s.sessions.expsession,
-
 			LastProcessed: s.lastProcessed,
 			RepoAccess:    access,
 
 			CommitURLTemplate: fetch.CommitURLTemplate,
 			BranchURLTemplate: fetch.BranchURLTemplate,
+
+			Sessions:      s.sessions.expsession,
+			SessionRootID: sessionRoot,
 		}
 		exp := exportrepo.New(opts, s.Locs)
 		repoDirName, duration, err := exp.Run(ctx)
@@ -204,6 +263,12 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 		logger.Error("Error in git repo processing", "count", i, "dur", time.Since(start).String(), "repos_failed", len(resErrors))
 		return true, nil
 
+	}
+
+	err = s.sessions.expsession.Done(sessionRoot, nil)
+	if err != nil {
+		logger.Error("could not close session for git export", "err", err.Error())
+		return true, nil
 	}
 
 	logger.Info("Finished git repo processing", "count", i,
