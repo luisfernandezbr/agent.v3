@@ -109,19 +109,15 @@ func (s *exporter) sendExportEvent(ctx context.Context, jobID string, data *agen
 			// ExportType:    agent.ExportResponseIntegrationsExportTypeHistorical or TypeIncremental,
 		})
 	}
-	enrollConf, err := agentconf.Load(s.opts.FSConf.Config2)
-	if err != nil {
-		return err
-	}
 
-	deviceinfo.AppendCommonInfoFromConfig(data, enrollConf)
+	deviceinfo.AppendCommonInfoFromConfig(data, s.conf)
 	publishEvent := event.PublishEvent{
 		Object: data,
 		Headers: map[string]string{
-			"uuid": enrollConf.DeviceID,
+			"uuid": s.conf.DeviceID,
 		},
 	}
-	return event.Publish(ctx, publishEvent, enrollConf.Channel, enrollConf.APIKey)
+	return event.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
 }
 
 func (s *exporter) sendStartExportEvent(ctx context.Context, jobID string, ints []agent.ExportRequestIntegrations) error {
@@ -135,19 +131,24 @@ func (s *exporter) sendStartExportEvent(ctx context.Context, jobID string, ints 
 	return s.sendExportEvent(ctx, jobID, data, ints)
 }
 
-func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started, ended time.Time, filesize int64, uploadurl *string, ints []agent.ExportRequestIntegrations, success bool) error {
+func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started, ended time.Time, filesize int64, uploadurl *string, ints []agent.ExportRequestIntegrations, err error) error {
 	if !s.opts.AgentConfig.Backend.Enable {
 		return nil
 	}
 	data := &agent.ExportResponse{
 		State:     agent.ExportResponseStateCompleted,
-		Success:   true,
 		Size:      filesize,
 		UploadURL: uploadurl,
 	}
 	date.ConvertToModel(started, &data.StartDate)
 	date.ConvertToModel(ended, &data.EndDate)
-
+	if err != nil {
+		errstr := err.Error()
+		data.Error = &errstr
+		data.Success = false
+	} else {
+		data.Success = true
+	}
 	return s.sendExportEvent(ctx, jobID, data, ints)
 }
 
@@ -196,44 +197,32 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 	agentConfig := s.opts.AgentConfig
 	agentConfig.Backend.ExportJobID = data.JobID
 
+	sendEndEvent := func(size int64, url *string, errmsg error) {
+		if err := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), size, url, data.Integrations, errmsg); err != nil {
+			s.logger.Error("error sending export response stop event", "err", err)
+		}
+	}
 	err = s.execExport(ctx, agentConfig, integrations, data.ReprocessHistorical, exportLogSender)
 	if err != nil {
-		e := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), 0, nil, data.Integrations, false)
-		if e != nil {
-			s.logger.Error("error sending export response stop event (1)", "err", e)
-		}
+		sendEndEvent(0, nil, err)
 		return err
 	}
 
 	err = exportLogSender.FlushAndClose()
 	if err != nil {
-		e := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), 0, nil, data.Integrations, false)
-		if e != nil {
-			s.logger.Error("error sending export response stop event (2)", "err", e)
-		}
+		sendEndEvent(0, nil, err)
 		s.logger.Error("could not send export logs to the server", "err", err)
 		return err
 	}
 
 	s.logger.Info("export finished, running upload")
 
-	fileName, err := cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL)
+	fileSize, err := cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL)
 	if err != nil {
-		e := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), 0, nil, data.Integrations, false)
-		if e != nil {
-			s.logger.Error("error sending export response stop event (3)", "err", e)
-		}
+		sendEndEvent(0, nil, err)
 		return err
 	}
-	stat, err := os.Stat(fileName)
-	if err != nil {
-		s.logger.Error("can't get file size", "err", err)
-		// stat.Size() = 0
-	}
-	e := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), stat.Size(), data.UploadURL, data.Integrations, true)
-	if e != nil {
-		s.logger.Error("error sending export response stop event (4)", "err", e)
-	}
+	sendEndEvent(fileSize, data.UploadURL, nil)
 	return nil
 }
 

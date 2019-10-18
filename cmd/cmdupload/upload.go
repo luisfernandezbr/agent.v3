@@ -22,7 +22,7 @@ import (
 func Run(ctx context.Context,
 	logger hclog.Logger,
 	pinpointRoot string,
-	uploadURL string) (zipPath string, err error) {
+	uploadURL string) (size int64, err error) {
 
 	fsc := fsconf.New(pinpointRoot)
 
@@ -34,7 +34,7 @@ func Run(ctx context.Context,
 	fileName := time.Now().Format(time.RFC3339)
 	fileName = strings.ReplaceAll(fileName, ":", "_")
 
-	zipPath = filepath.Join(fsc.UploadZips, fileName+".zip")
+	zipPath := filepath.Join(fsc.UploadZips, fileName+".zip")
 
 	err = zipFilesJSON(logger, zipPath, fsc.Uploads)
 	if err != nil {
@@ -42,7 +42,7 @@ func Run(ctx context.Context,
 	}
 	logger.Info("uploading export result", "upload_url", uploadURL, "zip_path", zipPath)
 
-	err = upload(logger, zipPath, uploadURL)
+	size, err = upload(logger, zipPath, uploadURL)
 	if err != nil {
 		return
 	}
@@ -62,26 +62,27 @@ func zipFilesJSON(logger hclog.Logger, target, source string) error {
 	return archive.ZipFiles(target, source, files)
 }
 
-func upload(logger hclog.Logger, zipPath, uploadURL string) error {
+func upload(logger hclog.Logger, zipPath, uploadURL string) (size int64, err error) {
 
 	f, err := os.Open(zipPath)
 	defer f.Close()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	fi, err := f.Stat()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	req, err := http.NewRequest(http.MethodPut, uploadURL, f)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	req.ContentLength = fi.Size()
+	size = fi.Size()
+	req.ContentLength = size
 	req.Header.Set("Content-Type", "application/zip")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer resp.Body.Close()
 	io.Copy(ioutil.Discard, resp.Body) // copy even if we don't read
@@ -94,5 +95,5 @@ func upload(logger hclog.Logger, zipPath, uploadURL string) error {
 		logger.Info("upload response", "data", string(data))
 	*/
 
-	return nil
+	return
 }
