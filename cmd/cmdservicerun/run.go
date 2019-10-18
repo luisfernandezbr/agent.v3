@@ -81,10 +81,6 @@ func (s *runner) run(ctx context.Context) error {
 
 	s.agentConfig = s.getAgentConfig()
 
-	go func() {
-		s.sendPings()
-	}()
-
 	err = s.sendStart(context.Background())
 	if err != nil {
 		return fmt.Errorf("could not send start event, err: %v", err)
@@ -100,6 +96,9 @@ func (s *runner) run(ctx context.Context) error {
 		AgentConfig:         s.agentConfig,
 	})
 
+	go func() {
+		s.sendPings()
+	}()
 	go func() {
 		s.exporter.Run()
 	}()
@@ -545,16 +544,12 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 		ev := instance.Object().(*agent.ExportRequest)
 		s.logger.Info("received export request", "id", ev.ID, "uuid", ev.UUID, "request_date", ev.RequestDate.Rfc3339)
 
-		publishEvent := s.processExportRequest(ev)
-
-		err := event.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
-		if err != nil {
-			s.logger.Error("could not send back export result", "err", err)
-			return nil, nil
+		done := make(chan bool)
+		s.exporter.ExportQueue <- exportRequest{
+			Done: done,
+			Data: ev,
 		}
-
-		s.logger.Info("sent back export result")
-
+		<-done
 		return nil, nil
 	}
 
@@ -573,48 +568,6 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 
 	return func() { sub.Close() }, nil
 
-}
-
-func (s *runner) processExportRequest(ev *agent.ExportRequest) (res event.PublishEvent) {
-	done := make(chan error)
-
-	req := exportRequest{
-		Done: done,
-		Data: ev,
-	}
-
-	startDate := time.Now()
-
-	s.exporter.ExportQueue <- req
-
-	err := <-done
-
-	jobID := ev.JobID
-
-	data := agent.ExportResponse{
-		CustomerID: s.conf.CustomerID,
-		UUID:       s.conf.DeviceID,
-		JobID:      jobID,
-	}
-	date.ConvertToModel(startDate, &data.StartDate)
-
-	deviceinfo.AppendCommonInfoFromConfig(&data, s.conf)
-
-	if err == nil {
-		data.Success = true
-	} else {
-		s.logger.Error("failed export", "err", err)
-		data.Error = pstrings.Pointer(err.Error())
-	}
-
-	res = event.PublishEvent{
-		Object: &data,
-		Headers: map[string]string{
-			"uuid": s.conf.DeviceID,
-		},
-	}
-
-	return
 }
 
 func (s *runner) sendPings() {
@@ -650,6 +603,11 @@ func (s *runner) sendPing(ctx context.Context) error {
 	agentEvent := &agent.Ping{
 		Type:    agent.PingTypePing,
 		Success: true,
+	}
+	if s.exporter.IsRunning() {
+		agentEvent.State = agent.PingStateExporting
+	} else {
+		agentEvent.State = agent.PingStateIdle
 	}
 	return s.sendEvent(ctx, agentEvent, "", nil)
 }
