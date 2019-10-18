@@ -175,17 +175,17 @@ func (s *exporter) export(data *agent.ExportRequest) {
 	if err := s.sendStartExportEvent(ctx, data.JobID, data.Integrations); err != nil {
 		s.logger.Error("error sending export response start event", "err", err)
 	}
-	fileSize, uploadURL, err := s.doExport(ctx, data)
+	fileSize, err := s.doExport(ctx, data)
 	if err != nil {
 		s.logger.Error("exported finsihed with error", "err", err)
 	} else {
 		s.logger.Info("sent back export result")
 	}
-	if err := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), fileSize, uploadURL, data.Integrations, err); err != nil {
+	if err := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), fileSize, data.UploadURL, data.Integrations, err); err != nil {
 		s.logger.Error("error sending export response stop event", "err", err)
 	}
 }
-func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (fileSize int64, uploadURL *string, err error) {
+func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (fileSize int64, err error) {
 	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
 
 	var integrations []cmdexport.Integration
@@ -200,30 +200,30 @@ func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (fil
 		s.logger.Info("exporting integration", "name", integration.Name, "len(exclusions)", len(integration.Exclusions))
 		conf, err := configFromEvent(integration.ToMap(), IntegrationType(integration.SystemType), s.opts.PPEncryptionKey)
 		if err != nil {
-			return 0, nil, err
+			return 0, err
 		}
 		integrations = append(integrations, conf)
 	}
 	fsconf := s.opts.FSConf
 	// delete existing uploads
 	if err = os.RemoveAll(fsconf.Uploads); err != nil {
-		return 0, nil, err
+		return 0, err
 	}
 	exportLogSender := newExportLogSender(s.logger, s.conf, data.JobID)
 	agentConfig := s.opts.AgentConfig
 	agentConfig.Backend.ExportJobID = data.JobID
 	if err := s.execExport(ctx, agentConfig, integrations, data.ReprocessHistorical, exportLogSender); err != nil {
-		return 0, nil, err
+		return 0, err
 	}
 	if err := exportLogSender.FlushAndClose(); err != nil {
 		s.logger.Error("could not send export logs to the server", "err", err)
-		return 0, nil, err
+		return 0, err
 	}
 	s.logger.Info("export finished, running upload")
 	if fileSize, err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL); err != nil {
-		return 0, nil, err
+		return 0, err
 	}
-	return fileSize, data.UploadURL, nil
+	return fileSize, nil
 }
 
 func (s *exporter) execExport(ctx context.Context, agentConfig cmdexport.AgentConfig, integrations []cmdexport.Integration, reprocessHistorical bool, exportLogWriter io.Writer) error {
