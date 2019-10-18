@@ -7,11 +7,15 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/cmd/cmdupload"
+	"github.com/pinpt/go-common/event"
 
 	"github.com/pinpt/agent.next/pkg/agentconf"
+	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent.next/pkg/deviceinfo"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/logutils"
 
@@ -93,9 +97,69 @@ func (s *exporter) Run() {
 	return
 }
 
-func (s *exporter) export(data *agent.ExportRequest) error {
-	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
+func (s *exporter) sendExportEvent(ctx context.Context, jobID string, data *agent.ExportResponse, ints []agent.ExportRequestIntegrations) error {
+	data.JobID = jobID
+	data.RefType = "export"
+	data.Type = agent.ExportResponseTypeExport
+	for _, i := range ints {
+		data.Integrations = append(data.Integrations, agent.ExportResponseIntegrations{
+			IntegrationID: i.ID, // i.RefID ?
+			Name:          i.Name,
+			SystemType:    agent.ExportResponseIntegrationsSystemType(i.SystemType),
+			// ExportType:    agent.ExportResponseIntegrationsExportTypeHistorical or TypeIncremental,
+		})
+	}
 
+	deviceinfo.AppendCommonInfoFromConfig(data, s.conf)
+	publishEvent := event.PublishEvent{
+		Object: data,
+		Headers: map[string]string{
+			"uuid": s.conf.DeviceID,
+		},
+	}
+	return event.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
+}
+
+func (s *exporter) sendStartExportEvent(ctx context.Context, jobID string, ints []agent.ExportRequestIntegrations) error {
+	if !s.opts.AgentConfig.Backend.Enable {
+		return nil
+	}
+	data := &agent.ExportResponse{
+		State:   agent.ExportResponseStateStarting,
+		Success: true,
+	}
+	return s.sendExportEvent(ctx, jobID, data, ints)
+}
+
+func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started, ended time.Time, filesize int64, uploadurl *string, ints []agent.ExportRequestIntegrations, err error) error {
+	if !s.opts.AgentConfig.Backend.Enable {
+		return nil
+	}
+	data := &agent.ExportResponse{
+		State:     agent.ExportResponseStateCompleted,
+		Size:      filesize,
+		UploadURL: uploadurl,
+	}
+	date.ConvertToModel(started, &data.StartDate)
+	date.ConvertToModel(ended, &data.EndDate)
+	if err != nil {
+		errstr := err.Error()
+		data.Error = &errstr
+		data.Success = false
+	} else {
+		data.Success = true
+	}
+	return s.sendExportEvent(ctx, jobID, data, ints)
+}
+
+func (s *exporter) export(data *agent.ExportRequest) error {
+	ctx := context.Background()
+	started := time.Now()
+	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
+	err := s.sendStartExportEvent(ctx, data.JobID, data.Integrations)
+	if err != nil {
+		s.logger.Error("error sending export response start event", "err", err)
+	}
 	var integrations []cmdexport.Integration
 
 	// add in additional integrations defined in config
@@ -121,13 +185,10 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 		integrations = append(integrations, conf)
 	}
 
-	ctx := context.Background()
-
 	fsconf := s.opts.FSConf
 
 	// delete existing uploads
-	err := os.RemoveAll(fsconf.Uploads)
-	if err != nil {
+	if err = os.RemoveAll(fsconf.Uploads); err != nil {
 		return err
 	}
 
@@ -136,22 +197,32 @@ func (s *exporter) export(data *agent.ExportRequest) error {
 	agentConfig := s.opts.AgentConfig
 	agentConfig.Backend.ExportJobID = data.JobID
 
+	sendEndEvent := func(size int64, url *string, errmsg error) {
+		if err := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), size, url, data.Integrations, errmsg); err != nil {
+			s.logger.Error("error sending export response stop event", "err", err)
+		}
+	}
 	err = s.execExport(ctx, agentConfig, integrations, data.ReprocessHistorical, exportLogSender)
 	if err != nil {
+		sendEndEvent(0, nil, err)
 		return err
 	}
 
 	err = exportLogSender.FlushAndClose()
 	if err != nil {
+		sendEndEvent(0, nil, err)
 		s.logger.Error("could not send export logs to the server", "err", err)
+		return err
 	}
 
 	s.logger.Info("export finished, running upload")
 
-	err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL)
+	fileSize, err := cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL)
 	if err != nil {
+		sendEndEvent(0, nil, err)
 		return err
 	}
+	sendEndEvent(fileSize, data.UploadURL, nil)
 	return nil
 }
 
