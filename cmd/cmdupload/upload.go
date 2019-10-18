@@ -3,6 +3,7 @@ package cmdupload
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -84,15 +85,16 @@ func upload(logger hclog.Logger, zipPath, uploadURL string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	io.Copy(ioutil.Discard, resp.Body) // copy even if we don't read
 
-	/*
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-		logger.Info("upload response", "data", string(data))
-	*/
+	if resp.StatusCode == 200 {
+		io.Copy(ioutil.Discard, resp.Body) // copy even if we don't read
+		return nil
+	}
 
-	return nil
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	logger.Error("Upload failed", "response_status", resp.StatusCode, "response", string(data))
+	return fmt.Errorf("upload failed with server status code: %v", resp.StatusCode)
 }
