@@ -545,16 +545,17 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 		ev := instance.Object().(*agent.ExportRequest)
 		s.logger.Info("received export request", "id", ev.ID, "uuid", ev.UUID, "request_date", ev.RequestDate.Rfc3339)
 
-		publishEvent := s.processExportRequest(ev)
-
-		err := event.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
-		if err != nil {
-			s.logger.Error("could not send back export result", "err", err)
-			return nil, nil
+		done := make(chan error)
+		s.exporter.ExportQueue <- exportRequest{
+			Done: done,
+			Data: ev,
 		}
-
-		s.logger.Info("sent back export result")
-
+		err := <-done
+		if err != nil {
+			s.logger.Info("exported finsihed with error", "err", err)
+		} else {
+			s.logger.Info("sent back export result")
+		}
 		return nil, nil
 	}
 
@@ -573,48 +574,6 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 
 	return func() { sub.Close() }, nil
 
-}
-
-func (s *runner) processExportRequest(ev *agent.ExportRequest) (res event.PublishEvent) {
-	done := make(chan error)
-
-	req := exportRequest{
-		Done: done,
-		Data: ev,
-	}
-
-	startDate := time.Now()
-
-	s.exporter.ExportQueue <- req
-
-	err := <-done
-
-	jobID := ev.JobID
-
-	data := agent.ExportResponse{
-		CustomerID: s.conf.CustomerID,
-		UUID:       s.conf.DeviceID,
-		JobID:      jobID,
-	}
-	date.ConvertToModel(startDate, &data.StartDate)
-
-	deviceinfo.AppendCommonInfoFromConfig(&data, s.conf)
-
-	if err == nil {
-		data.Success = true
-	} else {
-		s.logger.Error("failed export", "err", err)
-		data.Error = pstrings.Pointer(err.Error())
-	}
-
-	res = event.PublishEvent{
-		Object: &data,
-		Headers: map[string]string{
-			"uuid": s.conf.DeviceID,
-		},
-	}
-
-	return
 }
 
 func (s *runner) sendPings() {
