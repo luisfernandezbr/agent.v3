@@ -88,6 +88,7 @@ func upload(logger hclog.Logger, zipPath, uploadURL string) error {
 
 	if resp.StatusCode == 200 {
 		io.Copy(ioutil.Discard, resp.Body) // copy even if we don't read
+		logger.Info("Upload completed without error")
 		return nil
 	}
 
