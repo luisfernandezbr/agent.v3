@@ -81,10 +81,6 @@ func (s *runner) run(ctx context.Context) error {
 
 	s.agentConfig = s.getAgentConfig()
 
-	go func() {
-		s.sendPings()
-	}()
-
 	err = s.sendStart(context.Background())
 	if err != nil {
 		return fmt.Errorf("could not send start event, err: %v", err)
@@ -100,6 +96,9 @@ func (s *runner) run(ctx context.Context) error {
 		AgentConfig:         s.agentConfig,
 	})
 
+	go func() {
+		s.sendPings()
+	}()
 	go func() {
 		s.exporter.Run()
 	}()
@@ -609,6 +608,11 @@ func (s *runner) sendPing(ctx context.Context) error {
 	agentEvent := &agent.Ping{
 		Type:    agent.PingTypePing,
 		Success: true,
+	}
+	if s.exporter.IsRunning() {
+		agentEvent.State = agent.PingStateExporting
+	} else {
+		agentEvent.State = agent.PingStateIdle
 	}
 	return s.sendEvent(ctx, agentEvent, "", nil)
 }

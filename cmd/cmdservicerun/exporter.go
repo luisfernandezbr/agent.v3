@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"sync"
 	"time"
 
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
@@ -94,11 +95,25 @@ func newExporter(opts exporterOpts) *exporter {
 
 func (s *exporter) Run() {
 	for req := range s.ExportQueue {
+		s.SetRunning(true)
 		req.Done <- s.export(req.Data)
+		s.SetRunning(false)
 	}
 	return
 }
 
+func (s *exporter) SetRunning(ex bool) {
+	s.mu.Lock()
+	s.exporting = ex
+	s.mu.Unlock()
+
+}
+func (s *exporter) IsRunning() bool {
+	s.mu.Lock()
+	ex := s.exporting
+	s.mu.Unlock()
+	return ex
+}
 func (s *exporter) sendExportEvent(ctx context.Context, jobID string, data *agent.ExportResponse, ints []agent.ExportRequestIntegrations) error {
 	data.JobID = jobID
 	data.RefType = "export"
