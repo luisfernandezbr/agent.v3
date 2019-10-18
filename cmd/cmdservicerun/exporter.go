@@ -224,12 +224,16 @@ func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (isI
 		}
 		integrations = append(integrations, conf)
 
-		lastProcessed, err := s.getLastProcessed(lastProcessedStore, conf)
-		if err != nil {
-			rerr = err
-			return
+		if data.ReprocessHistorical {
+			isIncremental = append(isIncremental, false)
+		} else {
+			lastProcessed, err := s.getLastProcessed(lastProcessedStore, conf)
+			if err != nil {
+				rerr = err
+				return
+			}
+			isIncremental = append(isIncremental, lastProcessed != "")
 		}
-		isIncremental = append(isIncremental, lastProcessed != "")
 	}
 
 	fsconf := s.opts.FSConf
