@@ -77,7 +77,7 @@ type exporter struct {
 }
 
 type exportRequest struct {
-	Done chan error
+	Done chan bool
 	Data *agent.ExportRequest
 }
 
@@ -96,8 +96,9 @@ func newExporter(opts exporterOpts) *exporter {
 func (s *exporter) Run() {
 	for req := range s.ExportQueue {
 		s.SetRunning(true)
-		req.Done <- s.export(req.Data)
+		s.export(req.Data)
 		s.SetRunning(false)
+		req.Done <- true
 	}
 	return
 }
@@ -168,17 +169,21 @@ func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started
 	}
 	return s.sendExportEvent(ctx, jobID, data, ints)
 }
-func (s *exporter) export(data *agent.ExportRequest) error {
+func (s *exporter) export(data *agent.ExportRequest) {
 	ctx := context.Background()
 	started := time.Now()
 	if err := s.sendStartExportEvent(ctx, data.JobID, data.Integrations); err != nil {
 		s.logger.Error("error sending export response start event", "err", err)
 	}
-	fileSize, uploadURL, errmsg := s.doExport(ctx, data)
-	if err := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), fileSize, uploadURL, data.Integrations, errmsg); err != nil {
+	fileSize, uploadURL, err := s.doExport(ctx, data)
+	if err != nil {
+		s.logger.Error("exported finsihed with error", "err", err)
+	} else {
+		s.logger.Info("sent back export result")
+	}
+	if err := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), fileSize, uploadURL, data.Integrations, err); err != nil {
 		s.logger.Error("error sending export response stop event", "err", err)
 	}
-	return errmsg
 }
 func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (fileSize int64, uploadURL *string, err error) {
 	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)

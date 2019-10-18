@@ -544,17 +544,12 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 		ev := instance.Object().(*agent.ExportRequest)
 		s.logger.Info("received export request", "id", ev.ID, "uuid", ev.UUID, "request_date", ev.RequestDate.Rfc3339)
 
-		done := make(chan error)
+		done := make(chan bool)
 		s.exporter.ExportQueue <- exportRequest{
 			Done: done,
 			Data: ev,
 		}
-		err := <-done
-		if err != nil {
-			s.logger.Info("exported finsihed with error", "err", err)
-		} else {
-			s.logger.Info("sent back export result")
-		}
+		<-done
 		return nil, nil
 	}
 
