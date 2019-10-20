@@ -43,7 +43,7 @@ func GetWorkConfig(qc jiracommonapi.QueryContext, isCloud bool, usesOauth bool) 
 	}
 	ws.AllStatuses = allStatus
 
-	resolutions, err := jiracommonapi.Resolution(qc)
+	resolutions, _ := jiracommonapi.Resolution(qc)
 	ws.AllResolutions = resolutions
 
 	appendStaticInfo(&ws)
@@ -83,6 +83,8 @@ func appendStaticInfo(ws *agent.WorkStatusResponseWorkConfig) {
 		Name: "Epic",
 		Type: "Issue",
 	}
+	ws.Resolutions.WorkDone = []string{"Completed"}
+	ws.Resolutions.NoWorkDone = []string{"Won't Do", "Invalid"}
 	ws.TypeRules = []agent.WorkStatusResponseWorkConfigTypeRules{
 		agent.WorkStatusResponseWorkConfigTypeRules{
 			IssueType: agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeFeature,
