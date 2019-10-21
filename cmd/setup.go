@@ -91,7 +91,7 @@ func integrationCommandFlags(cmd *cobra.Command) {
 	cmd.Flags().String("integrations-file", "", "Integrations config json as file")
 	var indir string
 	if insideDocker {
-		indir = "/bin/pinpoint-agent/integrations"
+		indir = "/bin/integrations"
 	}
 	cmd.Flags().String("integrations-dir", indir, "Integrations dir")
 }
