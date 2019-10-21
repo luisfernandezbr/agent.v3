@@ -68,4 +68,5 @@ windows:
 	env GOOS=windows go build -o dist/windows/integrations/mock.exe ./integrations/mock
 	env GOOS=windows go build -o dist/windows/integrations/sonarqube.exe ./integrations/sonarqube
 	
-
+docker:
+	@docker build -t pinpt/agent .

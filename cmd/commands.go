@@ -1,9 +1,13 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
+
+	"github.com/pinpt/go-common/fileutil"
 
 	"github.com/pinpt/agent.next/cmd/cmdenroll"
 	"github.com/pinpt/agent.next/cmd/cmdexport"
@@ -16,6 +20,16 @@ import (
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/spf13/cobra"
 )
+
+func isInsideDocker() bool {
+	if fileutil.FileExists("/proc/self/cgroup") {
+		buf, _ := ioutil.ReadFile("/proc/self/cgroup")
+		if bytes.Contains(buf, []byte("docker")) {
+			return true
+		}
+	}
+	return false
+}
 
 var cmdEnroll = &cobra.Command{
 	Use:   "enroll <code>",
@@ -45,6 +59,10 @@ var cmdEnroll = &cobra.Command{
 		})
 		if err != nil {
 			exitWithErr(logger, err)
+		}
+		if isInsideDocker() {
+			// if inside docker, just immediately run
+			cmdServiceRun.Run(cmd, []string{})
 		}
 	},
 }

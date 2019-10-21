@@ -16,8 +16,8 @@ import (
 	"github.com/pinpt/agent.next/pkg/fsconf"
 
 	"github.com/fatih/color"
-	"github.com/hashicorp/go-hclog"
-	"github.com/mitchellh/go-ps"
+	hclog "github.com/hashicorp/go-hclog"
+	ps "github.com/mitchellh/go-ps"
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +68,11 @@ func getPinpointRoot(cmd *cobra.Command) (string, error) {
 }
 
 func flagPinpointRoot(cmd *cobra.Command) {
-	cmd.Flags().String("pinpoint-root", "", "Custom location of pinpoint work dir.")
+	var def string
+	if isInsideDocker() {
+		def = "/etc/pinpoint"
+	}
+	cmd.Flags().String("pinpoint-root", def, "Custom location of pinpoint work dir.")
 }
 
 func flagsLogger(cmd *cobra.Command) {
