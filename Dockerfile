@@ -4,7 +4,8 @@ WORKDIR $GOPATH/src/github.com/pinpt/agent.next
 COPY . .
 RUN make dependencies
 ARG BUILD=
-ENV BUILD=${BUILD}
+ENV PP_AGENT_VERSION=${BUILD}
+RUN echo PP_AGENT_VERSION=$PP_AGENT_VERSION
 RUN make linux
 RUN mkdir /tmp/agent && cp -R dist/linux/ /tmp/agent/
 
