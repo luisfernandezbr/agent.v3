@@ -55,7 +55,7 @@ func newSessions(logger hclog.Logger, export *export, outputDir string) *session
 			res := s.progressTracker.InProgressString()
 
 			if strings.TrimSpace(res) != "" { // do not print empty progress data
-				s.logger.Info("progress", "data", "\n\n"+res+"\n\n")
+				s.logger.Debug("progress", "data", "\n\n"+res+"\n\n")
 			}
 
 			if s.export.Opts.AgentConfig.Backend.Enable {
