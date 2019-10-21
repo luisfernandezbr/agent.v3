@@ -396,6 +396,7 @@ func convertConfigAzureTFS(integrationNameBackend string, systemTypeBackend Inte
 		RefType         string         `json:"reftype"` // azure or tfs
 		IntegrationType string         `json:"type"`    // sourcecode or work
 		Credentials     azureapi.Creds `json:"credentials"`
+		ExcludedRepos   []string       `json:"excluded_repos"`
 	}
 	if rerr = structmarshal.MapToStruct(cb, &conf.Credentials); rerr != nil {
 		return
