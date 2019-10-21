@@ -60,10 +60,6 @@ var cmdEnroll = &cobra.Command{
 		if err != nil {
 			exitWithErr(logger, err)
 		}
-		if isInsideDocker() {
-			// if inside docker, just immediately run
-			cmdServiceRun.Run(cmd, []string{})
-		}
 	},
 }
 
@@ -127,7 +123,7 @@ func init() {
 	cmdRoot.AddCommand(cmd)
 }
 
-var cmdExportOboardData = &cobra.Command{
+var cmdExportOnboardData = &cobra.Command{
 	Use:    "export-onboard-data",
 	Hidden: true,
 	Short:  "Exports users, repos or projects based on param for a specified integration. Saves that data into provided file.",
@@ -161,7 +157,7 @@ var cmdExportOboardData = &cobra.Command{
 }
 
 func init() {
-	cmd := cmdExportOboardData
+	cmd := cmdExportOnboardData
 	integrationCommandFlags(cmd)
 	flagOutputFile(cmd)
 	cmd.Flags().String("object-type", "", "Object type to export, one of: users, repos, projects.")

@@ -67,9 +67,11 @@ func getPinpointRoot(cmd *cobra.Command) (string, error) {
 	return fsconf.DefaultRoot()
 }
 
+var insideDocker = isInsideDocker()
+
 func flagPinpointRoot(cmd *cobra.Command) {
 	var def string
-	if isInsideDocker() {
+	if insideDocker {
 		def = "/etc/pinpoint"
 	}
 	cmd.Flags().String("pinpoint-root", def, "Custom location of pinpoint work dir.")
@@ -87,7 +89,11 @@ func integrationCommandFlags(cmd *cobra.Command) {
 	cmd.Flags().String("agent-config-file", "", "Agent config json as file")
 	cmd.Flags().String("integrations-json", "", "Integrations config as json")
 	cmd.Flags().String("integrations-file", "", "Integrations config json as file")
-	cmd.Flags().String("integrations-dir", "", "Integrations dir")
+	var indir string
+	if insideDocker {
+		indir = "/bin/pinpoint-agent/integrations"
+	}
+	cmd.Flags().String("integrations-dir", indir, "Integrations dir")
 }
 
 func integrationCommandOpts(cmd *cobra.Command) (hclog.Logger, cmdintegration.Opts) {
