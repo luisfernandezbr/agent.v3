@@ -43,7 +43,12 @@ func GetWorkConfig(qc jiracommonapi.QueryContext, isCloud bool, usesOauth bool) 
 	}
 	ws.AllStatuses = allStatus
 
-	resolutions, _ := jiracommonapi.Resolution(qc)
+	resolutions, err := jiracommonapi.Resolution(qc)
+	if err != nil {
+		res.Error = err
+		return
+	}
+
 	ws.AllResolutions = resolutions
 
 	appendStaticInfo(&ws)
