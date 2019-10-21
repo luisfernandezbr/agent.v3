@@ -30,12 +30,9 @@ func myDefaultInfo() SystemInfo {
 	s.Memory = m.Alloc
 	s.OS = runtime.GOOS
 	s.NumCPU = runtime.NumCPU()
-	s.GoVersion = runtime.Version()
+	s.GoVersion = runtime.Version()[2:]
 	s.Architecture = runtime.GOARCH
 	s.AgentVersion = os.Getenv("PP_AGENT_VERSION")
-	if s.AgentVersion == "" {
-		s.AgentVersion = "dev"
-	}
 	dir := os.Getenv("PP_CACHEDIR")
 	if dir == "" {
 		dir, _ = os.Getwd()

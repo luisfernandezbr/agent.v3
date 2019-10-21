@@ -30,6 +30,11 @@ func GetSystemInfo() SystemInfo {
 	return def
 }
 
+// GetAvailablePath returns a valid path for the largest disk available
+func GetAvailablePath() string {
+	return getAvailablePath()
+}
+
 /*
 ProductName:	Mac OS X
 ProductVersion:	10.13.5

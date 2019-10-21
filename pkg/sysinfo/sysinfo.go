@@ -5,6 +5,7 @@ import (
 	"runtime"
 
 	"github.com/denisbrodbeck/machineid"
+	pos "github.com/pinpt/go-common/os"
 )
 
 // SystemInfo returns the operating system details
@@ -27,7 +28,7 @@ func getDefault() SystemInfo {
 	hostname, _ := os.Hostname()
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	id := os.Getenv("PP_AGENT_ID") // for the cloud agent, allow it to be overriden
+	id := pos.Getenv("PP_AGENT_ID", os.Getenv("PP_UUID")) // for the cloud agent, allow it to be overriden
 	if id == "" {
 		id, _ = machineid.ProtectedID("pinpoint-agent")
 	}
@@ -36,12 +37,9 @@ func getDefault() SystemInfo {
 	s.Memory = m.Alloc
 	s.OS = runtime.GOOS
 	s.NumCPU = runtime.NumCPU()
-	s.GoVersion = runtime.Version()
+	s.GoVersion = runtime.Version()[2:] // trim off go
 	s.Architecture = runtime.GOARCH
 	s.AgentVersion = os.Getenv("PP_AGENT_VERSION")
-	if s.AgentVersion == "" {
-		s.AgentVersion = "dev"
-	}
 	dir := os.Getenv("PP_CACHEDIR")
 	if dir == "" {
 		dir, _ = os.Getwd()
