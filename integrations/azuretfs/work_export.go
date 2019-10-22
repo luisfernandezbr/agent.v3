@@ -21,7 +21,7 @@ func (s *Integration) exportWork() error {
 	if err != nil {
 		return err
 	}
-	projects, err := s.api.FetchProjects()
+	projects, err := s.api.FetchProjects(s.ExcludedProjectIDs)
 	if err != nil {
 		return err
 	}

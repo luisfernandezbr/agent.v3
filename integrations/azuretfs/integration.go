@@ -56,6 +56,8 @@ type Integration struct {
 	IntegrationType IntegrationType `json:"type"`
 	// ExcludedRepoIDs this comes from the admin UI
 	ExcludedRepoIDs []string `json:"excluded_repos"`
+	// ExcludedProjectIDs this comes from the admin UI
+	ExcludedProjectIDs []string `json:"excluded_projects"`
 	// IncludedRepos names of repos to process. Used for debugging and development.
 	IncludedRepos       []string `json:"included_repos"`
 	OverrideGitHostName string   `json:"git_host_name"`

@@ -17,7 +17,7 @@ func (api *API) FetchAllRepos(included []string, excludedids []string) (projecti
 	}
 	projectidmap := make(map[string]bool)
 	for _, repo := range rawrepos {
-		if len(excludedids) > 0 && exists(repo.ID, excludedids) {
+		if exists(repo.ID, excludedids) {
 			continue
 		}
 		// 1. check if there are any in included
