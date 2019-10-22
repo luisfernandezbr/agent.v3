@@ -8,11 +8,11 @@ import (
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommon"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/jira-hosted/api"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
-	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/integration-sdk/work"
 )
@@ -137,16 +137,18 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 	return
 }
 
-func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
+func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, rerr error) {
 	err := s.initWithConfig(config)
 	if err != nil {
-		return res, err
+		rerr = err
+		return
 	}
 	s.common.SetupUsers()
 
 	fields, err := s.fields()
 	if err != nil {
-		return res, err
+		rerr = err
+		return
 	}
 
 	fieldByID := map[string]*work.CustomField{}
@@ -154,27 +156,44 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		fieldByID[f.RefID] = f
 	}
 
+	projectSender, err := objsender2.Root(s.agent, work.ProjectModelName.String())
+	if err != nil {
+		rerr = err
+		return
+	}
+
 	var projects []Project
+
 	{
 		allProjectsDetailed, err := api.Projects(s.qc)
 		if err != nil {
-			return res, err
+			rerr = err
+			return
 		}
 
-		projects, err = s.common.ProcessAllProjectsUsingExclusions(allProjectsDetailed)
+		projects, err = s.common.ProcessAllProjectsUsingExclusions(projectSender, allProjectsDetailed)
 		if err != nil {
-			return res, err
+			rerr = err
+			return
 		}
 	}
 
-	err = s.common.IssuesAndChangelogs(projects, fieldByID)
+	err = s.common.IssuesAndChangelogs(projectSender, projects, fieldByID)
 	if err != nil {
-		return res, err
+		rerr = err
+		return
+	}
+
+	err = projectSender.Done()
+	if err != nil {
+		rerr = err
+		return
 	}
 
 	err = s.common.ExportDone()
 	if err != nil {
-		return res, err
+		rerr = err
+		return
 	}
 
 	return res, nil
@@ -182,17 +201,22 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 
 type Project = jiracommon.Project
 
-func (s *Integration) fields() ([]*work.CustomField, error) {
-	sender := objsender.NewNotIncremental(s.agent, work.CustomFieldModelName.String())
-
+func (s *Integration) fields() (_ []*work.CustomField, rerr error) {
+	sender, err := objsender2.Root(s.agent, work.CustomFieldModelName.String())
+	if err != nil {
+		rerr = err
+		return
+	}
 	res, err := api.FieldsAll(s.qc)
 	if err != nil {
-		return nil, err
+		rerr = err
+		return
 	}
 	for _, item := range res {
 		err := sender.Send(item)
 		if err != nil {
-			return nil, err
+			rerr = err
+			return
 		}
 	}
 

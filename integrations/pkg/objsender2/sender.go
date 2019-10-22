@@ -34,11 +34,11 @@ type Session struct {
 	noAutoProgress bool
 }
 
-func Root(agent rpcdef.Agent, refType string) (*Session, error) {
+func Root(agent rpcdef.Agent, objectType string) (*Session, error) {
 	s := &Session{}
 	s.agent = agent
 	s.startTime = time.Now()
-	s.name = refType
+	s.name = objectType
 	err := s.start()
 	if err != nil {
 		return nil, err
@@ -63,11 +63,11 @@ func RootTracking(agent rpcdef.Agent, trackingName string) (*Session, error) {
 	return s, nil
 }
 
-func (par *Session) Session(refType string, parentObjectID string, parentObjectName string) (*Session, error) {
+func (par *Session) Session(objectType string, parentObjectID string, parentObjectName string) (*Session, error) {
 	s := &Session{}
 	s.agent = par.agent
 	s.startTime = time.Now()
-	s.name = refType
+	s.name = objectType
 
 	var err error
 	s.sessionID, s.lastProcessed, err = s.agent.SessionStart(s.isTracking, s.name, par.sessionID, parentObjectID, parentObjectName)
@@ -78,12 +78,12 @@ func (par *Session) Session(refType string, parentObjectID string, parentObjectN
 	return s, nil
 }
 
-func (par *Session) SessionTracking(refType string, parentObjectID string, parentObjectName string) (*Session, error) {
+func (par *Session) SessionTracking(objectType string, parentObjectID string, parentObjectName string) (*Session, error) {
 	s := &Session{}
 	s.isTracking = true
 	s.agent = par.agent
 	s.startTime = time.Now()
-	s.name = refType
+	s.name = objectType
 
 	var err error
 	s.sessionID, s.lastProcessed, err = s.agent.SessionStart(s.isTracking, s.name, par.sessionID, parentObjectID, parentObjectName)
