@@ -392,7 +392,6 @@ func convertConfigAzureTFS(integrationNameBackend string, systemTypeBackend Inte
 	}
 	isazure := strings.HasPrefix(integrationNameBackend, "azure")
 	var conf struct {
-		Concurrency      int64          `json:"concurrency"`
 		RefType          string         `json:"reftype"` // azure or tfs
 		IntegrationType  string         `json:"type"`    // sourcecode or work
 		Credentials      azureapi.Creds `json:"credentials"`
