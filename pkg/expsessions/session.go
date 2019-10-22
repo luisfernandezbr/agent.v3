@@ -9,8 +9,6 @@ import (
 )
 
 type session struct {
-	in integrationid.ID
-
 	isTracking   bool
 	name         string
 	id           ID
@@ -40,7 +38,6 @@ func newSession(
 	parentObjectID string,
 	parentObjectName string) *session {
 	s := &session{}
-	s.in = in
 	s.isTracking = isTracking
 	s.name = name
 	s.id = id
@@ -52,18 +49,13 @@ func newSession(
 		if parentObjectID == "" {
 			panic("parentObjectID must be set if using parent session")
 		}
-		s.in = s.parent.in
 		s.ProgressPath = s.parent.ProgressPath.Copy()
 		s.ProgressPath = append(s.ProgressPath, ProgressPathComponent{
 			ObjectID:   parentObjectID,
 			ObjectName: parentObjectName})
 	} else {
-		name := in.Name
-		if in.Type != integrationid.TypeEmpty {
-			name += "-" + in.Type.String()
-		}
 		s.ProgressPath = append(s.ProgressPath, ProgressPathComponent{
-			TrackingName: name})
+			TrackingName: in.String()})
 	}
 
 	if s.isTracking {
