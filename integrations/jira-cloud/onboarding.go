@@ -8,6 +8,7 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommon"
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/integration-sdk/agent"
 )
 
 func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.OnboardExportType, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
@@ -23,20 +24,22 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 }
 
 func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, rerr error) {
+
 	err := s.initWithConfig(config)
 	if err != nil {
 		rerr = err
 		return
 	}
-	var records []map[string]interface{}
+
+	var projects []agent.ProjectResponseProjects
 	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
-		pi, projects, err := api.ProjectsOnboardPage(s.qc, paginationParams)
+		pi, sub, err := api.ProjectsOnboardPage(s.qc, paginationParams)
 		if err != nil {
 			rerr = err
 			return
 		}
-		for _, obj := range projects {
-			records = append(records, obj.ToMap())
+		for _, obj := range sub {
+			projects = append(projects, *obj)
 		}
 		return pi.HasMore, pi.MaxResults, nil
 	})
@@ -44,7 +47,26 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 		rerr = err
 		return
 	}
+
+	qcc := s.qc.Common()
+	for i, project := range projects {
+		project2 := jiracommonapi.Project{}
+		project2.JiraID = project.RefID
+		project2.Key = project.Identifier
+		issuesCount, err := jiracommonapi.ProjectIssuesCount(qcc, project2)
+		if err != nil {
+			rerr = err
+			return
+		}
+		projects[i].TotalIssues = int64(issuesCount)
+	}
+
+	var records []map[string]interface{}
+	for _, project := range projects {
+		records = append(records, project.ToMap())
+	}
 	res.Data = records
+
 	return res, nil
 }
 

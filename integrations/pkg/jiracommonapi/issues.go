@@ -14,6 +14,31 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
+// ProjectIssuesCount returns the count of issues per project by making one request to search api.
+func ProjectIssuesCount(
+	qc QueryContext,
+	project Project,
+) (totalIssues int, rerr error) {
+	objectPath := "search"
+	params := url.Values{}
+	params.Set("validateQuery", "strict")
+	jql := `project="` + project.JiraID + `"`
+	params.Set("jql", jql)
+	qc.Logger.Debug("project issues count request", "project", project.Key, "params", params)
+
+	var rr struct {
+		Total int `json:"total"`
+	}
+
+	err := qc.Request(objectPath, params, &rr)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	return rr.Total, nil
+}
+
 // IssuesAndChangelogsPage returns issues and related changelogs. Calls qc.ExportUser for each user. Current difference from jira-cloud version is that user.Key is used instead of user.AccountID everywhere.
 func IssuesAndChangelogsPage(
 	qc QueryContext,
