@@ -57,7 +57,7 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 }
 
 func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
-	projects, err := s.api.FetchProjects()
+	projects, err := s.api.FetchProjects(nil)
 	var records []map[string]interface{}
 	for _, proj := range projects {
 		itemids, err := s.api.FetchItemIDs(proj.RefID, time.Time{})

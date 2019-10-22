@@ -5,13 +5,16 @@ import (
 )
 
 // FetchProjects gets the projects and sends them to the projchan channel
-func (api *API) FetchProjects() (projects []*work.Project, err error) {
+func (api *API) FetchProjects(excludedids []string) (projects []*work.Project, err error) {
 	url := `_apis/projects/`
 	var res []projectResponse
 	if err = api.getRequest(url, stringmap{"stateFilter": "all"}, &res); err != nil {
 		return nil, err
 	}
 	for _, p := range res {
+		if exists(p.ID, excludedids) {
+			continue
+		}
 		projects = append(projects, &work.Project{
 			Active:      p.State == "wellFormed",
 			CustomerID:  api.customerid,

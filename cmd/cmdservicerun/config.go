@@ -392,10 +392,11 @@ func convertConfigAzureTFS(integrationNameBackend string, systemTypeBackend Inte
 	}
 	isazure := strings.HasPrefix(integrationNameBackend, "azure")
 	var conf struct {
-		Concurrency     int64          `json:"concurrency"`
-		RefType         string         `json:"reftype"` // azure or tfs
-		IntegrationType string         `json:"type"`    // sourcecode or work
-		Credentials     azureapi.Creds `json:"credentials"`
+		RefType          string         `json:"reftype"` // azure or tfs
+		IntegrationType  string         `json:"type"`    // sourcecode or work
+		Credentials      azureapi.Creds `json:"credentials"`
+		ExcludedRepos    []string       `json:"excluded_repos"`
+		ExcludedProjects []string       `json:"excluded_projects"`
 	}
 	if rerr = structmarshal.MapToStruct(cb, &conf.Credentials); rerr != nil {
 		return
@@ -421,17 +422,20 @@ func convertConfigAzureTFS(integrationNameBackend string, systemTypeBackend Inte
 	}
 	conf.RefType = integrationNameBackend
 	conf.IntegrationType = systemTypeBackend.String()
-	res, rerr = structmarshal.StructToMap(conf)
+
 	agentIn.Name = "azuretfs"
 	switch systemTypeBackend {
 	case IntegrationTypeSourcecode:
+		conf.ExcludedRepos = exclusions
 		agentIn.Type = integrationid.TypeSourcecode
 	case IntegrationTypeWork:
+		conf.ExcludedProjects = exclusions
 		agentIn.Type = integrationid.TypeWork
 	default:
 		rerr = fmt.Errorf("invalid systemtype received from backend: %v", systemTypeBackend)
 		return
 	}
+	res, rerr = structmarshal.StructToMap(conf)
 	return
 }
 

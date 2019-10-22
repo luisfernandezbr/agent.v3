@@ -162,6 +162,9 @@ func (api *API) doRequest(method, endPoint string, params stringmap, reader io.R
 
 // some util functions
 func exists(what string, where []string) bool {
+	if where == nil {
+		return false
+	}
 	for _, each := range where {
 		if what == each {
 			return true
