@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/go-common/hash"
@@ -13,7 +13,7 @@ import (
 
 // FetchPullRequests calls the pull request api and processes the reponse sending each object to the corresponding channel async
 // sourcecode.PullRequest, sourcecode.PullRequestReview, sourcecode.PullRequestComment, and sourcecode.PullRequestCommit
-func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsender2.Session) error {
+func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsender.Session) error {
 	res, err := api.fetchPullRequests(repoid)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 	return prsender.Done()
 }
 
-func (api *API) sendPullRequestCommentObject(repoid string, prid int64, sender *objsender2.Session) {
+func (api *API) sendPullRequestCommentObject(repoid string, prid int64, sender *objsender.Session) {
 	comments, err := api.fetchPullRequestComments(repoid, prid)
 	if err != nil {
 		api.logger.Error("error fetching comments for PR, skiping", "pr_id", prid, "repo_id", repoid)
@@ -141,7 +141,7 @@ func (api *API) sendPullRequestCommentObject(repoid string, prid int64, sender *
 	}
 }
 
-func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithShas, prsender *objsender2.Session, prrsender *objsender2.Session) {
+func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithShas, prsender *objsender.Session, prrsender *objsender.Session) {
 
 	pr := &sourcecode.PullRequest{
 		BranchName:     p.SourceBranch,
@@ -210,7 +210,7 @@ func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithS
 		api.logger.Error("error sending pull request", "id", pr.RefID, "err", err)
 	}
 }
-func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestResponseWithShas, sender *objsender2.Session) error {
+func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestResponseWithShas, sender *objsender.Session) error {
 	sha := p.commitshas[len(p.commitshas)-1]
 	commits, err := api.fetchSingleCommit(repoid, sha)
 	if err != nil {

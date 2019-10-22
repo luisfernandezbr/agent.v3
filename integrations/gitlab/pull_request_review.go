@@ -6,11 +6,11 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/gitlab/api"
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *objsender2.Session, repo commonrepo.Repo, pullRequests chan []api.PullRequest) error {
+func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *objsender.Session, repo commonrepo.Repo, pullRequests chan []api.PullRequest) error {
 	for prs := range pullRequests {
 		for _, pr := range prs {
 			err := s.exportPullRequestReviews(logger, prSender, repo, pr)
@@ -22,7 +22,7 @@ func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *o
 	return nil
 }
 
-func (s *Integration) exportPullRequestReviews(logger hclog.Logger, prSender *objsender2.Session, repo commonrepo.Repo, pr api.PullRequest) error {
+func (s *Integration) exportPullRequestReviews(logger hclog.Logger, prSender *objsender.Session, repo commonrepo.Repo, pr api.PullRequest) error {
 
 	reviewsSender, err := prSender.Session(sourcecode.PullRequestReviewModelName.String(), pr.RefID, pr.RefID)
 	if err != nil {

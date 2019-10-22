@@ -5,10 +5,10 @@ import (
 
 	"github.com/pinpt/integration-sdk/work"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 )
 
-func (s *JiraCommon) ProcessAllProjectsUsingExclusions(projectSender *objsender2.Session, allProjectsDetailed []*work.Project) (notExcluded []Project, rerr error) {
+func (s *JiraCommon) ProcessAllProjectsUsingExclusions(projectSender *objsender.Session, allProjectsDetailed []*work.Project) (notExcluded []Project, rerr error) {
 	var allProjects []Project
 	for _, obj := range allProjectsDetailed {
 		p := Project{}
@@ -88,7 +88,7 @@ func (s *JiraCommon) getProjectsFilterExcluded(all []Project) ([]Project, error)
 	return res, nil
 }
 
-func (s *JiraCommon) sendProjects(sender *objsender2.Session, allProjects []*work.Project, notExcluded []Project) error {
+func (s *JiraCommon) sendProjects(sender *objsender.Session, allProjects []*work.Project, notExcluded []Project) error {
 
 	ok := map[string]bool{}
 	for _, p := range notExcluded {

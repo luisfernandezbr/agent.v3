@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/bitbucket/api"
@@ -15,8 +15,8 @@ import (
 )
 
 func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
-	pullRequestSender *objsender2.Session,
-	commitsSender *objsender2.Session) (rerr error) {
+	pullRequestSender *objsender.Session,
+	commitsSender *objsender.Session) (rerr error) {
 
 	logger = logger.With("repo", repo.NameWithOwner)
 	logger.Info("exporting")
@@ -116,7 +116,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	return
 }
 
-func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, repo commonrepo.Repo, sender *objsender2.Session, pullRequests chan []sourcecode.PullRequest, lastProcessed time.Time) error {
+func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, repo commonrepo.Repo, sender *objsender.Session, pullRequests chan []sourcecode.PullRequest, lastProcessed time.Time) error {
 	return api.PaginateNewerThan(logger, lastProcessed, func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
 		pi, res, err := api.PullRequestPage(s.qc, sender, repo.ID, repo.NameWithOwner, parameters, stopOnUpdatedAt)
 		if err != nil {

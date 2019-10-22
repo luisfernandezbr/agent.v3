@@ -3,11 +3,11 @@ package main
 import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *objsender2.Session, pullRequests chan []api.PullRequest) error {
+func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *objsender.Session, pullRequests chan []api.PullRequest) error {
 	for prs := range pullRequests {
 		for _, pr := range prs {
 			if !pr.HasReviews {
@@ -23,7 +23,7 @@ func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *o
 	return nil
 }
 
-func (s *Integration) exportPullRequestReviews(logger hclog.Logger, prSender *objsender2.Session, prID string) error {
+func (s *Integration) exportPullRequestReviews(logger hclog.Logger, prSender *objsender.Session, prID string) error {
 	reviewsSender, err := prSender.Session(sourcecode.PullRequestReviewModelName.String(), prID, prID)
 	if err != nil {
 		return err

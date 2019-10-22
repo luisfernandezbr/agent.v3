@@ -15,7 +15,7 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommon"
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/integration-sdk/work"
 )
@@ -207,7 +207,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		fieldByID[f.RefID] = f
 	}
 
-	projectSender, err := objsender2.Root(s.agent, work.ProjectModelName.String())
+	projectSender, err := objsender.Root(s.agent, work.ProjectModelName.String())
 	if err != nil {
 		rerr = err
 		return
@@ -273,7 +273,7 @@ func (s *Integration) projects() (all []*work.Project, _ error) {
 }
 
 func (s *Integration) fields() (_ []*work.CustomField, rerr error) {
-	sender, err := objsender2.Root(s.agent, work.CustomFieldModelName.String())
+	sender, err := objsender.Root(s.agent, work.CustomFieldModelName.String())
 	if err != nil {
 		rerr = err
 		return

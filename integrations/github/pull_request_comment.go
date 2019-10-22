@@ -3,11 +3,11 @@ package main
 import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportPullRequestsComments(logger hclog.Logger, prSender *objsender2.Session, pullRequests chan []api.PullRequest) error {
+func (s *Integration) exportPullRequestsComments(logger hclog.Logger, prSender *objsender.Session, pullRequests chan []api.PullRequest) error {
 	for prs := range pullRequests {
 		for _, pr := range prs {
 			if !pr.HasComments {
@@ -23,7 +23,7 @@ func (s *Integration) exportPullRequestsComments(logger hclog.Logger, prSender *
 	return nil
 }
 
-func (s *Integration) exportPullRequestComments(logger hclog.Logger, prSender *objsender2.Session, prID string) error {
+func (s *Integration) exportPullRequestComments(logger hclog.Logger, prSender *objsender.Session, prID string) error {
 	commentsSender, err := prSender.Session(sourcecode.PullRequestCommentModelName.String(), prID, prID)
 	if err != nil {
 		return err

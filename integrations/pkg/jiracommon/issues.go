@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/integration-sdk/work"
 )
@@ -29,7 +29,7 @@ func projectsToChan(projects []Project) chan Project {
 }
 
 func (s *JiraCommon) IssuesAndChangelogs(
-	projectSender *objsender2.Session,
+	projectSender *objsender.Session,
 	projects []Project,
 	fieldByID map[string]*work.CustomField) error {
 
@@ -98,7 +98,7 @@ func (s *JiraCommon) IssuesAndChangelogs(
 		return pErr
 	}
 
-	senderSprints, err := objsender2.Root(s.agent, work.SprintModelName.String())
+	senderSprints, err := objsender.Root(s.agent, work.SprintModelName.String())
 	if err != nil {
 		return err
 	}
@@ -141,8 +141,8 @@ func (s *JiraCommon) IssuesAndChangelogs(
 func (s *JiraCommon) issuesAndChangelogsForProject(
 	project Project,
 	fieldByID map[string]*work.CustomField,
-	senderIssues *objsender2.Session,
-	senderChangelogs *objsender2.Session,
+	senderIssues *objsender.Session,
+	senderChangelogs *objsender.Session,
 	sprints *Sprints) error {
 
 	s.opts.Logger.Info("processing issues and changelogs for project", "project", project.Key)

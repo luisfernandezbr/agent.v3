@@ -4,14 +4,14 @@ import (
 	"sync"
 
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/integration-sdk/work"
 )
 
 type Users struct {
-	sender     *objsender2.Session
+	sender     *objsender.Session
 	exported   map[string]bool
 	exportedMu sync.Mutex
 	customerID string
@@ -21,7 +21,7 @@ func NewUsers(customerID string, agent rpcdef.Agent) (_ *Users, rerr error) {
 	s := &Users{}
 	s.customerID = customerID
 	var err error
-	s.sender, err = objsender2.Root(agent, work.UserModelName.String())
+	s.sender, err = objsender.Root(agent, work.UserModelName.String())
 	if err != nil {
 		rerr = err
 		return

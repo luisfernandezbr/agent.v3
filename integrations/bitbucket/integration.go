@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/integration-sdk/sourcecode"
 
 	"github.com/hashicorp/go-hclog"
@@ -156,7 +156,7 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 
 func (s *Integration) export(ctx context.Context) (err error) {
 
-	teamSession, err := objsender2.RootTracking(s.agent, "team")
+	teamSession, err := objsender.RootTracking(s.agent, "team")
 	if err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	return teamSession.Done()
 }
 
-func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender2.Session, teamName string) error {
+func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender.Session, teamName string) error {
 	s.logger.Info("exporting group", "name", teamName)
 	logger := s.logger.With("org", teamName)
 
@@ -279,7 +279,7 @@ func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender2.Se
 	return repoSender.Done()
 }
 
-func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender2.Session, groupName string, onlyInclude []commonrepo.Repo) error {
+func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender.Session, groupName string, onlyInclude []commonrepo.Repo) error {
 
 	shouldInclude := map[string]bool{}
 	for _, repo := range onlyInclude {
@@ -310,7 +310,7 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 
 func (s *Integration) exportUsers(ctx context.Context, logger hclog.Logger, groupName string) error {
 
-	sender, err := objsender2.Root(s.agent, sourcecode.UserModelName.String())
+	sender, err := objsender.Root(s.agent, sourcecode.UserModelName.String())
 	if err != nil {
 		return err
 	}
@@ -339,7 +339,7 @@ func (s *Integration) exportUsers(ctx context.Context, logger hclog.Logger, grou
 
 }
 
-func (s *Integration) exportCommitUsers(ctx context.Context, logger hclog.Logger, repoSender *objsender2.Session, repos []commonrepo.Repo) (err error) {
+func (s *Integration) exportCommitUsers(ctx context.Context, logger hclog.Logger, repoSender *objsender.Session, repos []commonrepo.Repo) (err error) {
 
 	for _, repo := range repos {
 		usersSender, err := repoSender.Session(commitusers.TableName, repo.ID, repo.NameWithOwner)

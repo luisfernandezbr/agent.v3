@@ -1,4 +1,4 @@
-package objsender2
+package objsender
 
 import (
 	"errors"

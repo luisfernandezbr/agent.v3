@@ -8,7 +8,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommon"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/jira-hosted/api"
@@ -156,7 +156,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		fieldByID[f.RefID] = f
 	}
 
-	projectSender, err := objsender2.Root(s.agent, work.ProjectModelName.String())
+	projectSender, err := objsender.Root(s.agent, work.ProjectModelName.String())
 	if err != nil {
 		rerr = err
 		return
@@ -202,7 +202,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 type Project = jiracommon.Project
 
 func (s *Integration) fields() (_ []*work.CustomField, rerr error) {
-	sender, err := objsender2.Root(s.agent, work.CustomFieldModelName.String())
+	sender, err := objsender.Root(s.agent, work.CustomFieldModelName.String())
 	if err != nil {
 		rerr = err
 		return
