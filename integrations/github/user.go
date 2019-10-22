@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
-	"github.com/pinpt/agent.next/pkg/objsender"
 
 	pstrings "github.com/pinpt/go-common/strings"
 
@@ -117,7 +116,7 @@ func (s *Users) exportInstanceUsers() error {
 }
 
 func (s *Users) exportUsersFromChan(usersChan chan []*sourcecode.User) error {
-	var batch []objsender.Model
+	var batch []objsender2.Model
 	for users := range usersChan {
 		for _, user := range users {
 			s.loginToID[*user.Username] = user.RefID
