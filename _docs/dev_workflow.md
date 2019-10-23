@@ -1,4 +1,8 @@
-### Testing integrations without backend
+## Dev workflow
+
+When developing integrations you do not need to use the backend. It is more convenient to call export and similar commands directly. See next section for an example.
+
+### Running integrations without backend
 
 ```
 Windows powershell
@@ -12,7 +16,7 @@ Getting logs
 Get-Content .\logs.txt -Wait -Tail 10
 ```
 
-#### Checking exported data
+### Checking exported data
 When checking exported data is it often needed to look for a specific id or some fields. Using zcat with jq is often sufficient.
 
 One problem is that we generate multiple file per each type, and zcat * does not work on MacOS.
