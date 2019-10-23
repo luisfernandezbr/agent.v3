@@ -15,9 +15,6 @@ COPY . .
 # Restore vendor dir from cache
 RUN dep ensure -v -vendor-only
 
-# Run unit tests
-# RUN CGO_ENABLED=0 go test -v
-
 # Build the actual binaries
 ARG BUILD=
 ENV PP_AGENT_VERSION=${BUILD}
