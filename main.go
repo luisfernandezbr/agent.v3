@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/pinpt/agent.next/cmd"
 )
-// test
+// test 2
 func main() {
 	cmd.Execute()
 }
