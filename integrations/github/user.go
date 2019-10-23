@@ -105,14 +105,20 @@ func (s *Users) sendUsers(users []*sourcecode.User) error {
 
 func (s *Users) exportInstanceUsers() error {
 	resChan := make(chan []*sourcecode.User)
+	done := make(chan error)
+
 	go func() {
-		defer close(resChan)
 		err := api.UsersEnterpriseAll(s.integration.qc, resChan)
-		if err != nil {
-			panic(err)
-		}
+		close(resChan)
+		done <- err
 	}()
-	return s.exportUsersFromChan(resChan)
+
+	err := s.exportUsersFromChan(resChan)
+	if err != nil {
+		return err
+	}
+
+	return <-done
 }
 
 func (s *Users) exportUsersFromChan(usersChan chan []*sourcecode.User) error {
@@ -136,14 +142,20 @@ func (s *Users) exportUsersFromChan(usersChan chan []*sourcecode.User) error {
 
 func (s *Users) exportOrganizationUsers(org api.Org) error {
 	resChan := make(chan []*sourcecode.User)
+	done := make(chan error)
+
 	go func() {
-		defer close(resChan)
 		err := api.UsersAll(s.integration.qc, org, resChan)
-		if err != nil {
-			panic(err)
-		}
+		close(resChan)
+		done <- err
 	}()
-	return s.exportUsersFromChan(resChan)
+
+	err := s.exportUsersFromChan(resChan)
+	if err != nil {
+		return err
+	}
+
+	return <-done
 }
 
 func (s *Users) LoginToRefID(login string) (refID string, _ error) {

@@ -17,7 +17,7 @@ func (s *Integration) makeRequest(query string, res interface{}) error {
 
 	b, err := json.Marshal(data)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("could not make request, marshaling of request data failed, err: %v", err)
 	}
 
 	u := s.config.APIURL
