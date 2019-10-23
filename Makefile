@@ -12,7 +12,7 @@ clean:
 
 dependencies:
 	@rm -rf .vendor-new
-	@dep ensure -v
+	@dep ensure -v -vendor-only
 
 protobuf:
 	protoc -I rpcdef/proto/ rpcdef/proto/*.proto --go_out=plugins=grpc:rpcdef/proto/

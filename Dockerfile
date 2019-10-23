@@ -1,8 +1,24 @@
 FROM golang:alpine
 RUN apk add make dep git
 WORKDIR $GOPATH/src/github.com/pinpt/agent.next
+
+# Do not require rebuilding container if dependencies are the same
+COPY Gopkg.toml .
+COPY Gopkg.lock .
+# The downloaded vendored packages are saved,
+# but the vendor dir itself will be removed in next step
+RUN dep ensure -v -vendor-only
+
+# Copy source code
 COPY . .
-RUN make dependencies
+
+# Restore vendor dir from cache
+RUN dep ensure -v -vendor-only
+
+# Run unit tests
+# RUN CGO_ENABLED=0 go test -v
+
+# Build the actual binaries
 ARG BUILD=
 ENV PP_AGENT_VERSION=${BUILD}
 RUN echo PP_AGENT_VERSION=$PP_AGENT_VERSION
