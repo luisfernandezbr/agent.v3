@@ -24,3 +24,11 @@ TODO
 | 2.13               | Released on 2017-05. Introduced clone --no-tags flag. Should work.
 | <2.13              | We do not support older versions.
 
+## Integration docs
+
+- [Microsoft Azure DevOps and TFS](./integrations/azuretfs/readme.md)
+- [Bitbucket](./integrations/bitbucket/readme.md)
+- [GitHub](./integrations/github/readme.md)
+- [GitLab](./integrations/gitlab/readme.md)
+- [Jira](./integrations/jira/readme.md)
+- [SonarQube](./integrations/sonarqube/readme.md)
