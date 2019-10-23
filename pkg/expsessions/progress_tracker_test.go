@@ -9,6 +9,10 @@ import (
 	jsonp "github.com/pinpt/go-common/json"
 )
 
+func TestFailingTest(t *testing.T) {
+	t.Error("failing test")
+}
+
 func assertProgress(t *testing.T, pt *ProgressTracker, want string) {
 	t.Helper()
 	got := stripLineSpaces(pt.InProgressString())
