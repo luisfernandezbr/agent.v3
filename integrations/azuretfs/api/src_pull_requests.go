@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/date"
@@ -45,6 +46,9 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 	for _, p := range pullrequests {
 		pr := pullRequestResponseWithShas{}
 		pr.pullRequestResponse = p
+		pr.SourceBranch = strings.TrimPrefix(p.SourceBranch, "refs/heads/")
+		pr.TargetBranch = strings.TrimPrefix(p.TargetBranch, "refs/heads/")
+
 		async.Do(func() {
 			commits, err := api.fetchPullRequestCommits(repoid, pr.PullRequestID)
 			pridstring := fmt.Sprintf("%d", pr.PullRequestID)
