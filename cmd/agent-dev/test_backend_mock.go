@@ -194,7 +194,7 @@ var cmdTestBackendMock = &cobra.Command{
 			req := instance.Object().(*agent.EnrollRequest)
 			assertEqual(pinpointTestUUID, instance.Message().Headers["uuid"], "wrong uuid header, was: %v, expected: %v")
 			assertEqual(pinpointCODE, req.Code, "expected code to be %v but was %v")
-			assertValidInt64(req.RequestDate.Epoch, "1expected request date epoch to be valid but was %v")
+			assertValidInt64(req.RequestDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.RequestDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
 			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
 			date := datetime.NewDateNow()
