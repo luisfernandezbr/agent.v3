@@ -41,3 +41,26 @@ https://jira.atlassian.com/browse/JRASERVER-43171
 ```
 curl -u user:pass -X GET -H "Content-Type: application/json" 'https://localhost:8443/rest/api/2/project' --insecure | jq . | less
 ```
+
+### Development
+
+#### Encode params for jira search
+
+https://play.golang.org/
+
+```
+package main
+
+import (
+	"fmt"
+	"net/url"
+)
+
+func main() {
+	projectJiraID := "10"
+	jql := `project="` + projectJiraID + `"`
+	params := url.Values{}
+	params.Set("jql", jql)
+	fmt.Println(params.Encode())
+}
+```

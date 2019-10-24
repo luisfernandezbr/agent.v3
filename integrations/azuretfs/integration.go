@@ -11,7 +11,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/azuretfs/api"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/rpcdef"
 )
@@ -49,7 +49,7 @@ type Integration struct {
 	api        *api.API
 	Creds      *api.Creds `json:"credentials"`
 	customerid string
-	orgSession *objsender2.Session
+	orgSession *objsender.Session
 
 	// RefType switches between azure and tfs
 	RefType         RefType         `json:"reftype"`
@@ -80,7 +80,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	} else {
 		orgtype = "organization"
 	}
-	if s.orgSession, err = objsender2.RootTracking(s.agent, orgtype); err != nil {
+	if s.orgSession, err = objsender.RootTracking(s.agent, orgtype); err != nil {
 		return
 	}
 

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/ids"
@@ -17,7 +17,7 @@ import (
 
 func PullRequestPage(
 	qc QueryContext,
-	sender *objsender2.Session,
+	sender *objsender.Session,
 	repoID string,
 	repoName string,
 	params url.Values,

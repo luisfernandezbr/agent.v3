@@ -13,7 +13,10 @@ import (
 )
 
 type Integration interface {
+	// Init provides the connection details for connecting back to agent.
 	Init(agent Agent) error
+	// Export starts export of all data types for this integration.
+	// Config contains typed config common for all integrations and map[string]interface{} for custom fields.
 	Export(context.Context, ExportConfig) (ExportResult, error)
 	ValidateConfig(context.Context, ExportConfig) (ValidationResult, error)
 	// OnboardExport returns the data used in onboard. Kind is one of users, repos, projects.

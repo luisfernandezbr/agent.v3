@@ -46,7 +46,7 @@ Then run:
 
 Depending on the integration type, sourcecode or work, it calls `exportCode()` or `exportWork()`. These are located in `code_export.go` and `work_export.go`.
 
-Some of the API functions take an `objsender2.Session` object as a parameter and send the objects to the agent, while others return the objects and do it in the export.go, this all depends on the complexity of the fetch.
+Some of the API functions take an `objsender.Session` object as a parameter and send the objects to the agent, while others return the objects and do it in the export.go, this all depends on the complexity of the fetch.
 
 Whenever ever possible, the `azureapi.Async` is used to speed things up by calling API's asynchronously. For example in [Pull Requests](./api/src_pull_requests.go)  where the comments, commits, and reviews are fetch per PR. 
 

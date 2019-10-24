@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/gitlab/api"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/commitusers"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -14,12 +14,12 @@ import (
 
 func UsersEmails(s *Integration) error {
 
-	userSender, err := objsender2.Root(s.agent, sourcecode.UserModelName.String())
+	userSender, err := objsender.Root(s.agent, sourcecode.UserModelName.String())
 	if err != nil {
 		return err
 	}
 
-	commituserSender, err := objsender2.Root(s.agent, commitusers.TableName)
+	commituserSender, err := objsender.Root(s.agent, commitusers.TableName)
 	if err != nil {
 		return err
 	}

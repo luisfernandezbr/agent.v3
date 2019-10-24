@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/integration-sdk/codequality"
 )
 
@@ -11,7 +11,7 @@ func (s *Integration) exportAll() error {
 		s.logger.Error("error fetching projects", "err", err)
 		return err
 	}
-	session, err := objsender2.Root(s.agent, codequality.ProjectModelName.String())
+	session, err := objsender.Root(s.agent, codequality.ProjectModelName.String())
 	if err != nil {
 		s.logger.Error("error creating project session", "err", err)
 		return err

@@ -32,7 +32,7 @@ func (api *API) FetchAllRepos(included []string, excludedids []string) (projecti
 			repos = append(repos, &sourcecode.Repo{
 				Active:        true,
 				CustomerID:    api.customerid,
-				DefaultBranch: strings.Replace(repo.DefaultBranch, "refs/heads/", "", 1),
+				DefaultBranch: strings.TrimPrefix(repo.DefaultBranch, "refs/heads/"),
 				Name:          reponame,
 				RefID:         repo.ID,
 				RefType:       api.reftype,

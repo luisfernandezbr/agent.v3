@@ -8,10 +8,10 @@ import (
 	"github.com/pinpt/agent.next/pkg/commitusers"
 
 	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 )
 
-func (s *Integration) exportCommitUsers(logger hclog.Logger, repoSender *objsender2.Session, repos []api.Repo, concurrency int) (rerr error) {
+func (s *Integration) exportCommitUsers(logger hclog.Logger, repoSender *objsender.Session, repos []api.Repo, concurrency int) (rerr error) {
 
 	wg := sync.WaitGroup{}
 
@@ -66,7 +66,7 @@ func reposToChan(sl []api.Repo, maxToReturn int) chan api.Repo {
 	return res
 }
 
-func (s *Integration) exportCommitsForRepoDefaultBranch(logger hclog.Logger, userSender *objsender2.Session, repo api.Repo) error {
+func (s *Integration) exportCommitsForRepoDefaultBranch(logger hclog.Logger, userSender *objsender.Session, repo api.Repo) error {
 	logger.Info("exporting commits (to get users)", "repo_id", repo.ID, "repo_name", repo.NameWithOwner)
 
 	if repo.DefaultBranch == "" {
@@ -105,7 +105,7 @@ func (s *Integration) exportCommitsForRepoAllBranches(et *exportType, repoID str
 }
 */
 
-func (s *Integration) exportCommitsForRepoBranch(logger hclog.Logger, userSender *objsender2.Session, repo api.Repo, branchName string) error {
+func (s *Integration) exportCommitsForRepoBranch(logger hclog.Logger, userSender *objsender.Session, repo api.Repo, branchName string) error {
 	logger.Info("exporting commits for branch", "repo_id", repo.ID, "repo_name", repo.NameWithOwner)
 
 	return api.PaginateCommits(

@@ -5,8 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
-	"github.com/pinpt/agent.next/pkg/objsender"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 
 	pstrings "github.com/pinpt/go-common/strings"
 
@@ -17,7 +16,7 @@ import (
 // map[login]refID
 type Users struct {
 	integration *Integration
-	sender      *objsender2.Session
+	sender      *objsender.Session
 	loginToID   map[string]string
 
 	mu sync.Mutex
@@ -27,7 +26,7 @@ func NewUsers(integration *Integration, orgs []api.Org) (*Users, error) {
 	s := &Users{}
 	s.integration = integration
 	var err error
-	s.sender, err = objsender2.Root(integration.agent, sourcecode.UserModelName.String())
+	s.sender, err = objsender.Root(integration.agent, sourcecode.UserModelName.String())
 	if err != nil {
 		return nil, err
 	}
@@ -106,14 +105,20 @@ func (s *Users) sendUsers(users []*sourcecode.User) error {
 
 func (s *Users) exportInstanceUsers() error {
 	resChan := make(chan []*sourcecode.User)
+	done := make(chan error)
+
 	go func() {
-		defer close(resChan)
 		err := api.UsersEnterpriseAll(s.integration.qc, resChan)
-		if err != nil {
-			panic(err)
-		}
+		close(resChan)
+		done <- err
 	}()
-	return s.exportUsersFromChan(resChan)
+
+	err := s.exportUsersFromChan(resChan)
+	if err != nil {
+		return err
+	}
+
+	return <-done
 }
 
 func (s *Users) exportUsersFromChan(usersChan chan []*sourcecode.User) error {
@@ -137,14 +142,20 @@ func (s *Users) exportUsersFromChan(usersChan chan []*sourcecode.User) error {
 
 func (s *Users) exportOrganizationUsers(org api.Org) error {
 	resChan := make(chan []*sourcecode.User)
+	done := make(chan error)
+
 	go func() {
-		defer close(resChan)
 		err := api.UsersAll(s.integration.qc, org, resChan)
-		if err != nil {
-			panic(err)
-		}
+		close(resChan)
+		done <- err
 	}()
-	return s.exportUsersFromChan(resChan)
+
+	err := s.exportUsersFromChan(resChan)
+	if err != nil {
+		return err
+	}
+
+	return <-done
 }
 
 func (s *Users) LoginToRefID(login string) (refID string, _ error) {

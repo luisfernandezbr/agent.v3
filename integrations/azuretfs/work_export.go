@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 
 	azureapi "github.com/pinpt/agent.next/integrations/azuretfs/api"
 	"github.com/pinpt/integration-sdk/work"
@@ -50,7 +50,7 @@ func (s *Integration) exportWork() error {
 	return sender.Done()
 }
 
-func (s *Integration) processWorkUsers(projid, projname string, teamids []string, sender *objsender2.Session) error {
+func (s *Integration) processWorkUsers(projid, projname string, teamids []string, sender *objsender.Session) error {
 	sender, err := sender.Session(work.UserModelName.String(), projid, projname)
 	if err != nil {
 		s.logger.Error("error creating sender session for work user")
@@ -71,7 +71,7 @@ func (s *Integration) processWorkUsers(projid, projname string, teamids []string
 	return sender.Done()
 }
 
-func (s *Integration) processWorkItems(projid, projname string, sender *objsender2.Session) error {
+func (s *Integration) processWorkItems(projid, projname string, sender *objsender.Session) error {
 	sender, err := sender.Session(work.IssueModelName.String(), projid, projname)
 	if err != nil {
 		s.logger.Error("error creating sender session for work user")
@@ -119,7 +119,7 @@ func (s *Integration) processWorkItems(projid, projname string, sender *objsende
 	return sender.Done()
 }
 
-func (s *Integration) processChangelogs(projid, identifier, itemid string, sender *objsender2.Session) error {
+func (s *Integration) processChangelogs(projid, identifier, itemid string, sender *objsender.Session) error {
 
 	// First we need to get the IDs of the items that hav changed after the fromdate
 	// Then we need to get each changelog individually.
@@ -145,7 +145,7 @@ func (s *Integration) processChangelogs(projid, identifier, itemid string, sende
 	return sender.Done()
 }
 
-func (s *Integration) processSprints(projid, projname string, teamids []string, sender *objsender2.Session) error {
+func (s *Integration) processSprints(projid, projname string, teamids []string, sender *objsender.Session) error {
 	sender, err := sender.Session(work.SprintModelName.String(), projid, projname)
 	if err != nil {
 		s.logger.Error("error creating sender session for work sprint")

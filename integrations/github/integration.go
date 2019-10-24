@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/reqstats"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
@@ -287,7 +287,7 @@ func (s *Integration) export(ctx context.Context) error {
 	s.qc.UserLoginToRefID = s.users.LoginToRefID
 	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
 
-	orgSession, err := objsender2.RootTracking(s.agent, "organization")
+	orgSession, err := objsender.RootTracking(s.agent, "organization")
 	if err != nil {
 		return err
 	}
@@ -374,7 +374,7 @@ func (s *Integration) filterRepos(logger hclog.Logger, repos []api.Repo) (res []
 	return
 }
 
-func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsender2.Session, org api.Org) error {
+func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsender.Session, org api.Org) error {
 
 	s.logger.Info("exporting organization", "login", org.Login)
 	logger := s.logger.With("org", org.Login)
@@ -528,8 +528,8 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 }
 
 func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Repo,
-	pullRequestSender *objsender2.Session,
-	commitsSender *objsender2.Session) (rerr error) {
+	pullRequestSender *objsender.Session,
+	commitsSender *objsender.Session) (rerr error) {
 
 	logger = logger.With("repo", repo.NameWithOwner)
 	logger.Info("exporting")

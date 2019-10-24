@@ -3,7 +3,7 @@ package main
 import (
 	"net/url"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/bitbucket/api"
@@ -11,7 +11,7 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportPullRequestsComments(logger hclog.Logger, prSender *objsender2.Session, repo commonrepo.Repo, pullRequests chan []sourcecode.PullRequest) error {
+func (s *Integration) exportPullRequestsComments(logger hclog.Logger, prSender *objsender.Session, repo commonrepo.Repo, pullRequests chan []sourcecode.PullRequest) error {
 	for prs := range pullRequests {
 		for _, pr := range prs {
 			err := s.exportPullRequestComments(logger, prSender, repo, pr)
@@ -23,7 +23,7 @@ func (s *Integration) exportPullRequestsComments(logger hclog.Logger, prSender *
 	return nil
 }
 
-func (s *Integration) exportPullRequestComments(logger hclog.Logger, prSender *objsender2.Session, repo commonrepo.Repo, pr sourcecode.PullRequest) error {
+func (s *Integration) exportPullRequestComments(logger hclog.Logger, prSender *objsender.Session, repo commonrepo.Repo, pr sourcecode.PullRequest) error {
 
 	commentsSender, err := prSender.Session(sourcecode.PullRequestCommentModelName.String(), pr.RefID, pr.RefID)
 	if err != nil {

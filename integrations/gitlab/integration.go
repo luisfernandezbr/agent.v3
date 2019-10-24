@@ -12,7 +12,7 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender2"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
@@ -173,7 +173,7 @@ func (s *Integration) export(ctx context.Context) (err error) {
 		return err
 	}
 
-	groupSession, err := objsender2.RootTracking(s.agent, "group")
+	groupSession, err := objsender.RootTracking(s.agent, "group")
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	return groupSession.Done()
 }
 
-func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender2.Session, groupName string) error {
+func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.Session, groupName string) error {
 	s.logger.Info("exporting group", "name", groupName)
 	logger := s.logger.With("org", groupName)
 
@@ -250,7 +250,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender2.
 	}
 
 	if s.config.ServerType == CLOUD {
-		userSender, err := objsender2.Root(s.agent, sourcecode.UserModelName.String())
+		userSender, err := objsender.Root(s.agent, sourcecode.UserModelName.String())
 		if err != nil {
 			return err
 		}
@@ -294,7 +294,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender2.
 	return repoSender.Done()
 }
 
-func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender2.Session, groupName string, onlyInclude []commonrepo.Repo) error {
+func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender.Session, groupName string, onlyInclude []commonrepo.Repo) error {
 
 	shouldInclude := map[string]bool{}
 	for _, repo := range onlyInclude {
@@ -325,7 +325,7 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 	return nil
 }
 
-func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Logger, sender *objsender2.Session, repo commonrepo.Repo) error {
+func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Logger, sender *objsender.Session, repo commonrepo.Repo) error {
 	return api.PaginateStartAt(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
 		pi, users, err := api.RepoUsersPageREST(s.qc, repo, parameters)
 		if err != nil {
@@ -342,8 +342,8 @@ func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Log
 }
 
 func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
-	pullRequestSender *objsender2.Session,
-	commitsSender *objsender2.Session) (rerr error) {
+	pullRequestSender *objsender.Session,
+	commitsSender *objsender.Session) (rerr error) {
 
 	logger = logger.With("repo", repo.NameWithOwner)
 	logger.Info("exporting")

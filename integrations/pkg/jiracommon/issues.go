@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/objsender"
 	"github.com/pinpt/integration-sdk/work"
 )
 
@@ -28,12 +28,10 @@ func projectsToChan(projects []Project) chan Project {
 	return res
 }
 
-func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[string]*work.CustomField) error {
-	senderIssues, err := objsender.NewIncrementalDateBased(s.agent, work.IssueModelName.String())
-	if err != nil {
-		return err
-	}
-	senderChangelogs := objsender.NewNotIncremental(s.agent, work.ChangelogModelName.String())
+func (s *JiraCommon) IssuesAndChangelogs(
+	projectSender *objsender.Session,
+	projects []Project,
+	fieldByID map[string]*work.CustomField) error {
 
 	startedSprintExport := time.Now()
 	sprints := NewSprints()
@@ -42,6 +40,12 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 	wg := sync.WaitGroup{}
 	var pErr error
 	var errMu sync.Mutex
+
+	rerr := func(err error) {
+		errMu.Lock()
+		pErr = err
+		errMu.Unlock()
+	}
 
 	for i := 0; i < issuesAndChangelogsProjectConcurrency; i++ {
 		wg.Add(1)
@@ -54,15 +58,36 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 				if err != nil {
 					return
 				}
+				senderIssues, err := projectSender.Session(work.IssueModelName.String(), p.JiraID, p.Key)
+				if err != nil {
+					rerr(err)
+					return
+				}
+				senderChangelogs, err := projectSender.Session(work.ChangelogModelName.String(), p.JiraID, p.Key)
+				if err != nil {
+					rerr(err)
+					return
+				}
+
 				// p is defined above
 				// fieldByID is read-only
 				// senderIssues and senderChangelogs are sender which support concurrency
 				// sprints support concurrency for processIssueSprint
 				err = s.issuesAndChangelogsForProject(p, fieldByID, senderIssues, senderChangelogs, sprints)
 				if err != nil {
-					errMu.Lock()
-					pErr = err
-					errMu.Unlock()
+					rerr(err)
+					return
+				}
+
+				err = senderIssues.Done()
+				if err != nil {
+					rerr(err)
+					return
+				}
+
+				err = senderChangelogs.Done()
+				if err != nil {
+					rerr(err)
 					return
 				}
 			}
@@ -73,7 +98,10 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 		return pErr
 	}
 
-	senderSprints := objsender.NewNotIncremental(s.agent, work.SprintModelName.String())
+	senderSprints, err := objsender.Root(s.agent, work.SprintModelName.String())
+	if err != nil {
+		return err
+	}
 
 	for _, data := range sprints.SprintsWithIssues() {
 		item := &work.Sprint{}
@@ -107,28 +135,20 @@ func (s *JiraCommon) IssuesAndChangelogs(projects []Project, fieldByID map[strin
 		}
 	}
 
-	err = senderIssues.Done()
-	if err != nil {
-		return err
-	}
-	err = senderChangelogs.Done()
-	if err != nil {
-		return err
-	}
 	return senderSprints.Done()
 }
 
 func (s *JiraCommon) issuesAndChangelogsForProject(
 	project Project,
 	fieldByID map[string]*work.CustomField,
-	senderIssues *objsender.IncrementalDateBased,
-	senderChangelogs *objsender.NotIncremental,
+	senderIssues *objsender.Session,
+	senderChangelogs *objsender.Session,
 	sprints *Sprints) error {
 
 	s.opts.Logger.Info("processing issues and changelogs for project", "project", project.Key)
 
 	err := jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
-		pi, resIssues, resChangelogs, err := jiracommonapi.IssuesAndChangelogsPage(s.CommonQC(), project, fieldByID, senderIssues.LastProcessed, paginationParams)
+		pi, resIssues, resChangelogs, err := jiracommonapi.IssuesAndChangelogsPage(s.CommonQC(), project, fieldByID, senderIssues.LastProcessedTime(), paginationParams)
 		if err != nil {
 			rerr = err
 			return
@@ -148,6 +168,12 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 				}
 
 			}
+		}
+
+		err = senderIssues.SetTotal(pi.Total)
+		if err != nil {
+			rerr = err
+			return
 		}
 
 		for _, obj := range resIssues {
