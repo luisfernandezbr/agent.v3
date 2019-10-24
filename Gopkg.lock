@@ -10,6 +10,14 @@
   version = "v2.8.0"
 
 [[projects]]
+  digest = "1:ce834ee7eff3bbf47931b5f1ca7a406ae92b0448d1b26e0480ad53958c37c0a5"
+  name = "github.com/bsm/redislock"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "60529f1f500dc4067b939a981172b79be43705b2"
+  version = "v0.3.0"
+
+[[projects]]
   digest = "1:c952f10089bb57d6e6d56d8880bcbb4d444b1d40b091354cb25b10a6c23b211a"
   name = "github.com/bxcodec/faker"
   packages = [
@@ -109,6 +117,22 @@
   pruneopts = "UT"
   revision = "07c9b44f60d7ffdfb7d8efe1ad539965737836dc"
   version = "v0.4.0"
+
+[[projects]]
+  digest = "1:b46f50677ef33284ebde2b285a42b707ff9e1de1f37328d91869859c929ebbd2"
+  name = "github.com/go-redis/redis"
+  packages = [
+    ".",
+    "internal",
+    "internal/consistenthash",
+    "internal/hashtag",
+    "internal/pool",
+    "internal/proto",
+    "internal/util",
+  ]
+  pruneopts = "UT"
+  revision = "7f69d5e32072d151eb6936cbe2306413e8117488"
+  version = "v6.15.6"
 
 [[projects]]
   digest = "1:586ea76dbd0374d6fb649a91d70d652b7fe0ccffb8910a77468e7702e7901f3d"
@@ -352,7 +376,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:1f0096aeb5325ccd4e11b146077a8849b42c33b67bf4da2b492534cba632a139"
+  digest = "1:50c550db295c47a76147d20ddefa1f80762fc964722805f79deff178210e63e8"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -367,6 +391,7 @@
     "httpdefaults",
     "io",
     "json",
+    "kafka",
     "log",
     "number",
     "os",
@@ -375,8 +400,8 @@
     "term",
   ]
   pruneopts = "UT"
-  revision = "f77879b09cf62c9d444f7a7fbb0fbf40f76dbc7d"
-  version = "9.1.8"
+  revision = "8b9037cdda24ff337da2ca58979421f526f8ab59"
+  version = "9.1.15"
 
 [[projects]]
   digest = "1:ed714e78fb8bb03c0c1b11702e017493faecb1d8b7eb604182184aa9490b8904"
@@ -387,8 +412,7 @@
   version = "2.0.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:a88d5ee6933bc9fbed893bdbec94bb82df78e80eb1724ba8fd5d94967cb63882"
+  digest = "1:6d72e45bd5dd91f1fd091051e8d8967a42a694db836a105b4b1962c803a9de03"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -400,7 +424,8 @@
     "work",
   ]
   pruneopts = "UT"
-  revision = "7b3b85c54b0e9403ed092c1ccf315c62a73e44fc"
+  revision = "cbc1d10fe9764fd910b1cf15013849c6350ab93d"
+  version = "0.0.541"
 
 [[projects]]
   branch = "master"
@@ -730,6 +755,14 @@
   version = "v1.23.1"
 
 [[projects]]
+  digest = "1:9169e569b3e6517da7de4476059f8fa889d508007e53fa5fc6a2ea4ffc5ae199"
+  name = "gopkg.in/confluentinc/confluent-kafka-go.v1"
+  packages = ["kafka"]
+  pruneopts = "UT"
+  revision = "48acc03b9ddd85b5c8c268b480d5a9a3d523b9ad"
+  version = "v1.1.0"
+
+[[projects]]
   digest = "1:85b60f4403e2aae0eee2ac2ba50e4124dea766b582c6ec0d94fb1335d9c0d16e"
   name = "gopkg.in/neurosnap/sentences.v1"
   packages = [
@@ -907,7 +940,9 @@
     "github.com/pinpt/go-common/httpdefaults",
     "github.com/pinpt/go-common/io",
     "github.com/pinpt/go-common/json",
+    "github.com/pinpt/go-common/kafka",
     "github.com/pinpt/go-common/log",
+    "github.com/pinpt/go-common/os",
     "github.com/pinpt/go-common/strings",
     "github.com/pinpt/httpclient",
     "github.com/pinpt/integration-sdk",

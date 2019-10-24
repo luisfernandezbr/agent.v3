@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/pinpt/go-common/fileutil"
 
@@ -50,12 +51,16 @@ var cmdEnroll = &cobra.Command{
 		}
 
 		channel, _ := cmd.Flags().GetString("channel")
+
+		bts, _ := ioutil.ReadFile(os.TempDir() + "tempuuid.tmp")
+
 		ctx := context.Background()
 		err = cmdenroll.Run(ctx, cmdenroll.Opts{
 			Logger:       logger,
 			PinpointRoot: pinpointRoot,
 			Code:         code,
 			Channel:      channel,
+			UUID:         string(bts),
 		})
 		if err != nil {
 			exitWithErr(logger, err)

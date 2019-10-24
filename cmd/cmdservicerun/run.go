@@ -256,7 +256,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 			return rerr(err)
 		}
 
-		resp.Message = "Success. Export completed."
+		resp.Message = "Success. Integration validated."
 		resp.Success = true
 		resp.Type = agent.IntegrationResponseTypeIntegration
 		resp.Authorization = encrAuthData

@@ -32,6 +32,7 @@ type Opts struct {
 	PinpointRoot string
 	Code         string
 	Channel      string
+	UUID         string
 }
 
 func Run(ctx context.Context, opts Opts) error {
@@ -63,7 +64,11 @@ func newEnroller(opts Opts) (*enroller, error) {
 	s.logger = opts.Logger
 	s.opts = opts
 	s.fsconf = fsconf.New(opts.PinpointRoot)
-	s.deviceID = pstrings.NewUUIDV4()
+	if opts.UUID != "" {
+		s.deviceID = opts.UUID
+	} else {
+		s.deviceID = pstrings.NewUUIDV4()
+	}
 	s.systemID = deviceinfo.SystemID()
 	return s, nil
 }
@@ -124,6 +129,7 @@ func (s *enroller) SendEvent(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not send enroll event, err: %v", err)
 	}
+	s.logger.Debug("enroll request sent")
 
 	return nil
 }
