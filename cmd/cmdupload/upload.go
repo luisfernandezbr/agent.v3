@@ -3,27 +3,25 @@ package cmdupload
 import (
 	"context"
 	"errors"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/pinpt/go-common/fileutil"
-
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/archive"
 	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/go-common/datetime"
+	"github.com/pinpt/go-common/fileutil"
+	"github.com/pinpt/go-common/upload"
+	"github.com/pinpt/integration-sdk/agent"
 )
 
 func Run(ctx context.Context,
 	logger hclog.Logger,
 	pinpointRoot string,
-	uploadURL string) (size int64, err error) {
+	data *agent.ExportRequest) (parts int, size int64, err error) {
 
 	fsc := fsconf.New(pinpointRoot)
 
@@ -32,6 +30,7 @@ func Run(ctx context.Context,
 		return
 	}
 
+	uploadURL := *data.UploadURL
 	fileName := time.Now().Format(time.RFC3339)
 	fileName = strings.ReplaceAll(fileName, ":", "_")
 
@@ -43,7 +42,17 @@ func Run(ctx context.Context,
 	}
 	logger.Info("uploading export result", "upload_url", uploadURL, "zip_path", zipPath)
 
-	size, err = upload(logger, zipPath, uploadURL)
+	// job config is sent as part of the upload so we can get basic information along side the
+	// job zipfile so we don't have to crack it open to see what is in it
+	jobconfig := map[string]interface{}{
+		"customer_id":  data.CustomerID,
+		"job_id":       data.JobID,
+		"uuid":         data.CustomerID,
+		"request_date": data.RequestDate.Epoch,
+		"finish_date":  datetime.EpochNow(),
+		"integrations": data.Integrations,
+	}
+	parts, size, err = runUpload(logger, zipPath, uploadURL, jobconfig, data.UploadHeaders)
 	if err != nil {
 		return
 	}
@@ -63,40 +72,21 @@ func zipFilesJSON(logger hclog.Logger, target, source string) error {
 	return archive.ZipFiles(target, source, files)
 }
 
-func upload(logger hclog.Logger, zipPath, uploadURL string) (size int64, err error) {
+func runUpload(logger hclog.Logger, zipPath, uploadURL string, jobconfig map[string]interface{}, headers []string) (parts int, size int64, err error) {
 
 	f, err := os.Open(zipPath)
 	defer f.Close()
 	if err != nil {
-		return 0, err
-	}
-	fi, err := f.Stat()
-	if err != nil {
-		return 0, err
-	}
-	req, err := http.NewRequest(http.MethodPut, uploadURL, f)
-	if err != nil {
-		return 0, err
-	}
-	size = fi.Size()
-	req.ContentLength = size
-	req.Header.Set("Content-Type", "application/zip")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == 200 {
-		io.Copy(ioutil.Discard, resp.Body) // copy even if we don't read
-		logger.Info("Upload completed without error")
-		return size, nil
+		return 0, 0, err
 	}
 
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return 0, err
-	}
-	logger.Error("Upload failed", "response_status", resp.StatusCode, "response", string(data))
-	return 0, fmt.Errorf("upload failed with server status code: %v", resp.StatusCode)
+	parts, size, err = upload.Upload(upload.Options{
+		Job:         jobconfig,
+		Headers:     headers,
+		Body:        f,
+		ContentType: "application/zip",
+		URL:         uploadURL,
+	})
+
+	return
 }
