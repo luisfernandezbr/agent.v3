@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDoubleSlaskRegex(t *testing.T) {
+func TestDoubleSlashRegex(t *testing.T) {
 
 	str1 := `[SomeCollection]\\Business Owners`
 	test1 := doubleSlashRegex.ReplaceAllString(str1, "")
