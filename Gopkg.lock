@@ -352,7 +352,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:5a6f2b7f50fd031531a825771e469ebffe5cc97384928b97cde32bbab1572816"
+  digest = "1:ddd418a417ef2c0ec74caee36172b841648367b36c0aab9843f41535ad59629e"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -373,6 +373,7 @@
     "slice",
     "strings",
     "term",
+    "upload",
   ]
   pruneopts = "UT"
   revision = "0e41aa28d879dea820c4174c951a4a95a0497b0d"
@@ -910,6 +911,7 @@
     "github.com/pinpt/go-common/log",
     "github.com/pinpt/go-common/os",
     "github.com/pinpt/go-common/strings",
+    "github.com/pinpt/go-common/upload",
     "github.com/pinpt/httpclient",
     "github.com/pinpt/integration-sdk",
     "github.com/pinpt/integration-sdk/agent",
