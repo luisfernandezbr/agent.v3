@@ -1,8 +1,12 @@
 package api
 
 import (
+	"regexp"
+
 	"github.com/pinpt/integration-sdk/work"
 )
+
+var doubleSlaskRegex = regexp.MustCompile(`^(.*?)\\\\`)
 
 // FetchWorkUsers gets all users from all the teams from a single project
 func (api *API) FetchWorkUsers(projid string, teamids []string) (users []*work.User, err error) {
@@ -14,10 +18,10 @@ func (api *API) FetchWorkUsers(projid string, teamids []string) (users []*work.U
 		users = append(users, &work.User{
 			AvatarURL:  &u.ImageURL,
 			CustomerID: api.customerid,
-			Name:       u.DisplayName,
+			Name:       doubleSlaskRegex.ReplaceAllString(u.DisplayName, ""),
 			RefID:      u.ID,
 			RefType:    api.reftype,
-			Username:   u.UniqueName,
+			Username:   doubleSlaskRegex.ReplaceAllString(u.UniqueName, ""),
 		})
 	}
 	return
