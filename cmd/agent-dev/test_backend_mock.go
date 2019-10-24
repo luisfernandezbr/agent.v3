@@ -17,7 +17,6 @@ import (
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/go-common/event/action"
-	"github.com/pinpt/go-common/kafka"
 	pos "github.com/pinpt/go-common/os"
 	pstrings "github.com/pinpt/go-common/strings"
 	sdk "github.com/pinpt/integration-sdk"
@@ -171,14 +170,6 @@ var cmdTestBackendMock = &cobra.Command{
 			}
 			errors <- fmt.Errorf(msg)
 		}
-
-		producer, err := kafka.NewProducer(kafka.Config{
-			Brokers: []string{"localhost:9092"},
-		})
-		if err != nil {
-			exitWithErr("error creating producer", "err", err)
-		}
-		defer producer.Close()
 
 		pinpointCustomerID := "5500a5ba8135f296"
 		pinpointJobID := "abc1234567890fedcba"
