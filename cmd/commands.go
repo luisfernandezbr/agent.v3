@@ -50,6 +50,7 @@ var cmdEnroll = &cobra.Command{
 		}
 
 		channel, _ := cmd.Flags().GetString("channel")
+
 		ctx := context.Background()
 		err = cmdenroll.Run(ctx, cmdenroll.Opts{
 			Logger:       logger,

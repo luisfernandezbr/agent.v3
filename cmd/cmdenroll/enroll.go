@@ -124,6 +124,7 @@ func (s *enroller) SendEvent(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not send enroll event, err: %v", err)
 	}
+	s.logger.Debug("enroll event sent")
 
 	return nil
 }
