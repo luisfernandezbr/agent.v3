@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 
@@ -63,38 +61,19 @@ func (s ppLogger) Log(keyvals ...interface{}) error {
 	return nil
 }
 
-func createdTempUUID() (string, error) {
-	var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	fileName := os.TempDir() + "tempuuid.tmp"
-
-	uuid := strconv.FormatInt(int64(seededRand.Int()), 10)
-
-	fmt.Println("UUID", uuid)
-
-	if err := ioutil.WriteFile(fileName, []byte(uuid), 0644); err != nil {
-		return "", fmt.Errorf("error writting to tempfile %s", err)
-	}
-
-	return uuid, nil
-}
-
 var cmdTestBackendMock = &cobra.Command{
 	Use:   "test-backend-mock",
 	Short: "Run test backend mock and check the received messages",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := defaultLogger()
+		logger.Info("started backend mock")
+
 		ppLogger := ppLogger{l: logger}
 
 		exitWithErr := func(msg string, args ...interface{}) {
 			logger.Error(msg, args...)
 			os.Exit(1)
-		}
-
-		pinpointTestUUID, err := createdTempUUID()
-		if err != nil {
-			exitWithErr("error creating temp file", "err", err)
 		}
 
 		if os.Getenv("PP_GITHUB_TOKEN") == "" {
@@ -164,26 +143,35 @@ var cmdTestBackendMock = &cobra.Command{
 			}
 			errors <- fmt.Errorf(msg)
 		}
-		assertNoError := func(err error, msg string) {
-			if err == nil {
-				return
+		/*
+			assertNoError := func(err error, msg string) {
+				if err == nil {
+					return
+				}
+				errors <- fmt.Errorf(msg)
 			}
-			errors <- fmt.Errorf(msg)
-		}
+		*/
 
 		pinpointCustomerID := "5500a5ba8135f296"
 		pinpointJobID := "abc1234567890fedcba"
 		pinpointCODE := "1234"
 		pinpointChannel := "dev"
 		pinpointAPIKey := "PQ2EUHYfb69KY2O6Gpl/6NvdUt5CA8OKexW36OTttSwpLEzrdUOcH7G+jfCdnqvHevW/Bu22+0nRVoqxBlDfnyeFO78wKgXoztMzhdAFvLKhPWmLdT3wfOYvto3nAPxd8QEqLpS/cliJrgiUjQw+tPaoA1sR5lRHJHAF0E5V+6nR9Hcjrwo3r38GKK4leM0P7vEpyyX1P9v4WE7iCIy5N3umKY8UUtaEPyPWq5bX16dDKJJGmQ=="
-
-		assertNoError(err, "err expected to not be error")
+		pinpointUUID := ""
+		uuidReceived := make(chan bool)
 
 		enrollAction := action.NewAction(func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 			logger.Info("enroll request received") //+instance.Object().Stringify())
 
 			req := instance.Object().(*agent.EnrollRequest)
-			assertEqual(pinpointTestUUID, instance.Message().Headers["uuid"], "wrong uuid header, was: %v, expected: %v")
+
+			uuid, ok := instance.Message().Headers["uuid"]
+			if !ok {
+				panic("uuid missing in enroll")
+			}
+			pinpointUUID = uuid
+			uuidReceived <- true
+
 			assertEqual(pinpointCODE, req.Code, "expected code to be %v but was %v")
 			assertValidInt64(req.RequestDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.RequestDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
@@ -201,7 +189,7 @@ var cmdTestBackendMock = &cobra.Command{
 			}
 
 			headers := map[string]string{
-				"uuid": pinpointTestUUID,
+				"uuid": pinpointUUID,
 			}
 			defer logger.Info("enroll response sent")
 			return datamodel.NewModelSendEventWithHeaders(enrollResponse, headers), nil
@@ -217,7 +205,10 @@ var cmdTestBackendMock = &cobra.Command{
 				Factory: f,
 				Offset:  "earliest",
 				Logger:  ppLogger,
-				Headers: map[string]string{"uuid": pinpointTestUUID},
+				Headers: map[string]string{},
+			}
+			if pinpointUUID != "" {
+				cfg.Headers["uuid"] = pinpointUUID
 			}
 			if customerID != "" {
 				cfg.Headers["customer_id"] = customerID
@@ -231,13 +222,16 @@ var cmdTestBackendMock = &cobra.Command{
 		}
 		defer enrollActionSub.Close()
 
+		logger.Info("enroll uuid received, listening to other events")
+		<-uuidReceived
+
 		agentEnabledAction := action.NewAction(func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 			logger.Info("agent enabled received: ") //+instance.Object().Stringify())
 			assertEqual(pinpointCustomerID, instance.Message().Headers["customer_id"], "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
 			req := instance.Object().(*agent.Enabled)
 			assertEqual(pinpointCustomerID, req.CustomerID, "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, req.UUID, "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
 			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
@@ -262,7 +256,7 @@ var cmdTestBackendMock = &cobra.Command{
 			date := datetime.NewDateNow()
 			integrationRequest := &agent.IntegrationRequest{
 				CustomerID: pinpointCustomerID,
-				UUID:       pinpointTestUUID,
+				UUID:       pinpointUUID,
 				RequestDate: agent.IntegrationRequestRequestDate{
 					Epoch:   date.Epoch,
 					Rfc3339: date.Rfc3339,
@@ -278,7 +272,7 @@ var cmdTestBackendMock = &cobra.Command{
 			}
 			headers := map[string]string{
 				"customer_id": pinpointCustomerID,
-				"uuid":        pinpointTestUUID,
+				"uuid":        pinpointUUID,
 			}
 			defer logger.Info("integration request sent")
 			time.Sleep(time.Second * 20)
@@ -290,10 +284,10 @@ var cmdTestBackendMock = &cobra.Command{
 		integrationResponseAction := action.NewAction(func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 			logger.Info("agent integration received: ") //+instance.Object().Stringify())
 			assertEqual(pinpointCustomerID, instance.Message().Headers["customer_id"], "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
 			req := instance.Object().(*agent.IntegrationResponse)
 			assertEqual(pinpointCustomerID, req.CustomerID, "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, req.UUID, "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
 			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
@@ -322,7 +316,7 @@ var cmdTestBackendMock = &cobra.Command{
 			date := datetime.NewDateNow()
 			repoRequest := &agent.RepoRequest{
 				CustomerID: pinpointCustomerID,
-				UUID:       pinpointTestUUID,
+				UUID:       pinpointUUID,
 				RefType:    "github",
 				RequestDate: agent.RepoRequestRequestDate{
 					Epoch:   date.Epoch,
@@ -338,7 +332,7 @@ var cmdTestBackendMock = &cobra.Command{
 			}
 			headers := map[string]string{
 				"customer_id": pinpointCustomerID,
-				"uuid":        pinpointTestUUID,
+				"uuid":        pinpointUUID,
 			}
 			defer logger.Info("repo request sent")
 			return datamodel.NewModelSendEventWithHeaders(repoRequest, headers), nil
@@ -361,10 +355,10 @@ var cmdTestBackendMock = &cobra.Command{
 		repoResponseAction := action.NewAction(func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 			logger.Info("agent repos received: ") //+instance.Object().Stringify())
 			assertEqual(pinpointCustomerID, instance.Message().Headers["customer_id"], "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
 			req := instance.Object().(*agent.RepoResponse)
 			assertEqual(pinpointCustomerID, req.CustomerID, "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, req.UUID, "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
 			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
@@ -386,6 +380,7 @@ var cmdTestBackendMock = &cobra.Command{
 			assertTrue(len(req.Repos) > 0, "expected repos array to be >0 but was %v")
 			assertEqual(agent.RepoResponseTypeRepo.String(), req.Type.String(), "expected type to be %v but was %v")
 
+			// pinpoint github repo ids
 			exclusions := []string{
 				"MDEwOlJlcG9zaXRvcnkxNjM4MDQwOTQ=",
 				"MDEwOlJlcG9zaXRvcnkxODUyMjY1MDk=",
@@ -490,10 +485,11 @@ var cmdTestBackendMock = &cobra.Command{
 				"MDEwOlJlcG9zaXRvcnk5NDkzNjA4NQ==",
 				"MDEwOlJlcG9zaXRvcnk5MTA5OTM5NQ==",
 				"MDEwOlJlcG9zaXRvcnkxNTM3MTgyNzA="}
+
 			date := datetime.NewDateNow()
 			exportReq := &agent.ExportRequest{
 				CustomerID:          pinpointCustomerID,
-				UUID:                pinpointTestUUID,
+				UUID:                pinpointUUID,
 				JobID:               pinpointJobID,
 				UploadURL:           pstrings.Pointer(httpserver.URL),
 				ReprocessHistorical: true,
@@ -514,7 +510,7 @@ var cmdTestBackendMock = &cobra.Command{
 			}
 			headers := map[string]string{
 				"customer_id": pinpointCustomerID,
-				"uuid":        pinpointTestUUID,
+				"uuid":        pinpointUUID,
 			}
 			return datamodel.NewModelSendEventWithHeaders(exportReq, headers), nil
 		})
@@ -522,10 +518,10 @@ var cmdTestBackendMock = &cobra.Command{
 		exportRequestAction := action.NewAction(func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 			logger.Info("agent export received: ") //+instance.Object().Stringify())
 			assertEqual(pinpointCustomerID, instance.Message().Headers["customer_id"], "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
 			req := instance.Object().(*agent.ExportResponse)
 			assertEqual(pinpointCustomerID, req.CustomerID, "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, req.UUID, "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
 			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
@@ -558,10 +554,10 @@ var cmdTestBackendMock = &cobra.Command{
 		pingAction := action.NewAction(func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 			logger.Info("agent ping received: ") //+instance.Object().Stringify())
 			assertEqual(pinpointCustomerID, instance.Message().Headers["customer_id"], "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
 			req := instance.Object().(*agent.Ping)
 			assertEqual(pinpointCustomerID, req.CustomerID, "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, req.UUID, "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
 			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
@@ -588,10 +584,10 @@ var cmdTestBackendMock = &cobra.Command{
 		startAction := action.NewAction(func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 			logger.Info("agent start received: ") //+instance.Object().Stringify())
 			assertEqual(pinpointCustomerID, instance.Message().Headers["customer_id"], "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
 			req := instance.Object().(*agent.Start)
 			assertEqual(pinpointCustomerID, req.CustomerID, "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, req.UUID, "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
 			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
@@ -615,10 +611,10 @@ var cmdTestBackendMock = &cobra.Command{
 		stopAction := action.NewAction(func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 			logger.Info("agent stop received: ") //+instance.Object().Stringify())
 			assertEqual(pinpointCustomerID, instance.Message().Headers["customer_id"], "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, instance.Message().Headers["uuid"], "missing uuid, expected %v, was %v")
 			req := instance.Object().(*agent.Stop)
 			assertEqual(pinpointCustomerID, req.CustomerID, "missing customer id, expected %v, was %v")
-			assertEqual(pinpointTestUUID, req.UUID, "missing uuid, expected %v, was %v")
+			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
 			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
