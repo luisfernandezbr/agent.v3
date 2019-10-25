@@ -83,14 +83,14 @@ func (s *ClientManager) wrapRoundTripper(rt http.RoundTripper) http.RoundTripper
 		start := time.Now()
 		l := s.logger.With("url", req.URL.String())
 		atomic.AddInt64(s.totalRequests, 1)
-		l.Debug("req start")
+		//l.Debug("req start")
 		res, err := rt.RoundTrip(req)
 		sec := fmt.Sprintf("%.1f", time.Since(start).Seconds())
 		if err != nil {
 			l.Debug("req end with err", "err", err, "sec", sec)
 			return res, err
 		}
-		l.Debug("req end", "code", res.StatusCode, "sec", sec)
+		//l.Debug("req end", "code", res.StatusCode, "sec", sec)
 		return res, err
 	}
 	return roundTripperFn{Fn: fn}

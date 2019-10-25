@@ -26,8 +26,13 @@ type Locs struct {
 	RipsrcCheckpoints string
 
 	// Special files
-	Config2           string // new config that is populated from enroll, not for manual editing
+	Config2 string // new config that is populated from enroll, not for manual editing
+
+	// LastProcessedFile stores timestamps or other data to mark last processed objects
 	LastProcessedFile string
+
+	// DedupFile contains hashes of all objects sent in incrementals to avoid sending the same objects multiple times
+	DedupFile string
 }
 
 func j(parts ...string) string {
@@ -65,6 +70,7 @@ func New(pinpointRoot string) Locs {
 
 	s.Config2 = j(s.Root, "config.json")
 	s.LastProcessedFile = j(s.State, "last_processed.json")
+	s.DedupFile = j(s.State, "dedup.json")
 
 	return s
 }

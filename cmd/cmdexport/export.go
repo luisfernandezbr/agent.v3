@@ -85,7 +85,10 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
-	s.sessions = newSessions(s.Logger, s, s.Locs.Uploads)
+	s.sessions, err = newSessions(s.Logger, s, opts.ReprocessHistorical)
+	if err != nil {
+		return nil, err
+	}
 
 	s.gitProcessingRepos = make(chan rpcdef.GitRepoFetch, 100000)
 
@@ -126,6 +129,12 @@ func newExport(opts Opts) (*export, error) {
 	err = s.lastProcessed.Save()
 	if err != nil {
 		s.Logger.Error("could not save updated last_processed file", "err", err)
+		return nil, err
+	}
+
+	err = s.sessions.Close()
+	if err != nil {
+		s.Logger.Error("could not close sessions", "err", err)
 		return nil, err
 	}
 
