@@ -412,7 +412,7 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 	// export repos
 	{
 		// we do not want to mark repo as exported until we export all pull request related data for it
-		//repoSender.SetNoAutoProgress(true)
+		repoSender.SetNoAutoProgress(true)
 		err := s.exportRepos(ctx, logger, repoSender, org, repos)
 		if err != nil {
 			return err
@@ -483,6 +483,11 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 						return
 					}
 					err = prCommitsSender.Done()
+					if err != nil {
+						rerr(err)
+						return
+					}
+					err = repoSender.IncProgress()
 					if err != nil {
 						rerr(err)
 						return
