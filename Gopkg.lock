@@ -908,6 +908,7 @@
     "github.com/pinpt/go-common/io",
     "github.com/pinpt/go-common/json",
     "github.com/pinpt/go-common/log",
+    "github.com/pinpt/go-common/os",
     "github.com/pinpt/go-common/strings",
     "github.com/pinpt/httpclient",
     "github.com/pinpt/integration-sdk",
