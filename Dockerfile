@@ -23,7 +23,7 @@ RUN make linux
 RUN mkdir /tmp/agent && cp -R dist/linux/ /tmp/agent/
 
 FROM alpine
-RUN apk update && apk upgrade && apk add --no-cache bash git openssh ca-certificates
+RUN apk update && apk upgrade && apk add --no-cache bash git openssh ca-certificates gnupg
 COPY --from=0 /tmp/agent/linux /bin
 RUN mv /bin/agent.next /bin/pinpoint-agent
 WORKDIR /

@@ -67,6 +67,7 @@ windows:
 	env GOOS=windows go build -o dist/windows/integrations/jira-hosted.exe ./integrations/jira-hosted
 	env GOOS=windows go build -o dist/windows/integrations/mock.exe ./integrations/mock
 	env GOOS=windows go build -o dist/windows/integrations/sonarqube.exe ./integrations/sonarqube
-	
+
+.PHONY: docker
 docker:
 	@docker build -t pinpt/agent .
