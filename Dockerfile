@@ -17,8 +17,7 @@ RUN dep ensure -v -vendor-only
 
 # Build the actual binaries
 ARG BUILD=
-ENV PP_AGENT_VERSION=${BUILD}
-RUN echo PP_AGENT_VERSION=$PP_AGENT_VERSION
+ENV COMMITSHA=${BUILD}
 RUN make linux
 RUN mkdir /tmp/agent && cp -R dist/linux/ /tmp/agent/
 
