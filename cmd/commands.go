@@ -234,3 +234,16 @@ func init() {
 	flagPinpointRoot(cmd)
 	cmdRoot.AddCommand(cmd)
 }
+
+var cmdVersion = &cobra.Command{
+	Use:   "version",
+	Short: "Display the build version",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println(Version)
+	},
+}
+
+func init() {
+	cmdRoot.AddCommand(cmdVersion)
+}

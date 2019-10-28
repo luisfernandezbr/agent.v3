@@ -4,6 +4,9 @@
 # To run with a different pinpoint root
 # make build-integrations PP_ROOT=~/.pinpoint/next-dev
 PP_ROOT := ~/.pinpoint/next
+COMMITSHA ?= $(shell git rev-parse HEAD | cut -c1-8)
+PKG := github.com/pinpt/agent.next
+LDFLAGS := -ldflags "-X $(PKG)/cmd.Version=${COMMITSHA}"
 
 build: macos linux windows
 
@@ -18,12 +21,12 @@ proto:
 	protoc -I rpcdef/proto/ rpcdef/proto/*.proto --go_out=plugins=grpc:rpcdef/proto/
 
 build-integrations-local:
-	go build -o ${PP_ROOT}/integrations/azuretfs ./integrations/azuretfs
-	go build -o ${PP_ROOT}/integrations/github ./integrations/github
-	go build -o ${PP_ROOT}/integrations/jira-cloud ./integrations/jira-cloud 
-	go build -o ${PP_ROOT}/integrations/jira-hosted ./integrations/jira-hosted
-	go build -o ${PP_ROOT}/integrations/sonarqube ./integrations/sonarqube
-	go build -o ${PP_ROOT}/integrations/mock ./integrations/mock
+	go build $(LDFLAGS) -o ${PP_ROOT}/integrations/azuretfs ./integrations/azuretfs
+	go build $(LDFLAGS) -o ${PP_ROOT}/integrations/github ./integrations/github
+	go build $(LDFLAGS) -o ${PP_ROOT}/integrations/jira-cloud ./integrations/jira-cloud
+	go build $(LDFLAGS) -o ${PP_ROOT}/integrations/jira-hosted ./integrations/jira-hosted
+	go build $(LDFLAGS) -o ${PP_ROOT}/integrations/sonarqube ./integrations/sonarqube
+	go build $(LDFLAGS) -o ${PP_ROOT}/integrations/mock ./integrations/mock
 	
 build-prod-local:
 	go build -tags prod -o dist/agent.next
@@ -32,41 +35,42 @@ osx: macos
 darwin: macos
 
 macos:
-	env GOOS=darwin go build -tags prod -o dist/macos/agent.next
+	env GOOS=darwin go build $(LDFLAGS) -tags prod -o dist/macos/agent.next
 
-	env GOOS=darwin go build -o dist/macos/integrations/azuretfs ./integrations/azuretfs
-	env GOOS=darwin go build -o dist/macos/integrations/bitbucket ./integrations/bitbucket
-	env GOOS=darwin go build -o dist/macos/integrations/github ./integrations/github
-	env GOOS=darwin go build -o dist/macos/integrations/gitlab ./integrations/gitlab
-	env GOOS=darwin go build -o dist/macos/integrations/jira-cloud ./integrations/jira-cloud
-	env GOOS=darwin go build -o dist/macos/integrations/jira-hosted ./integrations/jira-hosted
-	env GOOS=darwin go build -o dist/macos/integrations/mock ./integrations/mock
-	env GOOS=darwin go build -o dist/macos/integrations/sonarqube ./integrations/sonarqube
+	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/azuretfs ./integrations/azuretfs
+	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/bitbucket ./integrations/bitbucket
+	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/github ./integrations/github
+	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/gitlab ./integrations/gitlab
+	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/jira-cloud ./integrations/jira-cloud
+	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/jira-hosted ./integrations/jira-hosted
+	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/mock ./integrations/mock
+	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/sonarqube ./integrations/sonarqube
 
 linux:
-	env GOOS=linux go build -tags prod -o dist/linux/agent.next
+	env GOOS=linux go build $(LDFLAGS) -tags prod -o dist/linux/agent.next
 
-	env GOOS=linux go build -o dist/linux/integrations/azuretfs ./integrations/azuretfs
-	env GOOS=linux go build -o dist/linux/integrations/bitbucket ./integrations/bitbucket
-	env GOOS=linux go build -o dist/linux/integrations/github ./integrations/github
-	env GOOS=linux go build -o dist/linux/integrations/gitlab ./integrations/gitlab
-	env GOOS=linux go build -o dist/linux/integrations/jira-cloud ./integrations/jira-cloud
-	env GOOS=linux go build -o dist/linux/integrations/jira-hosted ./integrations/jira-hosted
-	env GOOS=linux go build -o dist/linux/integrations/mock ./integrations/mock
-	env GOOS=linux go build -o dist/linux/integrations/sonarqube ./integrations/sonarqube
+	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/azuretfs ./integrations/azuretfs
+	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/bitbucket ./integrations/bitbucket
+	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/github ./integrations/github
+	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/gitlab ./integrations/gitlab
+	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/jira-cloud ./integrations/jira-cloud
+	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/jira-hosted ./integrations/jira-hosted
+	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/mock ./integrations/mock
+	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/sonarqube ./integrations/sonarqube
 	
 
 windows:
-	env GOOS=windows go build -tags prod -o dist/windows/agent-next.exe
+	env GOOS=windows go build $(LDFLAGS) -tags prod -o dist/windows/agent-next.exe
 
-	env GOOS=windows go build -o dist/windows/integrations/azuretfs.exe ./integrations/azuretfs
-	env GOOS=windows go build -o dist/windows/integrations/bitbucket.exe ./integrations/bitbucket
-	env GOOS=windows go build -o dist/windows/integrations/github.exe ./integrations/github
-	env GOOS=windows go build -o dist/windows/integrations/gitlab.exe ./integrations/gitlab
-	env GOOS=windows go build -o dist/windows/integrations/jira-cloud.exe ./integrations/jira-cloud
-	env GOOS=windows go build -o dist/windows/integrations/jira-hosted.exe ./integrations/jira-hosted
-	env GOOS=windows go build -o dist/windows/integrations/mock.exe ./integrations/mock
-	env GOOS=windows go build -o dist/windows/integrations/sonarqube.exe ./integrations/sonarqube
-	
+	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/azuretfs.exe ./integrations/azuretfs
+	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/bitbucket.exe ./integrations/bitbucket
+	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/github.exe ./integrations/github
+	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/gitlab.exe ./integrations/gitlab
+	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/jira-cloud.exe ./integrations/jira-cloud
+	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/jira-hosted.exe ./integrations/jira-hosted
+	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/mock.exe ./integrations/mock
+	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/sonarqube.exe ./integrations/sonarqube
+
+.PHONY: docker
 docker:
-	@docker build -t pinpt/agent .
+	@docker build --build-arg BUILD=$(COMMITSHA) -t pinpt/agent .

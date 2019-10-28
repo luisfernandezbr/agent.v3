@@ -19,7 +19,7 @@ import (
 
 	pjson "github.com/pinpt/go-common/json"
 
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/go-common/event"
@@ -572,6 +572,7 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 
 func (s *runner) sendPings() {
 	ctx := context.Background()
+	s.sendPing(ctx) // always send ping immediately upon start
 	for {
 		select {
 		case <-time.After(30 * time.Second):
