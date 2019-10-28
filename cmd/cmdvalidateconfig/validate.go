@@ -182,6 +182,8 @@ func testGitClone(repoURL string) (err error) {
 			m := scanner.Text()
 			output += m
 			if strings.Contains(m, "Receiving objects:") ||
+				strings.Contains(m, "Counting objects:") ||
+				strings.Contains(m, "Enumerating objects:") ||
 				strings.Contains(m, "You appear to have cloned an empty repository") { // If we see one of these text, it means credentials are valid
 				doneOK <- true
 				return
