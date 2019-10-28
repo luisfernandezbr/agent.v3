@@ -146,7 +146,11 @@ func (s *Command) setupConfig() error {
 			delete(ec.Integration, "oauth_refresh_token")
 		}
 
-		s.ExportConfigs[obj.Name] = ec
+		integrationid, err := obj.ID()
+		if err != nil {
+			return err
+		}
+		s.ExportConfigs[integrationid.String()] = ec
 
 	}
 	return nil

@@ -311,17 +311,17 @@ func (s *export) runExports() map[string]runResult {
 	res := map[string]runResult{}
 	resMu := sync.Mutex{}
 
-	for name, integration := range s.Integrations {
+	for integrationid, integration := range s.Integrations {
 		wg.Add(1)
-		name := name
 		integration := integration
+		integrationid := integrationid
 		go func() {
 			defer wg.Done()
 			start := time.Now()
-
+			name := integration.Name()
 			ret := func(err error) {
 				resMu.Lock()
-				res[name] = runResult{Err: err, Duration: time.Since(start)}
+				res[integrationid] = runResult{Err: err, Duration: time.Since(start)}
 				resMu.Unlock()
 				if err != nil {
 					s.Logger.Error("Export failed", "integration", name, "dur", time.Since(start).String(), "err", err)
@@ -330,9 +330,9 @@ func (s *export) runExports() map[string]runResult {
 				s.Logger.Info("Export success", "integration", name, "dur", time.Since(start).String())
 			}
 
-			s.Logger.Info("Export starting", "integration", name)
+			s.Logger.Info("Export starting", "integration", name, "integrationid", integrationid)
 
-			exportConfig, ok := s.ExportConfigs[name]
+			exportConfig, ok := s.ExportConfigs[integrationid]
 			if !ok {
 				panic("no config for integration")
 			}
@@ -356,8 +356,9 @@ func (s *export) printExportRes(res map[string]runResult, gitHadErrors bool) {
 	var successNames []string
 	var failedNames []string
 
-	for name, integration := range s.Integrations {
-		ires := res[name]
+	for integrationid, integration := range s.Integrations {
+		ires := res[integrationid]
+		name := integration.Name()
 		if ires.Err != nil {
 			s.Logger.Error("Export failed", "integration", name, "dur", ires.Duration.String(), "err", ires.Err)
 			panicOut, err := integration.CloseAndDetectPanic()

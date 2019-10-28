@@ -44,7 +44,11 @@ func New(opts Opts) *Loader {
 func (s *Loader) Load(ins []integrationid.ID) (map[string]*Integration, error) {
 	s.logger.Info("Loading integrations", "ins", fmt.Sprintf("%+v", ins))
 
-	res := make(chan *Integration)
+	type intStruct struct {
+		id          string
+		integration *Integration
+	}
+	res := make(chan intStruct)
 	var rerr error
 	var errMu sync.Mutex
 
@@ -62,15 +66,18 @@ func (s *Loader) Load(ins []integrationid.ID) (map[string]*Integration, error) {
 					errMu.Unlock()
 					return
 				}
-				res <- one
+				res <- intStruct{
+					id:          in.String(),
+					integration: one,
+				}
 			}()
 		}
 		wg.Wait()
 		close(res)
 	}()
 	loaded := map[string]*Integration{}
-	for integration := range res {
-		loaded[integration.Name()] = integration
+	for each := range res {
+		loaded[each.id] = each.integration
 	}
 	return loaded, rerr
 }
