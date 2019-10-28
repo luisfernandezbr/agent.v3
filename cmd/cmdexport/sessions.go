@@ -71,39 +71,49 @@ func newSessions(logger hclog.Logger, export *export, reprocessHistorical bool) 
 	go func() {
 		for {
 			<-ticker.C
-			res := s.progressTracker.InProgressString()
-
-			if strings.TrimSpace(res) != "" { // do not print empty progress data
-				s.logger.Debug("progress", "data", "\n\n"+res+"\n\n")
-			}
-
-			if s.export.Opts.AgentConfig.Backend.Enable {
-				skipDone := true
-				if os.Getenv("PP_AGENT_PROGRESS_ALL") != "" {
-					skipDone = false
-				}
-				res := s.progressTracker.ProgressLinesNestedMap(skipDone)
-				b, err := json.Marshal(res)
-				if err != nil {
-					s.logger.Error("could not marshal progress data", err)
-					continue
-				}
-
-				//s.logger.Info("progress", "json", "\n\n"+string(b)+"\n\n")
-				//continue
-
-				err = s.export.sendProgress(context.Background(), b)
-				if err != nil {
-					s.logger.Error("could not send progress info to backend", "err", err)
-				}
-			}
+			s.sendProgress()
 		}
 	}()
 
 	return s, nil
 }
 
+func (s *sessions) sendProgress() {
+	res := s.progressTracker.InProgressString()
+
+	if strings.TrimSpace(res) != "" { // do not print empty progress data
+		s.logger.Debug("progress", "data", "\n\n"+res+"\n\n")
+	}
+
+	if s.export.Opts.AgentConfig.Backend.Enable {
+		skipDone := false
+		if os.Getenv("PP_AGENT_NO_PROGRESS_ALL") != "" {
+			skipDone = true
+		}
+		//if os.Getenv("PP_AGENT_PROGRESS_ALL") != "" {
+		//	skipDone = false
+		//}
+		res := s.progressTracker.ProgressLinesNestedMap(skipDone)
+		b, err := json.Marshal(res)
+		if err != nil {
+			s.logger.Error("could not marshal progress data", err)
+			return
+		}
+
+		//s.logger.Info("progress", "json", "\n\n"+string(b)+"\n\n")
+		//continue
+
+		err = s.export.sendProgress(context.Background(), b)
+		if err != nil {
+			s.logger.Error("could not send progress info to backend", "err", err)
+		}
+	}
+}
+
 func (s *sessions) Close() error {
+	// send last process data at the end when complete
+	s.sendProgress()
+
 	if s.dedupStore != nil {
 		newObjs, dups := s.dedupStore.Stats()
 		s.logger.Info("Dedup stats", "duplicates", dups, "new", newObjs)

@@ -207,7 +207,7 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 	ctx := context.Background()
 	sessionRoot, _, err := s.sessions.expsession.SessionRootTracking(integrationid.ID{
 		Name: "git",
-	}, "repos")
+	}, "git")
 	if err != nil {
 		logger.Error("could not create session for git export", "err", err.Error())
 		return true, nil
@@ -242,6 +242,9 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 		}
 		exp := exportrepo.New(opts, s.Locs)
 		repoDirName, duration, err := exp.Run(ctx)
+
+		s.sessions.expsession.Progress(sessionRoot, i, 0)
+
 		if err == exportrepo.ErrRevParseFailed {
 			reposFailedRevParse++
 			continue
