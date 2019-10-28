@@ -166,6 +166,10 @@ func testGitClone(repoURL string) (err error) {
 
 	repoName := splitedRepoName[len(splitedRepoName)-1]
 
+	// sometimes small repos can be cloned
+	// so we need to delete the folder
+	defer os.RemoveAll(tmpFolder + string(os.PathSeparator) + repoName)
+
 	c := exec.Command("git", "clone", "--progress", repoURL, tmpFolder)
 	var outBuf bytes.Buffer
 	c.Stdout = &outBuf
@@ -205,11 +209,7 @@ func testGitClone(repoURL string) (err error) {
 	select {
 	case <-doneOK:
 	case err = <-doneError:
-		return
 	}
 
-	// sometimes small repos can be cloned
-	// so we need to delete the folder
-	err = exec.Command("rm", "-rf", tmpFolder+string(os.PathSeparator)+repoName).Run()
 	return
 }
