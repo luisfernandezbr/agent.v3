@@ -58,6 +58,15 @@ type Opts struct {
 
 	Sessions      *expsessions.Manager
 	SessionRootID expsessions.ID
+
+	// PRs to process similar to branches.
+	PRs []PR
+}
+
+type PR struct {
+	ID            string
+	RefID         string
+	LastCommitSHA string
 }
 
 type Export struct {
@@ -189,6 +198,12 @@ func (s *Export) ripsrcSetup(repoDir string) {
 	opts.AllBranches = true
 	opts.BranchesUseOrigin = true
 	opts.CheckpointsDir = filepath.Join(s.locs.RipsrcCheckpoints, s.repoNameUsedInCacheDir)
+	var prSHAs []string
+	for _, pr := range s.opts.PRs {
+		prSHAs = append(prSHAs, pr.LastCommitSHA)
+	}
+	opts.PullRequestSHAs = prSHAs
+	s.logger.Info("requested pull request shas from ripsrc", "l", len(prSHAs))
 
 	s.lastProcessedKey = []string{"ripsrc", s.repoNameUsedInCacheDir}
 
@@ -252,17 +267,43 @@ func (s *Export) branches(ctx context.Context) error {
 	res := make(chan ripsrc.Branch)
 	done := make(chan bool)
 
+	prs := map[string]PR{}
+	for _, pr := range s.opts.PRs {
+		prs[pr.LastCommitSHA] = pr
+	}
+
 	go func() {
 		for data := range res {
 			if len(data.Commits) == 0 {
 				// we do not export branches with no commits, especially since branch id depends on first commit
 				continue
 			}
+
+			var pr PR
+			isPr := data.IsPullRequest
+
+			if isPr {
+				var ok bool
+				pr, ok = prs[data.HeadSHA]
+				if !ok {
+					s.logger.Error("could not find pr by sha")
+					continue
+				}
+			}
+
 			obj := sourcecode.Branch{}
-			obj.RefID = data.Name
+			if isPr {
+				obj.IsPullRequest = true
+				obj.PullRequestID = pr.ID
+				obj.RefID = pr.RefID
+				obj.Name = pr.RefID
+			} else {
+				obj.RefID = data.Name
+				obj.Name = data.Name
+			}
+
 			obj.RefType = s.opts.RefType
 			obj.CustomerID = s.opts.CustomerID
-			obj.Name = data.Name
 			obj.URL = branchURL(s.opts.BranchURLTemplate, data.Name)
 			obj.Default = data.IsDefault
 			obj.Merged = data.IsMerged
@@ -279,7 +320,15 @@ func (s *Export) branches(ctx context.Context) error {
 			obj.CommitShas = data.Commits
 			obj.CommitIds = s.commitIDs(obj.CommitShas)
 			obj.FirstCommitSha = obj.CommitShas[0]
-			obj.FirstCommitID = obj.CommitIds[0]
+
+			if isPr {
+				// do not set first commit id in prs, since we don't want to use it in generated id
+				// TODO: support generated id that is flexible on fields
+				obj.FirstCommitID = ""
+			} else {
+				obj.FirstCommitID = obj.CommitIds[0]
+			}
+
 			obj.BehindDefaultCount = int64(data.BehindDefaultCount)
 			obj.AheadDefaultCount = int64(data.AheadDefaultCount)
 			obj.RepoID = s.opts.RepoID
@@ -293,6 +342,7 @@ func (s *Export) branches(ctx context.Context) error {
 		}
 		done <- true
 	}()
+
 	err = s.rip.Branches(ctx, res)
 	<-done
 
