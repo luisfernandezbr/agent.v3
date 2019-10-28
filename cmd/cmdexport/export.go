@@ -240,6 +240,13 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 			Sessions:      s.sessions.expsession,
 			SessionRootID: sessionRoot,
 		}
+		for _, pr1 := range fetch.PRs {
+			pr2 := exportrepo.PR{}
+			pr2.ID = pr1.ID
+			pr2.RefID = pr1.RefID
+			pr2.LastCommitSHA = pr1.LastCommitSHA
+			opts.PRs = append(opts.PRs, pr2)
+		}
 		exp := exportrepo.New(opts, s.Locs)
 		repoDirName, duration, err := exp.Run(ctx)
 

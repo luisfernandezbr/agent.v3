@@ -55,6 +55,13 @@ type GitRepoFetch struct {
 	URL               string
 	CommitURLTemplate string
 	BranchURLTemplate string
+	PRs               []GitRepoFetchPR
+}
+
+type GitRepoFetchPR struct {
+	ID            string
+	RefID         string
+	LastCommitSHA string
 }
 
 func (s GitRepoFetch) Validate() error {
@@ -151,6 +158,13 @@ func (s *AgentServer) ExportGitRepo(ctx context.Context, req *proto.ExportGitRep
 	fetch.URL = req.Url
 	fetch.CommitURLTemplate = req.CommitUrlTemplate
 	fetch.BranchURLTemplate = req.BranchUrlTemplate
+	for _, pr := range req.Prs {
+		pr2 := GitRepoFetchPR{}
+		pr2.ID = pr.Id
+		pr2.RefID = pr.RefId
+		pr2.LastCommitSHA = pr.LastCommitSha
+		fetch.PRs = append(fetch.PRs, pr2)
+	}
 	err := s.Impl.ExportGitRepo(fetch)
 	if err != nil {
 		return resp, err
@@ -242,6 +256,13 @@ func (s *AgentClient) ExportGitRepo(fetch GitRepoFetch) error {
 	args.Url = fetch.URL
 	args.CommitUrlTemplate = fetch.CommitURLTemplate
 	args.BranchUrlTemplate = fetch.BranchURLTemplate
+	for _, pr := range fetch.PRs {
+		pr2 := &proto.ExportGitRepoPR{}
+		pr2.Id = pr.ID
+		pr2.RefId = pr.RefID
+		pr2.LastCommitSha = pr.LastCommitSHA
+		args.Prs = append(args.Prs, pr2)
+	}
 	_, err = s.client.ExportGitRepo(context.Background(), args)
 	if err != nil {
 		return err

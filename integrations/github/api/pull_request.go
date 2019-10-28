@@ -10,8 +10,9 @@ import (
 
 type PullRequest struct {
 	*sourcecode.PullRequest
-	HasComments bool
-	HasReviews  bool
+	HasComments   bool
+	HasReviews    bool
+	LastCommitSHA string
 }
 
 func PullRequestsPage(
@@ -72,6 +73,13 @@ func PullRequestsPage(
 						author { login }						
 						mergedBy { login }
 						mergeCommit { oid }
+						commits(last: 1) {
+							nodes {
+								commit {
+									oid
+								}
+							}
+						}
 						comments {
 							totalCount
 						}
@@ -116,6 +124,13 @@ func PullRequestsPage(
 						MergeCommit struct {
 							OID string `json:"oid"`
 						} `json:"mergeCommit"`
+						LastCommits struct {
+							Nodes []struct {
+								Commit struct {
+									OID string `json:"oid"`
+								} `json:"commit"`
+							} `json:"nodes"`
+						} `json:"commits"`
 						Comments struct {
 							TotalCount int `json:"totalCount"`
 						} `json:"comments"`
@@ -217,6 +232,9 @@ func PullRequestsPage(
 		pr2.PullRequest = pr
 		pr2.HasComments = data.Comments.TotalCount != 0
 		pr2.HasReviews = data.Reviews.TotalCount != 0
+		if len(data.LastCommits.Nodes) != 0 {
+			pr2.LastCommitSHA = data.LastCommits.Nodes[0].Commit.OID
+		}
 		res = append(res, pr2)
 	}
 
