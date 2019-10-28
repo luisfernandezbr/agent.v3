@@ -21,7 +21,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	Version = "dev" // set by makefile
+)
+
 func Execute() {
+	os.Setenv("PP_AGENT_VERSION", Version) // used later for versioning
 	cmdRoot.Execute()
 }
 

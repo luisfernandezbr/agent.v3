@@ -1,6 +1,5 @@
 [prune]
   go-tests = true
-  unused-packages = true
 
 [[constraint]]
   name = "github.com/hashicorp/go-plugin"

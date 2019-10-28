@@ -74,8 +74,6 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 func (s *Integration) ValidateConfig(ctx context.Context,
 	exportConfig rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
 
-	res.ReposUrls = make([]string, 0)
-
 	rerr := func(err error) {
 		res.Errors = append(res.Errors, err.Error())
 	}

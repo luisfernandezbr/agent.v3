@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 
 	"github.com/pinpt/go-common/fileutil"
 
@@ -52,15 +51,12 @@ var cmdEnroll = &cobra.Command{
 
 		channel, _ := cmd.Flags().GetString("channel")
 
-		bts, _ := ioutil.ReadFile(os.TempDir() + "tempuuid.tmp")
-
 		ctx := context.Background()
 		err = cmdenroll.Run(ctx, cmdenroll.Opts{
 			Logger:       logger,
 			PinpointRoot: pinpointRoot,
 			Code:         code,
 			Channel:      channel,
-			UUID:         string(bts),
 		})
 		if err != nil {
 			exitWithErr(logger, err)
@@ -237,4 +233,17 @@ func init() {
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
 	cmdRoot.AddCommand(cmd)
+}
+
+var cmdVersion = &cobra.Command{
+	Use:   "version",
+	Short: "Display the build version",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println(Version)
+	},
+}
+
+func init() {
+	cmdRoot.AddCommand(cmdVersion)
 }

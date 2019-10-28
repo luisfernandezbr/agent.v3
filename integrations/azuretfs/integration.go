@@ -113,9 +113,6 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 }
 
 func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ValidationResult, err error) {
-
-	res.ReposUrls = make([]string, 0)
-
 	if err = s.initConfig(ctx, config); err != nil {
 		res.Errors = append(res.Errors, err.Error())
 		return res, err
