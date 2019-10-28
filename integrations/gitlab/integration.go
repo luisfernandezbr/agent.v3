@@ -13,6 +13,7 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	purl "github.com/pinpt/agent.next/integrations/pkg/url"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
@@ -31,7 +32,7 @@ type Config struct {
 	APIToken           string `json:"apitoken"`
 	OnlyGit            bool   `json:"only_git"`
 	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
-	ServerType         string `json:"server-type"`
+	ServerType         string `json:"server_type"`
 }
 
 type Integration struct {
@@ -73,6 +74,8 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 func (s *Integration) ValidateConfig(ctx context.Context,
 	exportConfig rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
 
+	res.ReposUrls = make([]string, 0)
+
 	rerr := func(err error) {
 		res.Errors = append(res.Errors, err.Error())
 	}
@@ -83,12 +86,25 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	if err := api.ValidateUser(s.qc); err != nil {
+	groups, err := api.Groups(s.qc)
+	if err != nil {
 		rerr(err)
 		return
 	}
 
-	// TODO: return a repo and validate repo that repo can be cloned in agent
+	for _, group := range groups {
+		nameWithOwner, err := api.GetSingleRepo(s.qc, group)
+		if err != nil {
+			rerr(err)
+			return
+		}
+		repoURL, err := purl.GetRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), nameWithOwner, nil)
+		if err != nil {
+			rerr(err)
+			return
+		}
+		res.ReposUrls = append(res.ReposUrls, repoURL)
+	}
 
 	return
 }
@@ -210,13 +226,10 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 	{
 
 		for _, repo := range repos {
-			u, err := url.Parse(s.config.URL)
+			repoURL, err := purl.GetRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repo.NameWithOwner, nil)
 			if err != nil {
 				return err
 			}
-			u.User = url.UserPassword("token", s.config.APIToken)
-			u.Path = repo.NameWithOwner
-			repoURL := u.String()
 
 			args := rpcdef.GitRepoFetch{}
 			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)

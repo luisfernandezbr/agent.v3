@@ -1,9 +1,16 @@
 package cmdvalidateconfig
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/iloader"
@@ -124,6 +131,18 @@ func (s *validator) runValidate() (errs []string) {
 		rerr(err)
 		return
 	}
+
+	s.Logger.Debug("validate len repos", "len", len(res0.ReposUrls))
+	for _, repoURL := range res0.ReposUrls {
+		if err := testGitClone(repoURL); err != nil {
+			s.Logger.Debug("git clone validation failed", "repoURL", repoURL)
+			rerr(err)
+			return
+		}
+		s.Logger.Info("git clone validation succeed", "repoURL", repoURL)
+		break
+	}
+
 	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
 	if err != nil {
 		rerr(err)
@@ -134,4 +153,61 @@ func (s *validator) runValidate() (errs []string) {
 }
 
 func (s *validator) Destroy() {
+}
+
+func testGitClone(repoURL string) (err error) {
+
+	tmpFolder, err := ioutil.TempDir("", "")
+	if err != nil {
+		return err
+	}
+
+	splitedRepoName := strings.Split(repoURL, "/")
+
+	repoName := splitedRepoName[len(splitedRepoName)-1]
+
+	c := exec.Command("git", "clone", "--progress", repoURL, tmpFolder)
+	var outBuf bytes.Buffer
+	c.Stdout = &outBuf
+	stderr, _ := c.StderrPipe()
+
+	doneOK := make(chan bool, 1)
+	doneError := make(chan error, 1)
+
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		scanner.Split(bufio.ScanLines)
+		output := ""
+		for scanner.Scan() {
+			m := scanner.Text()
+			output += m
+			if strings.Contains(m, "Receiving objects:") ||
+				strings.Contains(m, "You appear to have cloned an empty repository") { // If we see one of these text, it means credentials are valid
+				doneOK <- true
+				return
+			}
+
+		}
+		if err := scanner.Err(); err != nil {
+			doneError <- err
+			return
+		}
+
+		doneError <- fmt.Errorf(output)
+	}()
+
+	if err = c.Start(); err != nil { // we use start because we don't need the command to finish
+		return
+	}
+
+	select {
+	case <-doneOK:
+	case err = <-doneError:
+		return
+	}
+
+	// sometimes small repos can be cloned
+	// so we need to delete the folder
+	err = exec.Command("rm", "-rf", tmpFolder+string(os.PathSeparator)+repoName).Run()
+	return
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
+	purl "github.com/pinpt/agent.next/integrations/pkg/url"
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
@@ -174,6 +175,8 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 func (s *Integration) ValidateConfig(ctx context.Context,
 	exportConfig rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
 
+	res.ReposUrls = make([]string, 0)
+
 	rerr := func(err error) {
 		res.Errors = append(res.Errors, err.Error())
 	}
@@ -190,13 +193,20 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	_, err = api.ReposAllSlice(s.qc, orgs[0])
-	if err != nil {
-		rerr(err)
-		return
-	}
+	for _, org := range orgs {
+		repoName, err := api.GetSingleRepo(s.qc, org.Login)
+		if err != nil {
+			rerr(err)
+			return
+		}
+		repoURL, err := purl.GetRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repoName, nil)
+		if err != nil {
+			rerr(err)
+			return
+		}
 
-	// TODO: return a repo and validate repo that repo can be cloned in agent
+		res.ReposUrls = append(res.ReposUrls, repoURL)
+	}
 
 	return
 }
@@ -400,13 +410,10 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 	{
 
 		for _, repo := range repos {
-			u, err := url.Parse(s.config.RepoURLPrefix)
+			repoURL, err := purl.GetRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repo.NameWithOwner, nil)
 			if err != nil {
 				return err
 			}
-			u.User = url.UserPassword(s.config.Token, "")
-			u.Path = repo.NameWithOwner
-			repoURL := u.String()
 
 			args := rpcdef.GitRepoFetch{}
 			args.RepoID = s.qc.RepoID(repo.ID)

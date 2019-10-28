@@ -4,14 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	pstrings "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/integration-sdk/sourcecode"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/azuretfs/api"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	purl "github.com/pinpt/agent.next/integrations/pkg/url"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/rpcdef"
 )
@@ -110,14 +113,36 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 }
 
 func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ValidationResult, err error) {
+
+	res.ReposUrls = make([]string, 0)
+
 	if err = s.initConfig(ctx, config); err != nil {
 		res.Errors = append(res.Errors, err.Error())
 		return res, err
 	}
-	if _, _, err = s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs); err != nil {
+	var repos []*sourcecode.Repo
+	if _, repos, err = s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs); err != nil {
 		// don't return, get as many errors are possible
 		res.Errors = append(res.Errors, err.Error())
+		return res, err
 	}
+
+	if len(repos) > 0 {
+
+		user := url.UserPassword(s.Creds.Username, s.Creds.Password)
+		repoURL, err := purl.GetRepoURL(repos[0].URL, user, "", func(url *url.URL) {
+			if s.OverrideGitHostName != "" {
+				url.Host = s.OverrideGitHostName
+			}
+		})
+		if err != nil {
+			res.Errors = append(res.Errors, err.Error())
+			return res, err
+		}
+
+		res.ReposUrls = append(res.ReposUrls, repoURL)
+	}
+
 	return res, err
 }
 

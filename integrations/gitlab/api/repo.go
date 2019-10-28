@@ -48,3 +48,27 @@ func ReposPageRESTAll(qc QueryContext, groupName string, params url.Values) (pag
 
 	return
 }
+
+func GetSingleRepo(qc QueryContext, groupName string) (repoName string, err error) {
+	qc.Logger.Debug("repos request")
+
+	objectPath := pstrings.JoinURL("groups", groupName, "projects")
+
+	var rr []struct {
+		FullName string `json:"path_with_namespace"`
+	}
+
+	params := url.Values{}
+	params.Set("per_page", "1")
+
+	_, err = qc.Request(objectPath, params, &rr)
+	if err != nil {
+		return
+	}
+
+	for _, repo := range rr {
+		repoName = repo.FullName
+	}
+
+	return
+}

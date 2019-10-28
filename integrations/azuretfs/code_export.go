@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 
+	purl "github.com/pinpt/agent.next/integrations/pkg/url"
 	"github.com/pinpt/agent.next/rpcdef"
 	pjson "github.com/pinpt/go-common/json"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -79,20 +80,23 @@ func (s *Integration) processRepos() (projectids []string, err error) {
 }
 
 func (s *Integration) ripSource(repo *sourcecode.Repo) error {
-	u, err := url.Parse(repo.URL)
-	if s.OverrideGitHostName != "" {
-		u.Host = s.OverrideGitHostName
-	}
+
+	user := url.UserPassword(s.Creds.Username, s.Creds.Password)
+	repoURL, err := purl.GetRepoURL(repo.URL, user, "", func(url *url.URL) {
+		if s.OverrideGitHostName != "" {
+			url.Host = s.OverrideGitHostName
+		}
+	})
 	if err != nil {
 		return err
 	}
-	u.User = url.UserPassword(s.Creds.Username, s.Creds.Password)
+
 	args := rpcdef.GitRepoFetch{}
 	args.RepoID = s.api.IDs.CodeRepo(repo.RefID)
 	args.UniqueName = repo.Name
 	args.RefType = s.RefType.String()
-	args.URL = u.String()
-	s.logger.Info("queueing repo for processing " + u.String())
+	args.URL = repoURL
+	s.logger.Info("queueing repo for processing " + repo.URL)
 	args.BranchURLTemplate = branchURLTemplate(repo.Name, s.Creds.URL)
 	args.CommitURLTemplate = commitURLTemplate(repo.Name, s.Creds.URL)
 	return s.agent.ExportGitRepo(args)

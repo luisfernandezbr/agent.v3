@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/pinpt/agent.next/integrations/pkg/objsender"
@@ -15,6 +14,7 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
+	purl "github.com/pinpt/agent.next/integrations/pkg/url"
 	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
@@ -70,6 +70,8 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 func (s *Integration) ValidateConfig(ctx context.Context,
 	exportConfig rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
 
+	res.ReposUrls = make([]string, 0)
+
 	rerr := func(err error) {
 		res.Errors = append(res.Errors, err.Error())
 	}
@@ -80,12 +82,27 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	if err := api.ValidateUser(s.qc); err != nil {
+	teamNames, err := api.Teams(s.qc)
+	if err != nil {
 		rerr(err)
 		return
 	}
 
-	// TODO: return a repo and validate repo that repo can be cloned in agent
+	for _, team := range teamNames {
+		repoNameWithOwner, err := api.SingleRepo(s.qc, team)
+		if err != nil {
+			rerr(err)
+			return
+		}
+
+		repoUrl, err := purl.GetRepoURL(s.config.URL, url.UserPassword(s.config.Username, s.config.Password), repoNameWithOwner, nil)
+		if err != nil {
+			rerr(err)
+			return
+		}
+
+		res.ReposUrls = append(res.ReposUrls, repoUrl)
+	}
 
 	return
 }
@@ -199,13 +216,11 @@ func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender.Ses
 	{
 
 		for _, repo := range repos {
-			u, err := url.Parse(s.config.URL)
+			urlUser := url.UserPassword(s.config.Username, s.config.Password)
+			repoURL, err := purl.GetRepoURL(s.config.URL, urlUser, "/"+repo.NameWithOwner, nil)
 			if err != nil {
 				return err
 			}
-			u.User = url.UserPassword(s.config.Username, s.config.Password)
-			u.Path = "/" + repo.NameWithOwner
-			repoURL := u.Scheme + "://" + u.User.String() + "@" + strings.TrimPrefix(u.Host, "api.") + u.EscapedPath()
 
 			args := rpcdef.GitRepoFetch{}
 			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
