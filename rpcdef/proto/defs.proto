@@ -114,6 +114,13 @@ message ExportGitRepoReq {
     string url = 4;
     string commit_url_template = 5;
     string branch_url_template = 6;
+    repeated ExportGitRepoPR prs = 7;
+}
+
+message ExportGitRepoPR {
+    string id = 1;
+    string ref_id = 2;
+    string last_commit_sha = 3;
 }
 
 message SessionStartReq {

@@ -255,10 +255,17 @@ func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (isI
 		rerr = err
 		return
 	}
+
 	s.logger.Info("export finished, running upload")
-	if fileSize, err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL); err != nil {
-		rerr = err
-		return
+	fileSize, err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL)
+	if err != nil {
+		if err == cmdupload.ErrNoFilesFound {
+			s.logger.Info("skipping upload, no files generated")
+			// do not return errors when no files to upload, which is ok for inremental
+		} else {
+			rerr = err
+			return
+		}
 	}
 	return
 }

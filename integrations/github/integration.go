@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	purl "github.com/pinpt/agent.next/integrations/pkg/url"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/reqstats"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
@@ -17,7 +18,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
-	purl "github.com/pinpt/agent.next/integrations/pkg/url"
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
@@ -374,31 +374,17 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 		logger.Info("stop_after_n passed", "v", stopAfter, "repos", l, "after", len(repos))
 	}
 
-	// queue repos for processing with ripsrc
-	{
+	if s.config.OnlyGit {
+		logger.Warn("only_ripsrc flag passed, skipping export of data from github api, will not be exporting prs")
 
+		// if only git do it here, otherwise wait till we export all prs per repo
 		for _, repo := range repos {
-			repoURL, err := purl.GetRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repo.NameWithOwner)
-			if err != nil {
-				return err
-			}
-
-			args := rpcdef.GitRepoFetch{}
-			args.RepoID = s.qc.RepoID(repo.ID)
-			args.UniqueName = repo.NameWithOwner
-			args.RefType = s.refType
-			args.URL = repoURL
-			args.CommitURLTemplate = commitURLTemplate(repo, s.config.RepoURLPrefix)
-			args.BranchURLTemplate = branchURLTemplate(repo, s.config.RepoURLPrefix)
-			err = s.agent.ExportGitRepo(args)
+			err := s.exportGit(repo, nil)
 			if err != nil {
 				return err
 			}
 		}
-	}
 
-	if s.config.OnlyGit {
-		logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
 		return nil
 	}
 
@@ -470,7 +456,12 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 						rerr(err)
 						return
 					}
-					err = s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
+					prs, err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
+					if err != nil {
+						rerr(err)
+						return
+					}
+					err = s.exportGit(repo, prs)
 					if err != nil {
 						rerr(err)
 						return
@@ -507,9 +498,44 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 	return nil
 }
 
-func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Repo,
+func (s *Integration) exportGit(repo api.Repo, prs []PRMeta) error {
+	repoURL, err := purl.GetRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repo.NameWithOwner)
+	if err != nil {
+		return err
+	}
+
+	args := rpcdef.GitRepoFetch{}
+	args.RepoID = s.qc.RepoID(repo.ID)
+	args.UniqueName = repo.NameWithOwner
+	args.RefType = s.refType
+	args.URL = repoURL
+	args.CommitURLTemplate = commitURLTemplate(repo, s.config.RepoURLPrefix)
+	args.BranchURLTemplate = branchURLTemplate(repo, s.config.RepoURLPrefix)
+	for _, pr := range prs {
+		pr2 := rpcdef.GitRepoFetchPR{}
+		pr2.ID = pr.ID
+		pr2.RefID = pr.RefID
+		pr2.LastCommitSHA = pr.LastCommitSHA
+		args.PRs = append(args.PRs, pr2)
+	}
+
+	err = s.agent.ExportGitRepo(args)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type PRMeta struct {
+	ID            string
+	RefID         string
+	LastCommitSHA string
+}
+
+func (s *Integration) exportPullRequestsForRepo(
+	logger hclog.Logger, repo api.Repo,
 	pullRequestSender *objsender.Session,
-	commitsSender *objsender.Session) (rerr error) {
+	commitsSender *objsender.Session) (res []PRMeta, rerr error) {
 
 	logger = logger.With("repo", repo.NameWithOwner)
 	logger.Info("exporting")
@@ -549,6 +575,13 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 
 	go func() {
 		for item := range pullRequestsInitial {
+			for _, pr := range item {
+				meta := PRMeta{}
+				meta.ID = s.qc.RepoID(pr.RefID)
+				meta.RefID = pr.RefID
+				meta.LastCommitSHA = pr.LastCommitSHA
+				res = append(res, meta)
+			}
 			pullRequestsForComments <- item
 			pullRequestsForReviews <- item
 			pullRequestsForCommits <- item
