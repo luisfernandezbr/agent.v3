@@ -38,8 +38,6 @@ type Integration struct {
 	opts   IntegrationOpts
 	logger hclog.Logger
 
-	name string
-
 	logFileLoc string
 	logFile    *os.File
 
@@ -144,7 +142,7 @@ func (s *Integration) setupLogFile() error {
 	if err != nil {
 		return err
 	}
-	s.logFileLoc = filepath.Join(dir, s.name)
+	s.logFileLoc = filepath.Join(dir, s.ID.String())
 	f, err := os.Create(s.logFileLoc)
 	if err != nil {
 		return err
@@ -157,13 +155,13 @@ func (s *Integration) setupRPC() error {
 	var cmd *exec.Cmd
 	if build.IsProd() || s.opts.DevUseCompiledIntegrations {
 		var err error
-		cmd, err = prodIntegrationCommand(s.opts.Locs, s.name)
+		cmd, err = prodIntegrationCommand(s.opts.Locs, s.ID.Name)
 		if err != nil {
 			return err
 		}
 	} else {
 		var err error
-		cmd, err = devIntegrationCommand(s.name)
+		cmd, err = devIntegrationCommand(s.ID.Name)
 		if err != nil {
 			return err
 		}
