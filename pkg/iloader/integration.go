@@ -53,6 +53,7 @@ func NewIntegration(opts IntegrationOpts) (*Integration, error) {
 		panic("provide all opts")
 	}
 	s := &Integration{}
+	s.ID = opts.ID
 	s.opts = opts
 	s.logger = opts.Logger.With("integration", s.opts.ID.String())
 	err := s.setupLogFile()
