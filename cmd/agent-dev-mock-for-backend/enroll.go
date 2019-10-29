@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pinpt/agent.next/cmd/cmdvalidate"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/go-common/event/action"
@@ -35,6 +37,16 @@ func enrollRequest(ctx context.Context, log hclog.Logger, code string, agentOpts
 		resp := instance.Object().(*agent.EnrollResponse)
 
 		//log.Info("received enroll response", "data", resp.ToMap())
+
+		valid, err := cmdvalidate.Run(ctx, log, false)
+		if err != nil {
+			return nil, err
+		}
+		if !valid {
+			// return a msg here
+			log.Info("the mininum requeriments were not meet")
+			return nil, nil
+		}
 
 		log.Info("received agent auth data run the following")
 		log.Info("run '" + resp.Apikey + "' '" + resp.CustomerID + "'")

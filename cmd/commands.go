@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/fileutil"
 
 	"github.com/pinpt/agent.next/cmd/cmdenroll"
@@ -15,6 +17,7 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
 	"github.com/pinpt/agent.next/cmd/cmdservicerun"
 	"github.com/pinpt/agent.next/cmd/cmdserviceuninstall"
+	"github.com/pinpt/agent.next/cmd/cmdvalidate"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -246,4 +249,35 @@ var cmdVersion = &cobra.Command{
 
 func init() {
 	cmdRoot.AddCommand(cmdVersion)
+}
+
+const MINIMUM_MEMORY = 16000000000
+const MINIMUM_SPACE = 100000000000
+const MINIMUM_NUM_CPU = 2
+const MININUM_GIT_VERSION = "2.13.0"
+
+var cmdValidate = &cobra.Command{
+	Use:   "validate",
+	Short: "Validate mininum hardware requirements",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		ctx := context.Background()
+		logger := hclog.New(&hclog.LoggerOptions{
+			Output:     os.Stdout,
+			Level:      hclog.Debug,
+			JSONFormat: false,
+		})
+
+		if _, err := cmdvalidate.Run(ctx, logger, true); err != nil {
+			exitWithErr(logger, err)
+		}
+
+	},
+}
+
+func init() {
+	cmd := cmdValidate
+	integrationCommandFlags(cmd)
+	cmdRoot.AddCommand(cmd)
 }
