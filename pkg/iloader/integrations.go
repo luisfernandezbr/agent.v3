@@ -41,8 +41,8 @@ func New(opts Opts) *Loader {
 	return s
 }
 
-func (s *Loader) Load(ins []integrationid.ID) (map[string]*Integration, error) {
-	s.logger.Info("Loading integrations", "ins", fmt.Sprintf("%+v", ins))
+func (s *Loader) Load(ids []integrationid.ID) (map[integrationid.ID]*Integration, error) {
+	s.logger.Info("Loading integrations", "ids", fmt.Sprintf("%+v", ids))
 
 	res := make(chan *Integration)
 	var rerr error
@@ -50,36 +50,37 @@ func (s *Loader) Load(ins []integrationid.ID) (map[string]*Integration, error) {
 
 	go func() {
 		wg := sync.WaitGroup{}
-		for _, in := range ins {
+		for _, id := range ids {
 			wg.Add(1)
-			in := in
+			id := id
 			go func() {
 				defer wg.Done()
-				one, err := s.load(in)
+				in, err := s.load(id)
 				if err != nil {
 					errMu.Lock()
 					rerr = err
 					errMu.Unlock()
 					return
 				}
-				res <- one
+				res <- in
 			}()
 		}
 		wg.Wait()
 		close(res)
 	}()
-	loaded := map[string]*Integration{}
-	for integration := range res {
-		loaded[integration.Name()] = integration
+
+	loaded := map[integrationid.ID]*Integration{}
+	for in := range res {
+		loaded[in.ID] = in
 	}
 	return loaded, rerr
 }
 
-func (s *Loader) load(in integrationid.ID) (*Integration, error) {
+func (s *Loader) load(id integrationid.ID) (*Integration, error) {
 	opts := IntegrationOpts{}
 	opts.Logger = s.opts.Logger
-	opts.Agent = s.opts.AgentDelegates(in)
-	opts.Name = in.Name
+	opts.Agent = s.opts.AgentDelegates(id)
+	opts.ID = id
 	opts.Locs = s.locs
 	opts.DevUseCompiledIntegrations = s.opts.DevUseCompiledIntegrations
 	return NewIntegration(opts)
