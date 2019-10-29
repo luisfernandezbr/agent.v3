@@ -41,52 +41,46 @@ func New(opts Opts) *Loader {
 	return s
 }
 
-func (s *Loader) Load(ins []integrationid.ID) (map[string]*Integration, error) {
-	s.logger.Info("Loading integrations", "ins", fmt.Sprintf("%+v", ins))
+func (s *Loader) Load(ids []integrationid.ID) (map[integrationid.ID]*Integration, error) {
+	s.logger.Info("Loading integrations", "ids", fmt.Sprintf("%+v", ids))
 
-	type intStruct struct {
-		id          string
-		integration *Integration
-	}
-	res := make(chan intStruct)
+	res := make(chan *Integration)
 	var rerr error
 	var errMu sync.Mutex
 
 	go func() {
 		wg := sync.WaitGroup{}
-		for _, in := range ins {
+		for _, id := range ids {
 			wg.Add(1)
-			in := in
+			id := id
 			go func() {
 				defer wg.Done()
-				one, err := s.load(in)
+				in, err := s.load(id)
 				if err != nil {
 					errMu.Lock()
 					rerr = err
 					errMu.Unlock()
 					return
 				}
-				res <- intStruct{
-					id:          in.String(),
-					integration: one,
-				}
+				res <- in
 			}()
 		}
 		wg.Wait()
 		close(res)
 	}()
-	loaded := map[string]*Integration{}
-	for each := range res {
-		loaded[each.id] = each.integration
+
+	loaded := map[integrationid.ID]*Integration{}
+	for in := range res {
+		loaded[in.ID] = in
 	}
 	return loaded, rerr
 }
 
-func (s *Loader) load(in integrationid.ID) (*Integration, error) {
+func (s *Loader) load(id integrationid.ID) (*Integration, error) {
 	opts := IntegrationOpts{}
 	opts.Logger = s.opts.Logger
-	opts.Agent = s.opts.AgentDelegates(in)
-	opts.Name = in.Name
+	opts.Agent = s.opts.AgentDelegates(id)
+	opts.ID = id
 	opts.Locs = s.locs
 	opts.DevUseCompiledIntegrations = s.opts.DevUseCompiledIntegrations
 	return NewIntegration(opts)

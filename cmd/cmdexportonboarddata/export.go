@@ -63,8 +63,9 @@ func newExport(opts Opts) (*export, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.integration = s.Integrations[id.String()]
-	s.exportConfig = s.ExportConfigs[id.String()]
+
+	s.integration = s.Integrations[id]
+	s.exportConfig = s.ExportConfigs[id]
 
 	err = s.runExportAndPrint()
 	if err != nil {
@@ -109,7 +110,7 @@ func (s *export) runExport() (data interface{}, _ error) {
 		return nil, err
 	}
 	if res.Error != nil {
-		return nil, fmt.Errorf("could not retrive data for onboard type: %v integration: %v err: %v", s.Opts.ExportType, s.integration.Name(), res.Error.Error())
+		return nil, fmt.Errorf("could not retrive data for onboard type: %v integration: %v err: %v", s.Opts.ExportType, s.integration.ID, res.Error.Error())
 	}
 
 	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration)

@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/pinpt/agent.next/pkg/build"
+	"github.com/pinpt/agent.next/pkg/integrationid"
 
 	"github.com/pinpt/agent.next/pkg/fsconf"
 
@@ -26,15 +27,18 @@ import (
 type IntegrationOpts struct {
 	Logger                     hclog.Logger
 	Agent                      rpcdef.Agent
-	Name                       string
+	ID                         integrationid.ID
 	Locs                       fsconf.Locs
 	DevUseCompiledIntegrations bool
 }
 
 type Integration struct {
+	ID integrationid.ID
+
 	opts   IntegrationOpts
 	logger hclog.Logger
-	name   string
+
+	name string
 
 	logFileLoc string
 	logFile    *os.File
@@ -47,13 +51,12 @@ type Integration struct {
 }
 
 func NewIntegration(opts IntegrationOpts) (*Integration, error) {
-	if opts.Logger == nil || opts.Agent == nil || opts.Name == "" || opts.Locs.Root == "" {
+	if opts.Logger == nil || opts.Agent == nil || opts.ID.Empty() || opts.Locs.Root == "" {
 		panic("provide all opts")
 	}
 	s := &Integration{}
 	s.opts = opts
-	s.logger = opts.Logger.With("integration", s.opts.Name)
-	s.name = s.opts.Name
+	s.logger = opts.Logger.With("integration", s.opts.ID.String())
 	err := s.setupLogFile()
 	if err != nil {
 		return nil, err
@@ -64,10 +67,6 @@ func NewIntegration(opts IntegrationOpts) (*Integration, error) {
 	}
 
 	return s, nil
-}
-
-func (s *Integration) Name() string {
-	return s.name
 }
 
 func (s *Integration) LogFile() string {
@@ -90,7 +89,7 @@ func prodIntegrationCommand(fslocs fsconf.Locs, integrationName string) (*exec.C
 	return exec.Command(bin), nil
 }
 
-func devIntegrationCommand(integrationName string) (*exec.Cmd, error) {
+func devIntegrationCommand(binaryName string) (*exec.Cmd, error) {
 	gop := os.Getenv("GOPATH")
 	if gop == "" {
 		home, err := homedir.Dir()
@@ -100,12 +99,12 @@ func devIntegrationCommand(integrationName string) (*exec.Cmd, error) {
 		gop = filepath.Join(home, "go")
 	}
 	integrationsDir := filepath.Join(gop, "src", "github.com/pinpt/agent.next/integrations")
-	integrationDir := filepath.Join(integrationsDir, integrationName)
+	integrationDir := filepath.Join(integrationsDir, binaryName)
 	if !fileutil.FileExists(integrationDir) {
-		return nil, fmt.Errorf("integration package not found: %v dir: %v", integrationName, integrationDir)
+		return nil, fmt.Errorf("integration package not found: %v dir: %v", binaryName, integrationDir)
 	}
 
-	packageName := "github.com/pinpt/agent.next/integrations/" + integrationName
+	packageName := "github.com/pinpt/agent.next/integrations/" + binaryName
 
 	// build to catch compile errors
 	// we don't need the resulting binary

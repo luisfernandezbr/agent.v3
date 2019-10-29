@@ -65,8 +65,9 @@ func newValidator(opts Opts) (*validator, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.integration = s.Integrations[id.String()]
-	s.exportConfig = s.ExportConfigs[id.String()]
+
+	s.integration = s.Integrations[id]
+	s.exportConfig = s.ExportConfigs[id]
 
 	err = s.runValidateAndPrint()
 	if err != nil {
