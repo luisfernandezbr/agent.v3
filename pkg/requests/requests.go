@@ -24,10 +24,7 @@ type Requests struct {
 }
 
 func New(logger hclog.Logger, client *http.Client) Requests {
-	return Requests{
-		Logger: logger,
-		Client: client,
-	}
+	return NewRetryable(logger, client, 0, 0, time.Hour)
 }
 
 func NewRetryable(logger hclog.Logger, client *http.Client, maxAttempts float64, retryDelay time.Duration, maxDuration time.Duration) Requests {
