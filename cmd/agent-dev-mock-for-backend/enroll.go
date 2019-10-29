@@ -44,7 +44,7 @@ func enrollRequest(ctx context.Context, log hclog.Logger, code string, agentOpts
 		}
 		if !valid {
 			// return a msg here
-			log.Info("the mininum requeriments were not meet")
+			log.Info("the mininum requirements were not meet")
 			return nil, nil
 		}
 

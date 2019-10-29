@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/sysinfo"
+	"github.com/pinpt/go-common/number"
 )
 
 func Run(ctx context.Context, logger hclog.Logger, terminal bool) (validate bool, err error) {
@@ -52,10 +53,10 @@ func Run(ctx context.Context, logger hclog.Logger, terminal bool) (validate bool
 	sysInfo := sysinfo.GetSystemInfo()
 
 	if sysInfo.Memory < MINIMUM_MEMORY {
-		pm.printMsg("memory", formatSize(sysInfo.Memory), "16Gb")
+		pm.printMsg("memory", number.ToBytesSize(int64(sysInfo.Memory)), "16Gb")
 	}
 	if sysInfo.FreeSpace < MINIMUM_SPACE {
-		pm.printMsg("space", formatSize(sysInfo.FreeSpace), "100Gb")
+		pm.printMsg("space", number.ToBytesSize(int64(sysInfo.FreeSpace)), "100Gb")
 	}
 	if sysInfo.NumCPU < MINIMUM_NUM_CPU {
 		pm.printMsg("cpus", strconv.FormatInt(int64(sysInfo.NumCPU), 10), strconv.FormatInt(MINIMUM_NUM_CPU, 10))
@@ -84,22 +85,4 @@ func (p *printMsg) printMsg(label, actual, expected string) {
 	} else {
 		p.logger.Info("validate", msg)
 	}
-}
-
-func formatSize(size uint64) string {
-	switch {
-	case size < 1024:
-		s := strconv.FormatUint(size, 10)
-		return s + "b"
-	case size < 1048576:
-		s := strconv.FormatUint(size/1024, 10)
-		return s + "Kb"
-	case size < 1073741824:
-		s := strconv.FormatUint(size/1048576, 10)
-		return s + "Mb"
-	case size < 1099511627776:
-		s := strconv.FormatUint(size/1073741824, 10)
-		return s + "Gb"
-	}
-	return "-1"
 }

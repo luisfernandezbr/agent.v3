@@ -251,11 +251,6 @@ func init() {
 	cmdRoot.AddCommand(cmdVersion)
 }
 
-const MINIMUM_MEMORY = 16000000000
-const MINIMUM_SPACE = 100000000000
-const MINIMUM_NUM_CPU = 2
-const MININUM_GIT_VERSION = "2.13.0"
-
 var cmdValidate = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate mininum hardware requirements",
