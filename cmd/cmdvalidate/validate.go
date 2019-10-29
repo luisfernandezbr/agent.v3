@@ -15,7 +15,7 @@ import (
 func Run(ctx context.Context, logger hclog.Logger, terminal bool) (validate bool, err error) {
 
 	const MINIMUM_MEMORY = 17179869184
-	const MINIMUM_SPACE = 100000000000
+	const MINIMUM_SPACE = 107374182400
 	const MINIMUM_NUM_CPU = 2
 	const MININUM_GIT_VERSION = "2.13.0"
 
@@ -52,10 +52,10 @@ func Run(ctx context.Context, logger hclog.Logger, terminal bool) (validate bool
 	sysInfo := sysinfo.GetSystemInfo()
 
 	if sysInfo.Memory < MINIMUM_MEMORY {
-		pm.printMsg("memory", formatSize(sysInfo.Memory), formatSize(MINIMUM_MEMORY))
+		pm.printMsg("memory", formatSize(sysInfo.Memory), "16Gb")
 	}
 	if sysInfo.FreeSpace < MINIMUM_SPACE {
-		pm.printMsg("space", formatSize(sysInfo.FreeSpace), formatSize(MINIMUM_SPACE))
+		pm.printMsg("space", formatSize(sysInfo.FreeSpace), "100Gb")
 	}
 	if sysInfo.NumCPU < MINIMUM_NUM_CPU {
 		pm.printMsg("cpus", strconv.FormatInt(int64(sysInfo.NumCPU), 10), strconv.FormatInt(MINIMUM_NUM_CPU, 10))
