@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/pinpt/agent.next/pkg/reqstats"
 	"github.com/pinpt/agent.next/pkg/requests"
@@ -42,7 +43,8 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 		u += "?" + params.Encode()
 	}
 
-	reqs := requests.New(s.logger, s.opts.Clients.TLSInsecure)
+	// retry 10 times, 500 millis per retry, and max timeout 1 minute
+	reqs := requests.NewRetryable(s.logger, s.opts.Clients.TLSInsecure, 10, 500*time.Millisecond, 1*time.Minute)
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
