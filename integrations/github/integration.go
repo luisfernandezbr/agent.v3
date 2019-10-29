@@ -378,7 +378,7 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 	{
 
 		for _, repo := range repos {
-			repoURL, err := purl.GetRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repo.NameWithOwner, nil)
+			repoURL, err := purl.GetRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repo.NameWithOwner)
 			if err != nil {
 				return err
 			}

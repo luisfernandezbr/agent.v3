@@ -86,20 +86,23 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
+	params := url.Values{}
+	params.Set("pagelen", "1")
 	for _, team := range teamNames {
-		repoNameWithOwner, err := api.SingleRepo(s.qc, team)
+		_, repos, err := api.ReposPage(s.qc, team, params)
 		if err != nil {
 			rerr(err)
 			return
 		}
+		if len(repos) > 0 {
+			repoUrl, err := purl.GetRepoURL(s.config.URL, url.UserPassword(s.config.Username, s.config.Password), repos[0].NameWithOwner)
+			if err != nil {
+				rerr(err)
+				return
+			}
 
-		repoUrl, err := purl.GetRepoURL(s.config.URL, url.UserPassword(s.config.Username, s.config.Password), repoNameWithOwner, nil)
-		if err != nil {
-			rerr(err)
-			return
+			res.ReposURLs = append(res.ReposURLs, repoUrl)
 		}
-
-		res.ReposUrls = append(res.ReposUrls, repoUrl)
 	}
 
 	return
@@ -215,7 +218,7 @@ func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender.Ses
 
 		for _, repo := range repos {
 			urlUser := url.UserPassword(s.config.Username, s.config.Password)
-			repoURL, err := purl.GetRepoURL(s.config.URL, urlUser, "/"+repo.NameWithOwner, nil)
+			repoURL, err := purl.GetRepoURL(s.config.URL, urlUser, "/"+repo.NameWithOwner)
 			if err != nil {
 				return err
 			}

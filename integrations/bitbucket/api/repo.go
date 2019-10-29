@@ -72,8 +72,6 @@ func ReposPage(qc QueryContext, groupName string, params url.Values) (page PageI
 
 	objectPath := pstrings.JoinURL("teams", groupName, "repositories")
 
-	params.Set("pagelen", "100")
-
 	var rr []struct {
 		UUID       string `json:"uuid"`
 		FullName   string `json:"full_name"`
@@ -148,30 +146,6 @@ func ReposSourcecodePage(qc QueryContext, group string, params url.Values, stopO
 		}
 
 		repos = append(repos, repo)
-	}
-
-	return
-}
-
-func SingleRepo(qc QueryContext, groupName string) (repoName string, err error) {
-	qc.Logger.Debug("repos request")
-
-	objectPath := pstrings.JoinURL("teams", groupName, "repositories")
-
-	params := url.Values{}
-	params.Set("pagelen", "1")
-
-	var rr []struct {
-		FullName string `json:"full_name"`
-	}
-
-	_, err = qc.Request(objectPath, params, true, &rr)
-	if err != nil {
-		return
-	}
-
-	for _, repo := range rr {
-		repoName = repo.FullName
 	}
 
 	return

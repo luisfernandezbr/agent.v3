@@ -66,7 +66,7 @@ type ExportResult struct {
 
 type ValidationResult struct {
 	Errors    []string `json:"errors"`
-	ReposUrls []string `json:"repos"`
+	ReposURLs []string `json:"repos"`
 }
 
 type OnboardExportType string
@@ -178,7 +178,7 @@ func (s *IntegrationClient) ValidateConfig(ctx context.Context,
 		return res, err
 	}
 	res.Errors = resp.Errors
-	res.ReposUrls = resp.ReposUrls
+	res.ReposURLs = resp.ReposUrls
 	return res, nil
 }
 
@@ -259,7 +259,7 @@ func (s *IntegrationServer) ValidateConfig(ctx context.Context, req *proto.Integ
 		return res, err
 	}
 	res.Errors = r0.Errors
-	res.ReposUrls = r0.ReposUrls
+	res.ReposUrls = r0.ReposURLs
 	return res, nil
 }
 

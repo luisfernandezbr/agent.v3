@@ -42,18 +42,20 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 	}
 
 	for _, org := range orgs {
-		repoName, err := api.GetSingleRepo(s.qc, org.Login)
+		_, repos, err := api.ReposPageInternal(s.qc, org, "first: 1")
 		if err != nil {
 			rerr(err)
 			return
 		}
-		repoURL, err := purl.GetRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repoName, nil)
-		if err != nil {
-			rerr(err)
-			return
-		}
+		if len(repos) > 0 {
+			repoURL, err := purl.GetRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repos[0].NameWithOwner)
+			if err != nil {
+				rerr(err)
+				return
+			}
 
-		res.ReposUrls = append(res.ReposUrls, repoURL)
+			res.ReposURLs = append(res.ReposURLs, repoURL)
+		}
 	}
 
 	return

@@ -16,43 +16,6 @@ type Repo struct {
 	DefaultBranch string
 }
 
-func GetSingleRepo(qc QueryContext, org string) (string, error) {
-	query := `
-	query {
-		organization(login:"` + org + `"){
-			repositories(first: 1) {
-				nodes {
-					nameWithOwner
-				}
-			}
-		}
-	}
-	`
-
-	var res struct {
-		Data struct {
-			Organization struct {
-				Repositories struct {
-					Nodes []struct {
-						NameWithOwner string `json:"nameWithOwner"`
-					} `json:"nodes"`
-				} `json:"repositories"`
-			} `json:"organization"`
-		} `json:"data"`
-	}
-
-	err := qc.Request(query, &res)
-	if err != nil {
-		return "", err
-	}
-
-	if len(res.Data.Organization.Repositories.Nodes) > 0 {
-		return res.Data.Organization.Repositories.Nodes[0].NameWithOwner, nil
-	}
-
-	return "", nil
-}
-
 func ReposAll(qc QueryContext, org Org, res chan []Repo) error {
 	return PaginateRegular(func(query string) (pi PageInfo, _ error) {
 		pi, sub, err := ReposPageInternal(qc, org, query)

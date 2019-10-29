@@ -132,14 +132,14 @@ func (s *validator) runValidate() (errs []string) {
 		return
 	}
 
-	s.Logger.Debug("validate len repos", "len", len(res0.ReposUrls))
-	for _, repoURL := range res0.ReposUrls {
-		if err := testGitClone(repoURL); err != nil {
-			s.Logger.Debug("git clone validation failed", "repoURL", repoURL)
+	s.Logger.Debug("validate len repos", "len", len(res0.ReposURLs))
+	for _, repoURL := range res0.ReposURLs {
+		if err := s.testGitClone(repoURL); err != nil {
+			s.Logger.Debug("git clone validation failed", "repoURL", printRepoNameOnly(repoURL))
 			rerr(err)
 			return
 		}
-		s.Logger.Info("git clone validation succeed", "repoURL", repoURL)
+		s.Logger.Info("git clone validation succeed", "repoURL", printRepoNameOnly(repoURL))
 		break
 	}
 
@@ -152,31 +152,33 @@ func (s *validator) runValidate() (errs []string) {
 	return res0.Errors
 }
 
+func printRepoNameOnly(rawpath string) string {
+
+	index := strings.Index(rawpath, "@")
+
+	return rawpath[index+1:]
+}
+
 func (s *validator) Destroy() {
 }
 
-func testGitClone(repoURL string) (err error) {
+func (s *validator) testGitClone(repoURL string) (err error) {
 
-	tmpFolder, err := ioutil.TempDir("", "")
+	tmpFolder, err := ioutil.TempDir(s.Locs.Temp, "")
 	if err != nil {
 		return err
 	}
 
-	splitedRepoName := strings.Split(repoURL, "/")
-
-	repoName := splitedRepoName[len(splitedRepoName)-1]
-
 	// sometimes small repos can be cloned
 	// so we need to delete the folder
-	defer os.RemoveAll(tmpFolder + string(os.PathSeparator) + repoName)
+	defer os.RemoveAll(tmpFolder)
 
 	c := exec.Command("git", "clone", "--progress", repoURL, tmpFolder)
 	var outBuf bytes.Buffer
 	c.Stdout = &outBuf
 	stderr, _ := c.StderrPipe()
 
-	doneOK := make(chan bool, 1)
-	doneError := make(chan error, 1)
+	done := make(chan error, 1)
 
 	go func() {
 		scanner := bufio.NewScanner(stderr)
@@ -189,27 +191,24 @@ func testGitClone(repoURL string) (err error) {
 				strings.Contains(m, "Counting objects:") ||
 				strings.Contains(m, "Enumerating objects:") ||
 				strings.Contains(m, "You appear to have cloned an empty repository") { // If we see one of these text, it means credentials are valid
-				doneOK <- true
+				done <- nil
 				return
 			}
 
 		}
 		if err := scanner.Err(); err != nil {
-			doneError <- err
+			done <- err
 			return
 		}
 
-		doneError <- fmt.Errorf(output)
+		done <- fmt.Errorf(output)
 	}()
 
 	if err = c.Start(); err != nil { // we use start because we don't need the command to finish
 		return
 	}
 
-	select {
-	case <-doneOK:
-	case err = <-doneError:
-	}
+	err = <-done
 
 	return
 }

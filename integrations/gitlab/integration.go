@@ -90,18 +90,23 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
+	params := url.Values{}
+	params.Set("per_page", "1")
+
 	for _, group := range groups {
-		nameWithOwner, err := api.GetSingleRepo(s.qc, group)
+		_, repos, err := api.ReposPageRESTAll(s.qc, group, params)
 		if err != nil {
 			rerr(err)
 			return
 		}
-		repoURL, err := purl.GetRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), nameWithOwner, nil)
-		if err != nil {
-			rerr(err)
-			return
+		if len(repos) > 0 {
+			repoURL, err := purl.GetRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repos[0].NameWithOwner)
+			if err != nil {
+				rerr(err)
+				return
+			}
+			res.ReposURLs = append(res.ReposURLs, repoURL)
 		}
-		res.ReposUrls = append(res.ReposUrls, repoURL)
 	}
 
 	return
@@ -224,7 +229,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 	{
 
 		for _, repo := range repos {
-			repoURL, err := purl.GetRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repo.NameWithOwner, nil)
+			repoURL, err := purl.GetRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repo.NameWithOwner)
 			if err != nil {
 				return err
 			}

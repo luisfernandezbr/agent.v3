@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"strings"
 
-	purl "github.com/pinpt/agent.next/integrations/pkg/url"
 	"github.com/pinpt/agent.next/rpcdef"
 	pjson "github.com/pinpt/go-common/json"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -79,14 +78,21 @@ func (s *Integration) processRepos() (projectids []string, err error) {
 	return
 }
 
+func (s *Integration) appendCredentials(repoURL string) (string, error) {
+	u, err := url.Parse(repoURL)
+	if s.OverrideGitHostName != "" {
+		u.Host = s.OverrideGitHostName
+	}
+	if err != nil {
+		return "", err
+	}
+	u.User = url.UserPassword(s.Creds.Username, s.Creds.Password)
+	return u.String(), nil
+}
+
 func (s *Integration) ripSource(repo *sourcecode.Repo) error {
 
-	user := url.UserPassword(s.Creds.Username, s.Creds.Password)
-	repoURL, err := purl.GetRepoURL(repo.URL, user, "", func(url *url.URL) {
-		if s.OverrideGitHostName != "" {
-			url.Host = s.OverrideGitHostName
-		}
-	})
+	repoURL, err := s.appendCredentials(repo.URL)
 	if err != nil {
 		return err
 	}

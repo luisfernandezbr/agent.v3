@@ -5,9 +5,7 @@ import (
 	"strings"
 )
 
-type customCondition func(url *url.URL)
-
-func GetRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string, cc customCondition) (string, error) {
+func GetRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {
 
 	if strings.Contains(repoURLPrefix, "api.bitbucket.org") {
 		repoURLPrefix = strings.Replace(repoURLPrefix, "api.", "", -1)
@@ -18,11 +16,6 @@ func GetRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string, 
 		return "", err
 	}
 	u.User = user
-	if nameWithOwner != "" {
-		u.Path = nameWithOwner
-	}
-	if cc != nil {
-		cc(u)
-	}
+	u.Path = nameWithOwner
 	return u.String(), nil
 }

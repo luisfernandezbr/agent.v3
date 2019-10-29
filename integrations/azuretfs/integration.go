@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 
 	pstrings "github.com/pinpt/go-common/strings"
@@ -14,7 +13,6 @@ import (
 	"github.com/pinpt/agent.next/integrations/azuretfs/api"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/integrations/pkg/objsender"
-	purl "github.com/pinpt/agent.next/integrations/pkg/url"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/agent.next/rpcdef"
 )
@@ -125,19 +123,13 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 	}
 
 	if len(repos) > 0 {
-
-		user := url.UserPassword(s.Creds.Username, s.Creds.Password)
-		repoURL, err := purl.GetRepoURL(repos[0].URL, user, "", func(url *url.URL) {
-			if s.OverrideGitHostName != "" {
-				url.Host = s.OverrideGitHostName
-			}
-		})
+		repoURL, err := s.appendCredentials(repos[0].URL)
 		if err != nil {
 			res.Errors = append(res.Errors, err.Error())
 			return res, err
 		}
 
-		res.ReposUrls = append(res.ReposUrls, repoURL)
+		res.ReposURLs = append(res.ReposURLs, repoURL)
 	}
 
 	return res, err
