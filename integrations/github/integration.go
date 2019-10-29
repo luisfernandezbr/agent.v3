@@ -579,7 +579,8 @@ func (s *Integration) exportPullRequestsForRepo(
 		for item := range pullRequestsInitial {
 			for _, pr := range item {
 				meta := PRMeta{}
-				meta.ID = s.qc.RepoID(pr.RefID)
+				repoID := s.qc.RepoID(repo.ID)
+				meta.ID = s.qc.PullRequestID(repoID, pr.RefID)
 				meta.RefID = pr.RefID
 				meta.LastCommitSHA = pr.LastCommitSHA
 				res = append(res, meta)

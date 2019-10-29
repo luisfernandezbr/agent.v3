@@ -20,6 +20,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/gitclone"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/go-common/hash"
 	"github.com/spf13/cobra"
 )
 
@@ -43,6 +44,23 @@ func defaultLogger() hclog.Logger {
 func exitWithErr(logger hclog.Logger, err error) {
 	logger.Error("error: " + err.Error())
 	os.Exit(1)
+}
+
+var cmdID = &cobra.Command{
+	Use:   "id",
+	Short: "Create id hash from passed params",
+	Args:  cobra.ArbitraryArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		var args2 []interface{}
+		for _, arg := range args {
+			args2 = append(args2, arg)
+		}
+		fmt.Println(hash.Values(args2...))
+	},
+}
+
+func init() {
+	cmdRoot.AddCommand(cmdID)
 }
 
 var cmdCloneRepo = &cobra.Command{
