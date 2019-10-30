@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -144,11 +145,12 @@ func (s *validator) runValidate() (errs []string) {
 		if err != nil {
 			rerr(fmt.Errorf("url passed to git clone validation is not valid, err: %v", err))
 		}
+		s.Logger.Info("git clone validation start", "url", urlWithoutCreds)
 		if err := s.testGitClone(repoURL); err != nil {
-			rerr(fmt.Errorf("git clone validation failed. repoURL: %v err: %v", urlWithoutCreds, err))
+			rerr(fmt.Errorf("git clone validation failed. url: %v err: %v", urlWithoutCreds, err))
 			return
 		}
-		s.Logger.Info("git clone validation success", "repoURL", urlWithoutCreds)
+		s.Logger.Info("git clone validation success", "url", urlWithoutCreds)
 		break
 	}
 
@@ -173,51 +175,47 @@ func urlWithoutCreds(urlStr string) (string, error) {
 func (s *validator) Destroy() {
 }
 
-func (s *validator) testGitClone(repoURL string) (err error) {
-
+func (s *validator) testGitClone(repoURL string) error {
 	tmpDir, err := ioutil.TempDir(s.Locs.Temp, "validate-repo-clone-")
 	if err != nil {
 		return err
 	}
-
 	defer os.RemoveAll(tmpDir)
 
-	c := exec.Command("git", "clone", "--progress", repoURL, tmpDir)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	c := exec.CommandContext(ctx, "git", "clone", "--progress", repoURL, tmpDir)
 	var outBuf bytes.Buffer
 	c.Stdout = &outBuf
 	stderr, _ := c.StderrPipe()
 
-	done := make(chan error, 1)
-
-	go func() {
-		scanner := bufio.NewScanner(stderr)
-		scanner.Split(bufio.ScanLines)
-		output := ""
-		for scanner.Scan() {
-			m := scanner.Text()
-			output += m
-			if strings.Contains(m, "Receiving objects:") ||
-				strings.Contains(m, "Counting objects:") ||
-				strings.Contains(m, "Enumerating objects:") ||
-				strings.Contains(m, "You appear to have cloned an empty repository") { // If we see one of these text, it means credentials are valid
-				done <- nil
-				return
-			}
-
-		}
-		if err := scanner.Err(); err != nil {
-			done <- err
-			return
-		}
-
-		done <- fmt.Errorf(output)
-	}()
-
-	if err = c.Start(); err != nil { // we use start because we don't need the command to finish
-		return
+	err = c.Start()
+	if err != nil {
+		return err
 	}
 
-	err = <-done
+	scanner := bufio.NewScanner(stderr)
+	var output []byte
+	for scanner.Scan() {
+		output = append(output, scanner.Bytes()...)
 
-	return
+		line := scanner.Text()
+
+		if strings.Contains(line, "Receiving objects:") ||
+			strings.Contains(line, "Counting objects:") ||
+			strings.Contains(line, "Enumerating objects:") ||
+			strings.Contains(line, "You appear to have cloned an empty repository") {
+			// If we see one of these lines, it means credentials are valid
+
+			return nil
+		}
+
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return errors.New(string(output))
 }
