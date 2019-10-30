@@ -211,6 +211,32 @@ func (s *Integration) export(ctx context.Context) (err error) {
 	return groupSession.Done()
 }
 
+func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchPR) error {
+	repoURL, err := getRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repo.NameWithOwner)
+	if err != nil {
+		return err
+	}
+
+	args := rpcdef.GitRepoFetch{}
+	args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
+	args.UniqueName = repo.NameWithOwner
+	args.RefType = s.refType
+	args.URL = repoURL
+	args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
+	args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
+	for _, pr := range prs {
+		pr2 := rpcdef.GitRepoFetchPR{}
+		pr2.ID = pr.ID
+		pr2.RefID = pr.RefID
+		pr2.LastCommitSHA = pr.LastCommitSHA
+		args.PRs = append(args.PRs, pr2)
+	}
+	if err = s.agent.ExportGitRepo(args); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.Session, groupName string) error {
 	s.logger.Info("exporting group", "name", groupName)
 	logger := s.logger.With("org", groupName)
@@ -224,30 +250,14 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 
 	repos = commonrepo.Filter(logger, repos, s.config.FilterConfig)
 
-	// queue repos for processing with ripsrc
-	{
-
+	if s.config.OnlyGit {
+		logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
 		for _, repo := range repos {
-			repoURL, err := getRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repo.NameWithOwner)
+			err := s.exportGit(repo, nil)
 			if err != nil {
 				return err
 			}
-
-			args := rpcdef.GitRepoFetch{}
-			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
-			args.UniqueName = repo.NameWithOwner
-			args.RefType = s.refType
-			args.URL = repoURL
-			args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
-			args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
-			if err = s.agent.ExportGitRepo(args); err != nil {
-				return err
-			}
 		}
-	}
-
-	if s.config.OnlyGit {
-		logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
 		return nil
 	}
 
@@ -293,7 +303,12 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 			return err
 		}
 
-		if err = s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender); err != nil {
+		prs, err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
+		if err != nil {
+			return err
+		}
+
+		if err = s.exportGit(repo, prs); err != nil {
 			return err
 		}
 
@@ -358,7 +373,7 @@ func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Log
 
 func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
 	pullRequestSender *objsender.Session,
-	commitsSender *objsender.Session) (rerr error) {
+	commitsSender *objsender.Session) (res []rpcdef.GitRepoFetchPR, rerr error) {
 
 	logger = logger.With("repo", repo.NameWithOwner)
 	logger.Info("exporting")
@@ -440,6 +455,14 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 
 				commitsSender.SetTotal(len(commits))
 
+				if len(commits) > 0 {
+					meta := rpcdef.GitRepoFetchPR{}
+					repoID := s.qc.IDs.CodeRepo(repo.ID)
+					meta.ID = s.qc.IDs.CodePullRequest(repoID, pr.RefID)
+					meta.RefID = pr.RefID
+					meta.LastCommitSHA = commits[0].Sha
+					res = append(res, meta)
+				}
 				for _, c := range commits {
 					pr.CommitShas = append(pr.CommitShas, c.Sha)
 				}
