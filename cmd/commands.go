@@ -6,9 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/fileutil"
 
 	"github.com/pinpt/agent.next/cmd/cmdenroll"
@@ -53,8 +51,19 @@ var cmdEnroll = &cobra.Command{
 		}
 
 		channel, _ := cmd.Flags().GetString("channel")
-
 		ctx := context.Background()
+		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
+
+		if !skipValidate {
+			valid, err := cmdvalidate.Run(ctx, logger, pinpointRoot)
+			if err != nil {
+				exitWithErr(logger, err)
+			}
+			if !valid {
+				exitWithErr(logger, fmt.Errorf("the miminum requirements were not met"))
+			}
+		}
+
 		err = cmdenroll.Run(ctx, cmdenroll.Opts{
 			Logger:       logger,
 			PinpointRoot: pinpointRoot,
@@ -72,6 +81,8 @@ func init() {
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
 	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
+	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
+	cmd.Flags().MarkHidden("skip-validate")
 	cmdRoot.AddCommand(cmd)
 }
 
@@ -258,13 +269,13 @@ var cmdValidate = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		ctx := context.Background()
-		logger := hclog.New(&hclog.LoggerOptions{
-			Output:     os.Stdout,
-			Level:      hclog.Debug,
-			JSONFormat: false,
-		})
+		logger := cmdlogger.Stdout(cmd)
+		pinpointRoot, err := getPinpointRoot(cmd)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
 
-		if _, err := cmdvalidate.Run(ctx, logger, true); err != nil {
+		if _, err := cmdvalidate.Run(ctx, logger, pinpointRoot); err != nil {
 			exitWithErr(logger, err)
 		}
 

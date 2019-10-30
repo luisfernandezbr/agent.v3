@@ -14,6 +14,7 @@ import (
 	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
 
 	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent.next/pkg/sysinfo"
 
 	"github.com/fatih/color"
 	hclog "github.com/hashicorp/go-hclog"
@@ -64,12 +65,18 @@ func exitWithErr(logger hclog.Logger, err error) {
 	os.Exit(1)
 }
 
-func getPinpointRoot(cmd *cobra.Command) (string, error) {
-	res, _ := cmd.Flags().GetString("pinpoint-root")
-	if res != "" {
-		return res, nil
+func getPinpointRoot(cmd *cobra.Command) (root string, err error) {
+	root, _ = cmd.Flags().GetString("pinpoint-root")
+	if root != "" {
+		sysinfo.SetRoot(root)
+		return root, nil
 	}
-	return fsconf.DefaultRoot()
+	root, err = fsconf.DefaultRoot()
+	if err != nil {
+		return root, err
+	}
+	sysinfo.SetRoot(root)
+	return root, nil
 }
 
 var insideDocker = isInsideDocker()
@@ -78,6 +85,7 @@ func flagPinpointRoot(cmd *cobra.Command) {
 	var def string
 	if insideDocker {
 		def = "/etc/pinpoint"
+		os.Mkdir(def, 0644)
 	}
 	cmd.Flags().String("pinpoint-root", def, "Custom location of pinpoint work dir.")
 }

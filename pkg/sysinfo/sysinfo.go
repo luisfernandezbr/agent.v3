@@ -4,9 +4,16 @@ import (
 	"os"
 	"runtime"
 
+	sigar "github.com/cloudfoundry/gosigar"
 	"github.com/denisbrodbeck/machineid"
 	pos "github.com/pinpt/go-common/os"
 )
+
+var root string
+
+func SetRoot(r string) {
+	root = r
+}
 
 // SystemInfo returns the operating system details
 type SystemInfo struct {
@@ -15,6 +22,7 @@ type SystemInfo struct {
 	Version      string `json:"version"`
 	Hostname     string `json:"hostname"`
 	Memory       uint64 `json:"memory"`
+	TotalMemory  uint64 `json:"total_memory"`
 	NumCPU       int    `json:"num_cpu"`
 	OS           string `json:"os"`
 	Architecture string `json:"architecture"`
@@ -32,18 +40,18 @@ func getDefault() SystemInfo {
 	if id == "" {
 		id, _ = machineid.ProtectedID("pinpoint-agent")
 	}
+	mem := sigar.Mem{}
+	mem.Get()
 	s.ID = id
 	s.Hostname = hostname
 	s.Memory = m.Alloc
+	s.TotalMemory = mem.Total
 	s.OS = runtime.GOOS
 	s.NumCPU = runtime.NumCPU()
 	s.GoVersion = runtime.Version()[2:] // trim off go
 	s.Architecture = runtime.GOARCH
 	s.AgentVersion = os.Getenv("PP_AGENT_VERSION")
-	dir := os.Getenv("PP_CACHEDIR")
-	if dir == "" {
-		dir, _ = os.Getwd()
-	}
-	s.FreeSpace = getFreeSpace(dir)
+	s.FreeSpace = getFreeSpace(root)
+
 	return s
 }

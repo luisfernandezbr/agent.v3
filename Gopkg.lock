@@ -29,6 +29,17 @@
   version = "v2.1.0"
 
 [[projects]]
+  digest = "1:b19ccf2471b4e9dea9d60386e4fc3867489ee8b891e0312186e019011caebfa8"
+  name = "github.com/cloudfoundry/gosigar"
+  packages = [
+    ".",
+    "sys/windows",
+  ]
+  pruneopts = "T"
+  revision = "dcb1afc219e4c99f21c37fb1ec22ed9ffe443317"
+  version = "v1.1.0"
+
+[[projects]]
   digest = "1:9f42202ac457c462ad8bb9642806d275af9ab4850cf0b1960b9c6f083d4a309a"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -598,7 +609,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:38e272b1095e60d9ddba5687c8a97c7380c57198a8d2ca98b37600b004816364"
+  digest = "1:20120702686e20ff134c179929dec80766cd772d7e0cfe2e205d3eeaefc53bd4"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -610,7 +621,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "T"
-  revision = "0a153f010e6963173baba2306531d173aa843137"
+  revision = "f43be2a4598cf3a47be9f94f0c28197ed9eae611"
 
 [[projects]]
   digest = "1:0a6103b1dc59b52f7e64a491b398b854c0fcaacde43c25ce468610a64311b72d"
@@ -888,6 +899,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/cloudfoundry/gosigar",
     "github.com/denisbrodbeck/machineid",
     "github.com/fatih/color",
     "github.com/golang/protobuf/proto",
@@ -908,6 +920,7 @@
     "github.com/pinpt/go-common/io",
     "github.com/pinpt/go-common/json",
     "github.com/pinpt/go-common/log",
+    "github.com/pinpt/go-common/number",
     "github.com/pinpt/go-common/os",
     "github.com/pinpt/go-common/strings",
     "github.com/pinpt/httpclient",

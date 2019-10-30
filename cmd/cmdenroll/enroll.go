@@ -8,7 +8,6 @@ import (
 
 	pstrings "github.com/pinpt/go-common/strings"
 
-	"github.com/pinpt/agent.next/cmd/cmdvalidate"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/encrypt"
 
@@ -168,16 +167,6 @@ func (s *enroller) WaitForResponse(ctx context.Context, ready chan<- bool) (res 
 			done <- true
 		}()
 		resp := instance.Object().(*agent.EnrollResponse)
-
-		valid, err := cmdvalidate.Run(ctx, s.logger, false)
-		if err != nil {
-			return nil, err
-		}
-		if !valid {
-			// return a msg here
-			s.logger.Info("the minimum requirements were not met")
-			return nil, fmt.Errorf("the miminum requirements were not met")
-		}
 
 		res = *resp
 		return nil, nil
