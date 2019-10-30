@@ -156,7 +156,6 @@ func (s *validator) runValidate() (errs []string) {
 			return
 		}
 		s.Logger.Info("git clone validation success", "url", urlWithoutCreds)
-		break
 	}
 
 	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
