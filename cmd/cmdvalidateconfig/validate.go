@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -45,7 +46,7 @@ type validator struct {
 	exportConfig rpcdef.ExportConfig
 }
 
-func newValidator(opts Opts) (*validator, error) {
+func newValidator(opts Opts) (_ *validator, rerr error) {
 	s := &validator{}
 	if len(opts.Integrations) != 1 {
 		panic("pass exactly 1 integration")
@@ -54,7 +55,8 @@ func newValidator(opts Opts) (*validator, error) {
 	var err error
 	s.Command, err = cmdintegration.NewCommand(opts.Opts)
 	if err != nil {
-		return nil, err
+		rerr = err
+		return
 	}
 	s.Opts = opts
 
@@ -62,9 +64,10 @@ func newValidator(opts Opts) (*validator, error) {
 	if err != nil {
 		err := s.outputErr(err)
 		if err != nil {
-			return nil, err
+			rerr = err
+			return
 		}
-		return nil, nil
+		return
 	}
 
 	integrationName := opts.Integrations[0].Name
@@ -73,8 +76,10 @@ func newValidator(opts Opts) (*validator, error) {
 
 	err = s.runValidateAndPrint()
 	if err != nil {
-		return nil, err
+		rerr = err
+		return
 	}
+
 	return s, nil
 }
 
@@ -133,13 +138,17 @@ func (s *validator) runValidate() (errs []string) {
 	}
 
 	s.Logger.Debug("validate len repos", "len", len(res0.ReposURLs))
+
 	for _, repoURL := range res0.ReposURLs {
+		urlWithoutCreds, err := urlWithoutCreds(repoURL)
+		if err != nil {
+			rerr(fmt.Errorf("url passed to git clone validation is not valid, err: %v", err))
+		}
 		if err := s.testGitClone(repoURL); err != nil {
-			s.Logger.Debug("git clone validation failed", "repoURL", printRepoNameOnly(repoURL))
-			rerr(err)
+			rerr(fmt.Errorf("git clone validation failed. repoURL: %v err: %v", urlWithoutCreds, err))
 			return
 		}
-		s.Logger.Info("git clone validation succeed", "repoURL", printRepoNameOnly(repoURL))
+		s.Logger.Info("git clone validation success", "repoURL", urlWithoutCreds)
 		break
 	}
 
@@ -152,11 +161,13 @@ func (s *validator) runValidate() (errs []string) {
 	return res0.Errors
 }
 
-func printRepoNameOnly(rawpath string) string {
-
-	index := strings.Index(rawpath, "@")
-
-	return rawpath[index+1:]
+func urlWithoutCreds(urlStr string) (string, error) {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return "", err
+	}
+	u.User = nil
+	return u.String(), nil
 }
 
 func (s *validator) Destroy() {
@@ -164,16 +175,14 @@ func (s *validator) Destroy() {
 
 func (s *validator) testGitClone(repoURL string) (err error) {
 
-	tmpFolder, err := ioutil.TempDir(s.Locs.Temp, "")
+	tmpDir, err := ioutil.TempDir(s.Locs.Temp, "validate-repo-clone-")
 	if err != nil {
 		return err
 	}
 
-	// sometimes small repos can be cloned
-	// so we need to delete the folder
-	defer os.RemoveAll(tmpFolder)
+	defer os.RemoveAll(tmpDir)
 
-	c := exec.Command("git", "clone", "--progress", repoURL, tmpFolder)
+	c := exec.Command("git", "clone", "--progress", repoURL, tmpDir)
 	var outBuf bytes.Buffer
 	c.Stdout = &outBuf
 	stderr, _ := c.StderrPipe()
