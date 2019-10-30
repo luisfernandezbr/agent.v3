@@ -62,10 +62,11 @@ func (s *Integration) processRepos() (projectids []string, err error) {
 			s.logger.Error("error sending repo", "repo_id", repo.RefID, "err", err)
 			return
 		}
-		if err = s.api.FetchPullRequests(repo.RefID, repo.Name, sender); err != nil {
+		var fetchprs []rpcdef.GitRepoFetchPR
+		if fetchprs, err = s.api.FetchPullRequests(repo.RefID, repo.Name, sender); err != nil {
 			errors = append(errors, err.Error())
 		}
-		if err := s.ripSource(repo); err != nil {
+		if err := s.ripSource(repo, fetchprs); err != nil {
 			s.logger.Error("error with ripsrc in repo", "data", repo.Stringify())
 		}
 	}
@@ -90,7 +91,7 @@ func (s *Integration) appendCredentials(repoURL string) (string, error) {
 	return u.String(), nil
 }
 
-func (s *Integration) ripSource(repo *sourcecode.Repo) error {
+func (s *Integration) ripSource(repo *sourcecode.Repo, fetchprs []rpcdef.GitRepoFetchPR) error {
 
 	repoURL, err := s.appendCredentials(repo.URL)
 	if err != nil {
@@ -102,9 +103,11 @@ func (s *Integration) ripSource(repo *sourcecode.Repo) error {
 	args.UniqueName = repo.Name
 	args.RefType = s.RefType.String()
 	args.URL = repoURL
-	s.logger.Info("queueing repo for processing " + repo.URL)
-	args.BranchURLTemplate = branchURLTemplate(repo.Name, s.Creds.URL)
 	args.CommitURLTemplate = commitURLTemplate(repo.Name, s.Creds.URL)
+	args.BranchURLTemplate = branchURLTemplate(repo.Name, s.Creds.URL)
+	args.PRs = fetchprs
+	s.logger.Info("queueing repo for processing " + repo.URL)
+
 	return s.agent.ExportGitRepo(args)
 }
 
