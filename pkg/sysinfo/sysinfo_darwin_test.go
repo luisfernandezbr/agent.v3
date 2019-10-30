@@ -8,10 +8,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetSystemInfoDarwin(t *testing.T) {
+
+	root, err := fsconf.DefaultRoot()
+	assert.NoError(t, err)
+	SetRoot(root)
+
 	response := GetSystemInfo()
 	answer := mySystemInfoDarwin()
 	assert.NotZero(t, response.Memory)
