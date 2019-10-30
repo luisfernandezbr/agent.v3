@@ -528,11 +528,7 @@ func (s *Integration) exportGit(repo api.Repo, prs []PRMeta) error {
 	return nil
 }
 
-type PRMeta struct {
-	ID            string
-	RefID         string
-	LastCommitSHA string
-}
+type PRMeta rpcdef.GitRepoFetchPR
 
 func (s *Integration) exportPullRequestsForRepo(
 	logger hclog.Logger, repo api.Repo,
