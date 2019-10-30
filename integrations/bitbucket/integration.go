@@ -80,12 +80,30 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	if err := api.ValidateUser(s.qc); err != nil {
+	teamNames, err := api.Teams(s.qc)
+	if err != nil {
 		rerr(err)
 		return
 	}
 
-	// TODO: return a repo and validate repo that repo can be cloned in agent
+	params := url.Values{}
+	params.Set("pagelen", "1")
+	for _, team := range teamNames {
+		_, repos, err := api.ReposPage(s.qc, team, params)
+		if err != nil {
+			rerr(err)
+			return
+		}
+		if len(repos) > 0 {
+			repoUrl, err := getRepoURL(s.config.URL, url.UserPassword(s.config.Username, s.config.Password), repos[0].NameWithOwner)
+			if err != nil {
+				rerr(err)
+				return
+			}
+
+			res.ReposURLs = append(res.ReposURLs, repoUrl)
+		}
+	}
 
 	return
 }
@@ -199,13 +217,11 @@ func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender.Ses
 	{
 
 		for _, repo := range repos {
-			u, err := url.Parse(s.config.URL)
+			urlUser := url.UserPassword(s.config.Username, s.config.Password)
+			repoURL, err := getRepoURL(s.config.URL, urlUser, "/"+repo.NameWithOwner)
 			if err != nil {
 				return err
 			}
-			u.User = url.UserPassword(s.config.Username, s.config.Password)
-			u.Path = "/" + repo.NameWithOwner
-			repoURL := u.Scheme + "://" + u.User.String() + "@" + strings.TrimPrefix(u.Host, "api.") + u.EscapedPath()
 
 			args := rpcdef.GitRepoFetch{}
 			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
@@ -371,4 +387,19 @@ func (s *Integration) exportCommitUsers(ctx context.Context, logger hclog.Logger
 	}
 
 	return
+}
+
+func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {
+
+	if strings.Contains(repoURLPrefix, "api.bitbucket.org") {
+		repoURLPrefix = strings.Replace(repoURLPrefix, "api.", "", -1)
+	}
+
+	u, err := url.Parse(repoURLPrefix)
+	if err != nil {
+		return "", err
+	}
+	u.User = user
+	u.Path = nameWithOwner
+	return u.String(), nil
 }

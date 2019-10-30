@@ -78,21 +78,31 @@ func (s *Integration) processRepos() (projectids []string, err error) {
 	return
 }
 
-func (s *Integration) ripSource(repo *sourcecode.Repo) error {
-	u, err := url.Parse(repo.URL)
+func (s *Integration) appendCredentials(repoURL string) (string, error) {
+	u, err := url.Parse(repoURL)
 	if s.OverrideGitHostName != "" {
 		u.Host = s.OverrideGitHostName
 	}
 	if err != nil {
-		return err
+		return "", err
 	}
 	u.User = url.UserPassword(s.Creds.Username, s.Creds.Password)
+	return u.String(), nil
+}
+
+func (s *Integration) ripSource(repo *sourcecode.Repo) error {
+
+	repoURL, err := s.appendCredentials(repo.URL)
+	if err != nil {
+		return err
+	}
+
 	args := rpcdef.GitRepoFetch{}
 	args.RepoID = s.api.IDs.CodeRepo(repo.RefID)
 	args.UniqueName = repo.Name
 	args.RefType = s.RefType.String()
-	args.URL = u.String()
-	s.logger.Info("queueing repo for processing " + u.String())
+	args.URL = repoURL
+	s.logger.Info("queueing repo for processing " + repo.URL)
 	args.BranchURLTemplate = branchURLTemplate(repo.Name, s.Creds.URL)
 	args.CommitURLTemplate = commitURLTemplate(repo.Name, s.Creds.URL)
 	return s.agent.ExportGitRepo(args)

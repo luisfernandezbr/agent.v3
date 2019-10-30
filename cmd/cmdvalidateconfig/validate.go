@@ -1,9 +1,18 @@
 package cmdvalidateconfig
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
+	"io/ioutil"
+	"net/url"
+	"os"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/iloader"
@@ -38,7 +47,7 @@ type validator struct {
 	exportConfig rpcdef.ExportConfig
 }
 
-func newValidator(opts Opts) (*validator, error) {
+func newValidator(opts Opts) (_ *validator, rerr error) {
 	s := &validator{}
 	if len(opts.Integrations) != 1 {
 		panic("pass exactly 1 integration")
@@ -47,7 +56,8 @@ func newValidator(opts Opts) (*validator, error) {
 	var err error
 	s.Command, err = cmdintegration.NewCommand(opts.Opts)
 	if err != nil {
-		return nil, err
+		rerr = err
+		return
 	}
 	s.Opts = opts
 
@@ -55,9 +65,10 @@ func newValidator(opts Opts) (*validator, error) {
 	if err != nil {
 		err := s.outputErr(err)
 		if err != nil {
-			return nil, err
+			rerr = err
+			return
 		}
-		return nil, nil
+		return
 	}
 
 	integration := opts.Integrations[0]
@@ -71,8 +82,10 @@ func newValidator(opts Opts) (*validator, error) {
 
 	err = s.runValidateAndPrint()
 	if err != nil {
-		return nil, err
+		rerr = err
+		return
 	}
+
 	return s, nil
 }
 
@@ -129,6 +142,23 @@ func (s *validator) runValidate() (errs []string) {
 		rerr(err)
 		return
 	}
+
+	s.Logger.Debug("validate len repos", "len", len(res0.ReposURLs))
+
+	for _, repoURL := range res0.ReposURLs {
+		urlWithoutCreds, err := urlWithoutCreds(repoURL)
+		if err != nil {
+			rerr(fmt.Errorf("url passed to git clone validation is not valid, err: %v", err))
+		}
+		s.Logger.Info("git clone validation start", "url", urlWithoutCreds)
+		if err := s.testGitClone(repoURL); err != nil {
+			rerr(fmt.Errorf("git clone validation failed. url: %v err: %v", urlWithoutCreds, err))
+			return
+		}
+		s.Logger.Info("git clone validation success", "url", urlWithoutCreds)
+		break
+	}
+
 	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
 	if err != nil {
 		rerr(err)
@@ -138,5 +168,59 @@ func (s *validator) runValidate() (errs []string) {
 	return res0.Errors
 }
 
+func urlWithoutCreds(urlStr string) (string, error) {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return "", err
+	}
+	u.User = nil
+	return u.String(), nil
+}
+
 func (s *validator) Destroy() {
+}
+
+func (s *validator) testGitClone(repoURL string) error {
+	tmpDir, err := ioutil.TempDir(s.Locs.Temp, "validate-repo-clone-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	c := exec.CommandContext(ctx, "git", "clone", "--progress", repoURL, tmpDir)
+	var outBuf bytes.Buffer
+	c.Stdout = &outBuf
+	stderr, _ := c.StderrPipe()
+
+	err = c.Start()
+	if err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(stderr)
+	var output []byte
+	for scanner.Scan() {
+		output = append(output, scanner.Bytes()...)
+
+		line := scanner.Text()
+
+		if strings.Contains(line, "Receiving objects:") ||
+			strings.Contains(line, "Counting objects:") ||
+			strings.Contains(line, "Enumerating objects:") ||
+			strings.Contains(line, "You appear to have cloned an empty repository") {
+			// If we see one of these lines, it means credentials are valid
+
+			return nil
+		}
+
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return errors.New(string(output))
 }

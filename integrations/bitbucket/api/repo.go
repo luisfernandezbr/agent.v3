@@ -72,8 +72,6 @@ func ReposPage(qc QueryContext, groupName string, params url.Values) (page PageI
 
 	objectPath := pstrings.JoinURL("teams", groupName, "repositories")
 
-	params.Set("pagelen", "100")
-
 	var rr []struct {
 		UUID       string `json:"uuid"`
 		FullName   string `json:"full_name"`
