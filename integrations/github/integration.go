@@ -498,13 +498,10 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 }
 
 func (s *Integration) exportGit(repo api.Repo, prs []PRMeta) error {
-	u, err := url.Parse(s.config.RepoURLPrefix)
+	repoURL, err := getRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repo.NameWithOwner)
 	if err != nil {
 		return err
 	}
-	u.User = url.UserPassword(s.config.Token, "")
-	u.Path = repo.NameWithOwner
-	repoURL := u.String()
 
 	args := rpcdef.GitRepoFetch{}
 	args.RepoID = s.qc.RepoID(repo.ID)
@@ -660,4 +657,14 @@ func (s *Integration) exportPullRequestsForRepo(
 	}()
 	wg.Wait()
 	return
+}
+
+func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {
+	u, err := url.Parse(repoURLPrefix)
+	if err != nil {
+		return "", err
+	}
+	u.User = user
+	u.Path = nameWithOwner
+	return u.String(), nil
 }
