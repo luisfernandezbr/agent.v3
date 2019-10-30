@@ -172,6 +172,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 	}
 
 	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
+		paginationParams.Set("retryable", "false")
 		_, _, err := api.ProjectsPage(s.qc, paginationParams)
 		if err != nil {
 			return false, 10, err

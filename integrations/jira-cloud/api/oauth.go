@@ -3,7 +3,6 @@ package api
 import (
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/reqstats"
@@ -20,9 +19,7 @@ func AccessibleResources(
 	hc reqstats.Clients,
 	accessToken string) (res []Site, rerr error) {
 
-	// retry 10 times, 500 millis per retry, and max timeout 1 minute
-	reqs := requests.NewRetryable(logger, hc.Default, 10, 500*time.Millisecond, 1*time.Minute)
-
+	reqs := requests.New(logger, hc.Default)
 	req, err := http.NewRequest(http.MethodGet, "https://api.atlassian.com/oauth/token/accessible-resources", nil)
 	if err != nil {
 		rerr = err

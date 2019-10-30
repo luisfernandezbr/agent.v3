@@ -128,7 +128,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	_, err = api.Projects(s.qc)
+	_, err = api.Projects(s.qc, true)
 	if err != nil {
 		rerr(err)
 		return
@@ -165,7 +165,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	var projects []Project
 
 	{
-		allProjectsDetailed, err := api.Projects(s.qc)
+		allProjectsDetailed, err := api.Projects(s.qc, false)
 		if err != nil {
 			rerr = err
 			return

@@ -24,29 +24,33 @@ type Requests struct {
 }
 
 func New(logger hclog.Logger, client *http.Client) Requests {
-	return NewRetryable(logger, client, 0, 0, time.Hour)
-}
-
-func NewRetryable(logger hclog.Logger, client *http.Client, maxAttempts float64, retryDelay time.Duration, maxDuration time.Duration) Requests {
 	req := Requests{
 		Logger: logger,
 		Client: client,
 	}
-	req.Retryable.MaxAttempts = maxAttempts
-	req.Retryable.MaxDuration = maxDuration
-	req.Retryable.RetryDelay = retryDelay
+	req.Retryable.MaxAttempts = 0
+	req.Retryable.MaxDuration = 0
+	req.Retryable.RetryDelay = 0
+	return req
+}
+
+func NewRetryableDefault(logger hclog.Logger, client *http.Client) Requests {
+	req := Requests{
+		Logger: logger,
+		Client: client,
+	}
+	req.Retryable.MaxAttempts = 10
+	req.Retryable.MaxDuration = 500 * time.Millisecond
+	req.Retryable.RetryDelay = 5 * time.Minute
 	return req
 }
 
 func (opts Requests) retryDo(ctx context.Context, req *http.Request) (resp *http.Response, err error) {
 	started := time.Now()
 
-	retries := opts.Retryable.MaxAttempts
-	delay := opts.Retryable.RetryDelay
-	maxduration := opts.Retryable.MaxDuration
-
-	req = req.WithContext(ctx)
-
+	retry := opts.Retryable
+	retries := retry.MaxAttempts
+	count := 0
 	for time.Since(started) < opts.Retryable.MaxDuration {
 		resp, err = opts.Client.Do(req)
 		if err != nil {
@@ -69,8 +73,8 @@ func (opts Requests) retryDo(ctx context.Context, req *http.Request) (resp *http
 			ioutil.ReadAll(resp.Body)
 			resp.Body.Close()
 		}
-		if delay > 0 {
-			remaining := math.Min(float64(maxduration-time.Since(started)), float64(delay))
+		if retry.RetryDelay > 0 {
+			remaining := math.Min(float64(retry.MaxDuration-time.Since(started)), float64(retry.RetryDelay))
 			select {
 			case <-ctx.Done():
 				return nil, context.Canceled
@@ -81,6 +85,8 @@ func (opts Requests) retryDo(ctx context.Context, req *http.Request) (resp *http
 		if retries <= 0 {
 			return
 		}
+		count++
+		opts.Logger.Info("request failed, will retry", "count", count, "url", req.URL.String())
 	}
 	return
 }
@@ -98,7 +104,12 @@ func (opts Requests) Do(ctx context.Context, reqDef *http.Request) (resp *http.R
 	}
 	req.Header.Set("Accept", "application/json")
 
-	resp, err = opts.retryDo(ctx, req)
+	req = req.WithContext(ctx)
+	if opts.Retryable.MaxAttempts == 0 {
+		resp, err = opts.Client.Do(req)
+	} else {
+		resp, err = opts.retryDo(ctx, req)
+	}
 	if err != nil {
 		rerr = err
 		return

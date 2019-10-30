@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/pinpt/agent.next/pkg/reqstats"
 	"github.com/pinpt/agent.next/pkg/requests"
@@ -37,14 +36,22 @@ func NewRequester(opts RequesterOpts) *Requester {
 }
 
 func (s *Requester) Request(objPath string, params url.Values, res interface{}) error {
-	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
 
+	retryable := true
+	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
+	if retry := params.Get("retryable"); retry != "" {
+		params.Del("retryable")
+		retryable = retry == "true"
+	}
 	if len(params) != 0 {
 		u += "?" + params.Encode()
 	}
-
-	// retry 10 times, 500 millis per retry, and max timeout 1 minute
-	reqs := requests.NewRetryable(s.logger, s.opts.Clients.TLSInsecure, 10, 500*time.Millisecond, 1*time.Minute)
+	var reqs requests.Requests
+	if retryable {
+		reqs = requests.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
+	} else {
+		reqs = requests.New(s.logger, s.opts.Clients.TLSInsecure)
+	}
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/pinpt/agent.next/pkg/oauthtoken"
 	"github.com/pinpt/agent.next/pkg/reqstats"
@@ -44,15 +43,21 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 }
 
 func (s *Requester) request(objPath string, params url.Values, res interface{}, maxOAuthRetries int) error {
+	retryable := true
 	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
-
+	if retry := params.Get("retryable"); retry != "" {
+		params.Del("retryable")
+		retryable = retry == "true"
+	}
 	if len(params) != 0 {
 		u += "?" + params.Encode()
 	}
-
-	// retry 10 times, 500 millis per retry, and max timeout 1 minute
-	reqs := requests.NewRetryable(s.logger, s.opts.Clients.Default, 10, 500*time.Millisecond, 1*time.Minute)
-
+	var reqs requests.Requests
+	if retryable {
+		reqs = requests.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
+	} else {
+		reqs = requests.New(s.logger, s.opts.Clients.TLSInsecure)
+	}
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return err
