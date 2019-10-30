@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/pinpt/agent.next/integrations/pkg/objsender"
@@ -14,7 +15,6 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
-	purl "github.com/pinpt/agent.next/integrations/pkg/url"
 	"github.com/pinpt/agent.next/pkg/commitusers"
 	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
@@ -95,7 +95,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 			return
 		}
 		if len(repos) > 0 {
-			repoUrl, err := purl.GetRepoURL(s.config.URL, url.UserPassword(s.config.Username, s.config.Password), repos[0].NameWithOwner)
+			repoUrl, err := getRepoURL(s.config.URL, url.UserPassword(s.config.Username, s.config.Password), repos[0].NameWithOwner)
 			if err != nil {
 				rerr(err)
 				return
@@ -218,7 +218,7 @@ func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender.Ses
 
 		for _, repo := range repos {
 			urlUser := url.UserPassword(s.config.Username, s.config.Password)
-			repoURL, err := purl.GetRepoURL(s.config.URL, urlUser, "/"+repo.NameWithOwner)
+			repoURL, err := getRepoURL(s.config.URL, urlUser, "/"+repo.NameWithOwner)
 			if err != nil {
 				return err
 			}
@@ -387,4 +387,19 @@ func (s *Integration) exportCommitUsers(ctx context.Context, logger hclog.Logger
 	}
 
 	return
+}
+
+func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {
+
+	if strings.Contains(repoURLPrefix, "api.bitbucket.org") {
+		repoURLPrefix = strings.Replace(repoURLPrefix, "api.", "", -1)
+	}
+
+	u, err := url.Parse(repoURLPrefix)
+	if err != nil {
+		return "", err
+	}
+	u.User = user
+	u.Path = nameWithOwner
+	return u.String(), nil
 }

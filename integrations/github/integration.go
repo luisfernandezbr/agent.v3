@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/pinpt/agent.next/integrations/pkg/objsender"
-	purl "github.com/pinpt/agent.next/integrations/pkg/url"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/reqstats"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
@@ -499,7 +498,7 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 }
 
 func (s *Integration) exportGit(repo api.Repo, prs []PRMeta) error {
-	repoURL, err := purl.GetRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repo.NameWithOwner)
+	repoURL, err := getRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repo.NameWithOwner)
 	if err != nil {
 		return err
 	}
@@ -657,4 +656,14 @@ func (s *Integration) exportPullRequestsForRepo(
 	}()
 	wg.Wait()
 	return
+}
+
+func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {
+	u, err := url.Parse(repoURLPrefix)
+	if err != nil {
+		return "", err
+	}
+	u.User = user
+	u.Path = nameWithOwner
+	return u.String(), nil
 }

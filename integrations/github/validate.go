@@ -6,7 +6,6 @@ import (
 	"net/url"
 
 	"github.com/pinpt/agent.next/integrations/github/api"
-	purl "github.com/pinpt/agent.next/integrations/pkg/url"
 	"github.com/pinpt/agent.next/rpcdef"
 )
 
@@ -48,7 +47,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 			return
 		}
 		if len(repos) > 0 {
-			repoURL, err := purl.GetRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repos[0].NameWithOwner)
+			repoURL, err := getRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repos[0].NameWithOwner)
 			if err != nil {
 				rerr(err)
 				return

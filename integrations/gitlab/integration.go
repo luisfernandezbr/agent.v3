@@ -13,7 +13,6 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent.next/integrations/pkg/ibase"
 	"github.com/pinpt/agent.next/integrations/pkg/objsender"
-	purl "github.com/pinpt/agent.next/integrations/pkg/url"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/pkg/ids2"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
@@ -100,7 +99,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 			return
 		}
 		if len(repos) > 0 {
-			repoURL, err := purl.GetRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repos[0].NameWithOwner)
+			repoURL, err := getRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repos[0].NameWithOwner)
 			if err != nil {
 				rerr(err)
 				return
@@ -229,7 +228,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 	{
 
 		for _, repo := range repos {
-			repoURL, err := purl.GetRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repo.NameWithOwner)
+			repoURL, err := getRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repo.NameWithOwner)
 			if err != nil {
 				return err
 			}
@@ -468,4 +467,14 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	}()
 	wg.Wait()
 	return
+}
+
+func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {
+	u, err := url.Parse(repoURLPrefix)
+	if err != nil {
+		return "", err
+	}
+	u.User = user
+	u.Path = nameWithOwner
+	return u.String(), nil
 }
