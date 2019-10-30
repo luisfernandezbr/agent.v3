@@ -304,35 +304,34 @@ type runResult struct {
 	Duration time.Duration
 }
 
-func (s *export) runExports() map[string]runResult {
+func (s *export) runExports() map[integrationid.ID]runResult {
 	ctx := context.Background()
 	wg := sync.WaitGroup{}
 
-	res := map[string]runResult{}
+	res := map[integrationid.ID]runResult{}
 	resMu := sync.Mutex{}
 
-	for name, integration := range s.Integrations {
+	for _, integration := range s.Integrations {
 		wg.Add(1)
-		name := name
 		integration := integration
 		go func() {
 			defer wg.Done()
 			start := time.Now()
-
+			id := integration.ID
 			ret := func(err error) {
 				resMu.Lock()
-				res[name] = runResult{Err: err, Duration: time.Since(start)}
+				res[id] = runResult{Err: err, Duration: time.Since(start)}
 				resMu.Unlock()
 				if err != nil {
-					s.Logger.Error("Export failed", "integration", name, "dur", time.Since(start).String(), "err", err)
+					s.Logger.Error("Export failed", "integration", id, "dur", time.Since(start).String(), "err", err)
 					return
 				}
-				s.Logger.Info("Export success", "integration", name, "dur", time.Since(start).String())
+				s.Logger.Info("Export success", "integration", id, "dur", time.Since(start).String())
 			}
 
-			s.Logger.Info("Export starting", "integration", name)
+			s.Logger.Info("Export starting", "integration", id)
 
-			exportConfig, ok := s.ExportConfigs[name]
+			exportConfig, ok := s.ExportConfigs[id]
 			if !ok {
 				panic("no config for integration")
 			}
@@ -350,43 +349,43 @@ func (s *export) runExports() map[string]runResult {
 	return res
 }
 
-func (s *export) printExportRes(res map[string]runResult, gitHadErrors bool) {
+func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors bool) {
 	s.Logger.Debug("Printing export results for all integrations")
 
-	var successNames []string
-	var failedNames []string
+	var success []integrationid.ID
+	var failed []integrationid.ID
 
-	for name, integration := range s.Integrations {
-		ires := res[name]
+	for id, integration := range s.Integrations {
+		ires := res[id]
 		if ires.Err != nil {
-			s.Logger.Error("Export failed", "integration", name, "dur", ires.Duration.String(), "err", ires.Err)
+			s.Logger.Error("Export failed", "integration", id, "dur", ires.Duration.String(), "err", ires.Err)
 			panicOut, err := integration.CloseAndDetectPanic()
 			if panicOut != "" {
 				// This is already printed in integration. But we will repeat output at the end, so it's not lost.
-				fmt.Println("Panic in integration", name)
+				fmt.Println("Panic in integration", id)
 				fmt.Println(panicOut)
 			}
 			if err != nil {
 				s.Logger.Error("Could not close integration", "err", err)
 			}
-			failedNames = append(failedNames, name)
+			failed = append(failed, id)
 			continue
 		}
 
-		s.Logger.Info("Export success", "integration", name, "dur", ires.Duration.String())
-		successNames = append(successNames, name)
+		s.Logger.Info("Export success", "integration", id, "dur", ires.Duration.String())
+		success = append(success, id)
 	}
 
 	dur := time.Since(s.StartTime)
 
 	if gitHadErrors {
-		failedNames = append(failedNames, "git")
+		failed = append(failed, integrationid.ID{Name: "git"})
 	}
 
-	if len(failedNames) > 0 {
-		s.Logger.Error("Some exports failed", "failed", failedNames, "succeded", successNames, "dur", dur.String())
+	if len(failed) > 0 {
+		s.Logger.Error("Some exports failed", "failed", failed, "succeded", success, "dur", dur.String())
 	} else {
-		s.Logger.Info("Exports completed", "succeded", successNames, "dur", dur.String())
+		s.Logger.Info("Exports completed", "succeded", success, "dur", dur.String())
 	}
 }
 

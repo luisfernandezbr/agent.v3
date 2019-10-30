@@ -80,8 +80,8 @@ type Command struct {
 	StartTime time.Time
 	Locs      fsconf.Locs
 
-	Integrations  map[string]*iloader.Integration
-	ExportConfigs map[string]rpcdef.ExportConfig
+	Integrations  map[integrationid.ID]*iloader.Integration
+	ExportConfigs map[integrationid.ID]rpcdef.ExportConfig
 
 	// OAuthRefreshTokens contains refresh token for integrations
 	// using OAuth. These are allow getting new access tokens using
@@ -122,11 +122,11 @@ func NewCommand(opts Opts) (*Command, error) {
 }
 
 func (s *Command) setupConfig() error {
-	s.ExportConfigs = map[string]rpcdef.ExportConfig{}
+	s.ExportConfigs = map[integrationid.ID]rpcdef.ExportConfig{}
 	s.OAuthRefreshTokens = map[string]string{}
 
 	for _, obj := range s.Opts.Integrations {
-		in, err := obj.ID()
+		id, err := obj.ID()
 		if err != nil {
 			return err
 		}
@@ -138,7 +138,7 @@ func (s *Command) setupConfig() error {
 		refreshToken, _ := obj.Config["oauth_refresh_token"].(string)
 		if refreshToken != "" {
 			// TODO: switch to using ID instead of name as key, so we could have azure issues and azure work to use different refresh tokens
-			s.OAuthRefreshTokens[in.Name] = refreshToken
+			s.OAuthRefreshTokens[id.Name] = refreshToken
 			ec.UseOAuth = true
 			// do not pass oauth_refresh_token to integration
 			// integrations should use
@@ -146,7 +146,7 @@ func (s *Command) setupConfig() error {
 			delete(ec.Integration, "oauth_refresh_token")
 		}
 
-		s.ExportConfigs[obj.Name] = ec
+		s.ExportConfigs[id] = ec
 
 	}
 	return nil

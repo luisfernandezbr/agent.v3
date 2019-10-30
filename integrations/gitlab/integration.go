@@ -31,7 +31,7 @@ type Config struct {
 	APIToken           string `json:"apitoken"`
 	OnlyGit            bool   `json:"only_git"`
 	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
-	ServerType         string `json:"server-type"`
+	ServerType         string `json:"server_type"`
 }
 
 type Integration struct {
@@ -83,12 +83,30 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	if err := api.ValidateUser(s.qc); err != nil {
+	groups, err := api.Groups(s.qc)
+	if err != nil {
 		rerr(err)
 		return
 	}
 
-	// TODO: return a repo and validate repo that repo can be cloned in agent
+	params := url.Values{}
+	params.Set("per_page", "1")
+
+	for _, group := range groups {
+		_, repos, err := api.ReposPageRESTAll(s.qc, group, params)
+		if err != nil {
+			rerr(err)
+			return
+		}
+		if len(repos) > 0 {
+			repoURL, err := getRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repos[0].NameWithOwner)
+			if err != nil {
+				rerr(err)
+				return
+			}
+			res.ReposURLs = append(res.ReposURLs, repoURL)
+		}
+	}
 
 	return
 }
@@ -194,13 +212,10 @@ func (s *Integration) export(ctx context.Context) (err error) {
 }
 
 func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchPR) error {
-	u, err := url.Parse(s.config.URL)
+	repoURL, err := getRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repo.NameWithOwner)
 	if err != nil {
 		return err
 	}
-	u.User = url.UserPassword("token", s.config.APIToken)
-	u.Path = repo.NameWithOwner
-	repoURL := u.String()
 
 	args := rpcdef.GitRepoFetch{}
 	args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
@@ -475,4 +490,14 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	}()
 	wg.Wait()
 	return
+}
+
+func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {
+	u, err := url.Parse(repoURLPrefix)
+	if err != nil {
+		return "", err
+	}
+	u.User = user
+	u.Path = nameWithOwner
+	return u.String(), nil
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/pinpt/agent.next/pkg/requests"
@@ -42,25 +43,39 @@ func EnterpriseVersion(qc QueryContext, apiURL string) (version string, rerr err
 		rerr = logError(err)
 		return
 	}
-	return extractMajorVersion(respJSON.URL)
+	version, err = extractMajorVersion(respJSON.URL)
+	if err != nil {
+		rerr = fmt.Errorf("could not get enterprise version from documentation_url, url: %v err: %v", respJSON.URL, err)
+		return
+	}
+	return
 }
 
 func extractMajorVersion(docsURL string) (_ string, rerr error) {
 	if docsURL == "" {
-		rerr = errors.New("could not get enterprise version documentation_url is empty")
+		rerr = errors.New("url is empty")
 		return
 	}
-	prefix := "https://developer.github.com/enterprise/"
-	suffix := "/v4"
-	if !strings.HasPrefix(docsURL, prefix) || !strings.HasSuffix(docsURL, suffix) {
-		rerr = fmt.Errorf("unexpected documentation_url: %v", docsURL)
+	u, err := url.Parse(docsURL)
+	if err != nil {
+		rerr = err
 		return
 	}
-	u := strings.TrimPrefix(docsURL, prefix)
-	u = strings.TrimSuffix(u, suffix)
-	if len(u) != 4 {
-		rerr = fmt.Errorf("unexpected documentation_url, wanted version len=4: %v", docsURL)
+	p := u.Path
+	p = strings.Trim(p, "/")
+	p = strings.TrimPrefix(p, "enterprise/")
+
+	if strings.HasSuffix(p, "/v4") {
+		p = strings.TrimSuffix(p, "/v4")
+	} else if strings.HasSuffix(p, "/v3") {
+		p = strings.TrimSuffix(p, "/v3")
+	} else {
+		rerr = fmt.Errorf("unexpected url: %v", docsURL)
 		return
 	}
-	return u, nil
+	if len(p) != 4 {
+		rerr = fmt.Errorf("unexpected documentation_url, wanted version len=4, p: %v", p)
+		return
+	}
+	return p, nil
 }
