@@ -13,7 +13,8 @@ import (
 
 type PullRequest struct {
 	*sourcecode.PullRequest
-	IID string
+	IID           string
+	LastCommitSHA string
 }
 
 func PullRequestPage(
