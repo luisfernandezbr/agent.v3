@@ -13,20 +13,18 @@ import (
 	"github.com/pinpt/go-common/number"
 )
 
+// TODO: root is passed but not used, this is likely to break with custom --pinpoint flag passed
 func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, err error) {
 
-	const GIGA_BYTE_SIZE = 1024 * 1024 * 1024
+	const GB = 1024 * 1024 * 1024
 
-	const MINIMUM_MEMORY = GIGA_BYTE_SIZE * 16
-	const MINIMUM_SPACE = GIGA_BYTE_SIZE * 100
-	const MINIMUM_NUM_CPU = 2
+	const MINIMUM_MEMORY = 16 * GB
+	const MINIMUM_SPACE = 100 * GB
+	const MINIMUM_NUM_CPU = 2 * 10
 	const MININUM_GIT_VERSION = "2.13.0"
 
-	pm := validator{
-		logger:  logger,
-		isValid: true,
-	}
-
+	// TODO: it should validate git executable as well, currently does not fail the checks if can't run the version
+	// also can use c.Output() instead of run for easier code, the below can be simplified
 	c := exec.CommandContext(ctx, "git", "version")
 	var stdout, stderr bytes.Buffer
 	var skipGit bool
@@ -50,24 +48,31 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 
 	sysInfo := sysinfo.GetSystemInfo()
 
+	val := validator{
+		logger:  logger,
+		isValid: true,
+	}
+
 	if sysInfo.TotalMemory < MINIMUM_MEMORY {
-		pm.validate("memory", number.ToBytesSize(int64(sysInfo.TotalMemory)), "16Gb")
+		val.invalid("memory", number.ToBytesSize(int64(sysInfo.TotalMemory)), number.ToBytesSize(int64(MINIMUM_MEMORY)))
 	}
 	if sysInfo.FreeSpace < MINIMUM_SPACE {
-		pm.validate("space", number.ToBytesSize(int64(sysInfo.FreeSpace)), "100Gb")
+		val.invalid("space", number.ToBytesSize(int64(sysInfo.FreeSpace)), number.ToBytesSize(int64(MINIMUM_SPACE)))
+		logger.Info("using pinpoint root", "dir", "TODO")
 	}
 	if sysInfo.NumCPU < MINIMUM_NUM_CPU {
-		pm.validate("cpus", strconv.FormatInt(int64(sysInfo.NumCPU), 10), strconv.FormatInt(MINIMUM_NUM_CPU, 10))
+		val.invalid("cpus", strconv.FormatInt(int64(sysInfo.NumCPU), 10), strconv.FormatInt(MINIMUM_NUM_CPU, 10))
 	}
+	// TODO: check minimum version using semver. otherwise may be wrong with 2.10 < 2.9
 	if !skipGit && currentGitVersion < MININUM_GIT_VERSION {
-		pm.validate("git version", currentGitVersion, MININUM_GIT_VERSION)
+		val.invalid("git version", currentGitVersion, MININUM_GIT_VERSION)
 	}
-	if !pm.isValid {
-		logger.Info("the minimum requirements were not met")
+	if !val.isValid {
+		logger.Error("Minimum system requirements were not met")
 		return
 	}
 
-	logger.Info("correct minimum requirements")
+	logger.Info("Passed system requirement validation")
 	return true, nil
 }
 
@@ -76,8 +81,8 @@ type validator struct {
 	isValid bool
 }
 
-func (p *validator) validate(label, actual, expected string) {
-	msg := fmt.Sprintf("%s available %s. %s is needed", label, actual, expected)
+func (p *validator) invalid(label, actual, expected string) {
+	msg := fmt.Sprintf("%s available %s. required %s", label, actual, expected)
 	p.isValid = false
-	p.logger.Info("validate", "info", msg)
+	p.logger.Error(msg)
 }
