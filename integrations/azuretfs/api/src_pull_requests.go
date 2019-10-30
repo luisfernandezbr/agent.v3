@@ -4,25 +4,29 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/ids"
+	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
 // FetchPullRequests calls the pull request api and processes the reponse sending each object to the corresponding channel async
 // sourcecode.PullRequest, sourcecode.PullRequestReview, sourcecode.PullRequestComment, and sourcecode.PullRequestCommit
-func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsender.Session) error {
+func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsender.Session) ([]rpcdef.GitRepoFetchPR, error) {
 	res, err := api.fetchPullRequests(repoid)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	fromdate := sender.LastProcessedTime()
 	incremental := !fromdate.IsZero()
 	var pullrequests []pullRequestResponse
 	var pullrequestcomments []pullRequestResponse
+	var fetchprs []rpcdef.GitRepoFetchPR
+	var fetchprsMutex sync.Mutex
 	for _, p := range res {
 		// if this is not incremental, return only the objects created after the fromdate
 		if !incremental || p.CreationDate.After(fromdate) {
@@ -37,7 +41,7 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 	prsender, err := sender.Session(sourcecode.PullRequestModelName.String(), repoid, reponame)
 	if err != nil {
 		api.logger.Error("error creating sender session for pull request", "err", err, "repo_id", repoid, "repo_name", reponame)
-		return err
+		return nil, err
 	}
 	if err := prsender.SetTotal(len(pullrequests)); err != nil {
 		api.logger.Error("error setting total pullrequests on FetchPullRequests", "err", err)
@@ -48,7 +52,6 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 		pr.pullRequestResponse = p
 		pr.SourceBranch = strings.TrimPrefix(p.SourceBranch, "refs/heads/")
 		pr.TargetBranch = strings.TrimPrefix(p.TargetBranch, "refs/heads/")
-
 		async.Do(func() {
 			commits, err := api.fetchPullRequestCommits(repoid, pr.PullRequestID)
 			pridstring := fmt.Sprintf("%d", pr.PullRequestID)
@@ -80,6 +83,14 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 			if err := prrsender.SetTotal(len(pr.Reviewers)); err != nil {
 				api.logger.Error("error setting total pull request reviews on FetchPullRequests", "err", err)
 			}
+			fetchprsMutex.Lock()
+			fetchprs = append(fetchprs, rpcdef.GitRepoFetchPR{
+				ID:            api.IDs.CodePullRequest(repoid, fmt.Sprintf("%d", pr.PullRequestID)),
+				RefID:         fmt.Sprintf("%d", p.PullRequestID),
+				LastCommitSHA: pr.commitshas[len(pr.commitshas)-1],
+			})
+			fetchprsMutex.Unlock()
+
 			api.sendPullRequestObjects(repoid, pr, prsender, prrsender)
 			if err := prrsender.Done(); err != nil {
 				api.logger.Error("error with sender done in pull request reviews", "err", err)
@@ -104,7 +115,7 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 	}
 	async.Wait()
 
-	return prsender.Done()
+	return fetchprs, prsender.Done()
 }
 
 func (api *API) sendPullRequestCommentObject(repoid string, prid int64, sender *objsender.Session) {
@@ -124,7 +135,7 @@ func (api *API) sendPullRequestCommentObject(repoid string, prid int64, sender *
 			c := &sourcecode.PullRequestComment{
 				Body:          e.Content,
 				CustomerID:    api.customerid,
-				PullRequestID: api.IDs.CodePullRequest(fmt.Sprintf("%d", prid), refid),
+				PullRequestID: api.IDs.CodePullRequest(repoid, fmt.Sprintf("%d", prid)),
 				RefID:         refid,
 				RefType:       api.reftype,
 				RepoID:        api.IDs.CodeRepo(repoid),
@@ -197,7 +208,7 @@ func (api *API) sendPullRequestObjects(repoid string, p pullRequestResponseWithS
 		refid := hash.Values(i, p.PullRequestID, r.ID)
 		if err := prrsender.Send(&sourcecode.PullRequestReview{
 			CustomerID:    api.customerid,
-			PullRequestID: api.IDs.CodePullRequest(fmt.Sprintf("%d", p.PullRequestID), refid),
+			PullRequestID: api.IDs.CodePullRequest(repoid, fmt.Sprintf("%d", p.PullRequestID)),
 			RefID:         refid,
 			RefType:       api.reftype,
 			RepoID:        api.IDs.CodeRepo(repoid),
@@ -229,7 +240,7 @@ func (api *API) sendPullRequestCommitObjects(repoid string, p pullRequestRespons
 			CustomerID:    api.customerid,
 			Deletions:     c.ChangeCounts.Delete,
 			Message:       c.Comment,
-			PullRequestID: api.IDs.CodePullRequest(p.Repository.ID, sha),
+			PullRequestID: api.IDs.CodePullRequest(p.Repository.ID, fmt.Sprintf("%d", p.PullRequestID)),
 			RefID:         sha,
 			RefType:       api.reftype,
 			RepoID:        p.Repository.ID,
