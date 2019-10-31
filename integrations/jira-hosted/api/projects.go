@@ -8,16 +8,13 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
-func Projects(qc QueryContext, forValidate bool) (res []*work.Project, rerr error) {
+func Projects(qc QueryContext) (res []*work.Project, rerr error) {
 	qc.Logger.Debug("projects request")
 
 	objectPath := "project"
 
 	params := url.Values{}
 	params.Set("expand", "description")
-	if forValidate {
-		params.Set("retryable", "false")
-	}
 	var rr []struct {
 		ID          string `json:"id"`
 		Key         string `json:"key"`

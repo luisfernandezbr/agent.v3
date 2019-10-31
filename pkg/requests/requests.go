@@ -29,9 +29,6 @@ func New(logger hclog.Logger, client *http.Client) Requests {
 		Logger: logger,
 		Client: client,
 	}
-	req.Retryable.MaxAttempts = 0
-	req.Retryable.MaxDuration = 0
-	req.Retryable.RetryDelay = 0
 	return req
 }
 
