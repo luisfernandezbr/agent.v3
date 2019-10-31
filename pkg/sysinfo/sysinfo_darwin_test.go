@@ -16,9 +16,8 @@ func TestGetSystemInfoDarwin(t *testing.T) {
 
 	root, err := fsconf.DefaultRoot()
 	assert.NoError(t, err)
-	SetRoot(root)
 
-	response := GetSystemInfo()
+	response := GetSystemInfo(root)
 	answer := mySystemInfoDarwin()
 	assert.NotZero(t, response.Memory)
 	assert.NotZero(t, response.FreeSpace)
@@ -44,7 +43,8 @@ func mySystemInfoDarwin() SystemInfo {
 			}
 		}
 	}
-	def := getDefault()
+	root, _ := fsconf.DefaultRoot()
+	def := getDefault(root)
 	def.Name = kv["ProductName"]
 	def.Version = kv["ProductVersion"]
 	return def

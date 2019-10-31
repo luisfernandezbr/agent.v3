@@ -10,7 +10,7 @@ import (
 )
 
 func TestGetDefault(t *testing.T) {
-	response := getDefault()
+	response := getDefault("")
 	answer := myDefaultInfo()
 	response.Memory = 0
 	response.FreeSpace = 0
