@@ -20,7 +20,6 @@ func AccessibleResources(
 	accessToken string) (res []Site, rerr error) {
 
 	reqs := requests.New(logger, hc.Default)
-
 	req, err := http.NewRequest(http.MethodGet, "https://api.atlassian.com/oauth/token/accessible-resources", nil)
 	if err != nil {
 		rerr = err

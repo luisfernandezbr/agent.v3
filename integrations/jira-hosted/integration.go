@@ -72,7 +72,7 @@ func ConfigFromMap(data map[string]interface{}) (res Config, rerr error) {
 	return
 }
 
-func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
+func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests bool) error {
 	var err error
 	s.config, err = ConfigFromMap(config.Integration)
 	if err != nil {
@@ -96,6 +96,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.APIURL = s.config.URL
 		opts.Username = s.config.Username
 		opts.Password = s.config.Password
+		opts.RetryRequests = retryRequests
 		requester := NewRequester(opts)
 		s.qc.Request = requester.Request
 	}
@@ -122,7 +123,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		res.Errors = append(res.Errors, err.Error())
 	}
 
-	err := s.initWithConfig(exportConfig)
+	err := s.initWithConfig(exportConfig, false)
 	if err != nil {
 		rerr(err)
 		return
@@ -138,7 +139,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 }
 
 func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, rerr error) {
-	err := s.initWithConfig(config)
+	err := s.initWithConfig(config, true)
 	if err != nil {
 		rerr = err
 		return

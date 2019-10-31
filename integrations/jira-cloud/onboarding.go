@@ -25,7 +25,7 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 
 func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, rerr error) {
 
-	err := s.initWithConfig(config)
+	err := s.initWithConfig(config, false)
 	if err != nil {
 		rerr = err
 		return
@@ -72,7 +72,7 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 
 func (s *Integration) onboardWorkConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
 
-	err := s.initWithConfig(config)
+	err := s.initWithConfig(config, false)
 	if err != nil {
 		return res, err
 	}
