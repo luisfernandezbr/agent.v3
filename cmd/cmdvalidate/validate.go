@@ -1,12 +1,13 @@
 package cmdvalidate
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/blang/semver"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/sysinfo"
@@ -23,27 +24,15 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 	const MINIMUM_NUM_CPU = 2 * 10
 	const MININUM_GIT_VERSION = "2.13.0"
 
-	// TODO: it should validate git executable as well, currently does not fail the checks if can't run the version
-	// also can use c.Output() instead of run for easier code, the below can be simplified
 	c := exec.CommandContext(ctx, "git", "version")
-	var stdout, stderr bytes.Buffer
 	var skipGit bool
 	var currentGitVersion string
-	c.Stdout = &stdout
-	c.Stderr = &stderr
-	if err = c.Run(); err != nil {
-		if strings.Contains(err.Error(), "found") || strings.Contains(err.Error(), "not recognized") {
-			skipGit = true
-			logger.Info("git", "msg", err.Error())
-			err = nil
-		} else {
-			return
-		}
-	} else if stderr.String() != "" {
-		err = fmt.Errorf("cmd err %s", stderr.String())
-		return
+	var bts []byte
+	if bts, err = c.Output(); err != nil {
+		skipGit = true
+		logger.Info("git", "msg", err.Error())
 	} else {
-		currentGitVersion = strings.Trim(strings.Split(stdout.String(), " ")[2], "\n")
+		currentGitVersion = strings.Trim(strings.Split(string(bts), " ")[2], "\n")
 	}
 
 	sysInfo := sysinfo.GetSystemInfo()
@@ -63,8 +52,9 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 	if sysInfo.NumCPU < MINIMUM_NUM_CPU {
 		val.invalid("cpus", strconv.FormatInt(int64(sysInfo.NumCPU), 10), strconv.FormatInt(MINIMUM_NUM_CPU, 10))
 	}
-	// TODO: check minimum version using semver. otherwise may be wrong with 2.10 < 2.9
-	if !skipGit && currentGitVersion < MININUM_GIT_VERSION {
+	cv, _ := semver.New(currentGitVersion)
+	mv, _ := semver.New(MININUM_GIT_VERSION)
+	if !skipGit && cv.LT(*mv) {
 		val.invalid("git version", currentGitVersion, MININUM_GIT_VERSION)
 	}
 	if !val.isValid {
