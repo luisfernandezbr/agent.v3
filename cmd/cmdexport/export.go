@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/deviceinfo"
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/integrationid"
@@ -47,6 +48,7 @@ type export struct {
 	lastProcessed *jsonstore.Store
 
 	gitProcessingRepos chan rpcdef.GitRepoFetch
+	deviceInfo         deviceinfo.CommonInfo
 }
 
 func newExport(opts Opts) (*export, error) {
@@ -58,6 +60,13 @@ func newExport(opts Opts) (*export, error) {
 	s.Command, err = cmdintegration.NewCommand(opts.Opts)
 	if err != nil {
 		return nil, err
+	}
+
+	s.deviceInfo = deviceinfo.CommonInfo{
+		CustomerID: opts.AgentConfig.CustomerID,
+		DeviceID:   s.EnrollConf.DeviceID,
+		SystemID:   s.EnrollConf.SystemID,
+		Root:       opts.Opts.AgentConfig.PinpointRoot,
 	}
 
 	if opts.ReprocessHistorical {

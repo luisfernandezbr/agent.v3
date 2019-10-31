@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:2e557a820f7a27413e4ed4a897d3552ac44d2268db16fc87471dd199b632f4a0"
+  name = "github.com/blang/semver"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "ba2c2ddd89069b46a7011d4106f6868f17ee1705"
+  version = "v3.6.1"
+
+[[projects]]
   digest = "1:d1fe4f79a99ebe0558a1636207d8d5631a1f0757b03a5294ab8d0bee0d4fae52"
   name = "github.com/boyter/scc"
   packages = ["processor"]
@@ -899,6 +907,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/blang/semver",
     "github.com/cloudfoundry/gosigar",
     "github.com/denisbrodbeck/machineid",
     "github.com/fatih/color",

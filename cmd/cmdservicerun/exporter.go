@@ -72,10 +72,11 @@ type exporter struct {
 
 	conf agentconf.Config
 
-	logger    hclog.Logger
-	opts      exporterOpts
-	mu        sync.Mutex
-	exporting bool
+	logger     hclog.Logger
+	opts       exporterOpts
+	mu         sync.Mutex
+	exporting  bool
+	deviceInfo deviceinfo.CommonInfo
 }
 
 type exportRequest struct {
@@ -90,6 +91,12 @@ func newExporter(opts exporterOpts) *exporter {
 	s := &exporter{}
 	s.opts = opts
 	s.conf = opts.Conf
+	s.deviceInfo = deviceinfo.CommonInfo{
+		CustomerID: s.conf.CustomerID,
+		SystemID:   s.conf.SystemID,
+		DeviceID:   s.conf.DeviceID,
+		Root:       s.opts.PinpointRoot,
+	}
 	s.logger = opts.Logger
 	s.ExportQueue = make(chan exportRequest)
 	return s
@@ -139,8 +146,7 @@ func (s *exporter) sendExportEvent(ctx context.Context, jobID string, data *agen
 		}
 		data.Integrations = append(data.Integrations, v)
 	}
-
-	deviceinfo.AppendCommonInfoFromConfig(data, s.conf, s.opts.PinpointRoot)
+	s.deviceInfo.AppendCommonInfo(data)
 	publishEvent := event.PublishEvent{
 		Object: data,
 		Headers: map[string]string{

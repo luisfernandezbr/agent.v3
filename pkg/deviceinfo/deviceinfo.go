@@ -4,8 +4,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/agentconf"
-
 	"github.com/pinpt/agent.next/pkg/sysinfo"
 	"github.com/pinpt/go-common/datetime"
 )
@@ -15,16 +13,6 @@ func SystemID() string {
 }
 
 var started = time.Now()
-
-func AppendCommonInfoFromConfig(event interface{}, conf agentconf.Config, root string) {
-	ci := CommonInfo{
-		CustomerID: conf.CustomerID,
-		DeviceID:   conf.DeviceID,
-		SystemID:   conf.SystemID,
-		Root:       root,
-	}
-	ci.AppendCommonInfo(event)
-}
 
 type CommonInfo struct {
 	CustomerID string

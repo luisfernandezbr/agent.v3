@@ -14,7 +14,6 @@ import (
 	"github.com/pinpt/go-common/number"
 )
 
-// TODO: root is passed but not used, this is likely to break with custom --pinpoint flag passed
 func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, err error) {
 
 	const GB = 1024 * 1024 * 1024
