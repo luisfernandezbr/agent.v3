@@ -405,13 +405,7 @@ func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchP
 	args.URL = repoURL
 	args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
 	args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
-	for _, pr := range prs {
-		pr2 := rpcdef.GitRepoFetchPR{}
-		pr2.ID = pr.ID
-		pr2.RefID = pr.RefID
-		pr2.LastCommitSHA = pr.LastCommitSHA
-		args.PRs = append(args.PRs, pr2)
-	}
+	args.PRs = prs
 	if err = s.agent.ExportGitRepo(args); err != nil {
 		return err
 	}
