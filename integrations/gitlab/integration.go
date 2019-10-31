@@ -251,7 +251,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 	repos = commonrepo.Filter(logger, repos, s.config.FilterConfig)
 
 	if s.config.OnlyGit {
-		logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
+		logger.Warn("only_ripsrc flag passed, skipping export of data from gitlab api")
 		for _, repo := range repos {
 			err := s.exportGit(repo, nil)
 			if err != nil {

@@ -213,32 +213,14 @@ func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender.Ses
 
 	repos = commonrepo.Filter(logger, repos, s.config.FilterConfig)
 
-	// queue repos for processing with ripsrc
-	{
-
+	if s.config.OnlyGit {
+		logger.Warn("only_ripsrc flag passed, skipping export of data from bitbucket api")
 		for _, repo := range repos {
-			urlUser := url.UserPassword(s.config.Username, s.config.Password)
-			repoURL, err := getRepoURL(s.config.URL, urlUser, "/"+repo.NameWithOwner)
-			if err != nil {
-				return err
-			}
-
-			args := rpcdef.GitRepoFetch{}
-			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
-			args.UniqueName = repo.NameWithOwner
-			args.RefType = s.refType
-			args.URL = repoURL
-			args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
-			args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
-			err = s.agent.ExportGitRepo(args)
+			err := s.exportGit(repo, nil)
 			if err != nil {
 				return err
 			}
 		}
-	}
-
-	if s.config.OnlyGit {
-		logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
 		return nil
 	}
 
@@ -278,7 +260,12 @@ func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender.Ses
 			return err
 		}
 
-		if err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender); err != nil {
+		prs, err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
+		if err != nil {
+			return err
+		}
+
+		if err = s.exportGit(repo, prs); err != nil {
 			return err
 		}
 
@@ -402,4 +389,31 @@ func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) 
 	u.User = user
 	u.Path = nameWithOwner
 	return u.String(), nil
+}
+
+func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchPR) error {
+	urlUser := url.UserPassword(s.config.Username, s.config.Password)
+	repoURL, err := getRepoURL(s.config.URL, urlUser, repo.NameWithOwner)
+	if err != nil {
+		return err
+	}
+
+	args := rpcdef.GitRepoFetch{}
+	args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
+	args.UniqueName = repo.NameWithOwner
+	args.RefType = s.refType
+	args.URL = repoURL
+	args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
+	args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
+	for _, pr := range prs {
+		pr2 := rpcdef.GitRepoFetchPR{}
+		pr2.ID = pr.ID
+		pr2.RefID = pr.RefID
+		pr2.LastCommitSHA = pr.LastCommitSHA
+		args.PRs = append(args.PRs, pr2)
+	}
+	if err = s.agent.ExportGitRepo(args); err != nil {
+		return err
+	}
+	return nil
 }
