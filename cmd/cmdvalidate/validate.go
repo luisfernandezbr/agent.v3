@@ -20,7 +20,7 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 
 	const MINIMUM_MEMORY = 16 * GB
 	const MINIMUM_SPACE = 100 * GB
-	const MINIMUM_NUM_CPU = 2 * 10
+	const MINIMUM_NUM_CPU = 2
 	const MININUM_GIT_VERSION = "2.13.0"
 
 	c := exec.CommandContext(ctx, "git", "version")
