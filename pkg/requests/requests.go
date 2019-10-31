@@ -52,7 +52,7 @@ func (opts Requests) retryDo(ctx context.Context, req *http.Request) (resp *http
 	retry := opts.Retryable
 	retries := retry.MaxAttempts
 	count := 0
-	for time.Since(started) < opts.Retryable.MaxDuration {
+	for time.Since(started) < retry.MaxDuration {
 		resp, err = opts.Client.Do(req)
 		if err != nil {
 			return
