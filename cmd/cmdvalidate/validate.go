@@ -52,11 +52,14 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 	if sysInfo.NumCPU < MINIMUM_NUM_CPU {
 		val.invalid("cpus", strconv.FormatInt(int64(sysInfo.NumCPU), 10), strconv.FormatInt(MINIMUM_NUM_CPU, 10))
 	}
-	cv, _ := semver.New(currentGitVersion)
-	mv, _ := semver.New(MININUM_GIT_VERSION)
-	if !skipGit && cv.LT(*mv) {
-		val.invalid("git version", currentGitVersion, MININUM_GIT_VERSION)
+	if !skipGit {
+		cv, _ := semver.New(currentGitVersion)
+		mv, _ := semver.New(MININUM_GIT_VERSION)
+		if cv.LT(*mv) {
+			val.invalid("git version", currentGitVersion, MININUM_GIT_VERSION)
+		}
 	}
+
 	if !val.isValid {
 		logger.Error("Minimum system requirements were not met")
 		return
