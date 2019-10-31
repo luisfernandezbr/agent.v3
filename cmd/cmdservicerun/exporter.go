@@ -140,7 +140,7 @@ func (s *exporter) sendExportEvent(ctx context.Context, jobID string, data *agen
 		data.Integrations = append(data.Integrations, v)
 	}
 
-	deviceinfo.AppendCommonInfoFromConfig(data, s.conf)
+	deviceinfo.AppendCommonInfoFromConfig(data, s.conf, s.opts.PinpointRoot)
 	publishEvent := event.PublishEvent{
 		Object: data,
 		Headers: map[string]string{

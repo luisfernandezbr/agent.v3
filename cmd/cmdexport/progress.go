@@ -31,7 +31,7 @@ func (s *export) sendProgress(ctx context.Context, progressData []byte) error {
 		Data:    &str,
 		Success: true,
 	}
-	deviceinfo.AppendCommonInfoFromConfig(data, s.EnrollConf)
+	deviceinfo.AppendCommonInfoFromConfig(data, s.EnrollConf, s.Locs.Root)
 	publishEvent := event.PublishEvent{
 		Object: data,
 		Headers: map[string]string{

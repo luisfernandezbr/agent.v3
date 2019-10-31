@@ -9,12 +9,6 @@ import (
 	pos "github.com/pinpt/go-common/os"
 )
 
-var root string
-
-func SetRoot(r string) {
-	root = r
-}
-
 // SystemInfo returns the operating system details
 type SystemInfo struct {
 	ID           string
@@ -31,18 +25,22 @@ type SystemInfo struct {
 	FreeSpace    uint64 `json:"free_space"`
 }
 
-func getDefault() SystemInfo {
-	var s SystemInfo
-	hostname, _ := os.Hostname()
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
+func GetID() string {
 	id := pos.Getenv("PP_AGENT_ID", os.Getenv("PP_UUID")) // for the cloud agent, allow it to be overriden
 	if id == "" {
 		id, _ = machineid.ProtectedID("pinpoint-agent")
 	}
+	return id
+}
+
+func getDefault(root string) SystemInfo {
+	var s SystemInfo
+	hostname, _ := os.Hostname()
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
 	mem := sigar.Mem{}
 	mem.Get()
-	s.ID = id
+	s.ID = GetID()
 	s.Hostname = hostname
 	s.Memory = m.Alloc
 	s.TotalMemory = mem.Total

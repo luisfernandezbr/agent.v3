@@ -165,7 +165,8 @@ func (s *runner) sendEnabled(ctx context.Context) error {
 	data.Success = true
 	data.Error = nil
 	data.Data = nil
-	deviceinfo.AppendCommonInfoFromConfig(&data, s.conf)
+
+	deviceinfo.AppendCommonInfoFromConfig(&data, s.conf, s.opts.PinpointRoot)
 
 	publishEvent := event.PublishEvent{
 		Object: &data,
@@ -221,7 +222,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 		// TODO: add connection validation
 
 		sendEvent := func(resp *agent.IntegrationResponse) (datamodel.ModelSendEvent, error) {
-			deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
+			deviceinfo.AppendCommonInfoFromConfig(resp, s.conf, s.opts.PinpointRoot)
 			return datamodel.NewModelSendEvent(resp), nil
 		}
 
@@ -340,7 +341,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 				resp.Teams = append(resp.Teams, team)
 			}
 		}
-		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
+		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf, s.opts.PinpointRoot)
 		return datamodel.NewModelSendEvent(resp), nil
 	}
 
@@ -382,7 +383,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 			}
 		}
 
-		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
+		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf, s.opts.PinpointRoot)
 		return datamodel.NewModelSendEvent(resp), nil
 	}
 
@@ -422,7 +423,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 				resp.Projects = append(resp.Projects, *project)
 			}
 		}
-		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
+		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf, s.agentConfig.PinpointRoot)
 		return datamodel.NewModelSendEvent(resp), nil
 	}
 
@@ -461,7 +462,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 			resp.WorkConfig = *workStatuses
 		}
 
-		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf)
+		deviceinfo.AppendCommonInfoFromConfig(resp, s.conf, s.agentConfig.PinpointRoot)
 
 		return datamodel.NewModelSendEvent(resp), nil
 	}
@@ -614,7 +615,7 @@ func (s *runner) sendPing(ctx context.Context) error {
 }
 
 func (s *runner) sendEvent(ctx context.Context, agentEvent datamodel.Model, jobID string, extraHeaders map[string]string) error {
-	deviceinfo.AppendCommonInfoFromConfig(agentEvent, s.conf)
+	deviceinfo.AppendCommonInfoFromConfig(agentEvent, s.conf, s.agentConfig.PinpointRoot)
 	headers := map[string]string{
 		"uuid":        s.conf.DeviceID,
 		"customer_id": s.conf.CustomerID,

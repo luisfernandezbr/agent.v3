@@ -111,7 +111,12 @@ func (s *enroller) SendEvent(ctx context.Context) error {
 	now := time.Now()
 	date.ConvertToModel(now, &data.RequestDate)
 
-	deviceinfo.AppendCommonInfo(&data, "", s.deviceID, s.systemID)
+	ci := deviceinfo.CommonInfo{
+		DeviceID: s.deviceID,
+		SystemID: s.systemID,
+		Root:     s.opts.PinpointRoot,
+	}
+	ci.AppendCommonInfo(&data)
 
 	reqEvent := event.PublishEvent{
 		Object: &data,

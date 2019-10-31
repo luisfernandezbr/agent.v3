@@ -35,7 +35,7 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 		currentGitVersion = strings.Trim(strings.Split(string(bts), " ")[2], "\n")
 	}
 
-	sysInfo := sysinfo.GetSystemInfo()
+	sysInfo := sysinfo.GetSystemInfo(root)
 
 	val := validator{
 		logger:  logger,
@@ -47,7 +47,7 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 	}
 	if sysInfo.FreeSpace < MINIMUM_SPACE {
 		val.invalid("space", number.ToBytesSize(int64(sysInfo.FreeSpace)), number.ToBytesSize(int64(MINIMUM_SPACE)))
-		logger.Info("using pinpoint root", "dir", "TODO")
+		logger.Info("using pinpoint root", "dir", root)
 	}
 	if sysInfo.NumCPU < MINIMUM_NUM_CPU {
 		val.invalid("cpus", strconv.FormatInt(int64(sysInfo.NumCPU), 10), strconv.FormatInt(MINIMUM_NUM_CPU, 10))
