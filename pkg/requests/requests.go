@@ -13,14 +13,15 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+type RetryableRequest struct {
+	MaxAttempts float64
+	MaxDuration time.Duration
+	RetryDelay  time.Duration
+}
 type Requests struct {
 	Logger    hclog.Logger
 	Client    *http.Client
-	Retryable struct {
-		MaxAttempts float64
-		MaxDuration time.Duration
-		RetryDelay  time.Duration
-	}
+	Retryable RetryableRequest
 }
 
 func New(logger hclog.Logger, client *http.Client) Requests {
