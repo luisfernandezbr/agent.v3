@@ -143,14 +143,12 @@ func (s *validator) runValidate() (errs []string) {
 		return
 	}
 
-	if res0.RepoURL == "" {
-		rerr(errors.New("no repo found in validate"))
-		return
-	}
-	err = s.cloneRepo(res0.RepoURL)
-	if err != nil {
-		rerr(err)
-		return
+	if res0.RepoURL != "" { // repo url is only set for git integrations
+		err = s.cloneRepo(res0.RepoURL)
+		if err != nil {
+			rerr(err)
+			return
+		}
 	}
 
 	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
