@@ -128,8 +128,7 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 			res.Errors = append(res.Errors, err.Error())
 			return res, err
 		}
-
-		res.ReposURLs = append(res.ReposURLs, repoURL)
+		res.RepoURL = repoURL
 	}
 
 	return res, err

@@ -109,6 +109,11 @@ func NewCommand(opts Opts) (*Command, error) {
 		return nil, err
 	}
 
+	err = os.MkdirAll(s.Locs.Temp, 0777)
+	if err != nil {
+		return nil, err
+	}
+
 	err = s.setupConfig()
 	if err != nil {
 		return nil, err

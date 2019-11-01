@@ -90,7 +90,7 @@ func newValidator(opts Opts) (_ *validator, rerr error) {
 }
 
 type Result struct {
-	rpcdef.ValidationResult
+	Errors []string `json:"errors"`
 	// Success is true if there are no errors. Useful when returning result as json to ensure that marshalling worked.
 	Success bool `json:"success"`
 }
@@ -143,19 +143,14 @@ func (s *validator) runValidate() (errs []string) {
 		return
 	}
 
-	s.Logger.Debug("validate len repos", "len", len(res0.ReposURLs))
-
-	for _, repoURL := range res0.ReposURLs {
-		urlWithoutCreds, err := urlWithoutCreds(repoURL)
-		if err != nil {
-			rerr(fmt.Errorf("url passed to git clone validation is not valid, err: %v", err))
-		}
-		s.Logger.Info("git clone validation start", "url", urlWithoutCreds)
-		if err := s.testGitClone(repoURL); err != nil {
-			rerr(fmt.Errorf("git clone validation failed. url: %v err: %v", urlWithoutCreds, err))
-			return
-		}
-		s.Logger.Info("git clone validation success", "url", urlWithoutCreds)
+	if res0.RepoURL == "" {
+		rerr(errors.New("no repo found in validate"))
+		return
+	}
+	err = s.cloneRepo(res0.RepoURL)
+	if err != nil {
+		rerr(err)
+		return
 	}
 
 	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
@@ -165,6 +160,22 @@ func (s *validator) runValidate() (errs []string) {
 	}
 
 	return res0.Errors
+}
+
+func (s *validator) cloneRepo(url string) error {
+	urlWithoutCreds, err := urlWithoutCreds(url)
+	if err != nil {
+		return fmt.Errorf("url passed to git clone validation is not valid, err: %v", err)
+	}
+
+	s.Logger.Info("git clone validation start", "url", urlWithoutCreds)
+
+	if err := s.cloneRepo2(url); err != nil {
+		return fmt.Errorf("git clone validation failed. url: %v err: %v", urlWithoutCreds, err)
+	}
+
+	s.Logger.Info("git clone validation success", "url", urlWithoutCreds)
+	return nil
 }
 
 func urlWithoutCreds(urlStr string) (string, error) {
@@ -179,7 +190,7 @@ func urlWithoutCreds(urlStr string) (string, error) {
 func (s *validator) Destroy() {
 }
 
-func (s *validator) testGitClone(repoURL string) error {
+func (s *validator) cloneRepo2(url string) error {
 	tmpDir, err := ioutil.TempDir(s.Locs.Temp, "validate-repo-clone-")
 	if err != nil {
 		return err
@@ -189,7 +200,7 @@ func (s *validator) testGitClone(repoURL string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	c := exec.CommandContext(ctx, "git", "clone", "--progress", repoURL, tmpDir)
+	c := exec.CommandContext(ctx, "git", "clone", "--progress", url, tmpDir)
 	var outBuf bytes.Buffer
 	c.Stdout = &outBuf
 	stderr, _ := c.StderrPipe()

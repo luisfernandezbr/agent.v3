@@ -92,6 +92,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 	params := url.Values{}
 	params.Set("per_page", "1")
 
+LOOP:
 	for _, group := range groups {
 		_, repos, err := api.ReposPageRESTAll(s.qc, group, params)
 		if err != nil {
@@ -104,7 +105,8 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 				rerr(err)
 				return
 			}
-			res.ReposURLs = append(res.ReposURLs, repoURL)
+			res.RepoURL = repoURL
+			break LOOP
 		}
 	}
 

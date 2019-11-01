@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -40,6 +41,12 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
+	if len(orgs) == 0 {
+		rerr(errors.New("no organizations found"))
+		return
+	}
+
+LOOP:
 	for _, org := range orgs {
 		_, repos, err := api.ReposPageInternal(s.qc, org, "first: 1")
 		if err != nil {
@@ -53,7 +60,8 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 				return
 			}
 
-			res.ReposURLs = append(res.ReposURLs, repoURL)
+			res.RepoURL = repoURL
+			break LOOP // only return 1 repo url
 		}
 	}
 

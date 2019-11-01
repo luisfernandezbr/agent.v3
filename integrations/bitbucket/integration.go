@@ -88,6 +88,8 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 
 	params := url.Values{}
 	params.Set("pagelen", "1")
+
+LOOP:
 	for _, team := range teamNames {
 		_, repos, err := api.ReposPage(s.qc, team, params)
 		if err != nil {
@@ -95,13 +97,14 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 			return
 		}
 		if len(repos) > 0 {
-			repoUrl, err := getRepoURL(s.config.URL, url.UserPassword(s.config.Username, s.config.Password), repos[0].NameWithOwner)
+			repoURL, err := getRepoURL(s.config.URL, url.UserPassword(s.config.Username, s.config.Password), repos[0].NameWithOwner)
 			if err != nil {
 				rerr(err)
 				return
 			}
 
-			res.ReposURLs = append(res.ReposURLs, repoUrl)
+			res.RepoURL = repoURL
+			break LOOP
 		}
 	}
 
