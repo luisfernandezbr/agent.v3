@@ -82,7 +82,6 @@ func init() {
 	flagPinpointRoot(cmd)
 	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
 	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
-	cmd.Flags().MarkHidden("skip-validate")
 	cmdRoot.AddCommand(cmd)
 }
 
