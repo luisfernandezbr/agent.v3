@@ -21,7 +21,12 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 	const MINIMUM_MEMORY = 16 * GB
 	const MINIMUM_SPACE = 100 * GB
 	const MINIMUM_NUM_CPU = 2
-	const MININUM_GIT_VERSION = "2.13.0"
+	const MINIMUM_GIT_VERSION = "2.13.0"
+
+	val := validator{
+		logger:  logger,
+		isValid: true,
+	}
 
 	c := exec.CommandContext(ctx, "git", "version")
 	var skipGit bool
@@ -29,6 +34,7 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 	var bts []byte
 	if bts, err = c.Output(); err != nil {
 		skipGit = true
+		val.isValid = false
 		logger.Info("git", "msg", err.Error())
 		err = nil
 	} else {
@@ -36,11 +42,6 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 	}
 
 	sysInfo := sysinfo.GetSystemInfo(root)
-
-	val := validator{
-		logger:  logger,
-		isValid: true,
-	}
 
 	if sysInfo.TotalMemory < MINIMUM_MEMORY {
 		val.invalid("memory", number.ToBytesSize(int64(sysInfo.TotalMemory)), number.ToBytesSize(int64(MINIMUM_MEMORY)))
@@ -54,9 +55,9 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 	}
 	if !skipGit {
 		cv, _ := semver.New(currentGitVersion)
-		mv, _ := semver.New(MININUM_GIT_VERSION)
+		mv, _ := semver.New(MINIMUM_GIT_VERSION)
 		if cv.LT(*mv) {
-			val.invalid("git version", currentGitVersion, MININUM_GIT_VERSION)
+			val.invalid("git version", currentGitVersion, MINIMUM_GIT_VERSION)
 		}
 	}
 

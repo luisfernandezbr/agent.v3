@@ -60,7 +60,7 @@ var cmdEnroll = &cobra.Command{
 				exitWithErr(logger, err)
 			}
 			if !valid {
-				exitWithErr(logger, fmt.Errorf("the mininum requirements were not met"))
+				exitWithErr(logger, fmt.Errorf("the minimum requirements were not met"))
 			}
 		}
 
@@ -263,7 +263,7 @@ func init() {
 
 var cmdValidate = &cobra.Command{
 	Use:   "validate",
-	Short: "Validate mininum hardware requirements",
+	Short: "Validate minimum hardware requirements",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 
