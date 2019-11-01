@@ -37,17 +37,6 @@
   version = "v2.1.0"
 
 [[projects]]
-  digest = "1:b19ccf2471b4e9dea9d60386e4fc3867489ee8b891e0312186e019011caebfa8"
-  name = "github.com/cloudfoundry/gosigar"
-  packages = [
-    ".",
-    "sys/windows",
-  ]
-  pruneopts = "T"
-  revision = "dcb1afc219e4c99f21c37fb1ec22ed9ffe443317"
-  version = "v1.1.0"
-
-[[projects]]
   digest = "1:9f42202ac457c462ad8bb9642806d275af9ab4850cf0b1960b9c6f083d4a309a"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -361,6 +350,14 @@
   pruneopts = "T"
   revision = "91416a867f9a95cdf7332dd1e73264359d0d5c7e"
   version = "v6.2.23"
+
+[[projects]]
+  branch = "master"
+  digest = "1:5f81e80915d9312397c603b6da6f751a4ae36ae2b4d4f0474a34241d95738686"
+  name = "github.com/pbnjay/memory"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "974d429e7ae40c89e7dcd41cfcc22a0bfbe42510"
 
 [[projects]]
   digest = "1:5e73b34a27d827212102605789de00bd411b2e434812133c83935fe9897c75e1"
@@ -908,7 +905,6 @@
   analyzer-version = 1
   input-imports = [
     "github.com/blang/semver",
-    "github.com/cloudfoundry/gosigar",
     "github.com/denisbrodbeck/machineid",
     "github.com/fatih/color",
     "github.com/golang/protobuf/proto",
@@ -917,6 +913,7 @@
     "github.com/kardianos/service",
     "github.com/mitchellh/go-homedir",
     "github.com/mitchellh/go-ps",
+    "github.com/pbnjay/memory",
     "github.com/pinpt/go-common/api",
     "github.com/pinpt/go-common/auth",
     "github.com/pinpt/go-common/datamodel",

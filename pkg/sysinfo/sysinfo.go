@@ -4,7 +4,8 @@ import (
 	"os"
 	"runtime"
 
-	sigar "github.com/cloudfoundry/gosigar"
+	"github.com/pbnjay/memory"
+
 	"github.com/denisbrodbeck/machineid"
 	pos "github.com/pinpt/go-common/os"
 )
@@ -38,12 +39,10 @@ func getDefault(root string) SystemInfo {
 	hostname, _ := os.Hostname()
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	mem := sigar.Mem{}
-	mem.Get()
 	s.ID = GetID()
 	s.Hostname = hostname
 	s.Memory = m.Alloc
-	s.TotalMemory = mem.Total
+	s.TotalMemory = memory.TotalMemory()
 	s.OS = runtime.GOOS
 	s.NumCPU = runtime.NumCPU()
 	s.GoVersion = runtime.Version()[2:] // trim off go

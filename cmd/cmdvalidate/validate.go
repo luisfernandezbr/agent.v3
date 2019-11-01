@@ -30,6 +30,7 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 	if bts, err = c.Output(); err != nil {
 		skipGit = true
 		logger.Info("git", "msg", err.Error())
+		err = nil
 	} else {
 		currentGitVersion = strings.Trim(strings.Split(string(bts), " ")[2], "\n")
 	}
