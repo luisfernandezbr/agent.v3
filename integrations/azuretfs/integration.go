@@ -116,21 +116,24 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 		return res, err
 	}
 	var repos []*sourcecode.Repo
+	// do a quick api call to see if the credentials, url, etc.. are correct
 	if _, repos, err = s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs); err != nil {
 		// don't return, get as many errors are possible
 		res.Errors = append(res.Errors, err.Error())
 		return res, err
 	}
 
-	if len(repos) > 0 {
-		repoURL, err := s.appendCredentials(repos[0].URL)
-		if err != nil {
-			res.Errors = append(res.Errors, err.Error())
-			return res, err
+	if s.IntegrationType == IntegrationTypeCode {
+		// only check git clone if this is a SOURCECODE type
+		if len(repos) > 0 {
+			repoURL, err := s.appendCredentials(repos[0].URL)
+			if err != nil {
+				res.Errors = append(res.Errors, err.Error())
+				return res, err
+			}
+			res.RepoURL = repoURL
 		}
-		res.RepoURL = repoURL
 	}
-
 	return res, err
 }
 
