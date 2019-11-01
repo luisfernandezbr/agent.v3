@@ -224,13 +224,7 @@ func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchP
 	args.URL = repoURL
 	args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
 	args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
-	for _, pr := range prs {
-		pr2 := rpcdef.GitRepoFetchPR{}
-		pr2.ID = pr.ID
-		pr2.RefID = pr.RefID
-		pr2.LastCommitSHA = pr.LastCommitSHA
-		args.PRs = append(args.PRs, pr2)
-	}
+	args.PRs = prs
 	if err = s.agent.ExportGitRepo(args); err != nil {
 		return err
 	}
@@ -251,7 +245,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 	repos = commonrepo.Filter(logger, repos, s.config.FilterConfig)
 
 	if s.config.OnlyGit {
-		logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
+		logger.Warn("only_ripsrc flag passed, skipping export of data from gitlab api")
 		for _, repo := range repos {
 			err := s.exportGit(repo, nil)
 			if err != nil {
@@ -463,8 +457,8 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 					meta.LastCommitSHA = commits[0].Sha
 					res = append(res, meta)
 				}
-				for _, c := range commits {
-					pr.CommitShas = append(pr.CommitShas, c.Sha)
+				for ind := len(commits) - 1; ind >= 0; ind-- {
+					pr.CommitShas = append(pr.CommitShas, commits[ind].Sha)
 				}
 
 				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, pr.CommitShas)
