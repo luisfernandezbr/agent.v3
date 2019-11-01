@@ -359,13 +359,7 @@ func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors
 		ires := res[id]
 		if ires.Err != nil {
 			s.Logger.Error("Export failed", "integration", id, "dur", ires.Duration.String(), "err", ires.Err)
-			panicOut, err := integration.CloseAndDetectPanic()
-			if panicOut != "" {
-				// This is already printed in integration. But we will repeat output at the end, so it's not lost.
-				fmt.Println("Panic in integration", id)
-				fmt.Println(panicOut)
-			}
-			if err != nil {
+			if err := s.Command.CloseOnlyIntegrationAndHandlePanic(integration); err != nil {
 				s.Logger.Error("Could not close integration", "err", err)
 			}
 			failed = append(failed, id)

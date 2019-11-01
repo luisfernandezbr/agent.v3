@@ -2,6 +2,7 @@
 package cmdintegration
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -11,10 +12,13 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/pkg/agentconf"
+	"github.com/pinpt/agent.next/pkg/deviceinfo"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/iloader"
 	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/go-common/event"
+	"github.com/pinpt/integration-sdk/agent"
 )
 
 type Opts struct {
@@ -202,6 +206,23 @@ func (s *Command) CloseOnlyIntegrationAndHandlePanic(integration *iloader.Integr
 		// This is already printed in integration logs, but easier to debug if it's repeated in stdout.
 		fmt.Println("Panic in integration")
 		fmt.Println(panicOut)
+		if s.Opts.AgentConfig.Backend.Enable {
+			data := &agent.Crash{
+				Data:  &panicOut,
+				Error: &panicOut,
+				Type:  agent.CrashTypeCrash,
+			}
+			deviceinfo.AppendCommonInfoFromConfig(data, s.EnrollConf)
+			publishEvent := event.PublishEvent{
+				Object: data,
+				Headers: map[string]string{
+					"uuid": s.EnrollConf.DeviceID,
+				},
+			}
+			if err := event.Publish(context.Background(), publishEvent, s.EnrollConf.Channel, s.EnrollConf.APIKey); err != nil {
+				s.Logger.Error("error sending agent.Crash to backend", "err", err)
+			}
+		}
 	}
 	if err != nil {
 		return err
