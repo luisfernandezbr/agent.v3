@@ -94,8 +94,8 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 					meta.LastCommitSHA = commits[0].Sha
 					res = append(res, meta)
 				}
-				for _, c := range commits {
-					pr.CommitShas = append(pr.CommitShas, c.Sha)
+				for ind := len(commits) - 1; ind >= 0; ind-- {
+					pr.CommitShas = append(pr.CommitShas, commits[ind].Sha)
 				}
 
 				pr.CommitIds = s.qc.IDs.CodeCommits(pr.RepoID, pr.CommitShas)
