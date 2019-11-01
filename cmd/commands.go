@@ -60,7 +60,7 @@ var cmdEnroll = &cobra.Command{
 				exitWithErr(logger, err)
 			}
 			if !valid {
-				exitWithErr(logger, fmt.Errorf("the miminum requirements were not met"))
+				exitWithErr(logger, fmt.Errorf("the mininum requirements were not met"))
 			}
 		}
 
