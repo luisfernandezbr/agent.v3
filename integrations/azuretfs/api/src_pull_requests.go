@@ -58,12 +58,12 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 			commits, err := api.fetchPullRequestCommits(repoRefID, pr.PullRequestID)
 			pridstring := fmt.Sprintf("%d", pr.PullRequestID)
 			if err != nil {
-				api.logger.Error("error fetching commits for PR, skipping", "pr_id", pr.PullRequestID, "repo_id", repoid)
+				api.logger.Error("error fetching commits for PR, skipping", "pr_id", pr.PullRequestID, "repo_id", repoid, "err", err)
 				return
 			}
 			prcsender, err := prsender.Session(sourcecode.PullRequestCommitModelName.String(), pridstring, pridstring)
 			if err != nil {
-				api.logger.Error("error creating sender session for pull request commits", "pr_id", pr.PullRequestID, "repo_id", repoid)
+				api.logger.Error("error creating sender session for pull request commits", "pr_id", pr.PullRequestID, "repo_id", repoid, "err", err)
 				return
 			}
 			if err := prcsender.SetTotal(len(commits)); err != nil {
@@ -79,7 +79,7 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 			}
 			prrsender, err := prsender.Session(sourcecode.PullRequestReviewModelName.String(), pridstring, pridstring)
 			if err != nil {
-				api.logger.Error("error creating sender session for pull request reviews", "pr_id", pr.PullRequestID, "repo_id", repoid)
+				api.logger.Error("error creating sender session for pull request reviews", "pr_id", pr.PullRequestID, "repo_id", repoid, "err", err)
 				return
 			}
 			if err := prrsender.SetTotal(len(pr.Reviewers)); err != nil {
@@ -106,7 +106,7 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 		async.Do(func() {
 			prcsender, err := prsender.Session(sourcecode.PullRequestCommentModelName.String(), fmt.Sprintf("%d", pr.PullRequestID), pr.Title)
 			if err != nil {
-				api.logger.Error("error creating sender session for pull request comments", "pr_id", pr.PullRequestID, "repo_id", repoid)
+				api.logger.Error("error creating sender session for pull request comments", "pr_id", pr.PullRequestID, "repo_id", repoid, "err", err)
 				return
 			}
 			api.sendPullRequestCommentObject(repoRefID, pr, prcsender)
@@ -123,7 +123,7 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 func (api *API) sendPullRequestCommentObject(repoRefID string, pr pullRequestResponse, sender *objsender.Session) {
 	comments, err := api.fetchPullRequestComments(pr.Repository.ID, pr.PullRequestID)
 	if err != nil {
-		api.logger.Error("error fetching comments for PR, skipping", "pr_id", pr.PullRequestID, "repo_id", pr.Repository.ID)
+		api.logger.Error("error fetching comments for PR, skipping", "pr_id", pr.PullRequestID, "repo_id", pr.Repository.ID, "err", err)
 		return
 	}
 	var total []*sourcecode.PullRequestComment
