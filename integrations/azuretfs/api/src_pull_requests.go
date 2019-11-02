@@ -58,7 +58,7 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 			commits, err := api.fetchPullRequestCommits(repoRefID, pr.PullRequestID)
 			pridstring := fmt.Sprintf("%d", pr.PullRequestID)
 			if err != nil {
-				api.logger.Error("error fetching commits for PR, skiping", "pr_id", pr.PullRequestID, "repo_id", repoid)
+				api.logger.Error("error fetching commits for PR, skipping", "pr_id", pr.PullRequestID, "repo_id", repoid)
 				return
 			}
 			prcsender, err := prsender.Session(sourcecode.PullRequestCommitModelName.String(), pridstring, pridstring)
@@ -123,7 +123,7 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 func (api *API) sendPullRequestCommentObject(repoRefID string, pr pullRequestResponse, sender *objsender.Session) {
 	comments, err := api.fetchPullRequestComments(pr.Repository.ID, pr.PullRequestID)
 	if err != nil {
-		api.logger.Error("error fetching comments for PR, skiping", "pr_id", pr.PullRequestID, "repo_id", pr.Repository.ID)
+		api.logger.Error("error fetching comments for PR, skipping", "pr_id", pr.PullRequestID, "repo_id", pr.Repository.ID)
 		return
 	}
 	var total []*sourcecode.PullRequestComment
