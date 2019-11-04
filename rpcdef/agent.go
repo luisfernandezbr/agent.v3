@@ -58,12 +58,6 @@ type GitRepoFetch struct {
 	PRs               []GitRepoFetchPR
 }
 
-type GitRepoFetchPR struct {
-	ID            string
-	RefID         string
-	LastCommitSHA string
-}
-
 func (s GitRepoFetch) Validate() error {
 	var missing []string
 	if s.RepoID == "" {
@@ -80,6 +74,40 @@ func (s GitRepoFetch) Validate() error {
 	}
 	if s.BranchURLTemplate == "" {
 		missing = append(missing, "BranchURLTemplate")
+	}
+	if len(missing) != 0 {
+		return fmt.Errorf("missing required param for GitRepoFetch: %s", strings.Join(missing, ", "))
+	}
+	for _, pr := range s.PRs {
+		err := pr.Validate()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type GitRepoFetchPR struct {
+	ID            string
+	RefID         string
+	URL           string
+	LastCommitSHA string
+}
+
+func (s GitRepoFetchPR) Validate() error {
+	var missing []string
+	if s.ID == "" {
+		missing = append(missing, "ID")
+	}
+	if s.RefID == "" {
+		missing = append(missing, "RefID")
+	}
+	if s.URL == "" {
+		missing = append(missing, "URL")
+	}
+	if s.LastCommitSHA == "" {
+		missing = append(missing, "LastCommitSHA")
 	}
 	if len(missing) != 0 {
 		return fmt.Errorf("missing required param for GitRepoFetch: %s", strings.Join(missing, ", "))
@@ -162,6 +190,7 @@ func (s *AgentServer) ExportGitRepo(ctx context.Context, req *proto.ExportGitRep
 		pr2 := GitRepoFetchPR{}
 		pr2.ID = pr.Id
 		pr2.RefID = pr.RefId
+		pr2.URL = pr.Url
 		pr2.LastCommitSHA = pr.LastCommitSha
 		fetch.PRs = append(fetch.PRs, pr2)
 	}
@@ -260,6 +289,7 @@ func (s *AgentClient) ExportGitRepo(fetch GitRepoFetch) error {
 		pr2 := &proto.ExportGitRepoPR{}
 		pr2.Id = pr.ID
 		pr2.RefId = pr.RefID
+		pr2.Url = pr.URL
 		pr2.LastCommitSha = pr.LastCommitSHA
 		args.Prs = append(args.Prs, pr2)
 	}

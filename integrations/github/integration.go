@@ -514,6 +514,7 @@ func (s *Integration) exportGit(repo api.Repo, prs []PRMeta) error {
 		pr2 := rpcdef.GitRepoFetchPR{}
 		pr2.ID = pr.ID
 		pr2.RefID = pr.RefID
+		pr2.URL = pr.URL
 		pr2.LastCommitSHA = pr.LastCommitSHA
 		args.PRs = append(args.PRs, pr2)
 	}
@@ -575,6 +576,7 @@ func (s *Integration) exportPullRequestsForRepo(
 				repoID := s.qc.RepoID(repo.ID)
 				meta.ID = s.qc.PullRequestID(repoID, pr.RefID)
 				meta.RefID = pr.RefID
+				meta.URL = pr.URL
 				meta.LastCommitSHA = pr.LastCommitSHA
 				res = append(res, meta)
 			}

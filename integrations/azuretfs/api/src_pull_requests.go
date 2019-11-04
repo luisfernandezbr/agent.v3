@@ -89,6 +89,7 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 			fetchprs = append(fetchprs, rpcdef.GitRepoFetchPR{
 				ID:            api.IDs.CodePullRequest(repoRefID, pridstring),
 				RefID:         pridstring,
+				URL:           pr.URL,
 				LastCommitSHA: pr.commitshas[len(pr.commitshas)-1],
 			})
 			fetchprsMutex.Unlock()

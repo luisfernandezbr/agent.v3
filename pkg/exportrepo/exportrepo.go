@@ -66,6 +66,7 @@ type Opts struct {
 type PR struct {
 	ID            string
 	RefID         string
+	URL           string
 	LastCommitSHA string
 }
 
@@ -297,14 +298,16 @@ func (s *Export) branches(ctx context.Context) error {
 				obj.PullRequestID = pr.ID
 				obj.RefID = pr.RefID
 				obj.Name = pr.RefID
+				obj.URL = pr.URL
 			} else {
 				obj.RefID = data.Name
 				obj.Name = data.Name
+				obj.URL = branchURL(s.opts.BranchURLTemplate, data.Name)
 			}
 
 			obj.RefType = s.opts.RefType
 			obj.CustomerID = s.opts.CustomerID
-			obj.URL = branchURL(s.opts.BranchURLTemplate, data.Name)
+
 			obj.Default = data.IsDefault
 			obj.Merged = data.IsMerged
 			obj.MergeCommitSha = data.MergeCommit

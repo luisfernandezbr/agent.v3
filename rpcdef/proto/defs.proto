@@ -120,7 +120,8 @@ message ExportGitRepoReq {
 message ExportGitRepoPR {
     string id = 1;
     string ref_id = 2;
-    string last_commit_sha = 3;
+    string url = 3;
+    string last_commit_sha = 4;    
 }
 
 message SessionStartReq {
