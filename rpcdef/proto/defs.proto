@@ -37,6 +37,7 @@ message IntegrationValidateConfigReq {
 
 message IntegrationValidateConfigResp {
     repeated string errors = 1;
+    string repo_url = 2;
 }
 
 message IntegrationOnboardExportReq {
@@ -113,6 +114,14 @@ message ExportGitRepoReq {
     string url = 4;
     string commit_url_template = 5;
     string branch_url_template = 6;
+    repeated ExportGitRepoPR prs = 7;
+}
+
+message ExportGitRepoPR {
+    string id = 1;
+    string ref_id = 2;
+    string url = 3;
+    string last_commit_sha = 4;    
 }
 
 message SessionStartReq {

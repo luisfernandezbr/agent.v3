@@ -55,6 +55,7 @@ type GitRepoFetch struct {
 	URL               string
 	CommitURLTemplate string
 	BranchURLTemplate string
+	PRs               []GitRepoFetchPR
 }
 
 func (s GitRepoFetch) Validate() error {
@@ -73,6 +74,40 @@ func (s GitRepoFetch) Validate() error {
 	}
 	if s.BranchURLTemplate == "" {
 		missing = append(missing, "BranchURLTemplate")
+	}
+	if len(missing) != 0 {
+		return fmt.Errorf("missing required param for GitRepoFetch: %s", strings.Join(missing, ", "))
+	}
+	for _, pr := range s.PRs {
+		err := pr.Validate()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type GitRepoFetchPR struct {
+	ID            string
+	RefID         string
+	URL           string
+	LastCommitSHA string
+}
+
+func (s GitRepoFetchPR) Validate() error {
+	var missing []string
+	if s.ID == "" {
+		missing = append(missing, "ID")
+	}
+	if s.RefID == "" {
+		missing = append(missing, "RefID")
+	}
+	if s.URL == "" {
+		missing = append(missing, "URL")
+	}
+	if s.LastCommitSHA == "" {
+		missing = append(missing, "LastCommitSHA")
 	}
 	if len(missing) != 0 {
 		return fmt.Errorf("missing required param for GitRepoFetch: %s", strings.Join(missing, ", "))
@@ -151,6 +186,14 @@ func (s *AgentServer) ExportGitRepo(ctx context.Context, req *proto.ExportGitRep
 	fetch.URL = req.Url
 	fetch.CommitURLTemplate = req.CommitUrlTemplate
 	fetch.BranchURLTemplate = req.BranchUrlTemplate
+	for _, pr := range req.Prs {
+		pr2 := GitRepoFetchPR{}
+		pr2.ID = pr.Id
+		pr2.RefID = pr.RefId
+		pr2.URL = pr.Url
+		pr2.LastCommitSHA = pr.LastCommitSha
+		fetch.PRs = append(fetch.PRs, pr2)
+	}
 	err := s.Impl.ExportGitRepo(fetch)
 	if err != nil {
 		return resp, err
@@ -242,6 +285,14 @@ func (s *AgentClient) ExportGitRepo(fetch GitRepoFetch) error {
 	args.Url = fetch.URL
 	args.CommitUrlTemplate = fetch.CommitURLTemplate
 	args.BranchUrlTemplate = fetch.BranchURLTemplate
+	for _, pr := range fetch.PRs {
+		pr2 := &proto.ExportGitRepoPR{}
+		pr2.Id = pr.ID
+		pr2.RefId = pr.RefID
+		pr2.Url = pr.URL
+		pr2.LastCommitSha = pr.LastCommitSHA
+		args.Prs = append(args.Prs, pr2)
+	}
 	_, err = s.client.ExportGitRepo(context.Background(), args)
 	if err != nil {
 		return err

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	"github.com/pinpt/agent.next/rpcdef"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/bitbucket/api"
@@ -16,7 +17,7 @@ import (
 
 func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
 	pullRequestSender *objsender.Session,
-	commitsSender *objsender.Session) (rerr error) {
+	commitsSender *objsender.Session) (res []rpcdef.GitRepoFetchPR, rerr error) {
 
 	logger = logger.With("repo", repo.NameWithOwner)
 	logger.Info("exporting")
@@ -85,8 +86,17 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 					return
 				}
 
-				for _, c := range commits {
-					pr.CommitShas = append(pr.CommitShas, c.Sha)
+				if len(commits) > 0 {
+					meta := rpcdef.GitRepoFetchPR{}
+					repoID := s.qc.IDs.CodeRepo(repo.ID)
+					meta.ID = s.qc.IDs.CodePullRequest(repoID, pr.RefID)
+					meta.RefID = pr.RefID
+					meta.URL = pr.URL
+					meta.LastCommitSHA = commits[0].Sha
+					res = append(res, meta)
+				}
+				for ind := len(commits) - 1; ind >= 0; ind-- {
+					pr.CommitShas = append(pr.CommitShas, commits[ind].Sha)
 				}
 
 				pr.CommitIds = s.qc.IDs.CodeCommits(pr.RepoID, pr.CommitShas)

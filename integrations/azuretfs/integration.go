@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	pstrings "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/integration-sdk/sourcecode"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/azuretfs/api"
@@ -114,9 +115,24 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 		res.Errors = append(res.Errors, err.Error())
 		return res, err
 	}
-	if _, _, err = s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs); err != nil {
+	var repos []*sourcecode.Repo
+	// do a quick api call to see if the credentials, url, etc.. are correct
+	if _, repos, err = s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs); err != nil {
 		// don't return, get as many errors are possible
 		res.Errors = append(res.Errors, err.Error())
+		return res, err
+	}
+
+	if s.IntegrationType == IntegrationTypeCode {
+		// only check git clone if this is a SOURCECODE type
+		if len(repos) > 0 {
+			repoURL, err := s.appendCredentials(repos[0].URL)
+			if err != nil {
+				res.Errors = append(res.Errors, err.Error())
+				return res, err
+			}
+			res.RepoURL = repoURL
+		}
 	}
 	return res, err
 }

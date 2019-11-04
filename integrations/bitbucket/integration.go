@@ -80,12 +80,33 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	if err := api.ValidateUser(s.qc); err != nil {
+	teamNames, err := api.Teams(s.qc)
+	if err != nil {
 		rerr(err)
 		return
 	}
 
-	// TODO: return a repo and validate repo that repo can be cloned in agent
+	params := url.Values{}
+	params.Set("pagelen", "1")
+
+LOOP:
+	for _, team := range teamNames {
+		_, repos, err := api.ReposPage(s.qc, team, params)
+		if err != nil {
+			rerr(err)
+			return
+		}
+		if len(repos) > 0 {
+			repoURL, err := getRepoURL(s.config.URL, url.UserPassword(s.config.Username, s.config.Password), repos[0].NameWithOwner)
+			if err != nil {
+				rerr(err)
+				return
+			}
+
+			res.RepoURL = repoURL
+			break LOOP
+		}
+	}
 
 	return
 }
@@ -195,34 +216,14 @@ func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender.Ses
 
 	repos = commonrepo.Filter(logger, repos, s.config.FilterConfig)
 
-	// queue repos for processing with ripsrc
-	{
-
+	if s.config.OnlyGit {
+		logger.Warn("only_ripsrc flag passed, skipping export of data from bitbucket api")
 		for _, repo := range repos {
-			u, err := url.Parse(s.config.URL)
-			if err != nil {
-				return err
-			}
-			u.User = url.UserPassword(s.config.Username, s.config.Password)
-			u.Path = "/" + repo.NameWithOwner
-			repoURL := u.Scheme + "://" + u.User.String() + "@" + strings.TrimPrefix(u.Host, "api.") + u.EscapedPath()
-
-			args := rpcdef.GitRepoFetch{}
-			args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
-			args.UniqueName = repo.NameWithOwner
-			args.RefType = s.refType
-			args.URL = repoURL
-			args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
-			args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
-			err = s.agent.ExportGitRepo(args)
+			err := s.exportGit(repo, nil)
 			if err != nil {
 				return err
 			}
 		}
-	}
-
-	if s.config.OnlyGit {
-		logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
 		return nil
 	}
 
@@ -262,7 +263,12 @@ func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender.Ses
 			return err
 		}
 
-		if err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender); err != nil {
+		prs, err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
+		if err != nil {
+			return err
+		}
+
+		if err = s.exportGit(repo, prs); err != nil {
 			return err
 		}
 
@@ -371,4 +377,40 @@ func (s *Integration) exportCommitUsers(ctx context.Context, logger hclog.Logger
 	}
 
 	return
+}
+
+func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {
+
+	if strings.Contains(repoURLPrefix, "api.bitbucket.org") {
+		repoURLPrefix = strings.Replace(repoURLPrefix, "api.", "", -1)
+	}
+
+	u, err := url.Parse(repoURLPrefix)
+	if err != nil {
+		return "", err
+	}
+	u.User = user
+	u.Path = nameWithOwner
+	return u.String(), nil
+}
+
+func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchPR) error {
+	urlUser := url.UserPassword(s.config.Username, s.config.Password)
+	repoURL, err := getRepoURL(s.config.URL, urlUser, repo.NameWithOwner)
+	if err != nil {
+		return err
+	}
+
+	args := rpcdef.GitRepoFetch{}
+	args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
+	args.UniqueName = repo.NameWithOwner
+	args.RefType = s.refType
+	args.URL = repoURL
+	args.CommitURLTemplate = commiturl.CommitURLTemplate(repo, s.config.URL)
+	args.BranchURLTemplate = commiturl.BranchURLTemplate(repo, s.config.URL)
+	args.PRs = prs
+	if err = s.agent.ExportGitRepo(args); err != nil {
+		return err
+	}
+	return nil
 }

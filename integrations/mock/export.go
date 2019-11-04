@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/pinpt/agent.next/rpcdef"
@@ -8,24 +9,26 @@ import (
 )
 
 func (s *Integration) exportAll() {
-	s.exportBlames()
-	s.exportCommits()
+	s.exportRepos()
 }
 
-func (s *Integration) exportBlames() {
+func (s *Integration) exportRepos() {
 
-	sessionID, lastProcessed := s.agent.ExportStarted(sourcecode.BlameModelName.String())
+	sessionID, lastProcessed := s.agent.ExportStarted(sourcecode.RepoModelName.String())
 	defer s.agent.ExportDone(sessionID, time.Now().Format(time.RFC3339))
 
-	s.logger.Info("exporting blames", "lastProcessed", lastProcessed)
+	s.logger.Info("exporting repos", "lastProcessed", lastProcessed)
+	c := 0
 
 	for i := 0; i < 10; i++ {
 		rows := []map[string]interface{}{}
 		for j := 0; j < 10; j++ {
-			row := sourcecode.Blame{}
-			row.RepoID = "r1"
-			row.Filename = "f"
-			row.Language = "go"
+			c++
+			n := strconv.Itoa(c)
+			row := sourcecode.Repo{}
+			row.RefType = "mock"
+			row.RefID = n
+			row.Name = "Repo: " + n
 			rows = append(rows, row.ToMap())
 		}
 		var objs []rpcdef.ExportObj
@@ -37,30 +40,5 @@ func (s *Integration) exportBlames() {
 		s.agent.SendExported(
 			sessionID,
 			objs)
-	}
-}
-
-func (s *Integration) exportCommits() {
-	sessionID, lastProcessed := s.agent.ExportStarted(sourcecode.CommitModelName.String())
-	defer s.agent.ExportDone(sessionID, time.Now().Format(time.RFC3339))
-
-	s.logger.Info("exporting blames", "lastProcessed", lastProcessed)
-
-	for i := 0; i < 10; i++ {
-		rows := []map[string]interface{}{}
-		for j := 0; j < 10; j++ {
-			row := map[string]interface{}{
-				"repo_id": "r1",
-				"message": "m",
-			}
-			rows = append(rows, row)
-		}
-		var objs []rpcdef.ExportObj
-		for _, row := range rows {
-			obj := rpcdef.ExportObj{}
-			obj.Data = row
-			objs = append(objs, obj)
-		}
-		s.agent.SendExported(sessionID, objs)
 	}
 }

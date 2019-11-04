@@ -14,12 +14,13 @@ import (
 )
 
 type RequesterOpts struct {
-	Logger     hclog.Logger
-	Clients    reqstats.Clients
-	APIURL     string
-	Username   string
-	Password   string
-	OAuthToken *oauthtoken.Manager
+	Logger        hclog.Logger
+	Clients       reqstats.Clients
+	APIURL        string
+	Username      string
+	Password      string
+	OAuthToken    *oauthtoken.Manager
+	RetryRequests bool
 }
 
 type Requester struct {
@@ -44,13 +45,15 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 
 func (s *Requester) request(objPath string, params url.Values, res interface{}, maxOAuthRetries int) error {
 	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
-
 	if len(params) != 0 {
 		u += "?" + params.Encode()
 	}
-
-	reqs := requests.New(s.logger, s.opts.Clients.Default)
-
+	var reqs requests.Requests
+	if s.opts.RetryRequests {
+		reqs = requests.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
+	} else {
+		reqs = requests.New(s.logger, s.opts.Clients.TLSInsecure)
+	}
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return err

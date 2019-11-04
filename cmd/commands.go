@@ -37,6 +37,9 @@ var cmdEnroll = &cobra.Command{
 	Short: "Enroll the agent with the Pinpoint Cloud",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		// only json is supported as log format for enroll and service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
+		cmd.Flags().Set("log-format", "json")
+
 		code := args[0]
 		logger := cmdlogger.Stdout(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
@@ -45,7 +48,7 @@ var cmdEnroll = &cobra.Command{
 		}
 
 		// once we have pinpoint root, we can also log to a file
-		logger, _, ok := cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
+		logger, level, ok := cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
 		if !ok {
 			return
 		}
@@ -73,6 +76,25 @@ var cmdEnroll = &cobra.Command{
 		if err != nil {
 			exitWithErr(logger, err)
 		}
+
+		logger.Info("enroll completed successfully")
+
+		skipServiceRun, _ := cmd.Flags().GetBool("skip-service-run")
+		if skipServiceRun {
+			logger.Info("skipping service-run")
+			return
+		}
+
+		logger.Info("starting service")
+
+		opts := cmdservicerun.Opts{}
+		opts.Logger = logger
+		opts.LogLevelSubcommands = level
+		opts.PinpointRoot = pinpointRoot
+		err = cmdservicerun.Run(ctx, opts)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
 	},
 }
 
@@ -82,6 +104,7 @@ func init() {
 	flagPinpointRoot(cmd)
 	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
 	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
+	cmd.Flags().Bool("skip-service-run", false, "Set to true to skip service run. Will need to run it separately.")
 	cmdRoot.AddCommand(cmd)
 }
 

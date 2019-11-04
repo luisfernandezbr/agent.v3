@@ -15,7 +15,6 @@ func Projects(qc QueryContext) (res []*work.Project, rerr error) {
 
 	params := url.Values{}
 	params.Set("expand", "description")
-
 	var rr []struct {
 		ID          string `json:"id"`
 		Key         string `json:"key"`

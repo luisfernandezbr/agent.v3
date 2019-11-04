@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/pinpt/agent.next/integrations/github/api"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -39,13 +41,29 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	_, err = api.ReposAllSlice(s.qc, orgs[0])
-	if err != nil {
-		rerr(err)
+	if len(orgs) == 0 {
+		rerr(errors.New("no organizations found"))
 		return
 	}
 
-	// TODO: return a repo and validate repo that repo can be cloned in agent
+LOOP:
+	for _, org := range orgs {
+		_, repos, err := api.ReposPageInternal(s.qc, org, "first: 1")
+		if err != nil {
+			rerr(err)
+			return
+		}
+		if len(repos) > 0 {
+			repoURL, err := getRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repos[0].NameWithOwner)
+			if err != nil {
+				rerr(err)
+				return
+			}
+
+			res.RepoURL = repoURL
+			break LOOP // only return 1 repo url
+		}
+	}
 
 	return
 }

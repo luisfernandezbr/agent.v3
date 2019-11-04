@@ -6,21 +6,87 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 )
 
+type RetryableRequest struct {
+	MaxAttempts float64
+	MaxDuration time.Duration
+	RetryDelay  time.Duration
+}
 type Requests struct {
-	Logger hclog.Logger
-	Client *http.Client
+	Logger    hclog.Logger
+	Client    *http.Client
+	Retryable RetryableRequest
 }
 
 func New(logger hclog.Logger, client *http.Client) Requests {
-	return Requests{
+	req := Requests{
 		Logger: logger,
 		Client: client,
 	}
+	return req
+}
+
+func NewRetryableDefault(logger hclog.Logger, client *http.Client) Requests {
+	req := Requests{
+		Logger: logger,
+		Client: client,
+	}
+	req.Retryable.MaxAttempts = 10
+	req.Retryable.MaxDuration = 500 * time.Millisecond
+	req.Retryable.RetryDelay = 5 * time.Minute
+	return req
+}
+
+func (opts Requests) retryDo(ctx context.Context, req *http.Request) (resp *http.Response, err error) {
+	started := time.Now()
+
+	retry := opts.Retryable
+	retries := retry.MaxAttempts
+	count := 0
+	for time.Since(started) < retry.MaxDuration {
+		resp, err = opts.Client.Do(req)
+		if err != nil {
+			return
+		}
+		// if this request looks like a normal, non-retryable response
+		// then just return it without attempting a retry
+		if (resp.StatusCode >= 200 && resp.StatusCode < 300) ||
+			resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusPaymentRequired ||
+			resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusNotFound ||
+			resp.StatusCode == http.StatusMethodNotAllowed || resp.StatusCode == http.StatusPermanentRedirect ||
+			resp.StatusCode == http.StatusTemporaryRedirect || resp.StatusCode == http.StatusConflict ||
+			resp.StatusCode == http.StatusRequestEntityTooLarge || resp.StatusCode == http.StatusRequestedRangeNotSatisfiable ||
+			resp.StatusCode == http.StatusRequestHeaderFieldsTooLarge || resp.StatusCode == http.StatusBadRequest ||
+			resp.StatusCode == http.StatusUnprocessableEntity || resp.StatusCode == http.StatusInternalServerError {
+			return
+		}
+		// make sure we read all (if any) content and close the response stream as to not leak resources
+		if resp.Body != nil {
+			ioutil.ReadAll(resp.Body)
+			resp.Body.Close()
+		}
+		if retry.RetryDelay > 0 {
+			remaining := math.Min(float64(retry.MaxDuration-time.Since(started)), float64(retry.RetryDelay))
+			select {
+			case <-ctx.Done():
+				return nil, context.Canceled
+			case <-time.After(time.Duration(remaining)):
+			}
+		}
+		retries--
+		if retries <= 0 {
+			return
+		}
+		count++
+		opts.Logger.Info("request failed, will retry", "count", count, "url", req.URL.String())
+	}
+	return
 }
 
 // Do makes an http request. It preserves both request and response body for logging purposes.
@@ -35,8 +101,13 @@ func (opts Requests) Do(ctx context.Context, reqDef *http.Request) (resp *http.R
 		return
 	}
 	req.Header.Set("Accept", "application/json")
+
 	req = req.WithContext(ctx)
-	resp, err = opts.Client.Do(req)
+	if opts.Retryable.MaxAttempts == 0 {
+		resp, err = opts.Client.Do(req)
+	} else {
+		resp, err = opts.retryDo(ctx, req)
+	}
 	if err != nil {
 		rerr = err
 		return

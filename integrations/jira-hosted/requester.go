@@ -17,6 +17,8 @@ type RequesterOpts struct {
 	APIURL   string
 	Username string
 	Password string
+
+	RetryRequests bool
 }
 
 type Requester struct {
@@ -36,13 +38,17 @@ func NewRequester(opts RequesterOpts) *Requester {
 }
 
 func (s *Requester) Request(objPath string, params url.Values, res interface{}) error {
-	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
 
+	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
 	if len(params) != 0 {
 		u += "?" + params.Encode()
 	}
-
-	reqs := requests.New(s.logger, s.opts.Clients.TLSInsecure)
+	var reqs requests.Requests
+	if s.opts.RetryRequests {
+		reqs = requests.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
+	} else {
+		reqs = requests.New(s.logger, s.opts.Clients.TLSInsecure)
+	}
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
