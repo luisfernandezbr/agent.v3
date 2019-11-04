@@ -69,6 +69,8 @@ func newExport(opts Opts) (*export, error) {
 		Root:       opts.Opts.AgentConfig.PinpointRoot,
 	}
 
+	s.Command.Deviceinfo = s.deviceInfo
+
 	if opts.ReprocessHistorical {
 		s.Logger.Info("Starting export. ReprocessHistorical is true, discarding incremental checkpoints")
 		err := s.discardIncrementalData()
