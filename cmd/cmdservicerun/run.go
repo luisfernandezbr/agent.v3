@@ -132,7 +132,7 @@ func (s *runner) run(ctx context.Context) error {
 		s.logger.Info("PP_AGENT_SERVICE_TEST_MOCK passed, running test mock export")
 		err := s.runTestMockExport()
 		if err != nil {
-			return err
+			return fmt.Errorf("could not export mock, err: %v", err)
 		}
 	}
 
@@ -234,6 +234,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 		date.ConvertToModel(time.Now(), &resp.EventDate)
 
 		rerr := func(err error) (datamodel.ModelSendEvent, error) {
+			s.logger.Error("integration request failed", "err", err)
 			// error for everything else
 			resp.Type = agent.IntegrationResponseTypeIntegration
 			resp.Error = pstrings.Pointer(err.Error())
@@ -244,7 +245,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 
 		res, err := s.validate(ctx, integration.Name, IntegrationType(req.Integration.SystemType), auth)
 		if err != nil {
-			return rerr(err)
+			return rerr(fmt.Errorf("could not call validate, err: %v", err))
 		}
 
 		if !res.Success {

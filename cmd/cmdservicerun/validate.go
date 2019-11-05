@@ -56,12 +56,12 @@ func (s *runner) validate(ctx context.Context, name string, systemType Integrati
 	defer fs.Clean()
 
 	err = s.runCommand(ctx, &res, args)
+	if err != nil {
+		return res, err
+	}
 	s.logger.Info("validation completed", "success", res.Success)
 	if !res.Success {
 		s.logger.Info("validation failed", "err", res.Errors)
-	}
-	if err != nil {
-		return res, err
 	}
 	return res, nil
 }
