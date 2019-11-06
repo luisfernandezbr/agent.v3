@@ -82,7 +82,6 @@ func flagPinpointRoot(cmd *cobra.Command) {
 	var def string
 	if insideDocker {
 		def = "/etc/pinpoint"
-		os.Mkdir(def, 0644)
 	}
 	cmd.Flags().String("pinpoint-root", def, "Custom location of pinpoint work dir.")
 }
