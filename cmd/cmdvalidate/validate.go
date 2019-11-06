@@ -3,6 +3,7 @@ package cmdvalidate
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -41,6 +42,10 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 		currentGitVersion = strings.Trim(strings.Split(string(bts), " ")[2], "\n")
 	}
 
+	err = os.MkdirAll(root, 0777)
+	if err != nil {
+		return false, err
+	}
 	sysInfo := sysinfo.GetSystemInfo(root)
 
 	if sysInfo.TotalMemory < MINIMUM_MEMORY {
