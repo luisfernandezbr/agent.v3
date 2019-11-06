@@ -156,7 +156,7 @@ func (s *runner) runTestMockExport() error {
 	reprocessHistorical := true
 
 	ctx := context.Background()
-	return s.exporter.execExport(ctx, s.agentConfig, integrations, reprocessHistorical, nil)
+	return s.exporter.execExport(ctx, integrations, reprocessHistorical, nil)
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {

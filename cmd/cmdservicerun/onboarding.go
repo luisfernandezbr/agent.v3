@@ -14,25 +14,20 @@ func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integ
 
 	integrations := []cmdvalidateconfig.Integration{config}
 
-	args := []string{"export-onboard-data",
-		"--object-type", objectType}
-
-	fs, err := newFsPassedParams(s.fsconf.Temp, []kv{
-		{"--agent-config-file", s.agentConfig},
-		{"--integrations-file", integrations},
-	})
-	if err != nil {
-		return res, err
+	c := &subCommand{
+		ctx:          ctx,
+		logger:       s.logger,
+		tmpdir:       s.fsconf.Temp,
+		config:       s.agentConfig,
+		conf:         s.conf,
+		integrations: integrations,
+		deviceInfo:   s.deviceInfo,
 	}
-	args = append(args, fs.Args()...)
-	defer fs.Clean()
+	c.validate()
 
-	err = s.runCommand(ctx, &res, args)
-
-	//s.logger.Info("got onboard data", "res", pjson.Stringify(res))
+	err := c.run("export-onboard-data", &res, "--object-type", objectType)
 
 	s.logger.Info("getting onboard data completed", "success", res.Success, "err", res.Error)
-
 	if err != nil {
 		return res, err
 	}

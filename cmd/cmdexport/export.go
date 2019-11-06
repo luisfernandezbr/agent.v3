@@ -3,8 +3,10 @@ package cmdexport
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 	"time"
@@ -23,6 +25,7 @@ import (
 type Opts struct {
 	cmdintegration.Opts
 	ReprocessHistorical bool
+	Output              io.Writer
 }
 
 type AgentConfig = cmdintegration.AgentConfig
@@ -149,6 +152,7 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
+	s.writeResult(opts.Output, exportRes)
 	s.printExportRes(exportRes, hadErrors)
 
 	return s, nil
@@ -359,6 +363,20 @@ func (s *export) runExports() map[integrationid.ID]runResult {
 	wg.Wait()
 
 	return res
+}
+
+func (s *export) writeResult(writer io.Writer, res map[integrationid.ID]runResult) error {
+
+	ress := make(map[string]runResult)
+	for k, v := range res {
+		ress[k.String()] = v
+	}
+	b, err := json.Marshal(ress)
+	if err != nil {
+		return err
+	}
+	_, err = writer.Write(b)
+	return err
 }
 
 func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors bool) {
