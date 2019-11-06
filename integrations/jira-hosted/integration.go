@@ -99,6 +99,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 		opts.RetryRequests = retryRequests
 		requester := NewRequester(opts)
 		s.qc.Request = requester.Request
+		s.qc.Request2 = requester.Request2
 	}
 
 	s.common, err = jiracommon.New(jiracommon.Opts{

@@ -14,6 +14,7 @@ type QueryContext struct {
 	Logger     hclog.Logger
 	CustomerID string
 	Request    func(objPath string, params url.Values, res interface{}) error
+	Request2   func(objPath string, params url.Values, res interface{}) (statusCode int, _ error)
 	ExportUser func(user User) error
 }
 

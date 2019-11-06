@@ -12,6 +12,7 @@ type QueryContext struct {
 	Logger     hclog.Logger
 	CustomerID string
 	Request    func(objPath string, params url.Values, res interface{}) error
+	Request2   func(objPath string, params url.Values, res interface{}) (statusCode int, _ error)
 }
 
 type PageInfo struct {
@@ -27,6 +28,7 @@ func (s *QueryContext) Common() jiracommonapi.QueryContext {
 	res.Logger = s.Logger
 	res.ExportUser = nil
 	res.Request = s.Request
+	res.Request2 = s.Request2
 	res.Validate()
 	return res
 }
