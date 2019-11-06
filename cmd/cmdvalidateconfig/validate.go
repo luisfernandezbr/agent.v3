@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/iloader"
 	"github.com/pinpt/agent.next/rpcdef"
 
@@ -189,6 +190,7 @@ func (s *validator) Destroy() {
 }
 
 func (s *validator) cloneRepo2(url string) error {
+
 	tmpDir, err := ioutil.TempDir(s.Locs.Temp, "validate-repo-clone-")
 	if err != nil {
 		return err
@@ -230,5 +232,10 @@ func (s *validator) cloneRepo2(url string) error {
 		return err
 	}
 
-	return errors.New(string(output))
+	outputStr, err := gitclone.RedactCredsInText(string(output), url)
+	if err != nil {
+		return err
+	}
+
+	return errors.New(outputStr)
 }
