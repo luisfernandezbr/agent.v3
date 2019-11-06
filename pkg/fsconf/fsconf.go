@@ -46,8 +46,6 @@ func DefaultRoot() (path string, err error) {
 	}
 
 	path = filepath.Join(dir, ".pinpoint", "next")
-	err = os.MkdirAll(path, 0644)
-
 	return
 }
 
