@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/pinpt/go-common/fileutil"
 
@@ -63,7 +64,7 @@ var cmdEnroll = &cobra.Command{
 				exitWithErr(logger, err)
 			}
 			if !valid {
-				exitWithErr(logger, fmt.Errorf("the minimum requirements were not met"))
+				os.Exit(1)
 			}
 		}
 
