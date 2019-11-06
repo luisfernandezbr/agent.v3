@@ -25,6 +25,8 @@ type Locs struct {
 	UploadZips        string
 	RipsrcCheckpoints string
 
+	ServiceRunCrashes string
+
 	// Special files
 	Config2 string // new config that is populated from enroll, not for manual editing
 
@@ -69,6 +71,8 @@ func New(pinpointRoot string) Locs {
 	s.Uploads = j(s.State, "uploads")
 	s.UploadZips = j(s.State, "upload-zips")
 	s.RipsrcCheckpoints = j(s.State, "ripsrc_checkpoints")
+
+	s.ServiceRunCrashes = j(s.Logs, "service-run-crashes")
 
 	s.Config2 = j(s.Root, "config.json")
 	s.LastProcessedFile = j(s.State, "last_processed.json")

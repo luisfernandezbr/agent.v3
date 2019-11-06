@@ -15,6 +15,7 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
 	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
 	"github.com/pinpt/agent.next/cmd/cmdservicerun"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts"
 	"github.com/pinpt/agent.next/cmd/cmdserviceuninstall"
 	"github.com/pinpt/agent.next/cmd/cmdvalidate"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
@@ -33,8 +34,8 @@ func isInsideDocker() bool {
 	return false
 }
 
-var cmdEnroll = &cobra.Command{
-	Use:   "enroll <code>",
+var cmdEnrollNoServiceRun = &cobra.Command{
+	Use:   "enroll-no-service-run <code>",
 	Short: "Enroll the agent with the Pinpoint Cloud",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -49,7 +50,7 @@ var cmdEnroll = &cobra.Command{
 		}
 
 		// once we have pinpoint root, we can also log to a file
-		logger, level, ok := cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
+		logger, _, ok := cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
 		if !ok {
 			return
 		}
@@ -79,19 +80,47 @@ var cmdEnroll = &cobra.Command{
 		}
 
 		logger.Info("enroll completed successfully")
+	},
+}
 
+func init() {
+	cmd := cmdEnrollNoServiceRun
+	flagsLogger(cmd)
+	flagPinpointRoot(cmd)
+	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
+	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdEnroll = &cobra.Command{
+	Use:   "enroll <code>",
+	Short: "Enroll the agent with the Pinpoint Cloud",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
 		skipServiceRun, _ := cmd.Flags().GetBool("skip-service-run")
 		if skipServiceRun {
-			logger.Info("skipping service-run")
+			cmdEnrollNoServiceRun.Run(cmd, args)
 			return
 		}
 
-		logger.Info("starting service")
+		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
+		cmd.Flags().Set("log-format", "json")
 
+		logger := cmdlogger.Stdout(cmd)
+		pinpointRoot, err := getPinpointRoot(cmd)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+
+		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
+
+		ctx := context.Background()
 		opts := cmdservicerun.Opts{}
 		opts.Logger = logger
-		opts.LogLevelSubcommands = level
 		opts.PinpointRoot = pinpointRoot
+		opts.Enroll.Run = true
+		opts.Enroll.Code = args[0]
+		opts.Enroll.SkipValidate = skipValidate
 		err = cmdservicerun.Run(ctx, opts)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -236,6 +265,42 @@ func init() {
 	cmdRoot.AddCommand(cmdServiceUninstall)
 }
 
+var cmdServiceRunNoRestarts = &cobra.Command{
+	Use:   "service-run-no-restarts",
+	Short: "This command is called by OS service to run the service.",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
+		cmd.Flags().Set("log-format", "json")
+		logger := cmdlogger.Stdout(cmd)
+		pinpointRoot, err := getPinpointRoot(cmd)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+		logger, level, ok := cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
+		if !ok {
+			return
+		}
+		ctx := context.Background()
+		opts := cmdservicerunnorestarts.Opts{}
+		opts.Logger = logger
+		opts.LogLevelSubcommands = level
+		opts.PinpointRoot = pinpointRoot
+		err = cmdservicerunnorestarts.Run(ctx, opts)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+	},
+}
+
+func init() {
+	cmd := cmdServiceRunNoRestarts
+	flagsLogger(cmd)
+	flagPinpointRoot(cmd)
+	cmdRoot.AddCommand(cmd)
+}
+
 var cmdServiceRun = &cobra.Command{
 	Use:   "service-run",
 	Short: "This command is called by OS service to run the service.",
@@ -249,14 +314,10 @@ var cmdServiceRun = &cobra.Command{
 		if err != nil {
 			exitWithErr(logger, err)
 		}
-		logger, level, ok := cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
-		if !ok {
-			return
-		}
+
 		ctx := context.Background()
 		opts := cmdservicerun.Opts{}
 		opts.Logger = logger
-		opts.LogLevelSubcommands = level
 		opts.PinpointRoot = pinpointRoot
 		err = cmdservicerun.Run(ctx, opts)
 		if err != nil {

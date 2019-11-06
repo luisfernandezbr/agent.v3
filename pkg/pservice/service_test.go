@@ -1,45 +1,125 @@
 package pservice
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/hashicorp/go-hclog"
 )
 
-type testLogger struct {
-	t *testing.T
-}
+func TestServiceRetryingCancelImmediately(t *testing.T) {
+	logger := hclog.New(hclog.DefaultOptions)
 
-func (s *testLogger) Log(keyvals ...interface{}) error {
-	//s.t.Log(keyvals...)
-	fmt.Println(keyvals...)
-	return nil
-}
+	runStart := make(chan bool)
+	runEnd := make(chan error)
 
-type tempFs struct {
-	d    string
-	File string
-}
-
-func newTempFs() *tempFs {
-	d, err := ioutil.TempDir("", "pp-test")
-	if err != nil {
-		panic(err)
+	run := func(ctx context.Context) error {
+		fmt.Println("started")
+		runStart <- true
+		return <-runEnd
 	}
-	s := &tempFs{d: d}
-	s.File = filepath.Join(s.d, "file")
-	err = ioutil.WriteFile(s.File, nil, 0666)
+
+	service := Retrying(logger, run, func(retry int) time.Duration {
+		return time.Microsecond
+	})
+
+	done, cancel := AsyncRunBg(service)
+	<-runStart
+	fmt.Println("cancel")
+	cancel()
+	runEnd <- nil
+	err := <-done
 	if err != nil {
-		panic(err)
+		t.Fatal("should never return error", err)
 	}
-	return s
 }
 
-func (s *tempFs) Remove() {
-	err := os.RemoveAll(s.d)
+func TestServiceRetryingRetries(t *testing.T) {
+	logger := hclog.New(hclog.DefaultOptions)
+
+	runStart := make(chan bool)
+	runEnd := make(chan error)
+
+	run := func(ctx context.Context) error {
+		fmt.Println("started")
+		runStart <- true
+		return <-runEnd
+	}
+
+	service := Retrying(logger, run, func(retry int) time.Duration {
+		return time.Nanosecond
+	})
+
+	done, cancel := AsyncRunBg(service)
+	<-runStart
+	runEnd <- nil
+	<-runStart
+	runEnd <- errors.New("e")
+	<-runStart
+
+	fmt.Println("cancel")
+	cancel()
+	runEnd <- nil
+
+	err := <-done
 	if err != nil {
-		panic(err)
+		t.Fatal("should never return error", err)
+	}
+}
+
+func TestServiceRetryingCancelPropagation(t *testing.T) {
+	logger := hclog.New(hclog.DefaultOptions)
+
+	runStart := make(chan bool)
+	runEnd := make(chan error)
+
+	run := func(ctx context.Context) error {
+		fmt.Println("started")
+		runStart <- true
+		<-ctx.Done()
+		fmt.Println("received ctx done")
+		return <-runEnd
+	}
+
+	service := Retrying(logger, run, func(retry int) time.Duration {
+		return time.Nanosecond
+	})
+
+	done, cancel := AsyncRunBg(service)
+	<-runStart
+
+	fmt.Println("cancel")
+	cancel()
+	runEnd <- nil
+
+	err := <-done
+	if err != nil {
+		t.Fatal("should never return error", err)
+	}
+}
+
+func TestExpRetryDelayFn(t *testing.T) {
+	delay := ExpRetryDelayFn(3*time.Second, 60*time.Second, 2)
+
+	cases := []struct {
+		In  int
+		Out time.Duration
+	}{
+		{In: 1, Out: 3 * time.Second},
+		{In: 2, Out: 6 * time.Second},
+		{In: 3, Out: 12 * time.Second},
+		{In: 4, Out: 24 * time.Second},
+		{In: 5, Out: 48 * time.Second},
+		{In: 6, Out: 60 * time.Second},
+		{In: 7, Out: 60 * time.Second},
+	}
+	for _, tc := range cases {
+		res := delay(tc.In)
+		if res != tc.Out {
+			t.Errorf("invalid res for in %v, got %v, wanted %v", tc.In, res, tc.Out)
+		}
 	}
 }
