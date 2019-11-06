@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/pinpt/go-common/fileutil"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
 	"github.com/pinpt/agent.next/cmd/cmdservicerun"
 	"github.com/pinpt/agent.next/cmd/cmdserviceuninstall"
+	"github.com/pinpt/agent.next/cmd/cmdvalidate"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -53,8 +55,19 @@ var cmdEnroll = &cobra.Command{
 		}
 
 		channel, _ := cmd.Flags().GetString("channel")
-
 		ctx := context.Background()
+		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
+
+		if !skipValidate {
+			valid, err := cmdvalidate.Run(ctx, logger, pinpointRoot)
+			if err != nil {
+				exitWithErr(logger, err)
+			}
+			if !valid {
+				os.Exit(1)
+			}
+		}
+
 		err = cmdenroll.Run(ctx, cmdenroll.Opts{
 			Logger:       logger,
 			PinpointRoot: pinpointRoot,
@@ -91,6 +104,7 @@ func init() {
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
 	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
+	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
 	cmd.Flags().Bool("skip-service-run", false, "Set to true to skip service run. Will need to run it separately.")
 	cmdRoot.AddCommand(cmd)
 }
@@ -269,4 +283,30 @@ var cmdVersion = &cobra.Command{
 
 func init() {
 	cmdRoot.AddCommand(cmdVersion)
+}
+
+var cmdValidate = &cobra.Command{
+	Use:   "validate",
+	Short: "Validate minimum hardware requirements",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		ctx := context.Background()
+		logger := cmdlogger.Stdout(cmd)
+		pinpointRoot, err := getPinpointRoot(cmd)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+
+		if _, err := cmdvalidate.Run(ctx, logger, pinpointRoot); err != nil {
+			exitWithErr(logger, err)
+		}
+
+	},
+}
+
+func init() {
+	cmd := cmdValidate
+	integrationCommandFlags(cmd)
+	cmdRoot.AddCommand(cmd)
 }

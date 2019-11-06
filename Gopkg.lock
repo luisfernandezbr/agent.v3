@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:2e557a820f7a27413e4ed4a897d3552ac44d2268db16fc87471dd199b632f4a0"
+  name = "github.com/blang/semver"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "ba2c2ddd89069b46a7011d4106f6868f17ee1705"
+  version = "v3.6.1"
+
+[[projects]]
   digest = "1:d1fe4f79a99ebe0558a1636207d8d5631a1f0757b03a5294ab8d0bee0d4fae52"
   name = "github.com/boyter/scc"
   packages = ["processor"]
@@ -344,6 +352,14 @@
   version = "v6.2.23"
 
 [[projects]]
+  branch = "master"
+  digest = "1:5f81e80915d9312397c603b6da6f751a4ae36ae2b4d4f0474a34241d95738686"
+  name = "github.com/pbnjay/memory"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "974d429e7ae40c89e7dcd41cfcc22a0bfbe42510"
+
+[[projects]]
   digest = "1:5e73b34a27d827212102605789de00bd411b2e434812133c83935fe9897c75e1"
   name = "github.com/philhofer/fwd"
   packages = ["."]
@@ -598,7 +614,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:38e272b1095e60d9ddba5687c8a97c7380c57198a8d2ca98b37600b004816364"
+  digest = "1:20120702686e20ff134c179929dec80766cd772d7e0cfe2e205d3eeaefc53bd4"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -610,7 +626,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = "T"
-  revision = "0a153f010e6963173baba2306531d173aa843137"
+  revision = "f43be2a4598cf3a47be9f94f0c28197ed9eae611"
 
 [[projects]]
   digest = "1:0a6103b1dc59b52f7e64a491b398b854c0fcaacde43c25ce468610a64311b72d"
@@ -888,6 +904,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/blang/semver",
     "github.com/denisbrodbeck/machineid",
     "github.com/fatih/color",
     "github.com/golang/protobuf/proto",
@@ -896,6 +913,7 @@
     "github.com/kardianos/service",
     "github.com/mitchellh/go-homedir",
     "github.com/mitchellh/go-ps",
+    "github.com/pbnjay/memory",
     "github.com/pinpt/go-common/api",
     "github.com/pinpt/go-common/auth",
     "github.com/pinpt/go-common/datamodel",
@@ -908,6 +926,7 @@
     "github.com/pinpt/go-common/io",
     "github.com/pinpt/go-common/json",
     "github.com/pinpt/go-common/log",
+    "github.com/pinpt/go-common/number",
     "github.com/pinpt/go-common/os",
     "github.com/pinpt/go-common/strings",
     "github.com/pinpt/httpclient",

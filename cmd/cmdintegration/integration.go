@@ -93,6 +93,7 @@ type Command struct {
 	OAuthRefreshTokens map[string]string
 
 	EnrollConf agentconf.Config
+	Deviceinfo deviceinfo.CommonInfo
 }
 
 func NewCommand(opts Opts) (*Command, error) {
@@ -217,7 +218,7 @@ func (s *Command) CloseOnlyIntegrationAndHandlePanic(integration *iloader.Integr
 				Error: &panicOut,
 				Type:  agent.CrashTypeCrash,
 			}
-			deviceinfo.AppendCommonInfoFromConfig(data, s.EnrollConf)
+			s.Deviceinfo.AppendCommonInfo(data)
 			publishEvent := event.PublishEvent{
 				Object: data,
 				Headers: map[string]string{

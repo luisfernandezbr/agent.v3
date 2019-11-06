@@ -39,12 +39,16 @@ func j(parts ...string) string {
 	return filepath.Join(parts...)
 }
 
-func DefaultRoot() (string, error) {
+func DefaultRoot() (path string, err error) {
 	dir, err := homedir.Dir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, ".pinpoint", "next"), nil
+
+	path = filepath.Join(dir, ".pinpoint", "next")
+	err = os.MkdirAll(path, 0644)
+
+	return
 }
 
 func New(pinpointRoot string) Locs {

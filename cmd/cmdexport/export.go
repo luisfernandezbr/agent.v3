@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/deviceinfo"
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/integrationid"
@@ -47,6 +48,7 @@ type export struct {
 	lastProcessed *jsonstore.Store
 
 	gitProcessingRepos chan rpcdef.GitRepoFetch
+	deviceInfo         deviceinfo.CommonInfo
 }
 
 func newExport(opts Opts) (*export, error) {
@@ -59,6 +61,15 @@ func newExport(opts Opts) (*export, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	s.deviceInfo = deviceinfo.CommonInfo{
+		CustomerID: opts.AgentConfig.CustomerID,
+		DeviceID:   s.EnrollConf.DeviceID,
+		SystemID:   s.EnrollConf.SystemID,
+		Root:       opts.Opts.AgentConfig.PinpointRoot,
+	}
+
+	s.Command.Deviceinfo = s.deviceInfo
 
 	if opts.ReprocessHistorical {
 		s.Logger.Info("Starting export. ReprocessHistorical is true, discarding incremental checkpoints")
