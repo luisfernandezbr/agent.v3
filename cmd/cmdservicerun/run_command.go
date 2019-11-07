@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"strings"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/event"
@@ -70,6 +69,7 @@ func (c *subCommand) run(cmdname string, res interface{}, args ...string) error 
 		return err
 	}
 	flags := append([]string{cmdname}, fs.Args()...)
+	flags = append(flags, "--log-format", "json")
 	if args != nil {
 		flags = append(flags, args...)
 	}
@@ -77,18 +77,17 @@ func (c *subCommand) run(cmdname string, res interface{}, args ...string) error 
 	if err := os.MkdirAll(c.tmpdir, 0777); err != nil {
 		return err
 	}
-
-	outfile, err := ioutil.TempFile(c.tmpdir, "")
-	if err != nil {
-		return err
+	var outfile *os.File
+	// the output goes into os.File, don't create the os.File if there is no res
+	if res != nil {
+		outfile, err = ioutil.TempFile(c.tmpdir, "")
+		if err != nil {
+			return err
+		}
+		outfile.Close()
+		defer os.Remove(outfile.Name())
+		flags = append(flags, "--output-file", outfile.Name())
 	}
-	outfile.Close()
-	defer os.Remove(outfile.Name())
-
-	flags = append(flags,
-		"--log-format", "json",
-		"--output-file", outfile.Name(),
-	)
 
 	logsfile, err := ioutil.TempFile(c.tmpdir, "")
 	if err != nil {
@@ -133,40 +132,31 @@ func (c *subCommand) handlePanic(filename string) error {
 	if err != nil {
 		return err
 	}
-	lines := strings.Split(string(b), "\n")
-	for _, line := range lines {
-		if strings.HasPrefix(line, "panic:") {
-			c.sendPanic(string(b))
-			return nil
+	if len(b) > 0 {
+		msg := string(b)
+		c.logger.Info("crash detected!")
+		if c.config.Backend.Enable {
+			data := &agent.Crash{
+				Data:  &msg,
+				Error: &msg,
+				Type:  agent.CrashTypeCrash,
+			}
+			c.deviceInfo.AppendCommonInfo(data)
+			publishEvent := event.PublishEvent{
+				Object: data,
+				Headers: map[string]string{
+					"uuid":        c.deviceInfo.DeviceID,
+					"customer_id": c.config.CustomerID,
+					"job_id":      c.config.Backend.ExportJobID,
+				},
+			}
+			if err := event.Publish(context.Background(), publishEvent, c.conf.Channel, c.conf.APIKey); err != nil {
+				return fmt.Errorf("error sending agent.Crash to backend, err: %v", err)
+			}
+			c.logger.Info("crash sent to backend")
 		}
 	}
 	return nil
-}
-
-func (c *subCommand) sendPanic(msg string) {
-	c.logger.Info("crash detected!")
-	if c.config.Backend.Enable {
-		data := &agent.Crash{
-			Data:  &msg,
-			Error: &msg,
-			Type:  agent.CrashTypeCrash,
-		}
-		c.deviceInfo.AppendCommonInfo(data)
-		publishEvent := event.PublishEvent{
-			Object: data,
-			Headers: map[string]string{
-				"uuid":        c.deviceInfo.DeviceID,
-				"customer_id": c.config.CustomerID,
-				"job_id":      c.config.Backend.ExportJobID,
-			},
-		}
-		if err := event.Publish(context.Background(), publishEvent, c.conf.Channel, c.conf.APIKey); err != nil {
-			c.logger.Error("error sending agent.Crash to backend", "err", err)
-			return
-		}
-		c.logger.Info("crash sent to backend")
-	}
-
 }
 
 type kv struct {
