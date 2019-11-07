@@ -43,6 +43,10 @@
   version = "0.8.0"
 
 [[constraint]]
+  name = "github.com/blang/semver"
+  version = "3.6.0"
+
+[[constraint]]
   name = "github.com/pinpt/ripsrc"
   #version = "6"
   branch = "master"
