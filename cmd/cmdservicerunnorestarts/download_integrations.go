@@ -17,7 +17,7 @@ const s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
 
 func (s *runner) downloadIntegrationsIfMissing() error {
 	// only attempt download in prod builds
-	if !build.IsProd() {
+	if !build.IsProduction() {
 		return nil
 	}
 
