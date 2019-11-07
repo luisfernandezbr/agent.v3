@@ -74,6 +74,10 @@ service Agent {
     rpc SessionProgress(SessionProgressReq) returns (Empty);
 
     rpc OAuthNewAccessToken(Empty) returns (OAuthNewAccessTokenResp);
+
+    rpc SendPauseEvent(SendPauseEventReq) returns (Empty);
+
+    rpc SendContinueEvent(SendContinueEventReq) returns (Empty);
 }
 
 message LastProcessed {
@@ -147,3 +151,10 @@ message OAuthNewAccessTokenResp {
     string token = 1;
 }
 
+message SendPauseEventReq {
+    string message = 1;
+}
+
+message SendContinueEventReq {
+    string message = 1;
+}

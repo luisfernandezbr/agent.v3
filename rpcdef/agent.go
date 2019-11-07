@@ -42,6 +42,10 @@ type Agent interface {
 
 	// OAuthNewAccessToken returns a new access token for integrations with UseOAuth: true. It askes agent to retrieve a new token from backend based on refresh token agent has.
 	OAuthNewAccessToken() (token string, _ error)
+
+	SendPauseEvent(msg string) error
+
+	SendContinueEvent(msg string) error
 }
 
 type ExportObj struct {
@@ -228,6 +232,18 @@ func (s *AgentServer) OAuthNewAccessToken(ctx context.Context, req *proto.Empty)
 	return resp, err
 }
 
+func (s *AgentServer) SendPauseEvent(ctx context.Context, req *proto.SendPauseEventReq) (resp *proto.Empty, err error) {
+	resp = &proto.Empty{}
+	err = s.Impl.SendPauseEvent(req.Message)
+	return
+}
+
+func (s *AgentServer) SendContinueEvent(ctx context.Context, req *proto.SendContinueEventReq) (resp *proto.Empty, err error) {
+	resp = &proto.Empty{}
+	err = s.Impl.SendContinueEvent(req.Message)
+	return
+}
+
 type AgentClient struct {
 	client proto.AgentClient
 }
@@ -333,4 +349,26 @@ func (s *AgentClient) OAuthNewAccessToken() (token string, _ error) {
 		return "", err
 	}
 	return resp.Token, nil
+}
+
+func (s *AgentClient) SendPauseEvent(msg string) error {
+	args := &proto.SendPauseEventReq{
+		Message: msg,
+	}
+	_, err := s.client.SendPauseEvent(context.Background(), args)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *AgentClient) SendContinueEvent(msg string) error {
+	args := &proto.SendContinueEventReq{
+		Message: msg,
+	}
+	_, err := s.client.SendContinueEvent(context.Background(), args)
+	if err != nil {
+		return err
+	}
+	return nil
 }

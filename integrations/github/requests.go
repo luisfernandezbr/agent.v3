@@ -98,7 +98,9 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 		}
 
 		s.logger.Warn("api request failed due to throttling, will sleep for 30m and retry, this should only happen if hourly quota is used up, check here (https://developer.github.com/v4/guides/resource-limitations/#returning-a-calls-rate-limit-status)", "body", string(b), "retryThrottled", retryThrottled)
+		s.agent.SendPauseEvent("message")
 		time.Sleep(30 * time.Minute)
+		s.agent.SendContinueEvent("message")
 
 		return s.makeRequestRetryThrottled(reqDef, res, retryThrottled+1)
 

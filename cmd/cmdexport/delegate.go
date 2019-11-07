@@ -63,3 +63,11 @@ func (s agentDelegate) SessionProgress(id int, current, total int) error {
 func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
 	return s.export.OAuthNewAccessToken(s.in.Name)
 }
+
+func (s agentDelegate) SendPauseEvent(msg string) error {
+	return s.export.SendPauseEvent(msg)
+}
+
+func (s agentDelegate) SendContinueEvent(msg string) error {
+	return s.export.SendContinueEvent(msg)
+}

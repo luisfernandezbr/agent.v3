@@ -246,3 +246,12 @@ func (s *Command) CaptureShutdown() {
 	plugin.CleanupClients()
 	os.Exit(1)
 }
+
+func (s *Command) SendPauseEvent(msg string) error {
+	s.Logger.Info("===============> SendPauseEvent(" + msg + ")")
+	return nil
+}
+func (s *Command) SendContinueEvent(msg string) error {
+	s.Logger.Info("===============> SendContinueEvent(" + msg + ")")
+	return nil
+}

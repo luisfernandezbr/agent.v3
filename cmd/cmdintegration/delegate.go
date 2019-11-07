@@ -47,3 +47,11 @@ func (s agentDelegate) SessionProgress(id int, current, total int) error {
 func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
 	return s.min.OAuthNewAccessToken(s.in.Name)
 }
+
+func (s agentDelegate) SendPauseEvent(msg string) error {
+	panic("not implemented")
+}
+
+func (s agentDelegate) SendContinueEvent(msg string) error {
+	panic("not implemented")
+}
