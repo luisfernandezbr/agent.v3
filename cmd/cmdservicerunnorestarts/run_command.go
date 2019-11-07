@@ -20,14 +20,15 @@ import (
 )
 
 type subCommand struct {
-	ctx          context.Context
-	logger       hclog.Logger
-	tmpdir       string
-	config       cmdintegration.AgentConfig
-	conf         agentconf.Config
-	integrations []cmdvalidateconfig.Integration
-	deviceInfo   deviceinfo.CommonInfo
-	logWriter    *io.Writer
+	ctx             context.Context
+	logger          hclog.Logger
+	tmpdir          string
+	config          cmdintegration.AgentConfig
+	conf            agentconf.Config
+	integrations    []cmdvalidateconfig.Integration
+	integrationsDir string
+	deviceInfo      deviceinfo.CommonInfo
+	logWriter       *io.Writer
 }
 
 func (c *subCommand) validate() {
@@ -49,6 +50,9 @@ func (c *subCommand) validate() {
 	if c.integrations == nil {
 		panic("integrations is nil")
 	}
+	if c.integrationsDir == "" {
+		panic("integrationsDir is nil")
+	}
 	if c.deviceInfo.SystemID == "" {
 		panic("deviceInfo is nil")
 	}
@@ -63,6 +67,7 @@ func (c *subCommand) run(cmdname string, res interface{}, args ...string) error 
 	fs, err := newFsPassedParams(c.tmpdir, []kv{
 		{"--agent-config-file", c.config},
 		{"--integrations-file", c.integrations},
+		{"--integrations-dir", c.integrationsDir},
 	})
 	defer fs.Clean()
 	if err != nil {

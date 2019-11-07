@@ -1,17 +1,16 @@
 # would be good to set this by default for all commands, but other names are uncommon and will not be present on fs in practise
 .PHONY: protobuf
 
-# To run with a different pinpoint root
-# make build-integrations PP_ROOT=~/.pinpoint/next-dev
-PP_ROOT := ~/.pinpoint/next
 COMMITSHA ?= $(shell git rev-parse HEAD | cut -c1-8)
-PKG := github.com/pinpt/agent.next
-LDFLAGS := -ldflags "-X $(PKG)/cmd.Version=${COMMITSHA}"
 
-build: macos linux windows
+build:
+	go run ./cmd/agent-dev build
 
 clean:
 	@rm -rf logs dist
+
+docker-dev:
+	docker run --rm -it -v $(GOPATH)/src/github.com/pinpt/agent.next:/go/src/github.com/pinpt/agent.next $(shell docker build -q . -f docker/dev/Dockerfile)
 
 dependencies:
 	@rm -rf .vendor-new
@@ -20,56 +19,20 @@ dependencies:
 proto:
 	protoc -I rpcdef/proto/ rpcdef/proto/*.proto --go_out=plugins=grpc:rpcdef/proto/
 
-build-integrations-local:
-	go build $(LDFLAGS) -o ${PP_ROOT}/integrations/azuretfs ./integrations/azuretfs
-	go build $(LDFLAGS) -o ${PP_ROOT}/integrations/github ./integrations/github
-	go build $(LDFLAGS) -o ${PP_ROOT}/integrations/jira-cloud ./integrations/jira-cloud
-	go build $(LDFLAGS) -o ${PP_ROOT}/integrations/jira-hosted ./integrations/jira-hosted
-	go build $(LDFLAGS) -o ${PP_ROOT}/integrations/sonarqube ./integrations/sonarqube
-	go build $(LDFLAGS) -o ${PP_ROOT}/integrations/mock ./integrations/mock
-	
-build-prod-local:
-	go build -tags prod -o dist/agent.next
+macos:
+	rm -rf dist
+	go run ./cmd/agent-dev build --platform macos
 
 osx: macos
 darwin: macos
 
-macos:
-	env GOOS=darwin go build $(LDFLAGS) -tags prod -o dist/macos/agent.next
-
-	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/azuretfs ./integrations/azuretfs
-	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/bitbucket ./integrations/bitbucket
-	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/github ./integrations/github
-	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/gitlab ./integrations/gitlab
-	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/jira-cloud ./integrations/jira-cloud
-	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/jira-hosted ./integrations/jira-hosted
-	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/mock ./integrations/mock
-	env GOOS=darwin go build $(LDFLAGS) -o dist/macos/integrations/sonarqube ./integrations/sonarqube
-
 linux:
-	env GOOS=linux go build $(LDFLAGS) -tags prod -o dist/linux/agent.next
-
-	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/azuretfs ./integrations/azuretfs
-	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/bitbucket ./integrations/bitbucket
-	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/github ./integrations/github
-	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/gitlab ./integrations/gitlab
-	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/jira-cloud ./integrations/jira-cloud
-	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/jira-hosted ./integrations/jira-hosted
-	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/mock ./integrations/mock
-	env GOOS=linux go build $(LDFLAGS) -o dist/linux/integrations/sonarqube ./integrations/sonarqube
-	
+	rm -rf dist
+	go run ./cmd/agent-dev build --platform linux
 
 windows:
-	env GOOS=windows go build $(LDFLAGS) -tags prod -o dist/windows/agent-next.exe
-
-	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/azuretfs.exe ./integrations/azuretfs
-	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/bitbucket.exe ./integrations/bitbucket
-	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/github.exe ./integrations/github
-	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/gitlab.exe ./integrations/gitlab
-	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/jira-cloud.exe ./integrations/jira-cloud
-	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/jira-hosted.exe ./integrations/jira-hosted
-	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/mock.exe ./integrations/mock
-	env GOOS=windows go build $(LDFLAGS) -o dist/windows/integrations/sonarqube.exe ./integrations/sonarqube
+	rm -rf dist
+	go run ./cmd/agent-dev build --platform windows
 
 .PHONY: docker
 docker:

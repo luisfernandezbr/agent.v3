@@ -2,6 +2,6 @@
 
 package build
 
-func IsProd() bool {
+func IsProduction() bool {
 	return false
 }

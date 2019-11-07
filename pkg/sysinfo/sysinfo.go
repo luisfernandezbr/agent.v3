@@ -47,8 +47,7 @@ func getDefault(root string) SystemInfo {
 	s.NumCPU = runtime.NumCPU()
 	s.GoVersion = runtime.Version()[2:] // trim off go
 	s.Architecture = runtime.GOARCH
-	s.AgentVersion = os.Getenv("PP_AGENT_VERSION")
+	s.AgentVersion = os.Getenv("PP_AGENT_VERSION") + "-" + os.Getenv("PP_AGENT_COMMIT")
 	s.FreeSpace = getFreeSpace(root)
-
 	return s
 }

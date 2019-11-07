@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/agent.next/cmd/agent-dev/cmdbuild"
 	"github.com/pinpt/agent.next/cmd/cmdupload"
 	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
@@ -201,6 +202,38 @@ var cmdUpload = &cobra.Command{
 func init() {
 	cmd := cmdUpload
 	flagPinpointRoot(cmd)
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdBuild = &cobra.Command{
+	Use:   "build",
+	Short: "Build agent and integrations and create a release",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		version, _ := cmd.Flags().GetString("version")
+		upload, _ := cmd.Flags().GetBool("upload")
+		platform, _ := cmd.Flags().GetString("platform")
+		if platform == "all" {
+			platform = ""
+		}
+		onlyAgent, _ := cmd.Flags().GetBool("only-agent")
+
+		cmdbuild.Run(cmdbuild.Opts{
+			BuildDir:     "./dist",
+			Version:      version,
+			Upload:       upload,
+			OnlyPlatform: platform,
+			OnlyAgent:    onlyAgent,
+		})
+	},
+}
+
+func init() {
+	cmd := cmdBuild
+	cmd.Flags().String("version", "dev", "Version to use for release")
+	cmd.Flags().Bool("upload", false, "Set to true to upload release to S3")
+	cmd.Flags().String("platform", "all", "Limit to specific platform")
+	cmd.Flags().Bool("only-agent", false, "Only build agent and skip the rest (for developement)")
 	cmdRoot.AddCommand(cmd)
 }
 

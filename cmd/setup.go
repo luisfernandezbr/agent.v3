@@ -22,11 +22,20 @@ import (
 )
 
 var (
-	Version = "dev" // set by makefile
+	// set by makefile
+	Version                = "dev"
+	Commit                 = "head"
+	IntegrationBinariesAll = ""
 )
 
 func Execute() {
-	os.Setenv("PP_AGENT_VERSION", Version) // used later for versioning
+	// using version in metrics and downloading integrations
+	os.Setenv("PP_AGENT_VERSION", Version)
+	// using commit as extra debug info
+	os.Setenv("PP_AGENT_COMMIT", Commit)
+
+	// need the list of integrations for download
+	os.Setenv("PP_INTEGRATION_BINARIES_ALL", IntegrationBinariesAll)
 	cmdRoot.Execute()
 }
 
@@ -98,11 +107,14 @@ func integrationCommandFlags(cmd *cobra.Command) {
 	cmd.Flags().String("agent-config-file", "", "Agent config json as file")
 	cmd.Flags().String("integrations-json", "", "Integrations config as json")
 	cmd.Flags().String("integrations-file", "", "Integrations config json as file")
-	var indir string
+	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
+}
+
+func defaultIntegrationsDir() string {
 	if insideDocker {
-		indir = "/bin/integrations"
+		return "./integrations"
 	}
-	cmd.Flags().String("integrations-dir", indir, "Integrations dir")
+	return ""
 }
 
 func integrationCommandOpts(cmd *cobra.Command) (hclog.Logger, cmdintegration.Opts) {

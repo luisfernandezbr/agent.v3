@@ -181,7 +181,12 @@ func (s *export) logLastProcessedTimestamps() error {
 		}
 	}
 
-	s.Logger.Info("Last processed timestamps", "v", lastExport)
+	// convert for log
+	obj := map[string]string{}
+	for k, v := range lastExport {
+		obj[k.String()] = v
+	}
+	s.Logger.Info("Last processed timestamps", "v", obj)
 	return nil
 }
 

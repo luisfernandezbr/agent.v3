@@ -30,6 +30,6 @@ func myDefaultInfo() SystemInfo {
 	s.NumCPU = runtime.NumCPU()
 	s.GoVersion = runtime.Version()[2:]
 	s.Architecture = runtime.GOARCH
-	s.AgentVersion = os.Getenv("PP_AGENT_VERSION")
+	s.AgentVersion = os.Getenv("PP_AGENT_VERSION") + "-" + os.Getenv("PP_AGENT_COMMIT")
 	return s
 }
