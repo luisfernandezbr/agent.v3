@@ -218,11 +218,14 @@ func (s *Command) CloseOnlyIntegrationAndHandlePanic(integration *iloader.Integr
 				Error: &panicOut,
 				Type:  agent.CrashTypeCrash,
 			}
+
 			s.Deviceinfo.AppendCommonInfo(data)
 			publishEvent := event.PublishEvent{
 				Object: data,
 				Headers: map[string]string{
-					"uuid": s.EnrollConf.DeviceID,
+					"uuid":        s.EnrollConf.DeviceID,
+					"customer_id": s.EnrollConf.CustomerID,
+					"job_id":      s.Opts.AgentConfig.Backend.ExportJobID,
 				},
 			}
 			if err := event.Publish(context.Background(), publishEvent, s.EnrollConf.Channel, s.EnrollConf.APIKey); err != nil {

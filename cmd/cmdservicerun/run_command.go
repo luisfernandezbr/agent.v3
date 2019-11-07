@@ -102,15 +102,14 @@ func (c *subCommand) run(cmdname string, res interface{}, args ...string) error 
 	if c.logWriter != nil {
 		cmd.Stdout = io.MultiWriter(os.Stdout, *c.logWriter, logsfile)
 	} else {
-		cmd.Stderr = os.Stderr
-		cmd.Stdout = io.MultiWriter(os.Stdout, logsfile)
+		cmd.Stdout = os.Stdout
 	}
 	cmd.Stderr = io.MultiWriter(os.Stderr, logsfile)
 
 	if err := cmd.Run(); err != nil {
 		logsfile.Close()
 		if err2 := c.handlePanic(logsfile.Name()); err2 != nil {
-			fmt.Println("could not open the log file", "err", err2)
+			return c.err(cmdname, fmt.Errorf("command err: %v. could not open the log file to save the crash report, err: %v", err, err2))
 		}
 		return c.err(cmdname, err)
 	}
@@ -135,9 +134,9 @@ func (c *subCommand) handlePanic(filename string) error {
 		return err
 	}
 	lines := strings.Split(string(b), "\n")
-	for i, line := range lines {
+	for _, line := range lines {
 		if strings.HasPrefix(line, "panic:") {
-			c.sendPanic(strings.Join(lines[i:], "\n"))
+			c.sendPanic(string(b))
 			return nil
 		}
 	}
@@ -156,7 +155,9 @@ func (c *subCommand) sendPanic(msg string) {
 		publishEvent := event.PublishEvent{
 			Object: data,
 			Headers: map[string]string{
-				"uuid": c.deviceInfo.DeviceID,
+				"uuid":        c.deviceInfo.DeviceID,
+				"customer_id": c.config.CustomerID,
+				"job_id":      c.config.Backend.ExportJobID,
 			},
 		}
 		if err := event.Publish(context.Background(), publishEvent, c.conf.Channel, c.conf.APIKey); err != nil {
