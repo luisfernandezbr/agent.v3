@@ -50,9 +50,6 @@ func (c *subCommand) validate() {
 	if c.integrations == nil {
 		panic("integrations is nil")
 	}
-	if c.integrationsDir == "" {
-		panic("integrationsDir is nil")
-	}
 	if c.deviceInfo.SystemID == "" {
 		panic("deviceInfo is nil")
 	}

@@ -100,7 +100,6 @@ func (s *runner) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not send crashes, err: %v", err)
 	}
-
 	s.exporter = newExporter(exporterOpts{
 		Logger:              s.logger,
 		LogLevelSubcommands: s.opts.LogLevelSubcommands,
@@ -109,6 +108,7 @@ func (s *runner) Run(ctx context.Context) error {
 		FSConf:              s.fsconf,
 		PPEncryptionKey:     s.conf.PPEncryptionKey,
 		AgentConfig:         s.agentConfig,
+		IntegrationsDir:     s.agentConfig.IntegrationsDir,
 	})
 
 	go func() {
