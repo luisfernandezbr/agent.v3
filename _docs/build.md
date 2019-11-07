@@ -9,6 +9,8 @@ cd ~/go/src/github.com/pinpt
 git clone git@github.com:pinpt/agent.next.git
 ```
 
+#### Build natively
+
 Build
 ```
 cd ./agent.next
@@ -26,9 +28,15 @@ go install github.com/pinpt/agent.next
 Run
 ```
 ~/go/bin/agent.next enroll <CODE> --channel=dev
-~/go/bin/agent.next service-run
 ```
 
 It will store the data into ~/.pinpoint/next folder.
 
 If you want to re-enroll the agent, delete ~/.pinpoint/next.
+
+#### Build and run via docker
+
+```
+docker build -t pinpoint-agent .
+docker run --rm pinpoint-agent enroll <CODE>
+```

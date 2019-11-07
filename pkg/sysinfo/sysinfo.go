@@ -39,7 +39,7 @@ func getDefault() SystemInfo {
 	s.NumCPU = runtime.NumCPU()
 	s.GoVersion = runtime.Version()[2:] // trim off go
 	s.Architecture = runtime.GOARCH
-	s.AgentVersion = os.Getenv("PP_AGENT_VERSION")
+	s.AgentVersion = os.Getenv("PP_AGENT_VERSION") + "-" + os.Getenv("PP_AGENT_COMMIT")
 	dir := os.Getenv("PP_CACHEDIR")
 	if dir == "" {
 		dir, _ = os.Getwd()

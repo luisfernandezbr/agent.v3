@@ -65,6 +65,8 @@ type exporterOpts struct {
 
 	PPEncryptionKey string
 	AgentConfig     cmdintegration.AgentConfig
+
+	IntegrationsDir string
 }
 
 type exporter struct {
@@ -308,6 +310,7 @@ func (s *exporter) execExport(ctx context.Context, agentConfig cmdexport.AgentCo
 	fs, err := newFsPassedParams(s.opts.FSConf.Temp, []kv{
 		{"--agent-config-file", agentConfig},
 		{"--integrations-file", integrations},
+		{"--integrations-dir", s.opts.IntegrationsDir},
 	})
 	if err != nil {
 		return err

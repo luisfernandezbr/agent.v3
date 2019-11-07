@@ -26,3 +26,14 @@ func WriteToTempAndRename(r io.Reader, loc string) error {
 	}
 	return nil
 }
+
+func Exists(loc string) (bool, error) {
+	_, err := os.Stat(loc)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}

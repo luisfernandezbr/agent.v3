@@ -2,6 +2,54 @@
 
 
 [[projects]]
+  digest = "1:b36785152642a82b5c987818710d183d81a93a0c8c50e131fce380be17807c9f"
+  name = "github.com/aws/aws-sdk-go"
+  packages = [
+    "aws",
+    "aws/awserr",
+    "aws/awsutil",
+    "aws/client",
+    "aws/client/metadata",
+    "aws/corehandlers",
+    "aws/credentials",
+    "aws/credentials/ec2rolecreds",
+    "aws/credentials/endpointcreds",
+    "aws/credentials/processcreds",
+    "aws/credentials/stscreds",
+    "aws/csm",
+    "aws/defaults",
+    "aws/ec2metadata",
+    "aws/endpoints",
+    "aws/request",
+    "aws/session",
+    "aws/signer/v4",
+    "internal/ini",
+    "internal/s3err",
+    "internal/sdkio",
+    "internal/sdkmath",
+    "internal/sdkrand",
+    "internal/sdkuri",
+    "internal/shareddefaults",
+    "private/protocol",
+    "private/protocol/eventstream",
+    "private/protocol/eventstream/eventstreamapi",
+    "private/protocol/json/jsonutil",
+    "private/protocol/query",
+    "private/protocol/query/queryutil",
+    "private/protocol/rest",
+    "private/protocol/restxml",
+    "private/protocol/xml/xmlutil",
+    "service/s3",
+    "service/s3/s3iface",
+    "service/s3/s3manager",
+    "service/sts",
+    "service/sts/stsiface",
+  ]
+  pruneopts = "T"
+  revision = "0cdb9f5617b12782c925df2fc10c00765ae0f4a4"
+  version = "v1.25.26"
+
+[[projects]]
   digest = "1:d1fe4f79a99ebe0558a1636207d8d5631a1f0757b03a5294ab8d0bee0d4fae52"
   name = "github.com/boyter/scc"
   packages = ["processor"]
@@ -213,6 +261,13 @@
   pruneopts = "T"
   revision = "1210784048414eefa4a4deea118810f412981407"
   version = "v1.1.1"
+
+[[projects]]
+  digest = "1:b3f2dea8fe8eadb5833f7c8a2ef35dae07308bf7a4d0fee7f37774314e1964d3"
+  name = "github.com/jmespath/go-jmespath"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "c2b33e84"
 
 [[projects]]
   branch = "master"
@@ -888,6 +943,9 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/aws/aws-sdk-go/aws",
+    "github.com/aws/aws-sdk-go/aws/session",
+    "github.com/aws/aws-sdk-go/service/s3/s3manager",
     "github.com/denisbrodbeck/machineid",
     "github.com/fatih/color",
     "github.com/golang/protobuf/proto",

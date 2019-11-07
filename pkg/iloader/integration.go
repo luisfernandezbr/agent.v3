@@ -154,7 +154,7 @@ func (s *Integration) setupLogFile() error {
 
 func (s *Integration) setupRPC() error {
 	var cmd *exec.Cmd
-	if build.IsProd() || s.opts.DevUseCompiledIntegrations {
+	if build.IsProduction() || s.opts.DevUseCompiledIntegrations {
 		var err error
 		cmd, err = prodIntegrationCommand(s.opts.Locs, s.ID.Name)
 		if err != nil {

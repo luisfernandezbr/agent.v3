@@ -1,10 +1,7 @@
 package fsconf
 
 import (
-	"os"
 	"path/filepath"
-
-	"github.com/pinpt/go-common/fileutil"
 
 	homedir "github.com/mitchellh/go-homedir"
 )
@@ -58,9 +55,6 @@ func New(pinpointRoot string) Locs {
 	s.Logs = j(s.Root, "logs")
 	s.LogsIntegrations = j(s.Root, "logs/integrations")
 	s.Integrations = j(s.Root, "integrations")
-	if !fileutil.FileExists(s.Integrations) {
-		s.Integrations = filepath.Join(filepath.Dir(os.Args[0]), "integrations")
-	}
 
 	s.RepoCache = j(s.Cache, "repos")
 	s.State = j(s.Root, "state")

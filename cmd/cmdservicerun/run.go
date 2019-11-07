@@ -40,14 +40,15 @@ type Opts struct {
 	// We need it here, because there is no way to get it from logger.
 	LogLevelSubcommands hclog.Level
 	PinpointRoot        string
+	IntegrationsDir     string
 }
 
 func Run(ctx context.Context, opts Opts) error {
-	run, err := newRunner(opts)
+	runner, err := newRunner(opts)
 	if err != nil {
 		return err
 	}
-	return run.run(ctx)
+	return runner.Run(ctx)
 }
 
 type runner struct {
@@ -70,10 +71,14 @@ func newRunner(opts Opts) (*runner, error) {
 
 type closefunc func()
 
-func (s *runner) run(ctx context.Context) error {
-	s.logger.Info("starting service")
+func (s *runner) Run(ctx context.Context) error {
+	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"))
 
-	var err error
+	err := s.downloadIntegrationsIfMissing()
+	if err != nil {
+		return fmt.Errorf("Could not download integration binaries: %v", err)
+	}
+
 	s.conf, err = agentconf.Load(s.fsconf.Config2)
 	if err != nil {
 		return err
@@ -94,6 +99,7 @@ func (s *runner) run(ctx context.Context) error {
 		FSConf:              s.fsconf,
 		PPEncryptionKey:     s.conf.PPEncryptionKey,
 		AgentConfig:         s.agentConfig,
+		IntegrationsDir:     s.opts.IntegrationsDir,
 	})
 
 	go func() {

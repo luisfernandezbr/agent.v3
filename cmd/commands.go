@@ -216,11 +216,15 @@ var cmdServiceRun = &cobra.Command{
 		if !ok {
 			return
 		}
+
+		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
+
 		ctx := context.Background()
 		opts := cmdservicerun.Opts{}
 		opts.Logger = logger
 		opts.LogLevelSubcommands = level
 		opts.PinpointRoot = pinpointRoot
+		opts.IntegrationsDir = integrationsDir
 		err = cmdservicerun.Run(ctx, opts)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -232,6 +236,7 @@ func init() {
 	cmd := cmdServiceRun
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
+	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
 	cmdRoot.AddCommand(cmd)
 }
 

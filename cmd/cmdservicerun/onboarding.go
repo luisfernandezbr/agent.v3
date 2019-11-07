@@ -20,6 +20,7 @@ func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integ
 	fs, err := newFsPassedParams(s.fsconf.Temp, []kv{
 		{"--agent-config-file", s.agentConfig},
 		{"--integrations-file", integrations},
+		{"--integrations-dir", s.opts.IntegrationsDir},
 	})
 	if err != nil {
 		return res, err
