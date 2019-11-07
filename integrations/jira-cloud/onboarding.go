@@ -48,19 +48,6 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 		return
 	}
 
-	qcc := s.qc.Common()
-	for i, project := range projects {
-		project2 := jiracommonapi.Project{}
-		project2.JiraID = project.RefID
-		project2.Key = project.Identifier
-		issuesCount, err := jiracommonapi.ProjectIssuesCount(qcc, project2)
-		if err != nil {
-			rerr = err
-			return
-		}
-		projects[i].TotalIssues = int64(issuesCount)
-	}
-
 	var records []map[string]interface{}
 	for _, project := range projects {
 		records = append(records, project.ToMap())

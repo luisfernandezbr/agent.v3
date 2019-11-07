@@ -14,7 +14,7 @@ import (
 func TestGetSystemInfoLinux(t *testing.T) {
 	t.Skip("this test fails in docker")
 
-	response := GetSystemInfo()
+	response := GetSystemInfo("")
 	answer := mySystemInfoLinux()
 	assert.NotZero(t, response.Memory)
 	assert.NotZero(t, response.FreeSpace)
@@ -40,7 +40,7 @@ func mySystemInfoLinux() SystemInfo {
 			}
 		}
 	}
-	def := getDefault()
+	def := getDefault("")
 	def.Name = kv["NAME"]
 	def.Version = kv["VERSION_ID"]
 	return def

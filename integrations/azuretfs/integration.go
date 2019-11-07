@@ -147,6 +147,8 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 		return s.onboardExportRepos(ctx, config)
 	case rpcdef.OnboardExportTypeProjects:
 		return s.onboardExportProjects(ctx, config)
+	case rpcdef.OnboardExportTypeWorkConfig:
+		return s.onboardWorkConfig(ctx, config)
 	default:
 		s.logger.Error("objectType not supported", "objectType", objectType)
 		res.Error = rpcdef.ErrOnboardExportNotSupported

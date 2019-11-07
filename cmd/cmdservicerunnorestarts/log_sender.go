@@ -1,4 +1,4 @@
-package cmdservicerun
+package cmdservicerunnorestarts
 
 import (
 	"bytes"

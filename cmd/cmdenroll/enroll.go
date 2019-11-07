@@ -111,7 +111,12 @@ func (s *enroller) SendEvent(ctx context.Context) error {
 	now := time.Now()
 	date.ConvertToModel(now, &data.RequestDate)
 
-	deviceinfo.AppendCommonInfo(&data, "", s.deviceID, s.systemID)
+	ci := deviceinfo.CommonInfo{
+		DeviceID: s.deviceID,
+		SystemID: s.systemID,
+		Root:     s.opts.PinpointRoot,
+	}
+	ci.AppendCommonInfo(&data)
 
 	reqEvent := event.PublishEvent{
 		Object: &data,
@@ -167,6 +172,7 @@ func (s *enroller) WaitForResponse(ctx context.Context, ready chan<- bool) (res 
 			done <- true
 		}()
 		resp := instance.Object().(*agent.EnrollResponse)
+
 		res = *resp
 		return nil, nil
 	}

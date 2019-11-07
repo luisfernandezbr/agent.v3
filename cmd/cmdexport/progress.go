@@ -7,7 +7,6 @@ import (
 
 	"github.com/pinpt/integration-sdk/agent"
 
-	"github.com/pinpt/agent.next/pkg/deviceinfo"
 	"github.com/pinpt/go-common/event"
 )
 
@@ -31,7 +30,7 @@ func (s *export) sendProgress(ctx context.Context, progressData []byte) error {
 		Data:    &str,
 		Success: true,
 	}
-	deviceinfo.AppendCommonInfoFromConfig(data, s.EnrollConf)
+	s.deviceInfo.AppendCommonInfo(data)
 	publishEvent := event.PublishEvent{
 		Object: data,
 		Headers: map[string]string{

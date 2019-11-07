@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/pinpt/go-common/fileutil"
 
@@ -14,7 +15,9 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
 	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
 	"github.com/pinpt/agent.next/cmd/cmdservicerun"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts"
 	"github.com/pinpt/agent.next/cmd/cmdserviceuninstall"
+	"github.com/pinpt/agent.next/cmd/cmdvalidate"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -31,11 +34,14 @@ func isInsideDocker() bool {
 	return false
 }
 
-var cmdEnroll = &cobra.Command{
-	Use:   "enroll <code>",
+var cmdEnrollNoServiceRun = &cobra.Command{
+	Use:   "enroll-no-service-run <code>",
 	Short: "Enroll the agent with the Pinpoint Cloud",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		// only json is supported as log format for enroll and service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
+		cmd.Flags().Set("log-format", "json")
+
 		code := args[0]
 		logger := cmdlogger.Stdout(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
@@ -50,14 +56,72 @@ var cmdEnroll = &cobra.Command{
 		}
 
 		channel, _ := cmd.Flags().GetString("channel")
-
 		ctx := context.Background()
+		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
+
+		if !skipValidate {
+			valid, err := cmdvalidate.Run(ctx, logger, pinpointRoot)
+			if err != nil {
+				exitWithErr(logger, err)
+			}
+			if !valid {
+				os.Exit(1)
+			}
+		}
+
 		err = cmdenroll.Run(ctx, cmdenroll.Opts{
 			Logger:       logger,
 			PinpointRoot: pinpointRoot,
 			Code:         code,
 			Channel:      channel,
 		})
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+
+		logger.Info("enroll completed successfully")
+	},
+}
+
+func init() {
+	cmd := cmdEnrollNoServiceRun
+	flagsLogger(cmd)
+	flagPinpointRoot(cmd)
+	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
+	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdEnroll = &cobra.Command{
+	Use:   "enroll <code>",
+	Short: "Enroll the agent with the Pinpoint Cloud",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		skipServiceRun, _ := cmd.Flags().GetBool("skip-service-run")
+		if skipServiceRun {
+			cmdEnrollNoServiceRun.Run(cmd, args)
+			return
+		}
+
+		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
+		cmd.Flags().Set("log-format", "json")
+
+		logger := cmdlogger.Stdout(cmd)
+		pinpointRoot, err := getPinpointRoot(cmd)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+
+		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
+
+		ctx := context.Background()
+		opts := cmdservicerun.Opts{}
+		opts.Logger = logger
+		opts.PinpointRoot = pinpointRoot
+		opts.Enroll.Run = true
+		opts.Enroll.Code = args[0]
+		opts.Enroll.SkipValidate = skipValidate
+		err = cmdservicerun.Run(ctx, opts)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
@@ -69,6 +133,8 @@ func init() {
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
 	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
+	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
+	cmd.Flags().Bool("skip-service-run", false, "Set to true to skip service run. Will need to run it separately.")
 	cmdRoot.AddCommand(cmd)
 }
 
@@ -120,7 +186,7 @@ var cmdValidateConfig = &cobra.Command{
 func init() {
 	cmd := cmdValidateConfig
 	integrationCommandFlags(cmd)
-	flagOutputFile(cmd)
+	flagOutputFile(cmd, "validate")
 	cmdRoot.AddCommand(cmd)
 }
 
@@ -160,7 +226,7 @@ var cmdExportOnboardData = &cobra.Command{
 func init() {
 	cmd := cmdExportOnboardData
 	integrationCommandFlags(cmd)
-	flagOutputFile(cmd)
+	flagOutputFile(cmd, "export onboard")
 	cmd.Flags().String("object-type", "", "Object type to export, one of: users, repos, projects.")
 	cmdRoot.AddCommand(cmd)
 }
@@ -199,14 +265,14 @@ func init() {
 	cmdRoot.AddCommand(cmdServiceUninstall)
 }
 
-var cmdServiceRun = &cobra.Command{
-	Use:   "service-run",
+var cmdServiceRunNoRestarts = &cobra.Command{
+	Use:   "service-run-no-restarts",
 	Short: "This command is called by OS service to run the service.",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
+
 		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
 		cmd.Flags().Set("log-format", "json")
-
 		logger := cmdlogger.Stdout(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
@@ -220,11 +286,43 @@ var cmdServiceRun = &cobra.Command{
 		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
 
 		ctx := context.Background()
-		opts := cmdservicerun.Opts{}
+		opts := cmdservicerunnorestarts.Opts{}
 		opts.Logger = logger
 		opts.LogLevelSubcommands = level
 		opts.PinpointRoot = pinpointRoot
 		opts.IntegrationsDir = integrationsDir
+		err = cmdservicerunnorestarts.Run(ctx, opts)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+	},
+}
+
+func init() {
+	cmd := cmdServiceRunNoRestarts
+	flagsLogger(cmd)
+	flagPinpointRoot(cmd)
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdServiceRun = &cobra.Command{
+	Use:   "service-run",
+	Short: "This command is called by OS service to run the service.",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
+		cmd.Flags().Set("log-format", "json")
+
+		logger := cmdlogger.Stdout(cmd)
+		pinpointRoot, err := getPinpointRoot(cmd)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+
+		ctx := context.Background()
+		opts := cmdservicerun.Opts{}
+		opts.Logger = logger
+		opts.PinpointRoot = pinpointRoot
 		err = cmdservicerun.Run(ctx, opts)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -251,4 +349,30 @@ var cmdVersion = &cobra.Command{
 
 func init() {
 	cmdRoot.AddCommand(cmdVersion)
+}
+
+var cmdValidate = &cobra.Command{
+	Use:   "validate",
+	Short: "Validate minimum hardware requirements",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		ctx := context.Background()
+		logger := cmdlogger.Stdout(cmd)
+		pinpointRoot, err := getPinpointRoot(cmd)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+
+		if _, err := cmdvalidate.Run(ctx, logger, pinpointRoot); err != nil {
+			exitWithErr(logger, err)
+		}
+
+	},
+}
+
+func init() {
+	cmd := cmdValidate
+	integrationCommandFlags(cmd)
+	cmdRoot.AddCommand(cmd)
 }

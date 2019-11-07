@@ -73,12 +73,16 @@ func exitWithErr(logger hclog.Logger, err error) {
 	os.Exit(1)
 }
 
-func getPinpointRoot(cmd *cobra.Command) (string, error) {
-	res, _ := cmd.Flags().GetString("pinpoint-root")
-	if res != "" {
-		return res, nil
+func getPinpointRoot(cmd *cobra.Command) (root string, err error) {
+	root, _ = cmd.Flags().GetString("pinpoint-root")
+	if root != "" {
+		return root, nil
 	}
-	return fsconf.DefaultRoot()
+	root, err = fsconf.DefaultRoot()
+	if err != nil {
+		return root, err
+	}
+	return root, nil
 }
 
 var insideDocker = isInsideDocker()
@@ -220,6 +224,6 @@ func (s outputFile) Close() {
 	}
 }
 
-func flagOutputFile(cmd *cobra.Command) {
-	cmd.Flags().String("output-file", "", "File to save validation result. Writes to stdout if not specified.")
+func flagOutputFile(cmd *cobra.Command, name string) {
+	cmd.Flags().String("output-file", "", "File to save "+name+" result. Writes to stdout if not specified.")
 }

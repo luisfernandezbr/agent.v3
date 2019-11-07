@@ -138,6 +138,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 		}
 		requester := NewRequester(opts)
 		s.qc.Request = requester.Request
+		s.qc.Request2 = requester.Request2
 	}
 
 	s.qc.CustomerID = config.Pinpoint.CustomerID
