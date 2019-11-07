@@ -16,6 +16,11 @@ import (
 const s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
 
 func (s *runner) downloadIntegrationsIfMissing() error {
+	// only attempt download in prod builds
+	if !build.IsProd() {
+		return nil
+	}
+
 	dir := s.fsconf.Integrations
 	exists, err := fs.Exists(dir)
 	if err != nil {
