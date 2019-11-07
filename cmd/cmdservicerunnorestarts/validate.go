@@ -3,13 +3,8 @@ package cmdservicerunnorestarts
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
 
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
-	"github.com/pinpt/agent.next/pkg/logutils"
 )
 
 func depointer(data map[string]interface{}) (map[string]interface{}, error) {
@@ -43,19 +38,18 @@ func (s *runner) validate(ctx context.Context, name string, systemType Integrati
 
 	integrations := []cmdvalidateconfig.Integration{in}
 
-	args := []string{"validate-config"}
-
-	fs, err := newFsPassedParams(s.fsconf.Temp, []kv{
-		{"--agent-config-file", s.agentConfig},
-		{"--integrations-file", integrations},
-	})
-	if err != nil {
-		return res, err
+	c := &subCommand{
+		ctx:          ctx,
+		logger:       s.logger,
+		tmpdir:       s.fsconf.Temp,
+		config:       s.agentConfig,
+		conf:         s.conf,
+		integrations: integrations,
+		deviceInfo:   s.deviceInfo,
 	}
-	args = append(args, fs.Args()...)
-	defer fs.Clean()
+	c.validate()
 
-	err = s.runCommand(ctx, &res, args)
+	err = c.run("validate-config", &res)
 	if err != nil {
 		return res, err
 	}
@@ -64,45 +58,4 @@ func (s *runner) validate(ctx context.Context, name string, systemType Integrati
 		s.logger.Info("validation failed", "err", res.Errors)
 	}
 	return res, nil
-}
-
-func (s *runner) runCommand(ctx context.Context, res interface{}, args []string) error {
-	rerr := func(err error) error {
-		return fmt.Errorf("could not run subcommand %v err: %v", args[0], err)
-	}
-
-	err := os.MkdirAll(s.fsconf.Temp, 0777)
-	if err != nil {
-		return err
-	}
-	f, err := ioutil.TempFile(s.fsconf.Temp, "")
-	if err != nil {
-		return err
-	}
-	out := f.Name()
-	f.Close()
-	defer os.Remove(out)
-
-	args = append(args, "--log-format", "json")
-	args = append(args, "--log-level", logutils.LogLevelToString(s.opts.LogLevelSubcommands))
-	args = append(args, "--output-file", out)
-	cmd := exec.CommandContext(ctx, os.Args[0], args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	if err != nil {
-		return rerr(err)
-	}
-
-	b, err := ioutil.ReadFile(out)
-	if err != nil {
-		return rerr(err)
-	}
-
-	err = json.Unmarshal(b, res)
-	if err != nil {
-		return rerr(fmt.Errorf("invalid data returned in command output, expecting json, err %v", err))
-	}
-
-	return nil
 }
