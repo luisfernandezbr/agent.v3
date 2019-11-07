@@ -199,6 +199,10 @@ func (s *runner) sendCrashes() error {
 		if err != nil {
 			return err
 		}
+		err = os.Remove(loc)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
