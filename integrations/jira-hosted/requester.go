@@ -38,12 +38,12 @@ func NewRequester(opts RequesterOpts) *Requester {
 }
 
 func (s *Requester) Request(objPath string, params url.Values, res interface{}) error {
-	_, err := s.request(objPath, params, res, 1)
+	_, err := s.request(objPath, params, res)
 	return err
 }
 
 func (s *Requester) Request2(objPath string, params url.Values, res interface{}) (statusCode int, _ error) {
-	return s.request(objPath, params, res, 1)
+	return s.request(objPath, params, res)
 }
 
 func (s *Requester) request(objPath string, params url.Values, res interface{}) (statusCode int, rerr error) {
