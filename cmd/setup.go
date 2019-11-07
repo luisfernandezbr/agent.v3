@@ -34,8 +34,15 @@ func Execute() {
 	// using commit as extra debug info
 	os.Setenv("PP_AGENT_COMMIT", Commit)
 
-	// need the list of integrations for download
-	os.Setenv("PP_INTEGRATION_BINARIES_ALL", IntegrationBinariesAll)
+	{
+		// list of integrations for download
+		// allow setting up from commandline for development use
+		v := os.Getenv("PP_INTEGRATION_BINARIES_ALL")
+		if v == "" {
+			os.Setenv("PP_INTEGRATION_BINARIES_ALL", IntegrationBinariesAll)
+		}
+	}
+
 	cmdRoot.Execute()
 }
 

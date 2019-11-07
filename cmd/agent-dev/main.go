@@ -230,7 +230,7 @@ var cmdBuild = &cobra.Command{
 
 func init() {
 	cmd := cmdBuild
-	cmd.Flags().String("version", "dev", "Version to use for release")
+	cmd.Flags().String("version", "test", "Version to use for release")
 	cmd.Flags().Bool("upload", false, "Set to true to upload release to S3")
 	cmd.Flags().String("platform", "all", "Limit to specific platform")
 	cmd.Flags().Bool("only-agent", false, "Only build agent and skip the rest (for developement)")

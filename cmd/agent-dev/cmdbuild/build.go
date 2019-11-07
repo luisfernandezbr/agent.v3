@@ -12,7 +12,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/archive"
 )
 
-func build(opts Opts, platforms Platforms) {
+func doBuild(opts Opts, platforms Platforms) {
 	fmt.Println("Building for platforms", platforms)
 
 	{
@@ -100,7 +100,7 @@ func getCommitSHA() string {
 }
 
 func buildAgent(opts Opts, pl Platform, ldflags string) {
-	exe([]string{"GOOS", pl.GOOS}, "go", "build", "-ldflags", ldflags, "-tags", "prod", "-o", filepath.Join(opts.BuildDir, "bin", pl.Name, "pinpoint-agent"))
+	exe([]string{"GOOS=" + pl.GOOS, "CGO_ENABLED=0"}, "go", "build", "-ldflags", ldflags, "-tags", "prod", "-o", filepath.Join(opts.BuildDir, "bin", pl.Name, "pinpoint-agent"))
 }
 
 func buildIntegration(opts Opts, in string, pl Platform) {
@@ -108,7 +108,7 @@ func buildIntegration(opts Opts, in string, pl Platform) {
 	if pl.GOOS == "windows" {
 		o += ".exe"
 	}
-	exe([]string{"GOOS", pl.GOOS}, "go", "build", "-o", o, "./integrations/"+in)
+	exe([]string{"GOOS=" + pl.GOOS, "CGO_ENABLED=0"}, "go", "build", "-o", o, "./integrations/"+in)
 }
 
 func exe(env []string, command ...string) {
