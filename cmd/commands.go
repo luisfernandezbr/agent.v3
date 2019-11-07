@@ -157,7 +157,7 @@ var cmdValidateConfig = &cobra.Command{
 func init() {
 	cmd := cmdValidateConfig
 	integrationCommandFlags(cmd)
-	flagOutputFile(cmd)
+	flagOutputFile(cmd, "validate")
 	cmdRoot.AddCommand(cmd)
 }
 
@@ -197,7 +197,7 @@ var cmdExportOnboardData = &cobra.Command{
 func init() {
 	cmd := cmdExportOnboardData
 	integrationCommandFlags(cmd)
-	flagOutputFile(cmd)
+	flagOutputFile(cmd, "export onboard")
 	cmd.Flags().String("object-type", "", "Object type to export, one of: users, repos, projects.")
 	cmdRoot.AddCommand(cmd)
 }

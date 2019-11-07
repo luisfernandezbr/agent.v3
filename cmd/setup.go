@@ -212,6 +212,6 @@ func (s outputFile) Close() {
 	}
 }
 
-func flagOutputFile(cmd *cobra.Command) {
-	cmd.Flags().String("output-file", "", "File to save validation result. Writes to stdout if not specified.")
+func flagOutputFile(cmd *cobra.Command, name string) {
+	cmd.Flags().String("output-file", "", "File to save "+name+" result. Writes to stdout if not specified.")
 }
