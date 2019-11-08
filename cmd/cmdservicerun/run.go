@@ -1,7 +1,9 @@
 package cmdservicerun
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +15,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/fs"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/pservice"
 )
@@ -92,6 +95,7 @@ func (s *runner) runService(ctx context.Context) error {
 	fn := time.Now().UTC().Format(time.RFC3339Nano)
 	fn = strings.ReplaceAll(fn, ":", "-")
 	fn = strings.ReplaceAll(fn, ".", "-")
+	fn += ".log"
 	errFileLoc := filepath.Join(s.fsconf.ServiceRunCrashes, fn)
 
 	err := os.MkdirAll(filepath.Dir(errFileLoc), 0777)
@@ -129,6 +133,21 @@ func (s *runner) runService(ctx context.Context) error {
 		err := os.Remove(errFileLoc)
 		if err != nil {
 			return fmt.Errorf("could not remove empty file for err output: %v", err)
+		}
+	} else {
+		// if there was a crash create a metadata file
+		data := struct {
+			CrashDate time.Time `json:"crash_date"`
+		}{}
+		data.CrashDate = time.Now()
+		b, err := json.Marshal(data)
+		if err != nil {
+			return err
+		}
+		jsonLoc := errFileLoc + ".json"
+		err = fs.WriteToTempAndRename(bytes.NewReader(b), jsonLoc)
+		if err != nil {
+			return fmt.Errorf("could not write crash metadata, err: %v", err)
 		}
 	}
 	return runErr

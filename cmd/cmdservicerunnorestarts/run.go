@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -169,42 +167,6 @@ func (s *runner) runTestMockExport() error {
 
 	ctx := context.Background()
 	return s.exporter.execExport(ctx, integrations, reprocessHistorical, nil)
-}
-
-func (s *runner) sendCrashes() error {
-	ctx := context.Background()
-	dir := s.fsconf.ServiceRunCrashes
-	files, err := ioutil.ReadDir(dir)
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	for _, f := range files {
-		s.logger.Info("sending crash file", "f", f.Name())
-		loc := filepath.Join(dir, f.Name())
-		b, err := ioutil.ReadFile(loc)
-		if err != nil {
-			return err
-		}
-		data := string(b)
-		ev := &agent.Crash{
-			Data:  &data,
-			Error: &data,
-			Type:  agent.CrashTypeCrash,
-		}
-		s.deviceInfo.AppendCommonInfo(ev)
-		err = s.sendEvent(ctx, ev, "", nil)
-		if err != nil {
-			return err
-		}
-		err = os.Remove(loc)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {
