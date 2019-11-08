@@ -79,13 +79,13 @@ type closefunc func()
 func (s *runner) Run(ctx context.Context) error {
 	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"))
 
-	if runtime.GOOS == "linux" {
+	if build.IsProduction() && runtime.GOOS == "linux" {
 		version := os.Getenv("PP_AGENT_UPDATE")
 		if version != "" {
 			err := build.ValidateVersion(version)
 			if err != nil {
 				return fmt.Errorf("Could not self-update, invalid version in PP_AGENT_UPDATE: %v", err)
-			}			
+			}
 			err = s.update(version)
 			if err != nil {
 				return fmt.Errorf("Could not self-update: %v", err)
@@ -213,6 +213,10 @@ func (s *runner) sendCrashes() error {
 		}
 		s.deviceInfo.AppendCommonInfo(ev)
 		err = s.sendEvent(ctx, ev, "", nil)
+		if err != nil {
+			return err
+		}
+		err = os.Remove(loc)
 		if err != nil {
 			return err
 		}
