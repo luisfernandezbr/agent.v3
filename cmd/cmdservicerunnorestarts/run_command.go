@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/event"
@@ -16,6 +17,7 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent.next/pkg/agentconf"
+	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
 )
 
@@ -109,7 +111,7 @@ func (c *subCommand) run(cmdname string, res interface{}, args ...string) error 
 
 	if err := cmd.Run(); err != nil {
 		logsfile.Close()
-		if err2 := c.handlePanic(logsfile.Name()); err2 != nil {
+		if err2 := c.handlePanic(logsfile.Name(), cmdname); err2 != nil {
 			return c.err(cmdname, fmt.Errorf("command err: %v. could not open the log file to save the crash report, err: %v", err, err2))
 		}
 		return c.err(cmdname, err)
@@ -129,7 +131,7 @@ func (c *subCommand) run(cmdname string, res interface{}, args ...string) error 
 	return nil
 }
 
-func (c *subCommand) handlePanic(filename string) error {
+func (c *subCommand) handlePanic(filename, cmdname string) error {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
@@ -139,10 +141,11 @@ func (c *subCommand) handlePanic(filename string) error {
 		c.logger.Info("crash detected!")
 		if c.config.Backend.Enable {
 			data := &agent.Crash{
-				Data:  &msg,
-				Error: &msg,
-				Type:  agent.CrashTypeCrash,
+				Data:      &msg,
+				Type:      agent.CrashTypeCrash,
+				Component: cmdname,
 			}
+			date.ConvertToModel(time.Now(), &data.CrashDate)
 			c.deviceInfo.AppendCommonInfo(data)
 			publishEvent := event.PublishEvent{
 				Object: data,
