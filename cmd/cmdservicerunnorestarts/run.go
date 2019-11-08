@@ -87,6 +87,11 @@ func (s *runner) Run(ctx context.Context) error {
 
 	s.agentConfig = s.getAgentConfig()
 
+	err = s.sendCrashes()
+	if err != nil {
+		return fmt.Errorf("could not send crashes, err: %v", err)
+	}
+
 	s.deviceInfo = s.getDeviceInfoOpts()
 
 	err = s.sendStart(context.Background())
@@ -94,10 +99,6 @@ func (s *runner) Run(ctx context.Context) error {
 		return fmt.Errorf("could not send start event, err: %v", err)
 	}
 
-	err = s.sendCrashes()
-	if err != nil {
-		return fmt.Errorf("could not send crashes, err: %v", err)
-	}
 	s.exporter = newExporter(exporterOpts{
 		Logger:              s.logger,
 		LogLevelSubcommands: s.opts.LogLevelSubcommands,

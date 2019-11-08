@@ -32,10 +32,8 @@ func (s *runner) sendCrashes() error {
 
 func (s *runner) sendCrashFile(loc string) error {
 	ctx := context.Background()
-
 	n := filepath.Base(loc)
-
-	if filepath.Ext(n) != "log" {
+	if filepath.Ext(n) != ".log" {
 		return nil
 	}
 
