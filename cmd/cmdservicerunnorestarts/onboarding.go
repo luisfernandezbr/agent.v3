@@ -15,14 +15,13 @@ func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integ
 	integrations := []cmdvalidateconfig.Integration{config}
 
 	c := &subCommand{
-		ctx:             ctx,
-		logger:          s.logger,
-		tmpdir:          s.fsconf.Temp,
-		config:          s.agentConfig,
-		conf:            s.conf,
-		integrations:    integrations,
-		integrationsDir: s.opts.IntegrationsDir,
-		deviceInfo:      s.deviceInfo,
+		ctx:          ctx,
+		logger:       s.logger,
+		tmpdir:       s.fsconf.Temp,
+		config:       s.agentConfig,
+		conf:         s.conf,
+		integrations: integrations,
+		deviceInfo:   s.deviceInfo,
 	}
 
 	c.validate()

@@ -75,11 +75,12 @@ type closefunc func()
 func (s *runner) Run(ctx context.Context) error {
 	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"))
 
-	err := s.downloadIntegrationsIfMissing()
-	if err != nil {
-		return fmt.Errorf("Could not download integration binaries: %v", err)
-	}
+	//err := s.downloadIntegrationsIfMissing()
+	//if err != nil {
+	//		return fmt.Errorf("Could not download integration binaries: %v", err)
+	//}
 
+	var err error
 	s.conf, err = agentconf.Load(s.fsconf.Config2)
 	if err != nil {
 		return err
@@ -107,7 +108,7 @@ func (s *runner) Run(ctx context.Context) error {
 		FSConf:              s.fsconf,
 		PPEncryptionKey:     s.conf.PPEncryptionKey,
 		AgentConfig:         s.agentConfig,
-		IntegrationsDir:     s.agentConfig.IntegrationsDir,
+		IntegrationsDir:     s.fsconf.Integrations,
 	})
 
 	go func() {
@@ -652,6 +653,7 @@ func (s *runner) getAgentConfig() (res cmdintegration.AgentConfig) {
 	res.CustomerID = s.conf.CustomerID
 	res.PinpointRoot = s.opts.PinpointRoot
 	res.Backend.Enable = true
+	res.IntegrationsDir = s.opts.IntegrationsDir
 	return
 }
 

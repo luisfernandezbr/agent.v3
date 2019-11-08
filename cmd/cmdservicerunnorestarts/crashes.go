@@ -24,7 +24,7 @@ func (s *runner) sendCrashes() error {
 	for _, f := range files {
 		err := s.sendCrashFile(filepath.Join(dir, f.Name()))
 		if err != nil {
-			s.logger.Error("could not upload service crash file", "n", f.Name())
+			s.logger.Error("could not upload service crash file", "n", f.Name(), "err", err)
 		}
 	}
 	return nil

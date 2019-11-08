@@ -292,14 +292,13 @@ func (s *exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport
 
 func (s *exporter) execExport(ctx context.Context, integrations []cmdexport.Integration, reprocessHistorical bool, exportLogWriter io.Writer) error {
 	c := &subCommand{
-		ctx:             ctx,
-		logger:          s.logger,
-		tmpdir:          s.opts.FSConf.Temp,
-		config:          s.opts.AgentConfig,
-		conf:            s.conf,
-		integrations:    integrations,
-		integrationsDir: s.opts.IntegrationsDir,
-		deviceInfo:      s.deviceInfo,
+		ctx:          ctx,
+		logger:       s.logger,
+		tmpdir:       s.opts.FSConf.Temp,
+		config:       s.opts.AgentConfig,
+		conf:         s.conf,
+		integrations: integrations,
+		deviceInfo:   s.deviceInfo,
 	}
 	c.validate()
 	if exportLogWriter != nil {

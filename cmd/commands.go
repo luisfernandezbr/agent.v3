@@ -283,6 +283,7 @@ var cmdServiceRunNoRestarts = &cobra.Command{
 			return
 		}
 
+		// TODO: this isn't working
 		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
 
 		ctx := context.Background()
