@@ -65,6 +65,10 @@ func newEnroller(opts Opts) (*enroller, error) {
 	s.fsconf = fsconf.New(opts.PinpointRoot)
 	s.deviceID = pstrings.NewUUIDV4()
 	s.systemID = deviceinfo.SystemID()
+	if s.systemID == "" {
+		return nil, errors.New("could not get SystemID")
+	}
+
 	return s, nil
 }
 

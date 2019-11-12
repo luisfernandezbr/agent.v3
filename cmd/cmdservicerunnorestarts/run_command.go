@@ -43,16 +43,16 @@ func (c *subCommand) validate() {
 		panic("temp dir is nil")
 	}
 	if c.config.PinpointRoot == "" {
-		panic("config is nil")
+		panic("c.config.PinpointRoot is nil")
 	}
 	if c.conf.SystemID == "" {
-		panic("conf is nil")
+		panic("c.conf.SystemID is nil")
 	}
 	if c.integrations == nil {
 		panic("integrations is nil")
 	}
 	if c.deviceInfo.SystemID == "" {
-		panic("deviceInfo is nil")
+		panic("c.deviceInfo.SystemID is nil")
 	}
 }
 

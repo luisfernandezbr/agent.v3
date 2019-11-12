@@ -73,7 +73,7 @@ func newRunner(opts Opts) (*runner, error) {
 type closefunc func()
 
 func (s *runner) Run(ctx context.Context) error {
-	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"))
+	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot)
 
 	//err := s.downloadIntegrationsIfMissing()
 	//if err != nil {
