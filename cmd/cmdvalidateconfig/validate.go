@@ -162,7 +162,7 @@ func (s *validator) cloneRepo(url string) error {
 
 	s.Logger.Info("git clone validation start", "url", urlWithoutCreds)
 
-	err = gitclone.TestClone(url, s.Locs.Temp)
+	err = gitclone.TestClone(s.Logger, url, s.Locs.Temp)
 	if err != nil {
 		return fmt.Errorf("git clone validation failed. url: %v err: %v", urlWithoutCreds, err)
 	}
