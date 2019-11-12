@@ -30,9 +30,10 @@ func TestClone(logger hclog.Logger, url string, tempDirRoot string) error {
 		"clone", "--progress", url, tempDir,
 	}
 
-	logger.Debug("clone args", "args", args)
+	cloneArgs := cloneArgs(url)
+	args = append(args, cloneArgs...)
 
-	args = append(args, cloneArgs(url)...)
+	logger.Debug("additional clone args", "args", cloneArgs)
 
 	c := exec.CommandContext(ctx, "git", args...)
 	var outBuf bytes.Buffer
