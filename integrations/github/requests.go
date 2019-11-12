@@ -97,10 +97,13 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 			return
 		}
 
+		waittime := 30 * time.Minute
+		paused := time.Now()
 		s.logger.Warn("api request failed due to throttling, will sleep for 30m and retry, this should only happen if hourly quota is used up, check here (https://developer.github.com/v4/guides/resource-limitations/#returning-a-calls-rate-limit-status)", "body", string(b), "retryThrottled", retryThrottled)
-		s.agent.SendPauseEvent("message")
-		time.Sleep(30 * time.Minute)
-		s.agent.SendContinueEvent("message")
+
+		s.agent.SendPauseEvent(fmt.Sprintf("github paused, will resume in %v", waittime))
+		time.Sleep(waittime)
+		s.agent.SendResumeEvent(fmt.Sprintf("github resumed, time elapsed %v", time.Since(paused)))
 
 		return s.makeRequestRetryThrottled(reqDef, res, retryThrottled+1)
 

@@ -35,10 +35,6 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 
 func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
 
-	// REMOVE BEFORE MERGING
-	s.agent.SendPauseEvent("test pause message")
-	s.agent.SendContinueEvent("test continue message")
-
 	if err := s.initConfig(ctx, config); err != nil {
 		return res, err
 	}

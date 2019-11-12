@@ -52,6 +52,6 @@ func (s agentDelegate) SendPauseEvent(msg string) error {
 	panic("not implemented")
 }
 
-func (s agentDelegate) SendContinueEvent(msg string) error {
+func (s agentDelegate) SendResumeEvent(msg string) error {
 	panic("not implemented")
 }

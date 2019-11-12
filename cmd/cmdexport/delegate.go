@@ -65,9 +65,9 @@ func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
 }
 
 func (s agentDelegate) SendPauseEvent(msg string) error {
-	return s.export.SendPauseEvent(msg)
+	return s.export.SendPauseEvent(s.in, msg)
 }
 
-func (s agentDelegate) SendContinueEvent(msg string) error {
-	return s.export.SendContinueEvent(msg)
+func (s agentDelegate) SendResumeEvent(msg string) error {
+	return s.export.SendResumeEvent(s.in, msg)
 }

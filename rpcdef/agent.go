@@ -45,7 +45,7 @@ type Agent interface {
 
 	SendPauseEvent(msg string) error
 
-	SendContinueEvent(msg string) error
+	SendResumeEvent(msg string) error
 }
 
 type ExportObj struct {
@@ -238,9 +238,9 @@ func (s *AgentServer) SendPauseEvent(ctx context.Context, req *proto.SendPauseEv
 	return
 }
 
-func (s *AgentServer) SendContinueEvent(ctx context.Context, req *proto.SendContinueEventReq) (resp *proto.Empty, err error) {
+func (s *AgentServer) SendResumeEvent(ctx context.Context, req *proto.SendResumeEventReq) (resp *proto.Empty, err error) {
 	resp = &proto.Empty{}
-	err = s.Impl.SendContinueEvent(req.Message)
+	err = s.Impl.SendResumeEvent(req.Message)
 	return
 }
 
@@ -362,11 +362,11 @@ func (s *AgentClient) SendPauseEvent(msg string) error {
 	return nil
 }
 
-func (s *AgentClient) SendContinueEvent(msg string) error {
-	args := &proto.SendContinueEventReq{
+func (s *AgentClient) SendResumeEvent(msg string) error {
+	args := &proto.SendResumeEventReq{
 		Message: msg,
 	}
-	_, err := s.client.SendContinueEvent(context.Background(), args)
+	_, err := s.client.SendResumeEvent(context.Background(), args)
 	if err != nil {
 		return err
 	}
