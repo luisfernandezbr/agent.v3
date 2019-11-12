@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/event"
@@ -16,19 +17,19 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent.next/pkg/agentconf"
+	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
 )
 
 type subCommand struct {
-	ctx             context.Context
-	logger          hclog.Logger
-	tmpdir          string
-	config          cmdintegration.AgentConfig
-	conf            agentconf.Config
-	integrations    []cmdvalidateconfig.Integration
-	integrationsDir string
-	deviceInfo      deviceinfo.CommonInfo
-	logWriter       *io.Writer
+	ctx          context.Context
+	logger       hclog.Logger
+	tmpdir       string
+	config       cmdintegration.AgentConfig
+	conf         agentconf.Config
+	integrations []cmdvalidateconfig.Integration
+	deviceInfo   deviceinfo.CommonInfo
+	logWriter    *io.Writer
 }
 
 func (c *subCommand) validate() {
@@ -42,16 +43,16 @@ func (c *subCommand) validate() {
 		panic("temp dir is nil")
 	}
 	if c.config.PinpointRoot == "" {
-		panic("config is nil")
+		panic("c.config.PinpointRoot is nil")
 	}
-	if c.conf.SystemID == "" {
-		panic("conf is nil")
+	if c.conf.DeviceID == "" {
+		panic("c.conf.DeviceID is nil")
 	}
 	if c.integrations == nil {
 		panic("integrations is nil")
 	}
-	if c.deviceInfo.SystemID == "" {
-		panic("deviceInfo is nil")
+	if c.deviceInfo.CustomerID == "" {
+		panic("c.deviceInfo.CustomerID is nil")
 	}
 }
 
@@ -64,7 +65,6 @@ func (c *subCommand) run(cmdname string, res interface{}, args ...string) error 
 	fs, err := newFsPassedParams(c.tmpdir, []kv{
 		{"--agent-config-file", c.config},
 		{"--integrations-file", c.integrations},
-		{"--integrations-dir", c.integrationsDir},
 	})
 	defer fs.Clean()
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *subCommand) run(cmdname string, res interface{}, args ...string) error 
 
 	if err := cmd.Run(); err != nil {
 		logsfile.Close()
-		if err2 := c.handlePanic(logsfile.Name()); err2 != nil {
+		if err2 := c.handlePanic(logsfile.Name(), cmdname); err2 != nil {
 			return c.err(cmdname, fmt.Errorf("command err: %v. could not open the log file to save the crash report, err: %v", err, err2))
 		}
 		return c.err(cmdname, err)
@@ -129,7 +129,7 @@ func (c *subCommand) run(cmdname string, res interface{}, args ...string) error 
 	return nil
 }
 
-func (c *subCommand) handlePanic(filename string) error {
+func (c *subCommand) handlePanic(filename, cmdname string) error {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
@@ -139,10 +139,11 @@ func (c *subCommand) handlePanic(filename string) error {
 		c.logger.Info("crash detected!")
 		if c.config.Backend.Enable {
 			data := &agent.Crash{
-				Data:  &msg,
-				Error: &msg,
-				Type:  agent.CrashTypeCrash,
+				Data:      &msg,
+				Type:      agent.CrashTypeCrash,
+				Component: cmdname,
 			}
+			date.ConvertToModel(time.Now(), &data.CrashDate)
 			c.deviceInfo.AppendCommonInfo(data)
 			publishEvent := event.PublishEvent{
 				Object: data,

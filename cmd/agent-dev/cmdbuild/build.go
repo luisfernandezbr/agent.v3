@@ -100,7 +100,11 @@ func getCommitSHA() string {
 }
 
 func buildAgent(opts Opts, pl Platform, ldflags string) {
-	exe([]string{"GOOS", pl.GOOS}, "go", "build", "-ldflags", ldflags, "-tags", "prod", "-o", filepath.Join(opts.BuildDir, "bin", pl.Name, "pinpoint-agent"))
+	name := filepath.Join(opts.BuildDir, "bin", pl.Name, "pinpoint-agent")
+	if pl.GOOS == "windows" {
+		name += ".exe"
+	}
+	exe("GOOS="+pl.GOOS, "go", "build", "-ldflags", ldflags, "-tags", "prod", "-o", name)
 }
 
 func buildIntegration(opts Opts, in string, pl Platform) {
@@ -108,14 +112,14 @@ func buildIntegration(opts Opts, in string, pl Platform) {
 	if pl.GOOS == "windows" {
 		o += ".exe"
 	}
-	exe([]string{"GOOS", pl.GOOS}, "go", "build", "-o", o, "./integrations/"+in)
+	exe("GOOS="+pl.GOOS, "go", "build", "-o", o, "./integrations/"+in)
 }
 
-func exe(env []string, command ...string) {
+func exe(env string, command ...string) {
 	fmt.Println(env, command)
 	cmd := exec.Command(command[0], command[1:]...)
 
-	cmd.Env = append(os.Environ(), env...)
+	cmd.Env = append(os.Environ(), env)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	err := cmd.Run()

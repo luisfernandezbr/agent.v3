@@ -39,14 +39,13 @@ func (s *runner) validate(ctx context.Context, name string, systemType Integrati
 	integrations := []cmdvalidateconfig.Integration{in}
 
 	c := &subCommand{
-		ctx:             ctx,
-		logger:          s.logger,
-		tmpdir:          s.fsconf.Temp,
-		config:          s.agentConfig,
-		conf:            s.conf,
-		integrations:    integrations,
-		integrationsDir: s.opts.IntegrationsDir,
-		deviceInfo:      s.deviceInfo,
+		ctx:          ctx,
+		logger:       s.logger,
+		tmpdir:       s.fsconf.Temp,
+		config:       s.agentConfig,
+		conf:         s.conf,
+		integrations: integrations,
+		deviceInfo:   s.deviceInfo,
 	}
 	c.validate()
 

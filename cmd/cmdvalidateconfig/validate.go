@@ -1,18 +1,11 @@
 package cmdvalidateconfig
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
-	"os"
-	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/gitclone"
@@ -169,7 +162,8 @@ func (s *validator) cloneRepo(url string) error {
 
 	s.Logger.Info("git clone validation start", "url", urlWithoutCreds)
 
-	if err := s.cloneRepo2(url); err != nil {
+	err = gitclone.TestClone(s.Logger, url, s.Locs.Temp)
+	if err != nil {
 		return fmt.Errorf("git clone validation failed. url: %v err: %v", urlWithoutCreds, err)
 	}
 
@@ -187,55 +181,4 @@ func urlWithoutCreds(urlStr string) (string, error) {
 }
 
 func (s *validator) Destroy() {
-}
-
-func (s *validator) cloneRepo2(url string) error {
-
-	tmpDir, err := ioutil.TempDir(s.Locs.Temp, "validate-repo-clone-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tmpDir)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	c := exec.CommandContext(ctx, "git", "clone", "--progress", url, tmpDir)
-	var outBuf bytes.Buffer
-	c.Stdout = &outBuf
-	stderr, _ := c.StderrPipe()
-
-	err = c.Start()
-	if err != nil {
-		return err
-	}
-
-	scanner := bufio.NewScanner(stderr)
-	var output []byte
-	for scanner.Scan() {
-		output = append(output, scanner.Bytes()...)
-
-		line := scanner.Text()
-
-		if strings.Contains(line, "Receiving objects:") ||
-			strings.Contains(line, "Counting objects:") ||
-			strings.Contains(line, "Enumerating objects:") ||
-			strings.Contains(line, "You appear to have cloned an empty repository") {
-			// If we see one of these lines, it means credentials are valid
-
-			return nil
-		}
-
-	}
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	outputStr, err := gitclone.RedactCredsInText(string(output), url)
-	if err != nil {
-		return err
-	}
-
-	return errors.New(outputStr)
 }

@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/date"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/pkg/agentconf"
@@ -214,10 +216,11 @@ func (s *Command) CloseOnlyIntegrationAndHandlePanic(integration *iloader.Integr
 		fmt.Println(panicOut)
 		if s.Opts.AgentConfig.Backend.Enable {
 			data := &agent.Crash{
-				Data:  &panicOut,
-				Error: &panicOut,
-				Type:  agent.CrashTypeCrash,
+				Data:      &panicOut,
+				Type:      agent.CrashTypeCrash,
+				Component: "integration/" + integration.ID.String(),
 			}
+			date.ConvertToModel(time.Now(), &data.CrashDate)
 
 			s.Deviceinfo.AppendCommonInfo(data)
 			publishEvent := event.PublishEvent{
