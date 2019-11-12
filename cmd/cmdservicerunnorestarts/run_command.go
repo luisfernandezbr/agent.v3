@@ -101,7 +101,7 @@ func (c *subCommand) run(cmdname string, res interface{}, args ...string) error 
 	cmd := exec.CommandContext(c.ctx, os.Args[0], flags...)
 
 	if c.logWriter != nil {
-		cmd.Stdout = io.MultiWriter(os.Stdout, *c.logWriter, logsfile)
+		cmd.Stdout = io.MultiWriter(os.Stdout, *c.logWriter)
 	} else {
 		cmd.Stdout = os.Stdout
 	}
@@ -110,7 +110,7 @@ func (c *subCommand) run(cmdname string, res interface{}, args ...string) error 
 	if err := cmd.Run(); err != nil {
 		logsfile.Close()
 		if err2 := c.handlePanic(logsfile.Name(), cmdname); err2 != nil {
-			return c.err(cmdname, fmt.Errorf("command err: %v. could not open the log file to save the crash report, err: %v", err, err2))
+			return c.err(cmdname, fmt.Errorf("command err: %v. could not crash report file, err: %v", err, err2))
 		}
 		return c.err(cmdname, err)
 	}
@@ -137,8 +137,6 @@ func (c *subCommand) handlePanic(filename, cmdname string) error {
 	if len(b) == 0 {
 		return nil
 	}
-	// TODO: msg here actually includes full log from export
-	// Not sure if bug or feature
 	msg := string(b)
 	c.logger.Info("Sub-command crashed will send to backend", "cmd", cmdname)
 	data := &agent.Crash{
