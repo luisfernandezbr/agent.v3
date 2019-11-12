@@ -68,10 +68,11 @@ func newEnroller(opts Opts) (*enroller, error) {
 	var err error
 	s.systemID, err = sysinfo.GetID2()
 	if err != nil {
-		return nil, fmt.Errorf("could not get SystemID (PP_AGENT_ID) err: %v", err)
-	}
-	if s.systemID == "" {
-		return nil, errors.New("could not get SystemID (PP_AGENT_ID)")
+		s.logger.Info("using empty SystemID, could not get SystemID (PP_AGENT_ID)", "err", err)
+		//return nil, fmt.Errorf("could not get SystemID (PP_AGENT_ID) err: %v", err)
+	} else if s.systemID == "" {
+		s.logger.Info("using empty SystemID, could not get SystemID (PP_AGENT_ID)")
+		//return nil, errors.New("could not get SystemID (PP_AGENT_ID)")
 	}
 	return s, nil
 }

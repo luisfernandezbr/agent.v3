@@ -45,8 +45,8 @@ func (c *subCommand) validate() {
 	if c.config.PinpointRoot == "" {
 		panic("c.config.PinpointRoot is nil")
 	}
-	if c.conf.SystemID == "" {
-		panic("c.conf.SystemID is nil")
+	if c.conf.DeviceID == "" {
+		panic("c.conf.DeviceID is nil")
 	}
 	if c.integrations == nil {
 		panic("integrations is nil")
