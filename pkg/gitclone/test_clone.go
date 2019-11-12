@@ -9,11 +9,13 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/hashicorp/go-hclog"
 )
 
 // TestClone tried to clone repo based on the url passed. If it fails returns an error.
 // Does not do the full clone, exists after it confirms that remote is sending data.
-func TestClone(url string, tempDirRoot string) error {
+func TestClone(logger hclog.Logger, url string, tempDirRoot string) error {
 
 	tempDir, err := ioutil.TempDir(tempDirRoot, "validate-repo-clone-")
 	if err != nil {
@@ -27,6 +29,9 @@ func TestClone(url string, tempDirRoot string) error {
 	args := []string{
 		"clone", "--progress", url, tempDir,
 	}
+
+	logger.Debug("clone args", "args", args)
+
 	args = append(args, cloneArgs(url)...)
 
 	c := exec.CommandContext(ctx, "git", args...)
