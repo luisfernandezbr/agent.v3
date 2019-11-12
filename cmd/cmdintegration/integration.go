@@ -274,17 +274,17 @@ func (s *Command) SendResumeEvent(in integrationid.ID, msg string) error {
 }
 
 func (s *Command) sendEvent(data datamodel.Model) error {
-	if s.Opts.AgentConfig.Backend.Enable {
-		s.Deviceinfo.AppendCommonInfo(data)
-		publishEvent := event.PublishEvent{
-			Object: data,
-			Headers: map[string]string{
-				"uuid":        s.EnrollConf.DeviceID,
-				"customer_id": s.EnrollConf.CustomerID,
-				"job_id":      s.Opts.AgentConfig.Backend.ExportJobID,
-			},
-		}
-		return event.Publish(context.Background(), publishEvent, s.EnrollConf.Channel, s.EnrollConf.APIKey)
+	if !s.Opts.AgentConfig.Backend.Enable {
+		return nil
 	}
-	return nil
+	s.Deviceinfo.AppendCommonInfo(data)
+	publishEvent := event.PublishEvent{
+		Object: data,
+		Headers: map[string]string{
+			"uuid":        s.EnrollConf.DeviceID,
+			"customer_id": s.EnrollConf.CustomerID,
+			"job_id":      s.Opts.AgentConfig.Backend.ExportJobID,
+		},
+	}
+	return event.Publish(context.Background(), publishEvent, s.EnrollConf.Channel, s.EnrollConf.APIKey)
 }
