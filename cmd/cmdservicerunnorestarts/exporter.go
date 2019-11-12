@@ -156,9 +156,6 @@ func (s *exporter) sendExportEvent(ctx context.Context, jobID string, data *agen
 }
 
 func (s *exporter) sendStartExportEvent(ctx context.Context, jobID string, ints []agent.ExportRequestIntegrations) error {
-	if !s.opts.AgentConfig.Backend.Enable {
-		return nil
-	}
 	data := &agent.ExportResponse{
 		State:   agent.ExportResponseStateStarting,
 		Success: true,
@@ -167,9 +164,6 @@ func (s *exporter) sendStartExportEvent(ctx context.Context, jobID string, ints 
 }
 
 func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started, ended time.Time, filesize int64, uploadurl *string, ints []agent.ExportRequestIntegrations, isIncremental []bool, err error) error {
-	if !s.opts.AgentConfig.Backend.Enable {
-		return nil
-	}
 	data := &agent.ExportResponse{
 		State:     agent.ExportResponseStateCompleted,
 		Size:      filesize,

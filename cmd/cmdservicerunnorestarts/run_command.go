@@ -134,30 +134,30 @@ func (c *subCommand) handlePanic(filename, cmdname string) error {
 	if err != nil {
 		return err
 	}
-	if len(b) > 0 {
-		msg := string(b)
-		c.logger.Info("crash detected!")
-		if c.config.Backend.Enable {
-			data := &agent.Crash{
-				Data:      &msg,
-				Type:      agent.CrashTypeCrash,
-				Component: cmdname,
-			}
-			date.ConvertToModel(time.Now(), &data.CrashDate)
-			c.deviceInfo.AppendCommonInfo(data)
-			publishEvent := event.PublishEvent{
-				Object: data,
-				Headers: map[string]string{
-					"uuid":        c.deviceInfo.DeviceID,
-					"customer_id": c.config.CustomerID,
-					"job_id":      c.config.Backend.ExportJobID,
-				},
-			}
-			if err := event.Publish(context.Background(), publishEvent, c.conf.Channel, c.conf.APIKey); err != nil {
-				return fmt.Errorf("error sending agent.Crash to backend, err: %v", err)
-			}
-			c.logger.Info("crash sent to backend")
-		}
+	if len(b) == 0 {
+		return nil
+	}
+	// TODO: msg here actually includes full log from export
+	// Not sure if bug or feature
+	msg := string(b)
+	c.logger.Info("Sub-command crashed will send to backend", "cmd", cmdname)
+	data := &agent.Crash{
+		Data:      &msg,
+		Type:      agent.CrashTypeCrash,
+		Component: cmdname,
+	}
+	date.ConvertToModel(time.Now(), &data.CrashDate)
+	c.deviceInfo.AppendCommonInfo(data)
+	publishEvent := event.PublishEvent{
+		Object: data,
+		Headers: map[string]string{
+			"uuid":        c.deviceInfo.DeviceID,
+			"customer_id": c.config.CustomerID,
+			"job_id":      c.config.Backend.ExportJobID,
+		},
+	}
+	if err := event.Publish(context.Background(), publishEvent, c.conf.Channel, c.conf.APIKey); err != nil {
+		return fmt.Errorf("error sending agent.Crash to backend, err: %v", err)
 	}
 	return nil
 }

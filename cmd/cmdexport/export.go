@@ -33,7 +33,7 @@ func Run(opts Opts) error {
 	if err != nil {
 		return err
 	}
-	defer exp.Destroy()
+	exp.Destroy()
 	return nil
 }
 
@@ -127,7 +127,7 @@ func newExport(opts Opts) (*export, error) {
 	select {
 	case hadErrors = <-gitProcessingDone:
 	case <-time.After(1 * time.Second):
-		// only log this is there is actual work needed for git repos
+		// only log this if there is actual work needed for git repos
 		s.Logger.Info("Waiting for git repo processing to complete")
 		hadErrors = <-gitProcessingDone
 	}
@@ -149,9 +149,21 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
-	s.printExportRes(exportRes, hadErrors)
+	_, failed := s.printExportRes(exportRes, hadErrors)
+	if len(failed) > 0 {
+		return nil, errors.New("One or more integrations failed")
+	}
 
 	return s, nil
+}
+
+func (s *export) Destroy() {
+	for _, integration := range s.Integrations {
+		err := integration.Close()
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func (s *export) discardIncrementalData() error {
@@ -366,11 +378,8 @@ func (s *export) runExports() map[integrationid.ID]runResult {
 	return res
 }
 
-func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors bool) {
+func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors bool) (success, failed []integrationid.ID) {
 	s.Logger.Debug("Printing export results for all integrations")
-
-	var success []integrationid.ID
-	var failed []integrationid.ID
 
 	for id, integration := range s.Integrations {
 		ires := res[id]
@@ -398,13 +407,6 @@ func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors
 	} else {
 		s.Logger.Info("Exports completed", "succeded", success, "dur", dur.String())
 	}
-}
 
-func (s *export) Destroy() {
-	for _, integration := range s.Integrations {
-		err := integration.Close()
-		if err != nil {
-			panic(err)
-		}
-	}
+	return
 }
