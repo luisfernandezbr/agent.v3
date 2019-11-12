@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pinpt/go-common/datetime"
+
 	"github.com/pinpt/agent.next/rpcdef/proto"
 )
 
@@ -43,7 +45,7 @@ type Agent interface {
 	// OAuthNewAccessToken returns a new access token for integrations with UseOAuth: true. It askes agent to retrieve a new token from backend based on refresh token agent has.
 	OAuthNewAccessToken() (token string, _ error)
 
-	SendPauseEvent(msg string) error
+	SendPauseEvent(msg string, resumeDate datetime.Date) error
 
 	SendResumeEvent(msg string) error
 }
@@ -234,7 +236,12 @@ func (s *AgentServer) OAuthNewAccessToken(ctx context.Context, req *proto.Empty)
 
 func (s *AgentServer) SendPauseEvent(ctx context.Context, req *proto.SendPauseEventReq) (resp *proto.Empty, err error) {
 	resp = &proto.Empty{}
-	err = s.Impl.SendPauseEvent(req.Message)
+	date := datetime.Date{
+		Epoch:   req.Epoch,
+		Offset:  req.Offset,
+		Rfc3339: req.Rfc3339,
+	}
+	err = s.Impl.SendPauseEvent(req.Message, date)
 	return
 }
 
@@ -351,9 +358,12 @@ func (s *AgentClient) OAuthNewAccessToken() (token string, _ error) {
 	return resp.Token, nil
 }
 
-func (s *AgentClient) SendPauseEvent(msg string) error {
+func (s *AgentClient) SendPauseEvent(msg string, resumeDate datetime.Date) error {
 	args := &proto.SendPauseEventReq{
 		Message: msg,
+		Epoch:   resumeDate.Epoch,
+		Offset:  resumeDate.Offset,
+		Rfc3339: resumeDate.Rfc3339,
 	}
 	_, err := s.client.SendPauseEvent(context.Background(), args)
 	if err != nil {

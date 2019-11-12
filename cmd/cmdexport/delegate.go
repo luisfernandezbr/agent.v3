@@ -4,6 +4,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/expsessions"
 	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/go-common/datetime"
 )
 
 type agentDelegate struct {
@@ -64,8 +65,8 @@ func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
 	return s.export.OAuthNewAccessToken(s.in.Name)
 }
 
-func (s agentDelegate) SendPauseEvent(msg string) error {
-	return s.export.SendPauseEvent(s.in, msg)
+func (s agentDelegate) SendPauseEvent(msg string, resumeDate datetime.Date) error {
+	return s.export.SendPauseEvent(s.in, msg, resumeDate)
 }
 
 func (s agentDelegate) SendResumeEvent(msg string) error {

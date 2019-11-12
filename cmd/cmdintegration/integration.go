@@ -20,6 +20,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-common/datamodel"
+	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/integration-sdk/agent"
 )
@@ -241,13 +242,14 @@ func (s *Command) CaptureShutdown() {
 	os.Exit(1)
 }
 
-func (s *Command) SendPauseEvent(in integrationid.ID, msg string) error {
+func (s *Command) SendPauseEvent(in integrationid.ID, msg string, resumeDate datetime.Date) error {
 
 	data := &agent.Pause{
-		Data:       &msg,
-		Type:       agent.PauseTypePause,
-		Integraton: in.String(),
-		JobID:      s.Opts.AgentConfig.Backend.ExportJobID,
+		Data:        &msg,
+		Type:        agent.PauseTypePause,
+		Integration: in.String(),
+		JobID:       s.Opts.AgentConfig.Backend.ExportJobID,
+		ResumeDate:  agent.PauseResumeDate(resumeDate),
 	}
 	date.ConvertToModel(time.Now(), &data.EventDate)
 	if err := s.sendEvent(data); err != nil {
@@ -258,10 +260,10 @@ func (s *Command) SendPauseEvent(in integrationid.ID, msg string) error {
 func (s *Command) SendResumeEvent(in integrationid.ID, msg string) error {
 
 	data := &agent.Resume{
-		Data:       &msg,
-		Type:       agent.ResumeTypeResume,
-		Integraton: in.String(),
-		JobID:      s.Opts.AgentConfig.Backend.ExportJobID,
+		Data:        &msg,
+		Type:        agent.ResumeTypeResume,
+		Integration: in.String(),
+		JobID:       s.Opts.AgentConfig.Backend.ExportJobID,
 	}
 	date.ConvertToModel(time.Now(), &data.EventDate)
 	if err := s.sendEvent(data); err != nil {
