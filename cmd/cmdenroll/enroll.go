@@ -10,6 +10,7 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/encrypt"
+	"github.com/pinpt/agent.next/pkg/sysinfo"
 
 	"github.com/pinpt/go-common/fileutil"
 
@@ -64,11 +65,14 @@ func newEnroller(opts Opts) (*enroller, error) {
 	s.opts = opts
 	s.fsconf = fsconf.New(opts.PinpointRoot)
 	s.deviceID = pstrings.NewUUIDV4()
-	s.systemID = deviceinfo.SystemID()
-	if s.systemID == "" {
-		return nil, errors.New("could not get SystemID")
+	var err error
+	s.systemID, err = sysinfo.GetID2()
+	if err != nil {
+		return nil, fmt.Errorf("could not get SystemID (PP_AGENT_ID) err: %v", err)
 	}
-
+	if s.systemID == "" {
+		return nil, errors.New("could not get SystemID (PP_AGENT_ID)")
+	}
 	return s, nil
 }
 
