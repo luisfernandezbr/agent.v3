@@ -51,8 +51,8 @@ func (c *subCommand) validate() {
 	if c.integrations == nil {
 		panic("integrations is nil")
 	}
-	if c.deviceInfo.SystemID == "" {
-		panic("c.deviceInfo.SystemID is nil")
+	if c.deviceInfo.CustomerID == "" {
+		panic("c.deviceInfo.CustomerID is nil")
 	}
 }
 
