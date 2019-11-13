@@ -196,27 +196,11 @@ func PaginateNewerThan(log hclog.Logger, lastProcessed time.Time, fn PaginateNew
 	p := url.Values{}
 	p.Set("per_page", "100")
 
-	if lastProcessed.IsZero() {
-		for {
-			p.Add("page", nextPage)
-			pageInfo, err := fn(log, p, lastProcessed)
-			if err != nil {
-				return err
-			}
-			if pageInfo.Page == pageInfo.TotalPages {
-				return nil
-			}
-			if pageInfo.PageSize == 0 {
-				return errors.New("pageSize is 0")
-			}
-			nextPage = pageInfo.NextPage
-			pageOffset += pageInfo.PageSize
-		}
-	}
-
 	for {
 		p.Add("page", nextPage)
-		p.Add("order_by", "last_activity_at")
+		if !lastProcessed.IsZero() {
+			p.Add("order_by", "last_activity_at")
+		}
 		pageInfo, err := fn(log, p, lastProcessed)
 		if err != nil {
 			return err
