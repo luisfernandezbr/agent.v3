@@ -41,8 +41,9 @@ func (api *API) fetchItemIDs(projid string, fromdate time.Time) ([]string, error
 // FetchWorkItemsByIDs used by onboard and export
 func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResponse, []*work.Issue, error) {
 	url := fmt.Sprintf(`%s/_apis/wit/workitems?ids=%s`, projid, strings.Join(ids, ","))
+	var err error
 	var res []WorkItemResponse
-	if err := api.getRequest(url, stringmap{"pagingoff": "true"}, &res); err != nil {
+	if err = api.getRequest(url, stringmap{"pagingoff": "true"}, &res); err != nil {
 		return nil, nil, err
 	}
 	var res2 []*work.Issue
@@ -65,9 +66,13 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 			Type:          fields.WorkItemType,
 			URL:           each.URL,
 		}
+		if issue.ChangeLog, err = api.fetchChangeLog(projid, issue.RefID); err != nil {
+			return nil, nil, err
+		}
 		date.ConvertToModel(fields.CreatedDate, &issue.CreatedDate)
 		date.ConvertToModel(fields.DueDate, &issue.DueDate)
 		date.ConvertToModel(fields.ChangedDate, &issue.UpdatedDate)
+
 		res2 = append(res2, &issue)
 	}
 	return res, res2, nil
