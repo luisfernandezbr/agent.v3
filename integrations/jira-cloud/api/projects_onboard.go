@@ -72,22 +72,28 @@ func ProjectsOnboardPage(
 
 		lastIssue, totalIssues, err := jiracommonapi.GetProjectLastIssue(qc.Common(), project)
 		if err != nil {
-			rerr = err
-			return
+			if err == jiracommonapi.ErrPermissions {
+				// this is a private project, skip setting last issue
+				item.Name += " (No Permissions)"
+			} else {
+				rerr = err
+				return
+			}
+		} else {
+
+			item.LastIssue.IssueID = lastIssue.IssueID
+			item.LastIssue.Identifier = lastIssue.Identifier
+
+			date.ConvertToModel(lastIssue.CreatedDate, &item.LastIssue.CreatedDate)
+
+			creator := lastIssue.Creator
+
+			item.LastIssue.LastUser.UserID = creator.RefID()
+			item.LastIssue.LastUser.Name = creator.Name
+			item.LastIssue.LastUser.AvatarURL = creator.Avatars.Large
+			qc.Logger.Info("totalissues", "c", totalIssues)
+			item.TotalIssues = int64(totalIssues)
 		}
-
-		item.LastIssue.IssueID = lastIssue.IssueID
-		item.LastIssue.Identifier = lastIssue.Identifier
-
-		date.ConvertToModel(lastIssue.CreatedDate, &item.LastIssue.CreatedDate)
-
-		creator := lastIssue.Creator
-
-		item.LastIssue.LastUser.UserID = creator.RefID()
-		item.LastIssue.LastUser.Name = creator.Name
-		item.LastIssue.LastUser.AvatarURL = creator.Avatars.Large
-
-		item.TotalIssues = int64(totalIssues)
 
 		// we decide if project is active on backend TODO: this flag can be removed from datamodel
 		item.Active = true

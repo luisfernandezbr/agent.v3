@@ -21,7 +21,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	// set by makefile
+	Version                = "dev"
+	Commit                 = "head"
+	IntegrationBinariesAll = ""
+)
+
 func Execute() {
+	// using version in metrics and downloading integrations
+	os.Setenv("PP_AGENT_VERSION", Version)
+	// using commit as extra debug info
+	os.Setenv("PP_AGENT_COMMIT", Commit)
+
+	// need the list of integrations for download
+	os.Setenv("PP_INTEGRATION_BINARIES_ALL", IntegrationBinariesAll)
 	cmdRoot.Execute()
 }
 
@@ -59,12 +73,16 @@ func exitWithErr(logger hclog.Logger, err error) {
 	os.Exit(1)
 }
 
-func getPinpointRoot(cmd *cobra.Command) (string, error) {
-	res, _ := cmd.Flags().GetString("pinpoint-root")
-	if res != "" {
-		return res, nil
+func getPinpointRoot(cmd *cobra.Command) (root string, err error) {
+	root, _ = cmd.Flags().GetString("pinpoint-root")
+	if root != "" {
+		return root, nil
 	}
-	return fsconf.DefaultRoot()
+	root, err = fsconf.DefaultRoot()
+	if err != nil {
+		return root, err
+	}
+	return root, nil
 }
 
 var insideDocker = isInsideDocker()
@@ -89,11 +107,14 @@ func integrationCommandFlags(cmd *cobra.Command) {
 	cmd.Flags().String("agent-config-file", "", "Agent config json as file")
 	cmd.Flags().String("integrations-json", "", "Integrations config as json")
 	cmd.Flags().String("integrations-file", "", "Integrations config json as file")
-	var indir string
+	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
+}
+
+func defaultIntegrationsDir() string {
 	if insideDocker {
-		indir = "/bin/integrations"
+		return "/bin/integrations"
 	}
-	cmd.Flags().String("integrations-dir", indir, "Integrations dir")
+	return ""
 }
 
 func integrationCommandOpts(cmd *cobra.Command) (hclog.Logger, cmdintegration.Opts) {
@@ -203,6 +224,6 @@ func (s outputFile) Close() {
 	}
 }
 
-func flagOutputFile(cmd *cobra.Command) {
-	cmd.Flags().String("output-file", "", "File to save validation result. Writes to stdout if not specified.")
+func flagOutputFile(cmd *cobra.Command, name string) {
+	cmd.Flags().String("output-file", "", "File to save "+name+" result. Writes to stdout if not specified.")
 }

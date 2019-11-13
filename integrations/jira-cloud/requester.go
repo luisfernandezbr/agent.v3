@@ -14,12 +14,13 @@ import (
 )
 
 type RequesterOpts struct {
-	Logger     hclog.Logger
-	Clients    reqstats.Clients
-	APIURL     string
-	Username   string
-	Password   string
-	OAuthToken *oauthtoken.Manager
+	Logger        hclog.Logger
+	Clients       reqstats.Clients
+	APIURL        string
+	Username      string
+	Password      string
+	OAuthToken    *oauthtoken.Manager
+	RetryRequests bool
 }
 
 type Requester struct {
@@ -39,21 +40,29 @@ func NewRequester(opts RequesterOpts) *Requester {
 }
 
 func (s *Requester) Request(objPath string, params url.Values, res interface{}) error {
+	_, err := s.request(objPath, params, res, 1)
+	return err
+}
+
+func (s *Requester) Request2(objPath string, params url.Values, res interface{}) (statusCode int, _ error) {
 	return s.request(objPath, params, res, 1)
 }
 
-func (s *Requester) request(objPath string, params url.Values, res interface{}, maxOAuthRetries int) error {
+func (s *Requester) request(objPath string, params url.Values, res interface{}, maxOAuthRetries int) (statusCode int, rerr error) {
 	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
-
 	if len(params) != 0 {
 		u += "?" + params.Encode()
 	}
-
-	reqs := requests.New(s.logger, s.opts.Clients.Default)
-
+	var reqs requests.Requests
+	if s.opts.RetryRequests {
+		reqs = requests.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
+	} else {
+		reqs = requests.New(s.logger, s.opts.Clients.TLSInsecure)
+	}
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	if s.opts.OAuthToken != nil {
@@ -63,21 +72,27 @@ func (s *Requester) request(objPath string, params url.Values, res interface{}, 
 	}
 
 	resp, err := reqs.JSON(req, res)
+	if resp != nil {
+		statusCode = resp.StatusCode
+	}
 	if s.opts.OAuthToken != nil {
-		if resp.StatusCode == 401 {
+		if resp != nil && resp.StatusCode == 401 {
 			if maxOAuthRetries == 0 {
-				return fmt.Errorf("received error 401 after retrying with new oauth token, path: %v", objPath)
+				rerr = fmt.Errorf("received error 401 after retrying with new oauth token, path: %v", objPath)
+				return
 			}
 			err := s.opts.OAuthToken.Refresh()
 			if err != nil {
-				return err
+				rerr = err
+				return
 			}
 			return s.request(objPath, params, res, maxOAuthRetries-1)
 		}
 	}
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
-	return nil
+	return
 }

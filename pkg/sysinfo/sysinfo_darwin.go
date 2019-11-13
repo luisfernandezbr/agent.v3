@@ -9,7 +9,7 @@ import (
 )
 
 // GetSystemInfo returns the SystemInfo details
-func GetSystemInfo() SystemInfo {
+func GetSystemInfo(root string) SystemInfo {
 	var buf bytes.Buffer
 	c := exec.Command("sw_vers")
 	c.Stdout = &buf
@@ -24,15 +24,10 @@ func GetSystemInfo() SystemInfo {
 			}
 		}
 	}
-	def := getDefault()
+	def := getDefault(root)
 	def.Name = kv["ProductName"]
 	def.Version = kv["ProductVersion"]
 	return def
-}
-
-// GetAvailablePath returns a valid path for the largest disk available
-func GetAvailablePath() string {
-	return getAvailablePath()
 }
 
 /*

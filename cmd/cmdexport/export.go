@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/deviceinfo"
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/integrationid"
@@ -32,7 +33,7 @@ func Run(opts Opts) error {
 	if err != nil {
 		return err
 	}
-	defer exp.Destroy()
+	exp.Destroy()
 	return nil
 }
 
@@ -47,6 +48,7 @@ type export struct {
 	lastProcessed *jsonstore.Store
 
 	gitProcessingRepos chan rpcdef.GitRepoFetch
+	deviceInfo         deviceinfo.CommonInfo
 }
 
 func newExport(opts Opts) (*export, error) {
@@ -59,6 +61,15 @@ func newExport(opts Opts) (*export, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	s.deviceInfo = deviceinfo.CommonInfo{
+		CustomerID: opts.AgentConfig.CustomerID,
+		DeviceID:   s.EnrollConf.DeviceID,
+		SystemID:   s.EnrollConf.SystemID,
+		Root:       opts.Opts.AgentConfig.PinpointRoot,
+	}
+
+	s.Command.Deviceinfo = s.deviceInfo
 
 	if opts.ReprocessHistorical {
 		s.Logger.Info("Starting export. ReprocessHistorical is true, discarding incremental checkpoints")
@@ -85,7 +96,10 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
-	s.sessions = newSessions(s.Logger, s, s.Locs.Uploads)
+	s.sessions, err = newSessions(s.Logger, s, opts.ReprocessHistorical)
+	if err != nil {
+		return nil, err
+	}
 
 	s.gitProcessingRepos = make(chan rpcdef.GitRepoFetch, 100000)
 
@@ -113,7 +127,7 @@ func newExport(opts Opts) (*export, error) {
 	select {
 	case hadErrors = <-gitProcessingDone:
 	case <-time.After(1 * time.Second):
-		// only log this is there is actual work needed for git repos
+		// only log this if there is actual work needed for git repos
 		s.Logger.Info("Waiting for git repo processing to complete")
 		hadErrors = <-gitProcessingDone
 	}
@@ -129,9 +143,27 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
-	s.printExportRes(exportRes, hadErrors)
+	err = s.sessions.Close()
+	if err != nil {
+		s.Logger.Error("could not close sessions", "err", err)
+		return nil, err
+	}
+
+	_, failed := s.printExportRes(exportRes, hadErrors)
+	if len(failed) > 0 {
+		return nil, errors.New("One or more integrations failed")
+	}
 
 	return s, nil
+}
+
+func (s *export) Destroy() {
+	for _, integration := range s.Integrations {
+		err := integration.Close()
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func (s *export) discardIncrementalData() error {
@@ -161,7 +193,12 @@ func (s *export) logLastProcessedTimestamps() error {
 		}
 	}
 
-	s.Logger.Info("Last processed timestamps", "v", lastExport)
+	// convert for log
+	obj := map[string]string{}
+	for k, v := range lastExport {
+		obj[k.String()] = v
+	}
+	s.Logger.Info("Last processed timestamps", "v", obj)
 	return nil
 }
 
@@ -198,7 +235,7 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 	ctx := context.Background()
 	sessionRoot, _, err := s.sessions.expsession.SessionRootTracking(integrationid.ID{
 		Name: "git",
-	}, "repos")
+	}, "git")
 	if err != nil {
 		logger.Error("could not create session for git export", "err", err.Error())
 		return true, nil
@@ -231,8 +268,19 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 			Sessions:      s.sessions.expsession,
 			SessionRootID: sessionRoot,
 		}
+		for _, pr1 := range fetch.PRs {
+			pr2 := exportrepo.PR{}
+			pr2.ID = pr1.ID
+			pr2.RefID = pr1.RefID
+			pr2.URL = pr1.URL
+			pr2.LastCommitSHA = pr1.LastCommitSHA
+			opts.PRs = append(opts.PRs, pr2)
+		}
 		exp := exportrepo.New(opts, s.Locs)
 		repoDirName, duration, err := exp.Run(ctx)
+
+		s.sessions.expsession.Progress(sessionRoot, i, 0)
+
 		if err == exportrepo.ErrRevParseFailed {
 			reposFailedRevParse++
 			continue
@@ -285,35 +333,34 @@ type runResult struct {
 	Duration time.Duration
 }
 
-func (s *export) runExports() map[string]runResult {
+func (s *export) runExports() map[integrationid.ID]runResult {
 	ctx := context.Background()
 	wg := sync.WaitGroup{}
 
-	res := map[string]runResult{}
+	res := map[integrationid.ID]runResult{}
 	resMu := sync.Mutex{}
 
-	for name, integration := range s.Integrations {
+	for _, integration := range s.Integrations {
 		wg.Add(1)
-		name := name
 		integration := integration
 		go func() {
 			defer wg.Done()
 			start := time.Now()
-
+			id := integration.ID
 			ret := func(err error) {
 				resMu.Lock()
-				res[name] = runResult{Err: err, Duration: time.Since(start)}
+				res[id] = runResult{Err: err, Duration: time.Since(start)}
 				resMu.Unlock()
 				if err != nil {
-					s.Logger.Error("Export failed", "integration", name, "dur", time.Since(start).String(), "err", err)
+					s.Logger.Error("Export failed", "integration", id, "dur", time.Since(start).String(), "err", err)
 					return
 				}
-				s.Logger.Info("Export success", "integration", name, "dur", time.Since(start).String())
+				s.Logger.Info("Export success", "integration", id, "dur", time.Since(start).String())
 			}
 
-			s.Logger.Info("Export starting", "integration", name)
+			s.Logger.Info("Export starting", "integration", id)
 
-			exportConfig, ok := s.ExportConfigs[name]
+			exportConfig, ok := s.ExportConfigs[id]
 			if !ok {
 				panic("no config for integration")
 			}
@@ -331,51 +378,35 @@ func (s *export) runExports() map[string]runResult {
 	return res
 }
 
-func (s *export) printExportRes(res map[string]runResult, gitHadErrors bool) {
+func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors bool) (success, failed []integrationid.ID) {
 	s.Logger.Debug("Printing export results for all integrations")
 
-	var successNames []string
-	var failedNames []string
-
-	for name, integration := range s.Integrations {
-		ires := res[name]
+	for id, integration := range s.Integrations {
+		ires := res[id]
 		if ires.Err != nil {
-			s.Logger.Error("Export failed", "integration", name, "dur", ires.Duration.String(), "err", ires.Err)
-			panicOut, err := integration.CloseAndDetectPanic()
-			if panicOut != "" {
-				// This is already printed in integration. But we will repeat output at the end, so it's not lost.
-				fmt.Println("Panic in integration", name)
-				fmt.Println(panicOut)
-			}
-			if err != nil {
+			s.Logger.Error("Export failed", "integration", id, "dur", ires.Duration.String(), "err", ires.Err)
+			if err := s.Command.CloseOnlyIntegrationAndHandlePanic(integration); err != nil {
 				s.Logger.Error("Could not close integration", "err", err)
 			}
-			failedNames = append(failedNames, name)
+			failed = append(failed, id)
 			continue
 		}
 
-		s.Logger.Info("Export success", "integration", name, "dur", ires.Duration.String())
-		successNames = append(successNames, name)
+		s.Logger.Info("Export success", "integration", id, "dur", ires.Duration.String())
+		success = append(success, id)
 	}
 
 	dur := time.Since(s.StartTime)
 
 	if gitHadErrors {
-		failedNames = append(failedNames, "git")
+		failed = append(failed, integrationid.ID{Name: "git"})
 	}
 
-	if len(failedNames) > 0 {
-		s.Logger.Error("Some exports failed", "failed", failedNames, "succeded", successNames, "dur", dur.String())
+	if len(failed) > 0 {
+		s.Logger.Error("Some exports failed", "failed", failed, "succeded", success, "dur", dur.String())
 	} else {
-		s.Logger.Info("Exports completed", "succeded", successNames, "dur", dur.String())
+		s.Logger.Info("Exports completed", "succeded", success, "dur", dur.String())
 	}
-}
 
-func (s *export) Destroy() {
-	for _, integration := range s.Integrations {
-		err := integration.Close()
-		if err != nil {
-			panic(err)
-		}
-	}
+	return
 }

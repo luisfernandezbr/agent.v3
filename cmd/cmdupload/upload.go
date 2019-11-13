@@ -60,6 +60,8 @@ func Run(ctx context.Context,
 	return
 }
 
+var ErrNoFilesFound = errors.New("no files found to upload")
+
 func zipFilesJSON(logger hclog.Logger, target, source string) error {
 	logger.Info("looking for files", "dir", source)
 	files, err := fileutil.FindFiles(source, regexp.MustCompile("\\.gz$"))
@@ -67,7 +69,7 @@ func zipFilesJSON(logger hclog.Logger, target, source string) error {
 		return err
 	}
 	if len(files) == 0 {
-		return errors.New("no files to upload")
+		return ErrNoFilesFound
 	}
 	return archive.ZipFiles(target, source, files)
 }

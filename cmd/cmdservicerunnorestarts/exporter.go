@@ -1,13 +1,10 @@
-package cmdservicerun
+package cmdservicerunnorestarts
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
-	"os/exec"
 	"sync"
 	"time"
 
@@ -65,6 +62,8 @@ type exporterOpts struct {
 
 	PPEncryptionKey string
 	AgentConfig     cmdintegration.AgentConfig
+
+	IntegrationsDir string
 }
 
 type exporter struct {
@@ -72,10 +71,11 @@ type exporter struct {
 
 	conf agentconf.Config
 
-	logger    hclog.Logger
-	opts      exporterOpts
-	mu        sync.Mutex
-	exporting bool
+	logger     hclog.Logger
+	opts       exporterOpts
+	mu         sync.Mutex
+	exporting  bool
+	deviceInfo deviceinfo.CommonInfo
 }
 
 type exportRequest struct {
@@ -90,6 +90,12 @@ func newExporter(opts exporterOpts) *exporter {
 	s := &exporter{}
 	s.opts = opts
 	s.conf = opts.Conf
+	s.deviceInfo = deviceinfo.CommonInfo{
+		CustomerID: s.conf.CustomerID,
+		SystemID:   s.conf.SystemID,
+		DeviceID:   s.conf.DeviceID,
+		Root:       s.opts.PinpointRoot,
+	}
 	s.logger = opts.Logger
 	s.ExportQueue = make(chan exportRequest)
 	return s
@@ -139,8 +145,7 @@ func (s *exporter) sendExportEvent(ctx context.Context, jobID string, data *agen
 		}
 		data.Integrations = append(data.Integrations, v)
 	}
-
-	deviceinfo.AppendCommonInfoFromConfig(data, s.conf)
+	s.deviceInfo.AppendCommonInfo(data)
 	publishEvent := event.PublishEvent{
 		Object: data,
 		Headers: map[string]string{
@@ -151,9 +156,6 @@ func (s *exporter) sendExportEvent(ctx context.Context, jobID string, data *agen
 }
 
 func (s *exporter) sendStartExportEvent(ctx context.Context, jobID string, ints []agent.ExportRequestIntegrations) error {
-	if !s.opts.AgentConfig.Backend.Enable {
-		return nil
-	}
 	data := &agent.ExportResponse{
 		State:   agent.ExportResponseStateStarting,
 		Success: true,
@@ -247,9 +249,8 @@ func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (isI
 	}
 
 	exportLogSender := newExportLogSender(s.logger, s.conf, data.JobID)
-	agentConfig := s.opts.AgentConfig
-	agentConfig.Backend.ExportJobID = data.JobID
-	if err := s.execExport(ctx, agentConfig, integrations, data.ReprocessHistorical, exportLogSender); err != nil {
+	s.opts.AgentConfig.Backend.ExportJobID = data.JobID
+	if err := s.execExport(ctx, integrations, data.ReprocessHistorical, exportLogSender); err != nil {
 		rerr = err
 		return
 	}
@@ -258,10 +259,16 @@ func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (isI
 		rerr = err
 		return
 	}
+
 	s.logger.Info("export finished, running upload")
 	if partsCount, fileSize, err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, data); err != nil {
-		rerr = err
-		return
+		if err == cmdupload.ErrNoFilesFound {
+			s.logger.Info("skipping upload, no files generated")
+			// do not return errors when no files to upload, which is ok for incremental
+		} else {
+			rerr = err
+			return
+		}
 	}
 	return
 }
@@ -282,102 +289,30 @@ func (s *exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport
 	return ts, nil
 }
 
-func (s *exporter) execExport(ctx context.Context, agentConfig cmdexport.AgentConfig, integrations []cmdexport.Integration, reprocessHistorical bool, exportLogWriter io.Writer) error {
-
-	var logWriter io.Writer
-	if exportLogWriter == nil {
-		logWriter = os.Stdout
-	} else {
-		logWriter = io.MultiWriter(os.Stdout, exportLogWriter)
+func (s *exporter) execExport(ctx context.Context, integrations []cmdexport.Integration, reprocessHistorical bool, exportLogWriter io.Writer) error {
+	c := &subCommand{
+		ctx:          ctx,
+		logger:       s.logger,
+		tmpdir:       s.opts.FSConf.Temp,
+		config:       s.opts.AgentConfig,
+		conf:         s.conf,
+		integrations: integrations,
+		deviceInfo:   s.deviceInfo,
+	}
+	c.validate()
+	if exportLogWriter != nil {
+		c.logWriter = &exportLogWriter
 	}
 
 	args := []string{
-		"export",
-		"--log-format", "json",
 		"--log-level", logutils.LogLevelToString(s.opts.LogLevelSubcommands),
 	}
-
 	if reprocessHistorical {
 		args = append(args, "--reprocess-historical=true")
 	}
-
-	fs, err := newFsPassedParams(s.opts.FSConf.Temp, []kv{
-		{"--agent-config-file", agentConfig},
-		{"--integrations-file", integrations},
-	})
+	err := c.run("export", nil, args...)
 	if err != nil {
 		return err
 	}
-	args = append(args, fs.Args()...)
-	defer fs.Clean()
-
-	cmd := exec.CommandContext(ctx, os.Args[0], args...)
-	cmd.Stdout = logWriter
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
-
-type kv struct {
-	K string
-	V interface{}
-}
-
-type fsPassedParams struct {
-	args    []kv
-	tempDir string
-	files   []string
-}
-
-func newFsPassedParams(tempDir string, args []kv) (*fsPassedParams, error) {
-	s := &fsPassedParams{}
-	s.args = args
-	s.tempDir = tempDir
-	for _, arg := range args {
-		loc, err := s.writeFile(arg.V)
-		if err != nil {
-			return nil, err
-		}
-		s.files = append(s.files, loc)
-	}
-	return s, nil
-}
-
-func (s *fsPassedParams) writeFile(obj interface{}) (string, error) {
-	err := os.MkdirAll(s.tempDir, 0777)
-	if err != nil {
-		return "", err
-	}
-	b, err := json.Marshal(obj)
-	if err != nil {
-		return "", err
-	}
-	f, err := ioutil.TempFile(s.tempDir, "")
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	_, err = f.Write(b)
-	if err != nil {
-		return "", err
-	}
-	return f.Name(), nil
-}
-
-func (s *fsPassedParams) Args() (res []string) {
-	for i, kv0 := range s.args {
-		k := kv0.K
-		v := s.files[i]
-		res = append(res, k, v)
-	}
-	return
-}
-
-func (s *fsPassedParams) Clean() error {
-	for _, f := range s.files {
-		err := os.Remove(f)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return err
 }

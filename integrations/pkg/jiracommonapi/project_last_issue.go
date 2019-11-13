@@ -1,6 +1,7 @@
 package jiracommonapi
 
 import (
+	"errors"
 	"net/url"
 	"time"
 )
@@ -11,6 +12,8 @@ type ProjectLastIssue struct {
 	CreatedDate time.Time
 	Creator     User
 }
+
+var ErrPermissions = errors.New("insufficient permissions")
 
 func GetProjectLastIssue(qc QueryContext, project Project) (res ProjectLastIssue, totalIssues int, rerr error) {
 
@@ -35,8 +38,13 @@ func GetProjectLastIssue(qc QueryContext, project Project) (res ProjectLastIssue
 		} `json:"issues"`
 	}
 
-	err := qc.Request(objectPath, q, &rr)
+	statusCode, err := qc.Request2(objectPath, q, &rr)
 	if err != nil {
+		if statusCode == 400 {
+			qc.Logger.Error("failed getting last project issue, probably due to insufficient permissions", "err", err)
+			rerr = ErrPermissions
+			return
+		}
 		rerr = err
 		return
 	}
@@ -54,5 +62,7 @@ func GetProjectLastIssue(qc QueryContext, project Project) (res ProjectLastIssue
 		return
 	}
 	res.Creator = data.Fields.Creator
+	totalIssues = rr.Total
+
 	return
 }

@@ -14,6 +14,10 @@ type ID struct {
 	Type Type
 }
 
+func (s ID) Empty() bool {
+	return s.String() == ""
+}
+
 func (s ID) String() string {
 	if s.Type == "" {
 		return s.Name

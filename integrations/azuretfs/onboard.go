@@ -94,3 +94,13 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 	res.Data = records
 	return res, err
 }
+
+func (s *Integration) onboardWorkConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
+	conf, err := s.api.FetchWorkConfig()
+	if err != nil {
+		res.Error = err
+		return
+	}
+	res.Data = conf.ToMap()
+	return
+}

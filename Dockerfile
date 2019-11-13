@@ -17,14 +17,13 @@ RUN dep ensure -v -vendor-only
 
 # Build the actual binaries
 ARG BUILD=
-ENV PP_AGENT_VERSION=${BUILD}
-RUN echo PP_AGENT_VERSION=$PP_AGENT_VERSION
+ENV COMMITSHA=${BUILD}
 RUN make linux
-RUN mkdir /tmp/agent && cp -R dist/linux/ /tmp/agent/
+RUN mkdir /tmp/agent && cp -R dist/bin/linux/ /tmp/agent/
 
 FROM alpine
-RUN apk update && apk upgrade && apk add --no-cache bash git openssh ca-certificates
+RUN apk update && apk upgrade && apk add --no-cache bash git openssh ca-certificates gnupg
 COPY --from=0 /tmp/agent/linux /bin
-RUN mv /bin/agent.next /bin/pinpoint-agent
+RUN mv /bin/pinpoint-agent /bin/pinpoint-agent
 WORKDIR /
 ENTRYPOINT ["pinpoint-agent"]

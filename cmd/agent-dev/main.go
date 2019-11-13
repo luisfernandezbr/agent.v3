@@ -10,6 +10,7 @@ import (
 
 	"github.com/pinpt/integration-sdk/agent"
 
+	"github.com/pinpt/agent.next/cmd/agent-dev/cmdbuild"
 	"github.com/pinpt/agent.next/cmd/cmdupload"
 	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
 	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
@@ -22,6 +23,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/gitclone"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/pinpt/go-common/hash"
 	"github.com/spf13/cobra"
 )
 
@@ -45,6 +47,23 @@ func defaultLogger() hclog.Logger {
 func exitWithErr(logger hclog.Logger, err error) {
 	logger.Error("error: " + err.Error())
 	os.Exit(1)
+}
+
+var cmdID = &cobra.Command{
+	Use:   "id",
+	Short: "Create id hash from passed params",
+	Args:  cobra.ArbitraryArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		var args2 []interface{}
+		for _, arg := range args {
+			args2 = append(args2, arg)
+		}
+		fmt.Println(hash.Values(args2...))
+	},
+}
+
+func init() {
+	cmdRoot.AddCommand(cmdID)
 }
 
 var cmdCloneRepo = &cobra.Command{
@@ -188,6 +207,38 @@ var cmdUpload = &cobra.Command{
 func init() {
 	cmd := cmdUpload
 	flagPinpointRoot(cmd)
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdBuild = &cobra.Command{
+	Use:   "build",
+	Short: "Build agent and integrations and create a release",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		version, _ := cmd.Flags().GetString("version")
+		upload, _ := cmd.Flags().GetBool("upload")
+		platform, _ := cmd.Flags().GetString("platform")
+		if platform == "all" {
+			platform = ""
+		}
+		onlyAgent, _ := cmd.Flags().GetBool("only-agent")
+
+		cmdbuild.Run(cmdbuild.Opts{
+			BuildDir:     "./dist",
+			Version:      version,
+			Upload:       upload,
+			OnlyPlatform: platform,
+			OnlyAgent:    onlyAgent,
+		})
+	},
+}
+
+func init() {
+	cmd := cmdBuild
+	cmd.Flags().String("version", "dev", "Version to use for release")
+	cmd.Flags().Bool("upload", false, "Set to true to upload release to S3")
+	cmd.Flags().String("platform", "all", "Limit to specific platform")
+	cmd.Flags().Bool("only-agent", false, "Only build agent and skip the rest (for developement)")
 	cmdRoot.AddCommand(cmd)
 }
 

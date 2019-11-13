@@ -2,19 +2,25 @@
 package cmdintegration
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/date"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/pkg/agentconf"
+	"github.com/pinpt/agent.next/pkg/deviceinfo"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/iloader"
 	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/go-common/event"
+	"github.com/pinpt/integration-sdk/agent"
 )
 
 type Opts struct {
@@ -80,8 +86,8 @@ type Command struct {
 	StartTime time.Time
 	Locs      fsconf.Locs
 
-	Integrations  map[string]*iloader.Integration
-	ExportConfigs map[string]rpcdef.ExportConfig
+	Integrations  map[integrationid.ID]*iloader.Integration
+	ExportConfigs map[integrationid.ID]rpcdef.ExportConfig
 
 	// OAuthRefreshTokens contains refresh token for integrations
 	// using OAuth. These are allow getting new access tokens using
@@ -89,6 +95,7 @@ type Command struct {
 	OAuthRefreshTokens map[string]string
 
 	EnrollConf agentconf.Config
+	Deviceinfo deviceinfo.CommonInfo
 }
 
 func NewCommand(opts Opts) (*Command, error) {
@@ -101,6 +108,11 @@ func NewCommand(opts Opts) (*Command, error) {
 
 	var err error
 	s.Locs, err = opts.AgentConfig.Locs()
+	if err != nil {
+		return nil, err
+	}
+
+	err = os.MkdirAll(s.Locs.Temp, 0777)
 	if err != nil {
 		return nil, err
 	}
@@ -122,11 +134,11 @@ func NewCommand(opts Opts) (*Command, error) {
 }
 
 func (s *Command) setupConfig() error {
-	s.ExportConfigs = map[string]rpcdef.ExportConfig{}
+	s.ExportConfigs = map[integrationid.ID]rpcdef.ExportConfig{}
 	s.OAuthRefreshTokens = map[string]string{}
 
 	for _, obj := range s.Opts.Integrations {
-		in, err := obj.ID()
+		id, err := obj.ID()
 		if err != nil {
 			return err
 		}
@@ -138,7 +150,7 @@ func (s *Command) setupConfig() error {
 		refreshToken, _ := obj.Config["oauth_refresh_token"].(string)
 		if refreshToken != "" {
 			// TODO: switch to using ID instead of name as key, so we could have azure issues and azure work to use different refresh tokens
-			s.OAuthRefreshTokens[in.Name] = refreshToken
+			s.OAuthRefreshTokens[id.Name] = refreshToken
 			ec.UseOAuth = true
 			// do not pass oauth_refresh_token to integration
 			// integrations should use
@@ -146,7 +158,7 @@ func (s *Command) setupConfig() error {
 			delete(ec.Integration, "oauth_refresh_token")
 		}
 
-		s.ExportConfigs[obj.Name] = ec
+		s.ExportConfigs[id] = ec
 
 	}
 	return nil
@@ -202,6 +214,27 @@ func (s *Command) CloseOnlyIntegrationAndHandlePanic(integration *iloader.Integr
 		// This is already printed in integration logs, but easier to debug if it's repeated in stdout.
 		fmt.Println("Panic in integration")
 		fmt.Println(panicOut)
+		if s.Opts.AgentConfig.Backend.Enable {
+			data := &agent.Crash{
+				Data:      &panicOut,
+				Type:      agent.CrashTypeCrash,
+				Component: "integration/" + integration.ID.String(),
+			}
+			date.ConvertToModel(time.Now(), &data.CrashDate)
+
+			s.Deviceinfo.AppendCommonInfo(data)
+			publishEvent := event.PublishEvent{
+				Object: data,
+				Headers: map[string]string{
+					"uuid":        s.EnrollConf.DeviceID,
+					"customer_id": s.EnrollConf.CustomerID,
+					"job_id":      s.Opts.AgentConfig.Backend.ExportJobID,
+				},
+			}
+			if err := event.Publish(context.Background(), publishEvent, s.EnrollConf.Channel, s.EnrollConf.APIKey); err != nil {
+				s.Logger.Error("error sending agent.Crash to backend", "err", err)
+			}
+		}
 	}
 	if err != nil {
 		return err

@@ -17,6 +17,8 @@ type RequesterOpts struct {
 	APIURL   string
 	Username string
 	Password string
+
+	RetryRequests bool
 }
 
 type Requester struct {
@@ -36,25 +38,43 @@ func NewRequester(opts RequesterOpts) *Requester {
 }
 
 func (s *Requester) Request(objPath string, params url.Values, res interface{}) error {
-	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
+	_, err := s.request(objPath, params, res)
+	return err
+}
 
+func (s *Requester) Request2(objPath string, params url.Values, res interface{}) (statusCode int, _ error) {
+	return s.request(objPath, params, res)
+}
+
+func (s *Requester) request(objPath string, params url.Values, res interface{}) (statusCode int, rerr error) {
+
+	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
 	if len(params) != 0 {
 		u += "?" + params.Encode()
 	}
-
-	reqs := requests.New(s.logger, s.opts.Clients.TLSInsecure)
+	var reqs requests.Requests
+	if s.opts.RetryRequests {
+		reqs = requests.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
+	} else {
+		reqs = requests.New(s.logger, s.opts.Clients.TLSInsecure)
+	}
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	req.SetBasicAuth(s.opts.Username, s.opts.Password)
 
-	_, err = reqs.JSON(req, res)
+	resp, err := reqs.JSON(req, res)
+	if resp != nil {
+		statusCode = resp.StatusCode
+	}
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
-	return nil
+	return
 }

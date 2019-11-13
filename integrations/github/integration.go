@@ -171,36 +171,6 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	return nil
 }
 
-func (s *Integration) ValidateConfig(ctx context.Context,
-	exportConfig rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
-
-	rerr := func(err error) {
-		res.Errors = append(res.Errors, err.Error())
-	}
-
-	err := s.initWithConfig(exportConfig)
-	if err != nil {
-		rerr(err)
-		return
-	}
-
-	orgs, err := s.getOrgs()
-	if err != nil {
-		rerr(err)
-		return
-	}
-
-	_, err = api.ReposAllSlice(s.qc, orgs[0])
-	if err != nil {
-		rerr(err)
-		return
-	}
-
-	// TODO: return a repo and validate repo that repo can be cloned in agent
-
-	return
-}
-
 func urlAppend(p1, p2 string) string {
 	return strings.TrimSuffix(p1, "/") + "/" + p2
 }
@@ -224,6 +194,13 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	})
 	s.clients = s.clientManager.Clients
 	s.qc.Clients = s.clients
+
+	if s.config.Enterprise {
+		err := s.checkEnterpriseVersion()
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -396,34 +373,17 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 		logger.Info("stop_after_n passed", "v", stopAfter, "repos", l, "after", len(repos))
 	}
 
-	// queue repos for processing with ripsrc
-	{
+	if s.config.OnlyGit {
+		logger.Warn("only_ripsrc flag passed, skipping export of data from github api, will not be exporting prs")
 
+		// if only git do it here, otherwise wait till we export all prs per repo
 		for _, repo := range repos {
-			u, err := url.Parse(s.config.RepoURLPrefix)
-			if err != nil {
-				return err
-			}
-			u.User = url.UserPassword(s.config.Token, "")
-			u.Path = repo.NameWithOwner
-			repoURL := u.String()
-
-			args := rpcdef.GitRepoFetch{}
-			args.RepoID = s.qc.RepoID(repo.ID)
-			args.UniqueName = repo.NameWithOwner
-			args.RefType = s.refType
-			args.URL = repoURL
-			args.CommitURLTemplate = commitURLTemplate(repo, s.config.RepoURLPrefix)
-			args.BranchURLTemplate = branchURLTemplate(repo, s.config.RepoURLPrefix)
-			err = s.agent.ExportGitRepo(args)
+			err := s.exportGit(repo, nil)
 			if err != nil {
 				return err
 			}
 		}
-	}
 
-	if s.config.OnlyGit {
-		logger.Warn("only_ripsrc flag passed, skipping export of data from github api")
 		return nil
 	}
 
@@ -435,7 +395,7 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 	// export repos
 	{
 		// we do not want to mark repo as exported until we export all pull request related data for it
-		//repoSender.SetNoAutoProgress(true)
+		repoSender.SetNoAutoProgress(true)
 		err := s.exportRepos(ctx, logger, repoSender, org, repos)
 		if err != nil {
 			return err
@@ -495,7 +455,12 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 						rerr(err)
 						return
 					}
-					err = s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
+					prs, err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
+					if err != nil {
+						rerr(err)
+						return
+					}
+					err = s.exportGit(repo, prs)
 					if err != nil {
 						rerr(err)
 						return
@@ -506,6 +471,11 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 						return
 					}
 					err = prCommitsSender.Done()
+					if err != nil {
+						rerr(err)
+						return
+					}
+					err = repoSender.IncProgress()
 					if err != nil {
 						rerr(err)
 						return
@@ -527,9 +497,41 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 	return nil
 }
 
-func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Repo,
+func (s *Integration) exportGit(repo api.Repo, prs []PRMeta) error {
+	repoURL, err := getRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repo.NameWithOwner)
+	if err != nil {
+		return err
+	}
+
+	args := rpcdef.GitRepoFetch{}
+	args.RepoID = s.qc.RepoID(repo.ID)
+	args.UniqueName = repo.NameWithOwner
+	args.RefType = s.refType
+	args.URL = repoURL
+	args.CommitURLTemplate = commitURLTemplate(repo, s.config.RepoURLPrefix)
+	args.BranchURLTemplate = branchURLTemplate(repo, s.config.RepoURLPrefix)
+	for _, pr := range prs {
+		pr2 := rpcdef.GitRepoFetchPR{}
+		pr2.ID = pr.ID
+		pr2.RefID = pr.RefID
+		pr2.URL = pr.URL
+		pr2.LastCommitSHA = pr.LastCommitSHA
+		args.PRs = append(args.PRs, pr2)
+	}
+
+	err = s.agent.ExportGitRepo(args)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type PRMeta rpcdef.GitRepoFetchPR
+
+func (s *Integration) exportPullRequestsForRepo(
+	logger hclog.Logger, repo api.Repo,
 	pullRequestSender *objsender.Session,
-	commitsSender *objsender.Session) (rerr error) {
+	commitsSender *objsender.Session) (res []PRMeta, rerr error) {
 
 	logger = logger.With("repo", repo.NameWithOwner)
 	logger.Info("exporting")
@@ -569,6 +571,15 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 
 	go func() {
 		for item := range pullRequestsInitial {
+			for _, pr := range item {
+				meta := PRMeta{}
+				repoID := s.qc.RepoID(repo.ID)
+				meta.ID = s.qc.PullRequestID(repoID, pr.RefID)
+				meta.RefID = pr.RefID
+				meta.URL = pr.URL
+				meta.LastCommitSHA = pr.LastCommitSHA
+				res = append(res, meta)
+			}
 			pullRequestsForComments <- item
 			pullRequestsForReviews <- item
 			pullRequestsForCommits <- item
@@ -644,4 +655,14 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo api.Re
 	}()
 	wg.Wait()
 	return
+}
+
+func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {
+	u, err := url.Parse(repoURLPrefix)
+	if err != nil {
+		return "", err
+	}
+	u.User = user
+	u.Path = nameWithOwner
+	return u.String(), nil
 }

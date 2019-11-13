@@ -23,9 +23,11 @@ type sessions struct {
 	commitUsers *process.CommitUsers
 
 	progressTracker *expsessions.ProgressTracker
+
+	dedupStore expsessions.DedupStore
 }
 
-func newSessions(logger hclog.Logger, export *export, outputDir string) *sessions {
+func newSessions(logger hclog.Logger, export *export, reprocessHistorical bool) (_ *sessions, rerr error) {
 
 	s := &sessions{}
 	s.logger = logger
@@ -34,12 +36,29 @@ func newSessions(logger hclog.Logger, export *export, outputDir string) *session
 
 	s.progressTracker = expsessions.NewProgressTracker()
 
+	newWriter := func(modelName string, id expsessions.ID) expsessions.Writer {
+		return expsessions.NewFileWriter(modelName, export.Locs.Uploads, id)
+	}
+
+	// we dedup objects in incremental processing, as perf optimization do not store hashes for hitorical export
+	if !reprocessHistorical {
+		var err error
+		s.dedupStore, err = expsessions.NewDedupStore(export.Locs.DedupFile)
+		if err != nil {
+			rerr = err
+			return
+		}
+		newWriterPrev := newWriter
+		newWriter = func(modelName string, id expsessions.ID) expsessions.Writer {
+			wr := newWriterPrev(modelName, id)
+			return expsessions.NewWriterDedup(wr, s.dedupStore)
+		}
+	}
+
 	s.expsession = expsessions.New(expsessions.Opts{
 		Logger:        logger,
 		LastProcessed: export.lastProcessed,
-		NewWriter: func(modelName string, id expsessions.ID) expsessions.Writer {
-			return expsessions.NewFileWriter(modelName, outputDir, id)
-		},
+		NewWriter:     newWriter,
 		SendProgress: func(progressPath expsessions.ProgressPath, current, total int) {
 			s.progressTracker.Update(progressPath.StringsWithObjectNames(), current, total)
 		},
@@ -52,36 +71,59 @@ func newSessions(logger hclog.Logger, export *export, outputDir string) *session
 	go func() {
 		for {
 			<-ticker.C
-			res := s.progressTracker.InProgressString()
-
-			if strings.TrimSpace(res) != "" { // do not print empty progress data
-				s.logger.Debug("progress", "data", "\n\n"+res+"\n\n")
-			}
-
-			if s.export.Opts.AgentConfig.Backend.Enable {
-				skipDone := true
-				if os.Getenv("PP_AGENT_PROGRESS_ALL") != "" {
-					skipDone = false
-				}
-				res := s.progressTracker.ProgressLinesNestedMap(skipDone)
-				b, err := json.Marshal(res)
-				if err != nil {
-					s.logger.Error("could not marshal progress data", err)
-					continue
-				}
-
-				//s.logger.Info("progress", "json", "\n\n"+string(b)+"\n\n")
-				//continue
-
-				err = s.export.sendProgress(context.Background(), b)
-				if err != nil {
-					s.logger.Error("could not send progress info to backend", "err", err)
-				}
-			}
+			s.sendProgress()
 		}
 	}()
 
-	return s
+	return s, nil
+}
+
+func (s *sessions) sendProgress() {
+	res := s.progressTracker.InProgressString()
+
+	if strings.TrimSpace(res) != "" { // do not print empty progress data
+		s.logger.Debug("progress", "data", "\n\n"+res+"\n\n")
+	}
+
+	if s.export.Opts.AgentConfig.Backend.Enable {
+		skipDone := false
+		if os.Getenv("PP_AGENT_NO_PROGRESS_ALL") != "" {
+			skipDone = true
+		}
+		//if os.Getenv("PP_AGENT_PROGRESS_ALL") != "" {
+		//	skipDone = false
+		//}
+		res := s.progressTracker.ProgressLinesNestedMap(skipDone)
+		b, err := json.Marshal(res)
+		if err != nil {
+			s.logger.Error("could not marshal progress data", err)
+			return
+		}
+
+		//s.logger.Info("progress", "json", "\n\n"+string(b)+"\n\n")
+		//continue
+
+		err = s.export.sendProgress(context.Background(), b)
+		if err != nil {
+			s.logger.Error("could not send progress info to backend", "err", err)
+		}
+	}
+}
+
+func (s *sessions) Close() error {
+	// send last process data at the end when complete
+	s.sendProgress()
+
+	if s.dedupStore != nil {
+		newObjs, dups := s.dedupStore.Stats()
+		s.logger.Info("Dedup stats", "duplicates", dups, "new", newObjs)
+
+		err := s.dedupStore.Save()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *sessions) new(in integrationid.ID, modelType string) (

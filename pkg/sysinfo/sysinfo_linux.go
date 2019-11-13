@@ -38,7 +38,7 @@ func readFileIfExists(fn string) string {
 }
 
 // GetSystemInfo returns the SystemInfo details
-func GetSystemInfo() SystemInfo {
+func GetSystemInfo(root string) SystemInfo {
 	files, _ := fileutil.FindFiles("/etc", regexp.MustCompile(`-release$`))
 	kv := make(map[string]string)
 	for _, fn := range files {
@@ -53,7 +53,7 @@ func GetSystemInfo() SystemInfo {
 			}
 		}
 	}
-	def := getDefault()
+	def := getDefault(root)
 	def.Name = kv["NAME"]
 	def.Version = kv["VERSION_ID"]
 	insidedocker := fileutil.FileExists("/proc/self/cgroup")
@@ -106,11 +106,6 @@ func GetSystemInfo() SystemInfo {
 		def.Name += " (Docker)"
 	}
 	return def
-}
-
-// GetAvailablePath returns a valid path for the largest disk available
-func GetAvailablePath() string {
-	return getAvailablePath()
 }
 
 /*

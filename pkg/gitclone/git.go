@@ -3,7 +3,9 @@ package gitclone
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -103,7 +105,7 @@ func cloneWithCacheNoRetries(ctx context.Context, logger hclog.Logger, access Ac
 		}
 	}
 
-	res, err := checkoutCopy(ctx, logger, access, dirs, cacheDirName)
+	res, err := checkoutCopy(ctx, logger, dirs, cacheDirName)
 	if err != nil {
 		rerr = err
 		return
@@ -125,7 +127,11 @@ func cloneFreshIntoCache(ctx context.Context, logger hclog.Logger, access Access
 	cmd := exec.CommandContext(ctx, "git", args...)
 	err = runGitCommand(ctx, logger, cmd)
 	if err != nil {
-		return err
+		output, err := RedactCredsInText(err.Error(), access.URL)
+		if err != nil {
+			return err
+		}
+		return errors.New(output)
 	}
 	// set the git config, so the further updates would use the same config as initial clone
 	err = setRepoConfig(ctx, logger, access.URL, tempDir)
@@ -169,7 +175,7 @@ func updateClonedRepo(ctx context.Context, logger hclog.Logger, access AccessDet
 	return nil
 }
 
-func checkoutCopy(ctx context.Context, logger hclog.Logger, access AccessDetails, dirs Dirs, cacheDirName string) (res CloneResults, _ error) {
+func checkoutCopy(ctx context.Context, logger hclog.Logger, dirs Dirs, cacheDirName string) (res CloneResults, _ error) {
 	cacheDir := filepath.Join(dirs.CacheRoot, cacheDirName)
 	checkout := dirs.Checkout
 
@@ -275,4 +281,13 @@ var alphaNumericRe = regexp.MustCompile(`[^a-zA-Z\d]`)
 
 func escapeForFS(name string) string {
 	return alphaNumericRe.ReplaceAllString(name, "-")
+}
+
+func RedactCredsInText(text string, urlStr string) (redactedText string, _ error) {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return "", err
+	}
+	res := strings.Replace(text, u.User.String(), "[redacted]", -1)
+	return res, nil
 }

@@ -25,7 +25,7 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 
 func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, rerr error) {
 
-	err := s.initWithConfig(config)
+	err := s.initWithConfig(config, false)
 	if err != nil {
 		rerr = err
 		return
@@ -48,19 +48,6 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 		return
 	}
 
-	qcc := s.qc.Common()
-	for i, project := range projects {
-		project2 := jiracommonapi.Project{}
-		project2.JiraID = project.RefID
-		project2.Key = project.Identifier
-		issuesCount, err := jiracommonapi.ProjectIssuesCount(qcc, project2)
-		if err != nil {
-			rerr = err
-			return
-		}
-		projects[i].TotalIssues = int64(issuesCount)
-	}
-
 	var records []map[string]interface{}
 	for _, project := range projects {
 		records = append(records, project.ToMap())
@@ -72,7 +59,7 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 
 func (s *Integration) onboardWorkConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
 
-	err := s.initWithConfig(config)
+	err := s.initWithConfig(config, false)
 	if err != nil {
 		return res, err
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/encrypt"
+	"github.com/pinpt/agent.next/pkg/sysinfo"
 
 	"github.com/pinpt/go-common/fileutil"
 
@@ -64,7 +65,15 @@ func newEnroller(opts Opts) (*enroller, error) {
 	s.opts = opts
 	s.fsconf = fsconf.New(opts.PinpointRoot)
 	s.deviceID = pstrings.NewUUIDV4()
-	s.systemID = deviceinfo.SystemID()
+	var err error
+	s.systemID, err = sysinfo.GetID2()
+	if err != nil {
+		s.logger.Info("using empty SystemID, could not get SystemID (PP_AGENT_ID)", "err", err)
+		//return nil, fmt.Errorf("could not get SystemID (PP_AGENT_ID) err: %v", err)
+	} else if s.systemID == "" {
+		s.logger.Info("using empty SystemID, could not get SystemID (PP_AGENT_ID)")
+		//return nil, errors.New("could not get SystemID (PP_AGENT_ID)")
+	}
 	return s, nil
 }
 
@@ -111,7 +120,12 @@ func (s *enroller) SendEvent(ctx context.Context) error {
 	now := time.Now()
 	date.ConvertToModel(now, &data.RequestDate)
 
-	deviceinfo.AppendCommonInfo(&data, "", s.deviceID, s.systemID)
+	ci := deviceinfo.CommonInfo{
+		DeviceID: s.deviceID,
+		SystemID: s.systemID,
+		Root:     s.opts.PinpointRoot,
+	}
+	ci.AppendCommonInfo(&data)
 
 	reqEvent := event.PublishEvent{
 		Object: &data,
@@ -124,6 +138,7 @@ func (s *enroller) SendEvent(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not send enroll event, err: %v", err)
 	}
+	s.logger.Debug("enroll event sent")
 
 	return nil
 }
@@ -166,6 +181,7 @@ func (s *enroller) WaitForResponse(ctx context.Context, ready chan<- bool) (res 
 			done <- true
 		}()
 		resp := instance.Object().(*agent.EnrollResponse)
+
 		res = *resp
 		return nil, nil
 	}
