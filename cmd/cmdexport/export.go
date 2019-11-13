@@ -152,6 +152,11 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
+	_, failed := s.printExportRes(exportRes, hadErrors)
+	if len(failed) > 0 {
+		return nil, errors.New("One or more integrations failed")
+	}
+
 	tempFiles, err := s.tempFilesInUploads()
 	if err != nil {
 		s.Logger.Error("could not check uploads dir for errors", "err", err)
@@ -161,11 +166,6 @@ func newExport(opts Opts) (*export, error) {
 		return nil, fmt.Errorf("found temp sessions files in upload dir, files: %v", tempFiles)
 	}
 	s.Logger.Info("No temp files found in upload dir, all sessions closed successfully.")
-
-	_, failed := s.printExportRes(exportRes, hadErrors)
-	if len(failed) > 0 {
-		return nil, errors.New("One or more integrations failed")
-	}
 
 	return s, nil
 }
