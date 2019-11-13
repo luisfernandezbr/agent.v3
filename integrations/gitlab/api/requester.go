@@ -17,8 +17,8 @@ type RequesterOpts struct {
 	Logger             hclog.Logger
 	APIURL             string
 	APIToken           string
-	APIGraphQL         string
 	InsecureSkipVerify bool
+	ServerType         ServerType
 }
 
 type Requester struct {
@@ -43,6 +43,14 @@ func NewRequester(opts RequesterOpts) *Requester {
 	return s
 }
 
+func (s *Requester) setAuthHeader(req *http.Request) {
+	if s.opts.ServerType == CLOUD {
+		req.Header.Set("Authorization", "bearer "+s.opts.APIToken)
+	} else {
+		req.Header.Set("Private-Token", s.opts.APIToken)
+	}
+}
+
 func (s *Requester) Request(objPath string, params url.Values, res interface{}) (page PageInfo, err error) {
 
 	u := pstrings.JoinURL(s.opts.APIURL, objPath)
@@ -55,7 +63,7 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 	if err != nil {
 		return page, err
 	}
-	req.Header.Set("Private-Token", s.opts.APIToken)
+	s.setAuthHeader(req)
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
@@ -64,7 +72,8 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		s.logger.Info("api request failed", "url", u)
+		s.logger.Debug("api request failed", "url", u)
+
 		return page, fmt.Errorf(`gitlab returned invalid status code: %v`, resp.StatusCode)
 	}
 
@@ -99,23 +108,4 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 		TotalPages: resp.Header.Get("X-Total-Pages"),
 		Total:      total,
 	}, nil
-}
-
-func (s *Requester) RequestGraphQL(query string, res interface{}) error {
-
-	body := "query{ " + query + " }"
-
-	req, err := http.NewRequest(http.MethodPost, s.opts.APIGraphQL+"?query="+url.QueryEscape(body), nil)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Private-Token", s.opts.APIToken)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	return json.NewDecoder(resp.Body).Decode(&res)
 }
