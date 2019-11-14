@@ -29,7 +29,7 @@ func (s *Integration) exportPullRequestReviews(logger hclog.Logger, prSender *ob
 		return err
 	}
 
-	err = api.PaginateRegular(func(query string) (api.PageInfo, error) {
+	err = api.PaginateRegularWithPageSize(pageSizeHeavyQueries, func(query string) (api.PageInfo, error) {
 		pi, res, totalCount, err := api.PullRequestReviewsPage(s.qc, prID, query)
 		if err != nil {
 			return pi, err
