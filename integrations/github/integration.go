@@ -432,7 +432,7 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 			go func() {
 				defer wg.Done()
 				for repo := range reposChan {
-					logger = logger.With("repo", repo.NameWithOwner).Named("prl")
+					logger := logger.With("repo", repo.NameWithOwner).Named("prl")
 
 					rerr := func(err error) {
 						wgErrMu.Lock()
