@@ -191,7 +191,6 @@ func PaginateStartAt(log hclog.Logger, fn PaginateStartAtFn) error {
 type PaginateNewerThanFn func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (PageInfo, error)
 
 func PaginateNewerThan(log hclog.Logger, lastProcessed time.Time, fn PaginateNewerThanFn) error {
-	pageOffset := 0
 	nextPage := "1"
 	p := url.Values{}
 	p.Set("per_page", "100")
@@ -212,7 +211,6 @@ func PaginateNewerThan(log hclog.Logger, lastProcessed time.Time, fn PaginateNew
 			return errors.New("pageSize is 0")
 		}
 		nextPage = pageInfo.NextPage
-		pageOffset += pageInfo.PageSize
 	}
 }
 
