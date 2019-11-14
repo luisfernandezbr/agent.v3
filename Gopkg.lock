@@ -423,7 +423,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:16faec042113d54c5184235b1cec95fed519ca1dcbae652b69219716251e71ed"
+  digest = "1:a0f103900ceb2350e69f58c1dded23cd750dd0494bf57614c1a6c8eacc599783"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -447,8 +447,8 @@
     "upload",
   ]
   pruneopts = "T"
-  revision = "afd13c5d1aaf7c17e7b52d5f2c8ba422db577187"
-  version = "9.1.25"
+  revision = "9a5127a036dc4a2498396fdb25ac263de4ad3852"
+  version = "9.1.26"
 
 [[projects]]
   digest = "1:160af92c9d129fe26acd668a490d6dfe34fb73d9c9e2e77f13da7a6f427b1df0"

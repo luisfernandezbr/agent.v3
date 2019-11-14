@@ -14,13 +14,13 @@ import (
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/go-common/fileutil"
 	"github.com/pinpt/go-common/upload"
-	"github.com/pinpt/integration-sdk/agent"
 )
 
 func Run(ctx context.Context,
 	logger hclog.Logger,
 	pinpointRoot string,
-	data *agent.ExportRequest) (parts int, size int64, err error) {
+	uploadURL string,
+	apiKey string) (parts int, size int64, err error) {
 
 	fsc := fsconf.New(pinpointRoot)
 
@@ -29,7 +29,6 @@ func Run(ctx context.Context,
 		return
 	}
 
-	uploadURL := *data.UploadURL
 	fileName := time.Now().Format(time.RFC3339)
 	fileName = strings.ReplaceAll(fileName, ":", "_")
 
@@ -41,7 +40,7 @@ func Run(ctx context.Context,
 	}
 	logger.Info("uploading export result", "upload_url", uploadURL, "zip_path", zipPath)
 
-	parts, size, err = runUpload(logger, zipPath, uploadURL)
+	parts, size, err = runUpload(logger, zipPath, uploadURL, apiKey)
 	if err != nil {
 		return
 	}
@@ -63,7 +62,7 @@ func zipFilesJSON(logger hclog.Logger, target, source string) error {
 	return archive.ZipFiles(target, source, files)
 }
 
-func runUpload(logger hclog.Logger, zipPath, uploadURL string) (parts int, size int64, err error) {
+func runUpload(logger hclog.Logger, zipPath, uploadURL, apiKey string) (parts int, size int64, err error) {
 
 	f, err := os.Open(zipPath)
 	defer f.Close()
@@ -71,7 +70,10 @@ func runUpload(logger hclog.Logger, zipPath, uploadURL string) (parts int, size 
 		return 0, 0, err
 	}
 
+	logger.Info("api key", "v", apiKey)
+
 	parts, size, err = upload.Upload(upload.Options{
+		APIKey:      apiKey,
 		Body:        f,
 		ContentType: "application/zip",
 		URL:         uploadURL,
