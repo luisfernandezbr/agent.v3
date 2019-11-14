@@ -14,6 +14,7 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
 	"github.com/pinpt/agent.next/pkg/exportrepo"
+	"github.com/pinpt/agent.next/pkg/fs"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/pkg/memorylogs"
@@ -187,6 +188,14 @@ func (s *export) Destroy() {
 }
 
 func (s *export) tempFilesInUploads() ([]string, error) {
+	uploadsExist, err := fs.Exists(s.Locs.Uploads)
+	if err != nil {
+		return nil, fmt.Errorf("Could not check if uploads dir exist: %v", err)
+	}
+	if !uploadsExist {
+		return nil, nil
+	}
+
 	var rec func(string) ([]string, error)
 	rec = func(p string) (res []string, rerr error) {
 		items, err := ioutil.ReadDir(p)
