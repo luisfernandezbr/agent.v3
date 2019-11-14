@@ -16,6 +16,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/integrationid"
+	"github.com/pinpt/agent.next/pkg/memorylogs"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
@@ -55,6 +56,9 @@ type export struct {
 }
 
 func newExport(opts Opts) (*export, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	s := &export{}
 
 	startTime := time.Now()
@@ -99,7 +103,8 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
-	s.sessions, err = newSessions(s.Logger, s, opts.ReprocessHistorical)
+	trackProgress := os.Getenv("PP_AGENT_NO_TRACK_PROGRESS") == ""
+	s.sessions, err = newSessions(s.Logger, s, opts.ReprocessHistorical, trackProgress)
 	if err != nil {
 		return nil, err
 	}
@@ -122,6 +127,8 @@ func newExport(opts Opts) (*export, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	memorylogs.Start(ctx, s.Logger, 5*time.Second)
 
 	exportRes := s.runExports()
 	close(s.gitProcessingRepos)
