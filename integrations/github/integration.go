@@ -431,23 +431,29 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				rerr := func(err error) {
-					wgErrMu.Lock()
-					s.logger.Error("could not process pr for repo", "err", err)
-					// only keep the first err
-					if wgErr != nil {
-						wgErr = err
-					}
-					wgErrMu.Unlock()
-				}
 				for repo := range reposChan {
-					hasErr := false
+					logger = logger.With("repo", repo.NameWithOwner).Named("prl")
+
+					rerr := func(err error) {
+						wgErrMu.Lock()
+						logger.Error("could not process pr for repo", "err", err)
+						// only keep the first err
+						if wgErr == nil {
+							wgErr = err
+						}
+						wgErrMu.Unlock()
+					}
+
+					logger.Debug("got repo from channel for processing")
+
 					wgErrMu.Lock()
-					hasErr = wgErr != nil
+					hasErr := wgErr != nil
 					wgErrMu.Unlock()
 					if hasErr {
+						logger.Info("returning from repo processing due to err")
 						return
 					}
+
 					prSender, err := repoSender.Session(sourcecode.PullRequestModelName.String(), repo.ID, repo.NameWithOwner)
 					if err != nil {
 						rerr(err)
