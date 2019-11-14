@@ -267,17 +267,9 @@ func (s *Export) branches(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := sessions.Done(branchSessionID, nil); err != nil {
-			panic(err)
-		}
-		if err := sessions.Done(prBranchSessionID, nil); err != nil {
-			panic(err)
-		}
-	}()
 
 	res := make(chan ripsrc.Branch)
-	done := make(chan bool)
+	done := make(chan error)
 
 	prs := map[string]PR{}
 	for _, pr := range s.opts.PRs {
@@ -285,11 +277,13 @@ func (s *Export) branches(ctx context.Context) error {
 	}
 
 	go func() {
+
 		for data := range res {
 			if len(data.Commits) == 0 {
 				// we do not export branches with no commits, especially since branch id depends on first commit
 				continue
 			}
+
 			commitIDs := s.commitIDs(data.Commits)
 			var pr PR
 			isPr := data.IsPullRequest
@@ -302,9 +296,10 @@ func (s *Export) branches(ctx context.Context) error {
 					continue
 				}
 				obj := sourcecode.PullRequestBranch{
-					PullRequestID:          pr.ID,
-					RefID:                  pr.RefID,
-					Name:                   data.Name,
+					PullRequestID: pr.ID,
+					RefID:         pr.RefID,
+					// TODO: this is not correct, data.Name would be empty for pr branches
+					//Name:                   data.Name,
 					URL:                    pr.URL,
 					RefType:                s.opts.RefType,
 					CustomerID:             s.opts.CustomerID,
@@ -326,7 +321,8 @@ func (s *Export) branches(ctx context.Context) error {
 					obj.ToMap(),
 				})
 				if err != nil {
-					panic(err)
+					done <- err
+					return
 				}
 			} else {
 				obj := sourcecode.Branch{
@@ -353,17 +349,29 @@ func (s *Export) branches(ctx context.Context) error {
 					obj.ToMap(),
 				})
 				if err != nil {
-					panic(err)
+					done <- err
+					return
 				}
 			}
 		}
-		done <- true
+		done <- nil
 	}()
 
 	err = s.rip.Branches(ctx, res)
-	<-done
+	err2 := <-done
 
 	if err != nil {
+		return err
+	}
+
+	if err2 != nil {
+		return err2
+	}
+
+	if err := sessions.Done(branchSessionID, nil); err != nil {
+		return err
+	}
+	if err := sessions.Done(prBranchSessionID, nil); err != nil {
 		return err
 	}
 
