@@ -70,8 +70,6 @@ func runUpload(logger hclog.Logger, zipPath, uploadURL, apiKey string) (parts in
 		return 0, 0, err
 	}
 
-	logger.Info("api key", "v", apiKey)
-
 	parts, size, err = upload.Upload(upload.Options{
 		APIKey:      apiKey,
 		Body:        f,
