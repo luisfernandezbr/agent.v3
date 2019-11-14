@@ -274,9 +274,11 @@ func (s *Integration) export(ctx context.Context) error {
 	}
 	for _, org := range orgs {
 		err := s.exportOrganization(ctx, orgSession, org)
+		s.logger.Info("finished export for org", "org", org.Login, "err", nil)
 		if err != nil {
 			return err
 		}
+
 		err = orgSession.IncProgress()
 		if err != nil {
 			return err
@@ -431,6 +433,7 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 				defer wg.Done()
 				rerr := func(err error) {
 					wgErrMu.Lock()
+					s.logger.Error("could not process pr for repo", "err", err)
 					// only keep the first err
 					if wgErr != nil {
 						wgErr = err
@@ -484,6 +487,7 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 			}()
 		}
 		wg.Wait()
+
 		if wgErr != nil {
 			return wgErr
 		}

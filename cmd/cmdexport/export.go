@@ -422,6 +422,7 @@ func (s *export) runExports() map[integrationid.ID]runResult {
 			if !ok {
 				panic("no config for integration")
 			}
+
 			_, err := integration.RPCClient().Export(ctx, exportConfig)
 			if err != nil {
 				ret(err)
