@@ -459,8 +459,8 @@
   version = "2.0.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:d975434cda2d17accc3321e360b6d8ed56acb638f60ab18bd2764b9dcac54f15"
+  branch = "DE-1780"
+  digest = "1:838cdc15513ccc568d1847a5a7dc57f607a2d25726e483a55334575f347c0a30"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -472,7 +472,7 @@
     "work",
   ]
   pruneopts = "T"
-  revision = "5a671a7dc30b94e121ba243a6d419d28bf6e9d41"
+  revision = "19f47baa6d57b5f6493e49b93ff5c02b7ee599d2"
 
 [[projects]]
   branch = "master"
@@ -611,7 +611,14 @@
 [[projects]]
   digest = "1:282674c4b65c1ca536e1f097449fe5e4b6fbaadc5aaaa1d81328b91aefc0da6e"
   name = "go.mongodb.org/mongo-driver"
-  packages = ["bson/primitive"]
+  packages = [
+    "bson",
+    "bson/bsoncodec",
+    "bson/bsonrw",
+    "bson/bsontype",
+    "bson/primitive",
+    "x/bsonx/bsoncore",
+  ]
   pruneopts = "T"
   revision = "c520d023af0a89aec8b7f97717b52da270df2c38"
   version = "v1.1.1"

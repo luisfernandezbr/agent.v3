@@ -259,11 +259,22 @@ func (s *Export) session(model string) (expsessions.ID, error) {
 
 func (s *Export) branches(ctx context.Context) error {
 	sessions := s.opts.Sessions
-	sessionID, err := s.session(sourcecode.BranchModelName.String())
+	branchSessionID, err := s.session(sourcecode.BranchModelName.String())
 	if err != nil {
 		return err
 	}
-	defer sessions.Done(sessionID, nil)
+	prBranchSessionID, err := s.session(sourcecode.PullRequestBranchModelName.String())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := sessions.Done(branchSessionID, nil); err != nil {
+			panic(err)
+		}
+		if err := sessions.Done(prBranchSessionID, nil); err != nil {
+			panic(err)
+		}
+	}()
 
 	res := make(chan ripsrc.Branch)
 	done := make(chan bool)
@@ -279,7 +290,7 @@ func (s *Export) branches(ctx context.Context) error {
 				// we do not export branches with no commits, especially since branch id depends on first commit
 				continue
 			}
-
+			commitIDs := s.commitIDs(data.Commits)
 			var pr PR
 			isPr := data.IsPullRequest
 
@@ -290,57 +301,60 @@ func (s *Export) branches(ctx context.Context) error {
 					s.logger.Error("could not find pr by sha")
 					continue
 				}
-			}
-
-			obj := sourcecode.Branch{}
-			if isPr {
-				obj.IsPullRequest = true
-				obj.PullRequestID = pr.ID
-				obj.RefID = pr.RefID
-				obj.Name = pr.RefID
-				obj.URL = pr.URL
+				obj := sourcecode.PullRequestBranch{
+					PullRequestID:          pr.ID,
+					RefID:                  pr.RefID,
+					Name:                   data.Name,
+					URL:                    pr.URL,
+					RefType:                s.opts.RefType,
+					CustomerID:             s.opts.CustomerID,
+					Default:                data.IsDefault,
+					Merged:                 data.IsMerged,
+					MergeCommitSha:         data.MergeCommit,
+					MergeCommitID:          s.commitID(data.MergeCommit),
+					BranchedFromCommitShas: data.BranchedFromCommits,
+					BranchedFromCommitIds:  s.commitIDs(data.BranchedFromCommits),
+					CommitShas:             data.Commits,
+					CommitIds:              commitIDs,
+					FirstCommitSha:         data.Commits[0],
+					FirstCommitID:          commitIDs[0],
+					BehindDefaultCount:     int64(data.BehindDefaultCount),
+					AheadDefaultCount:      int64(data.AheadDefaultCount),
+					RepoID:                 s.opts.RepoID,
+				}
+				err := sessions.Write(prBranchSessionID, []map[string]interface{}{
+					obj.ToMap(),
+				})
+				if err != nil {
+					panic(err)
+				}
 			} else {
-				obj.RefID = data.Name
-				obj.Name = data.Name
-				obj.URL = branchURL(s.opts.BranchURLTemplate, data.Name)
-			}
-
-			obj.RefType = s.opts.RefType
-			obj.CustomerID = s.opts.CustomerID
-
-			obj.Default = data.IsDefault
-			obj.Merged = data.IsMerged
-			obj.MergeCommitSha = data.MergeCommit
-			obj.MergeCommitID = s.commitID(obj.MergeCommitSha)
-			obj.BranchedFromCommitShas = data.BranchedFromCommits
-			obj.BranchedFromCommitIds = s.commitIDs(obj.BranchedFromCommitShas)
-			if len(obj.BranchedFromCommitShas) != 0 {
-				// this aren't really used in the pipeline
-				// TODO: remove from datamodel and pipeline
-				obj.FirstBranchedFromCommitSha = obj.BranchedFromCommitShas[0]
-				obj.FirstBranchedFromCommitID = obj.BranchedFromCommitIds[0]
-			}
-			obj.CommitShas = data.Commits
-			obj.CommitIds = s.commitIDs(obj.CommitShas)
-			obj.FirstCommitSha = obj.CommitShas[0]
-
-			if isPr {
-				// do not set first commit id in prs, since we don't want to use it in generated id
-				// TODO: support generated id that is flexible on fields
-				obj.FirstCommitID = ""
-			} else {
-				obj.FirstCommitID = obj.CommitIds[0]
-			}
-
-			obj.BehindDefaultCount = int64(data.BehindDefaultCount)
-			obj.AheadDefaultCount = int64(data.AheadDefaultCount)
-			obj.RepoID = s.opts.RepoID
-
-			err := sessions.Write(sessionID, []map[string]interface{}{
-				obj.ToMap(),
-			})
-			if err != nil {
-				panic(err)
+				obj := sourcecode.Branch{
+					RefID:                  data.Name,
+					Name:                   data.Name,
+					URL:                    branchURL(s.opts.BranchURLTemplate, data.Name),
+					RefType:                s.opts.RefType,
+					CustomerID:             s.opts.CustomerID,
+					Default:                data.IsDefault,
+					Merged:                 data.IsMerged,
+					MergeCommitSha:         data.MergeCommit,
+					MergeCommitID:          s.commitID(data.MergeCommit),
+					BranchedFromCommitShas: data.BranchedFromCommits,
+					BranchedFromCommitIds:  s.commitIDs(data.BranchedFromCommits),
+					CommitShas:             data.Commits,
+					CommitIds:              commitIDs,
+					FirstCommitSha:         data.Commits[0],
+					FirstCommitID:          commitIDs[0],
+					BehindDefaultCount:     int64(data.BehindDefaultCount),
+					AheadDefaultCount:      int64(data.AheadDefaultCount),
+					RepoID:                 s.opts.RepoID,
+				}
+				err := sessions.Write(branchSessionID, []map[string]interface{}{
+					obj.ToMap(),
+				})
+				if err != nil {
+					panic(err)
+				}
 			}
 		}
 		done <- true
