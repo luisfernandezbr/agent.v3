@@ -24,6 +24,7 @@ func Start(ctx context.Context, logger hclog.Logger, period time.Duration) {
 		for {
 			select {
 			case <-ctx.Done():
+				ticker.Stop()
 				return
 			case <-ticker.C:
 				log()
