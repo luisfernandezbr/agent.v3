@@ -205,11 +205,6 @@ func (s *exporter) export(data *agent.ExportRequest) {
 func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (isIncremental []bool, partsCount int, fileSize int64, rerr error) {
 	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
 
-	if len(data.UploadHeaders) == 0 {
-		rerr = errors.New("received ExportRequest has empty UploadHeaders, these are required for upload")
-		return
-	}
-
 	var integrations []cmdexport.Integration
 	// add in additional integrations defined in config
 	for _, in := range s.conf.ExtraIntegrations {
