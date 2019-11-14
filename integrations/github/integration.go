@@ -525,6 +525,10 @@ func (s *Integration) exportGit(repo api.Repo, prs []PRMeta) error {
 		pr2.ID = pr.ID
 		pr2.RefID = pr.RefID
 		pr2.URL = pr.URL
+		if pr.LastCommitSHA == "" {
+			s.logger.Info("pr.LastCommitSHA is mssing", "repo", repo.NameWithOwner, "pr", pr.URL)
+			continue
+		}
 		pr2.LastCommitSHA = pr.LastCommitSHA
 		args.PRs = append(args.PRs, pr2)
 	}
