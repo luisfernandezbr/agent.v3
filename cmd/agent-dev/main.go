@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/integration-sdk/agent"
-
 	"github.com/pinpt/agent.next/cmd/agent-dev/cmdbuild"
 	"github.com/pinpt/agent.next/cmd/cmdupload"
 	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
@@ -181,23 +179,22 @@ func getPinpointRoot(cmd *cobra.Command) (string, error) {
 }
 
 var cmdUpload = &cobra.Command{
-	Use:   "upload <upload_url>",
+	Use:   "upload <upload_url> <api_key>",
 	Short: "Upload processed data",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := defaultLogger()
 		ctx := context.Background()
 
 		uploadURL := args[0]
+		apiKey := args[1]
+
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
 
-		var data agent.ExportRequest
-		data.UploadURL = &uploadURL
-
-		_, _, err = cmdupload.Run(ctx, logger, pinpointRoot, &data)
+		_, _, err = cmdupload.Run(ctx, logger, pinpointRoot, uploadURL, apiKey)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
