@@ -47,6 +47,8 @@ type FileWriter struct {
 
 	stream   *io.JSONStream
 	streamMu sync.Mutex
+
+	loc string
 }
 
 func NewFileWriter(modelType string, outputDir string, id ID) *FileWriter {
@@ -62,7 +64,12 @@ func (s *FileWriter) Close() error {
 		// there was no stream, since no objects were sent
 		return nil
 	}
-	return s.stream.Close()
+	err := s.stream.Close()
+	if err != nil {
+		return err
+	}
+
+	return os.Rename(s.loc+".temp", s.loc)
 }
 
 func (s *FileWriter) createStreamIfNeeded() error {
@@ -74,12 +81,12 @@ func (s *FileWriter) createStreamIfNeeded() error {
 
 func (s *FileWriter) createStream(outputDir string) error {
 	base := strconv.FormatInt(time.Now().Unix(), 10) + "_" + strconv.Itoa(int(s.id)) + ".json.gz"
-	fn := filepath.Join(outputDir, s.modelType, base)
-	err := os.MkdirAll(filepath.Dir(fn), 0777)
+	s.loc = filepath.Join(outputDir, s.modelType, base)
+	err := os.MkdirAll(filepath.Dir(s.loc), 0777)
 	if err != nil {
 		return err
 	}
-	stream, err := io.NewJSONStream(fn)
+	stream, err := io.NewJSONStream(s.loc + ".temp")
 	if err != nil {
 		return err
 	}

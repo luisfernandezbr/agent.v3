@@ -5,7 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -155,6 +158,16 @@ func newExport(opts Opts) (*export, error) {
 		return nil, errors.New("One or more integrations failed")
 	}
 
+	tempFiles, err := s.tempFilesInUploads()
+	if err != nil {
+		s.Logger.Error("could not check uploads dir for errors", "err", err)
+		return nil, err
+	}
+	if len(tempFiles) != 0 {
+		return nil, fmt.Errorf("found temp sessions files in upload dir, files: %v", tempFiles)
+	}
+	s.Logger.Info("No temp files found in upload dir, all sessions closed successfully.")
+
 	return s, nil
 }
 
@@ -165,6 +178,35 @@ func (s *export) Destroy() {
 			panic(err)
 		}
 	}
+}
+
+func (s *export) tempFilesInUploads() ([]string, error) {
+	var rec func(string) ([]string, error)
+	rec = func(p string) (res []string, rerr error) {
+		items, err := ioutil.ReadDir(p)
+		if err != nil {
+			rerr = err
+			return
+		}
+		for _, item := range items {
+			n := filepath.Join(p, item.Name())
+			if item.IsDir() {
+				sr, err := rec(n)
+				if err != nil {
+					rerr = err
+					return
+				}
+				res = append(res, sr...)
+				continue
+			}
+			if !strings.HasSuffix(n, ".temp") {
+				continue
+			}
+			res = append(res, n)
+		}
+		return
+	}
+	return rec(s.Locs.Uploads)
 }
 
 func (s *export) discardIncrementalData() error {

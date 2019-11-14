@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/integration-sdk/agent"
+
 	"github.com/pinpt/agent.next/cmd/agent-dev/cmdbuild"
 	"github.com/pinpt/agent.next/cmd/cmdupload"
 	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
@@ -20,7 +22,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/hash"
 	"github.com/spf13/cobra"
 )
@@ -192,7 +194,10 @@ var cmdUpload = &cobra.Command{
 			exitWithErr(logger, err)
 		}
 
-		_, err = cmdupload.Run(ctx, logger, pinpointRoot, uploadURL)
+		var data agent.ExportRequest
+		data.UploadURL = &uploadURL
+
+		_, _, err = cmdupload.Run(ctx, logger, pinpointRoot, &data)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
