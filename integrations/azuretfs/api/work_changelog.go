@@ -12,13 +12,12 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
-func (api *API) FetchChangeLog(projid, refid string) (changelogs []*work.Changelog, err error) {
+func (api *API) fetchChangeLog(projid, issueid string) (changelogs []work.IssueChangeLog, err error) {
 	var res []changelogResponse
-	url := fmt.Sprintf(`%s/_apis/wit/workItems/%s/updates`, projid, refid)
+	url := fmt.Sprintf(`%s/_apis/wit/workItems/%s/updates`, projid, issueid)
 	if err := api.getRequest(url, stringmap{"$top": "200"}, &res); err != nil {
 		return nil, err
 	}
-	issueid := api.IDs.WorkIssue(refid)
 	for i, changelog := range res {
 		if changelog.Fields == nil {
 			continue
@@ -33,18 +32,14 @@ func (api *API) FetchChangeLog(projid, refid string) (changelogs []*work.Changel
 				if from == "" && to == "" {
 					continue
 				}
-				changelogs = append(changelogs, &work.Changelog{
+				changelogs = append(changelogs, work.IssueChangeLog{
 					CreatedDate: createdDate,
-					CustomerID:  api.customerid,
 					Field:       name,
-					FieldType:   api.reftype,
 					From:        from,
-					IssueID:     issueid,
+					FromString:  from,
 					Ordinal:     int64(i),
-					ProjectID:   api.IDs.WorkProject(projid),
-					RefID:       fmt.Sprintf("%d", changelog.ID),
-					RefType:     api.reftype,
 					To:          to,
+					ToString:    to,
 					UserID:      changelog.RevisedBy.ID,
 				})
 			}
@@ -53,8 +48,8 @@ func (api *API) FetchChangeLog(projid, refid string) (changelogs []*work.Changel
 	return
 }
 
-func changeLogExtractCreatedDate(changelog changelogResponse) work.ChangelogCreatedDate {
-	var createdDate work.ChangelogCreatedDate
+func changeLogExtractCreatedDate(changelog changelogResponse) work.IssueChangeLogCreatedDate {
+	var createdDate work.IssueChangeLogCreatedDate
 	if field, ok := changelog.Fields["System.CreatedDate"]; ok {
 		created, err := time.Parse(time.RFC3339, fmt.Sprint(field.NewValue))
 		if err == nil {
@@ -64,7 +59,7 @@ func changeLogExtractCreatedDate(changelog changelogResponse) work.ChangelogCrea
 		date.ConvertToModel(changelog.RevisedDate, &createdDate)
 	}
 	if createdDate.Epoch < 0 {
-		return work.ChangelogCreatedDate{}
+		return work.IssueChangeLogCreatedDate{}
 	}
 	return createdDate
 }
@@ -112,7 +107,7 @@ func changelogToString(i interface{}) string {
 	return fmt.Sprintf("%v", i)
 }
 
-type changeogFieldExtractor func(item changelogField) (name work.ChangelogField, from string, to string)
+type changeogFieldExtractor func(item changelogField) (name work.IssueChangeLogField, from string, to string)
 
 func extractUsers(item changelogField) (from string, to string) {
 	if item.OldValue != nil {
@@ -129,31 +124,31 @@ func extractUsers(item changelogField) (from string, to string) {
 }
 
 var changelogFields = map[string]changeogFieldExtractor{
-	"System.State": func(item changelogField) (work.ChangelogField, string, string) {
-		return work.ChangelogFieldStatus, changelogToString(item.OldValue), changelogToString(item.NewValue)
+	"System.State": func(item changelogField) (work.IssueChangeLogField, string, string) {
+		return work.IssueChangeLogFieldStatus, changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
-	"Microsoft.VSTS.Common.ResolvedReason": func(item changelogField) (work.ChangelogField, string, string) {
-		return work.ChangelogFieldResolution, changelogToString(item.OldValue), changelogToString(item.NewValue)
+	"Microsoft.VSTS.Common.ResolvedReason": func(item changelogField) (work.IssueChangeLogField, string, string) {
+		return work.IssueChangeLogFieldResolution, changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
-	"System.AssignedTo": func(item changelogField) (work.ChangelogField, string, string) {
+	"System.AssignedTo": func(item changelogField) (work.IssueChangeLogField, string, string) {
 		from, to := extractUsers(item)
-		return work.ChangelogFieldAssigneeRefID, from, to
+		return work.IssueChangeLogFieldAssigneeRefID, from, to
 	},
-	"System.CreatedBy": func(item changelogField) (work.ChangelogField, string, string) {
+	"System.CreatedBy": func(item changelogField) (work.IssueChangeLogField, string, string) {
 		from, to := extractUsers(item)
-		return work.ChangelogFieldReporterRefID, from, to
+		return work.IssueChangeLogFieldReporterRefID, from, to
 	},
-	"System.Title": func(item changelogField) (work.ChangelogField, string, string) {
-		return work.ChangelogFieldTitle, changelogToString(item.OldValue), changelogToString(item.NewValue)
+	"System.Title": func(item changelogField) (work.IssueChangeLogField, string, string) {
+		return work.IssueChangeLogFieldTitle, changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	// convert to date
-	"Microsoft.VSTS.Scheduling.DueDate": func(item changelogField) (work.ChangelogField, string, string) {
-		return work.ChangelogFieldDueDate, changelogToString(item.OldValue), changelogToString(item.NewValue)
+	"Microsoft.VSTS.Scheduling.DueDate": func(item changelogField) (work.IssueChangeLogField, string, string) {
+		return work.IssueChangeLogFieldDueDate, changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
-	"System.WorkItemType": func(item changelogField) (work.ChangelogField, string, string) {
-		return work.ChangelogFieldType, changelogToString(item.OldValue), changelogToString(item.NewValue)
+	"System.WorkItemType": func(item changelogField) (work.IssueChangeLogField, string, string) {
+		return work.IssueChangeLogFieldType, changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
-	"System.Tags": func(item changelogField) (work.ChangelogField, string, string) {
+	"System.Tags": func(item changelogField) (work.IssueChangeLogField, string, string) {
 		from := changelogToString(item.OldValue)
 		to := changelogToString(item.NewValue)
 		if from != "" {
@@ -164,21 +159,21 @@ var changelogFields = map[string]changeogFieldExtractor{
 			tmp := strings.Split(from, "; ")
 			to = strings.Join(tmp, ",")
 		}
-		return work.ChangelogFieldTags, from, to
+		return work.IssueChangeLogFieldTags, from, to
 	},
-	"Microsoft.VSTS.Common.Priority": func(item changelogField) (work.ChangelogField, string, string) {
-		return work.ChangelogFieldPriority, changelogToString(item.OldValue), changelogToString(item.NewValue)
+	"Microsoft.VSTS.Common.Priority": func(item changelogField) (work.IssueChangeLogField, string, string) {
+		return work.IssueChangeLogFieldPriority, changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
-	"System.Id": func(item changelogField) (work.ChangelogField, string, string) {
-		return work.ChangelogFieldProjectID, changelogToString(item.OldValue), changelogToString(item.NewValue)
+	"System.Id": func(item changelogField) (work.IssueChangeLogField, string, string) {
+		return work.IssueChangeLogFieldProjectID, changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
-	"System.TeamProject": func(item changelogField) (work.ChangelogField, string, string) {
-		return work.ChangelogFieldIdentifier, changelogToString(item.OldValue), changelogToString(item.NewValue)
+	"System.TeamProject": func(item changelogField) (work.IssueChangeLogField, string, string) {
+		return work.IssueChangeLogFieldIdentifier, changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
-	"System.IterationId": func(item changelogField) (work.ChangelogField, string, string) {
-		return work.ChangelogFieldSprintIds, changelogToString(item.OldValue), changelogToString(item.NewValue)
+	"System.IterationId": func(item changelogField) (work.IssueChangeLogField, string, string) {
+		return work.IssueChangeLogFieldSprintIds, changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
-	"parent": func(item changelogField) (work.ChangelogField, string, string) {
+	"parent": func(item changelogField) (work.IssueChangeLogField, string, string) {
 		var from, to string
 		if changelogToString(item.OldValue) != "" {
 			from = hash.Values("Issue", "item.CustomerID", "jira", item.OldValue)
@@ -186,9 +181,9 @@ var changelogFields = map[string]changeogFieldExtractor{
 		if changelogToString(item.NewValue) != "" {
 			to = hash.Values("Issue", "item.CustomerID", "jira", item.NewValue)
 		}
-		return work.ChangelogFieldParentID, from, to
+		return work.IssueChangeLogFieldParentID, from, to
 	},
-	// "Epic Link": func(item work.Changelog) (string, interface{}, interface{}) {
+	// "Epic Link": func(item work.IssueChangeLog) (string, interface{}, interface{}) {
 	// 	var from, to string
 	// 	if item.From != "" {
 	// 		from = pw.NewIssueID(item.CustomerID, "jira", item.From)
