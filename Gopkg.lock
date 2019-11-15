@@ -423,7 +423,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:40fb9ae4f06421907d8cfda90caa9cd5de0a7726ce5569eacf5f658324005b58"
+  digest = "1:ee15c4d64962ca94c33b2f02c35679d724a9f5ea85cb317c04f47dad8da21fab"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -444,10 +444,11 @@
     "slice",
     "strings",
     "term",
+    "upload",
   ]
   pruneopts = "T"
-  revision = "f77879b09cf62c9d444f7a7fbb0fbf40f76dbc7d"
-  version = "9.1.8"
+  revision = "6fe799109b20cf1cb04c22930e0c5f0bd92fb72a"
+  version = "9.1.29"
 
 [[projects]]
   digest = "1:160af92c9d129fe26acd668a490d6dfe34fb73d9c9e2e77f13da7a6f427b1df0"
@@ -475,7 +476,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6e8853b302a62d34c528f96b01b521db6ebd79767f3c0da88f8b36b85e265a26"
+  digest = "1:b9770b4c1e0f65263e2308a04689836c408207ce6163938f822ad12183da6516"
   name = "github.com/pinpt/ripsrc"
   packages = [
     "ripsrc",
@@ -496,7 +497,7 @@
     "ripsrc/pkg/logger",
   ]
   pruneopts = "T"
-  revision = "38e739ceb5eaec03a64b9eeb23c120f49398512b"
+  revision = "bffb02cb7b44160a64e35d982f928e9e23a2d8f8"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
@@ -993,6 +994,7 @@
     "github.com/pinpt/go-common/number",
     "github.com/pinpt/go-common/os",
     "github.com/pinpt/go-common/strings",
+    "github.com/pinpt/go-common/upload",
     "github.com/pinpt/httpclient",
     "github.com/pinpt/integration-sdk",
     "github.com/pinpt/integration-sdk/agent",
