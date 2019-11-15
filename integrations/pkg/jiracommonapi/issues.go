@@ -14,6 +14,18 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
+// TODO: check if all fields are needed, not that it's internal struct
+type CustomField struct {
+	ID    string
+	Name  string
+	Value string
+}
+
+type IssueWithCustomFields struct {
+	*work.Issue
+	CustomFields []CustomField
+}
+
 // IssuesAndChangelogsPage returns issues and related changelogs. Calls qc.ExportUser for each user. Current difference from jira-cloud version is that user.Key is used instead of user.AccountID everywhere.
 func IssuesAndChangelogsPage(
 	qc QueryContext,
@@ -22,8 +34,7 @@ func IssuesAndChangelogsPage(
 	updatedSince time.Time,
 	paginationParams url.Values) (
 	pi PageInfo,
-	resIssues []*work.Issue,
-	resChangelogs []*work.Changelog,
+	resIssues []IssueWithCustomFields,
 
 	rerr error) {
 
@@ -131,7 +142,8 @@ func IssuesAndChangelogsPage(
 
 		fields := issuesTypedFields[i]
 
-		item := &work.Issue{}
+		item := IssueWithCustomFields{}
+		item.Issue = &work.Issue{}
 		item.CustomerID = qc.CustomerID
 		item.RefID = data.ID
 		item.RefType = "jira"
@@ -163,13 +175,9 @@ func IssuesAndChangelogsPage(
 		}
 		date.ConvertToModel(updated, &item.UpdatedDate)
 
-		// TODO: check if name or id should be here
 		item.Priority = fields.Priority.Name
-		// TODO: check if name or id should be here
 		item.Type = fields.IssueType.Name
-		// TODO: check if name or id should be here
 		item.Status = fields.Status.Name
-		// TODO: check if name or id should be here
 		item.Resolution = fields.Resolution.Name
 
 		if !fields.Creator.IsZero() {
@@ -225,18 +233,32 @@ func IssuesAndChangelogsPage(
 				}
 			}
 
-			f := work.IssueCustomFields{}
+			if fd.Name == "Start Date" && v != "" {
+				d, err := ParsePlannedDate(v)
+				if err != nil {
+					qc.Logger.Error("could not parse field %v as date, err: %v", fd.Name, err)
+					continue
+				}
+				date.ConvertToModel(d, &item.PlannedStartDate)
+			} else if fd.Name == "End Date" && v != "" {
+				d, err := ParsePlannedDate(v)
+				if err != nil {
+					qc.Logger.Error("could not parse field %v as date, err: %v", fd.Name, err)
+					continue
+				}
+				date.ConvertToModel(d, &item.PlannedEndDate)
+			}
+
+			f := CustomField{}
 			f.ID = fd.Key
 			f.Name = fd.Name
 			f.Value = v
 			item.CustomFields = append(item.CustomFields, f)
 		}
 
-		// TODO: - parent_id
-		// parent_id is used in pipeline, but not prev. agent. not sure when it's set in jira (not subtasks)
-
 		issueRefID := item.RefID
-		issueID := qc.IssueID(item.RefID)
+
+		issue := item
 
 		// Jira changelog histories are ordered from the newest to the oldest but we want changelogs to be
 		// sent from the oldest event to the newest event when we send
@@ -244,12 +266,8 @@ func IssuesAndChangelogsPage(
 			cl := data.Changelog.Histories[i]
 			for _, data := range cl.Items {
 
-				item := &work.Changelog{}
-				item.CustomerID = qc.CustomerID
-				item.RefType = "jira"
+				item := work.IssueChangeLog{}
 				item.RefID = cl.ID
-
-				item.IssueID = issueID
 				item.Ordinal = ordinal
 
 				ordinal++
@@ -265,18 +283,17 @@ func IssuesAndChangelogsPage(
 				item.FromString = data.FromString + " @ " + data.From
 				item.ToString = data.ToString + " @ " + data.To
 
-				item.FieldType = data.FieldType
 				switch strings.ToLower(data.Field) {
 				case "status":
-					item.Field = work.ChangelogFieldStatus
+					item.Field = work.IssueChangeLogFieldStatus
 					item.From = data.FromString
 					item.To = data.ToString
 				case "resolution":
-					item.Field = work.ChangelogFieldResolution
+					item.Field = work.IssueChangeLogFieldResolution
 					item.From = data.FromString
 					item.To = data.ToString
 				case "assignee":
-					item.Field = work.ChangelogFieldAssigneeRefID
+					item.Field = work.IssueChangeLogFieldAssigneeRefID
 					if data.From != "" {
 						item.From = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.From)
 					}
@@ -284,31 +301,31 @@ func IssuesAndChangelogsPage(
 						item.To = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.To)
 					}
 				case "reporter":
-					item.Field = work.ChangelogFieldReporterRefID
+					item.Field = work.IssueChangeLogFieldReporterRefID
 					item.From = data.From
 					item.To = data.To
 				case "summary":
-					item.Field = work.ChangelogFieldTitle
+					item.Field = work.IssueChangeLogFieldTitle
 					item.From = data.FromString
 					item.To = data.ToString
 				case "duedate":
-					item.Field = work.ChangelogFieldDueDate
+					item.Field = work.IssueChangeLogFieldDueDate
 					item.From = data.FromString
 					item.To = data.ToString
 				case "issuetype":
-					item.Field = work.ChangelogFieldType
+					item.Field = work.IssueChangeLogFieldType
 					item.From = data.FromString
 					item.To = data.ToString
 				case "labels":
-					item.Field = work.ChangelogFieldTags
+					item.Field = work.IssueChangeLogFieldTags
 					item.From = data.FromString
 					item.To = data.ToString
 				case "priority":
-					item.Field = work.ChangelogFieldPriority
+					item.Field = work.IssueChangeLogFieldPriority
 					item.From = data.FromString
 					item.To = data.ToString
 				case "project":
-					item.Field = work.ChangelogFieldProjectID
+					item.Field = work.IssueChangeLogFieldProjectID
 					if data.From != "" {
 						item.From = work.NewProjectID(qc.CustomerID, "jira", data.From)
 					}
@@ -316,11 +333,11 @@ func IssuesAndChangelogsPage(
 						item.To = work.NewProjectID(qc.CustomerID, "jira", data.To)
 					}
 				case "key":
-					item.Field = work.ChangelogFieldIdentifier
+					item.Field = work.IssueChangeLogFieldIdentifier
 					item.From = data.FromString
 					item.To = data.ToString
 				case "sprint":
-					item.Field = work.ChangelogFieldSprintIds
+					item.Field = work.IssueChangeLogFieldSprintIds
 					var from, to []string
 					if data.From != "" {
 						for _, s := range strings.Split(data.From, ",") {
@@ -335,7 +352,7 @@ func IssuesAndChangelogsPage(
 					item.From = strings.Join(from, ",")
 					item.To = strings.Join(to, ",")
 				case "parent":
-					item.Field = work.ChangelogFieldParentID
+					item.Field = work.IssueChangeLogFieldParentID
 					if data.From != "" {
 						item.From = work.NewIssueID(qc.CustomerID, "jira", data.From)
 					}
@@ -343,7 +360,7 @@ func IssuesAndChangelogsPage(
 						item.To = work.NewIssueID(qc.CustomerID, "jira", data.To)
 					}
 				case "epic link":
-					item.Field = work.ChangelogFieldEpicID
+					item.Field = work.IssueChangeLogFieldEpicID
 					if data.From != "" {
 						item.From = work.NewIssueID(qc.CustomerID, "jira", data.From)
 					}
@@ -354,15 +371,19 @@ func IssuesAndChangelogsPage(
 					// Ignore other change types
 					continue
 				}
-				resChangelogs = append(resChangelogs, item)
+				issue.ChangeLog = append(issue.ChangeLog, item)
 			}
 
 		}
 
-		resIssues = append(resIssues, item)
+		resIssues = append(resIssues, issue)
 	}
 
 	return
+}
+
+func ParsePlannedDate(ts string) (time.Time, error) {
+	return time.ParseInLocation("2006-01-02", ts, time.UTC)
 }
 
 // jira format: 2019-07-12T22:32:50.376+0200
