@@ -5,16 +5,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
 	"github.com/pinpt/agent.next/pkg/exportrepo"
+	"github.com/pinpt/agent.next/pkg/fs"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/integrationid"
+	"github.com/pinpt/agent.next/pkg/memorylogs"
 
-	"github.com/hashicorp/go-plugin"
+	plugin "github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -52,6 +57,9 @@ type export struct {
 }
 
 func newExport(opts Opts) (*export, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	s := &export{}
 
 	startTime := time.Now()
@@ -96,7 +104,8 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
-	s.sessions, err = newSessions(s.Logger, s, opts.ReprocessHistorical)
+	trackProgress := os.Getenv("PP_AGENT_NO_TRACK_PROGRESS") == ""
+	s.sessions, err = newSessions(s.Logger, s, opts.ReprocessHistorical, trackProgress)
 	if err != nil {
 		return nil, err
 	}
@@ -119,6 +128,8 @@ func newExport(opts Opts) (*export, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	memorylogs.Start(ctx, s.Logger, 5*time.Second)
 
 	exportRes := s.runExports()
 	close(s.gitProcessingRepos)
@@ -154,6 +165,16 @@ func newExport(opts Opts) (*export, error) {
 		return nil, errors.New("One or more integrations failed")
 	}
 
+	tempFiles, err := s.tempFilesInUploads()
+	if err != nil {
+		s.Logger.Error("could not check uploads dir for errors", "err", err)
+		return nil, err
+	}
+	if len(tempFiles) != 0 {
+		return nil, fmt.Errorf("found temp sessions files in upload dir, files: %v", tempFiles)
+	}
+	s.Logger.Info("No temp files found in upload dir, all sessions closed successfully.")
+
 	return s, nil
 }
 
@@ -164,6 +185,43 @@ func (s *export) Destroy() {
 			panic(err)
 		}
 	}
+}
+
+func (s *export) tempFilesInUploads() ([]string, error) {
+	uploadsExist, err := fs.Exists(s.Locs.Uploads)
+	if err != nil {
+		return nil, fmt.Errorf("Could not check if uploads dir exist: %v", err)
+	}
+	if !uploadsExist {
+		return nil, nil
+	}
+
+	var rec func(string) ([]string, error)
+	rec = func(p string) (res []string, rerr error) {
+		items, err := ioutil.ReadDir(p)
+		if err != nil {
+			rerr = err
+			return
+		}
+		for _, item := range items {
+			n := filepath.Join(p, item.Name())
+			if item.IsDir() {
+				sr, err := rec(n)
+				if err != nil {
+					rerr = err
+					return
+				}
+				res = append(res, sr...)
+				continue
+			}
+			if !strings.HasSuffix(n, ".temp.gz") {
+				continue
+			}
+			res = append(res, n)
+		}
+		return
+	}
+	return rec(s.Locs.Uploads)
 }
 
 func (s *export) discardIncrementalData() error {
@@ -364,6 +422,7 @@ func (s *export) runExports() map[integrationid.ID]runResult {
 			if !ok {
 				panic("no config for integration")
 			}
+
 			_, err := integration.RPCClient().Export(ctx, exportConfig)
 			if err != nil {
 				ret(err)
