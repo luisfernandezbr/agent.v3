@@ -205,11 +205,6 @@ func (s *exporter) export(data *agent.ExportRequest, messageID string) {
 func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest, messageID string) (isIncremental []bool, partsCount int, fileSize int64, rerr error) {
 	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
 
-	if len(data.UploadHeaders) == 0 {
-		rerr = errors.New("received ExportRequest has empty UploadHeaders, these are required for upload")
-		return
-	}
-
 	var integrations []cmdexport.Integration
 	// add in additional integrations defined in config
 	for _, in := range s.conf.ExtraIntegrations {
@@ -259,7 +254,7 @@ func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest, mess
 		return
 	}
 	s.logger.Info("export finished, running upload")
-	if partsCount, fileSize, err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, data); err != nil {
+	if partsCount, fileSize, err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL, s.conf.APIKey); err != nil {
 		if err == cmdupload.ErrNoFilesFound {
 			s.logger.Info("skipping upload, no files generated")
 			// do not return errors when no files to upload, which is ok for incremental

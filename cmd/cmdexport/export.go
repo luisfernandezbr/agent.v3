@@ -19,7 +19,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/pkg/memorylogs"
 
-	"github.com/hashicorp/go-plugin"
+	plugin "github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -214,7 +214,7 @@ func (s *export) tempFilesInUploads() ([]string, error) {
 				res = append(res, sr...)
 				continue
 			}
-			if !strings.HasSuffix(n, ".temp") {
+			if !strings.HasSuffix(n, ".temp.gz") {
 				continue
 			}
 			res = append(res, n)
@@ -422,6 +422,7 @@ func (s *export) runExports() map[integrationid.ID]runResult {
 			if !ok {
 				panic("no config for integration")
 			}
+
 			_, err := integration.RPCClient().Export(ctx, exportConfig)
 			if err != nil {
 				ret(err)

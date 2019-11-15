@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,9 +12,15 @@ import (
 
 type PaginateRegularFn func(query string) (PageInfo, error)
 
-const pageSizeStr = "100"
+const defaultPageSize = 100
 
 func PaginateRegular(fn PaginateRegularFn) error {
+	return PaginateRegularWithPageSize(defaultPageSize, fn)
+}
+
+func PaginateRegularWithPageSize(pageSize int, fn PaginateRegularFn) error {
+	pageSizeStr := strconv.Itoa(pageSize)
+
 	cursor := ""
 	for {
 		q := "first: " + pageSizeStr
@@ -39,7 +46,7 @@ func PaginateNewerThan(lastProcessed time.Time, fn PaginateNewerThanFn) error {
 	if lastProcessed.IsZero() {
 		cursor := ""
 		for {
-			q := "first: " + pageSizeStr
+			q := "first: " + strconv.Itoa(defaultPageSize)
 			if cursor != "" {
 				q += " after:" + pjson.Stringify(cursor)
 			}
@@ -57,7 +64,7 @@ func PaginateNewerThan(lastProcessed time.Time, fn PaginateNewerThanFn) error {
 	}
 	cursor := ""
 	for {
-		q := "last: " + pageSizeStr
+		q := "last: " + strconv.Itoa(defaultPageSize)
 		if cursor != "" {
 			q += " before:" + pjson.Stringify(cursor)
 		}
@@ -88,7 +95,7 @@ func PaginateCommits(lastProcessed time.Time, fn PaginateCommitsFn) error {
 	}
 
 	for {
-		q := "first: " + pageSizeStr + since
+		q := "first: " + strconv.Itoa(defaultPageSize) + since
 		if cursor != "" {
 			q += " after:" + pjson.Stringify(cursor)
 		}
