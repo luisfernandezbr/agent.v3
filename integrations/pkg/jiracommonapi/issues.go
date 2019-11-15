@@ -233,6 +233,22 @@ func IssuesAndChangelogsPage(
 				}
 			}
 
+			if fd.Name == "Start Date" && v != "" {
+				d, err := ParsePlannedDate(v)
+				if err != nil {
+					qc.Logger.Error("could not parse field %v as date, err: %v", fd.Name, err)
+					continue
+				}
+				date.ConvertToModel(d, &item.PlannedStartDate)
+			} else if fd.Name == "End Date" && v != "" {
+				d, err := ParsePlannedDate(v)
+				if err != nil {
+					qc.Logger.Error("could not parse field %v as date, err: %v", fd.Name, err)
+					continue
+				}
+				date.ConvertToModel(d, &item.PlannedEndDate)
+			}
+
 			f := CustomField{}
 			f.ID = fd.Key
 			f.Name = fd.Name
@@ -360,10 +376,14 @@ func IssuesAndChangelogsPage(
 
 		}
 
-		resIssues = append(resIssues, item)
+		resIssues = append(resIssues, issue)
 	}
 
 	return
+}
+
+func ParsePlannedDate(ts string) (time.Time, error) {
+	return time.ParseInLocation("2006-01-02", ts, time.UTC)
 }
 
 // jira format: 2019-07-12T22:32:50.376+0200
