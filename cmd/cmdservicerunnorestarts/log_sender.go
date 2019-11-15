@@ -3,6 +3,7 @@ package cmdservicerunnorestarts
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -16,18 +17,19 @@ type commandLogSender struct {
 	logger    hclog.Logger
 	conf      agentconf.Config
 	messageID string
+	cmdname   string
 
 	ch     chan []byte
 	buf    []byte
 	closed chan bool
 }
 
-func newCommandLogSender(logger hclog.Logger, conf agentconf.Config, messageID string) *commandLogSender {
+func newCommandLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) *commandLogSender {
 	s := &commandLogSender{}
 	s.logger = logger.Named("log-sender")
 	s.conf = conf
 	s.messageID = messageID
-
+	s.cmdname = cmdname
 	s.ch = make(chan []byte, 10000)
 	s.closed = make(chan bool)
 
@@ -107,11 +109,22 @@ func (s *commandLogSender) upload() {
 	resp.Body.Close()
 }
 
-func (s *commandLogSender) Write(b []byte) (n int, _ error) {
+func (s *commandLogSender) Write(b []byte) (int, error) {
+	// we must return the number of bytes that were passed in, crashes otherwise
+	res := len(b)
+
+	// this should always be json, but check just in case
+	var m map[string]string
+	if e := json.Unmarshal(b, &m); e == nil {
+		m["_cmd"] = s.cmdname
+		b, _ = json.Marshal(m)
+		b = append(b, '\n')
+	}
+
 	bCopy := make([]byte, len(b))
 	copy(bCopy, b)
 	s.ch <- bCopy
-	return len(b), nil
+	return res, nil
 }
 
 func (s *commandLogSender) FlushAndClose() error {

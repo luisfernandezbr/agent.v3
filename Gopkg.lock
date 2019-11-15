@@ -986,6 +986,7 @@
     "github.com/pinpt/go-common/datetime",
     "github.com/pinpt/go-common/event",
     "github.com/pinpt/go-common/event/action",
+    "github.com/pinpt/go-common/eventing",
     "github.com/pinpt/go-common/fileutil",
     "github.com/pinpt/go-common/hash",
     "github.com/pinpt/go-common/httpdefaults",
