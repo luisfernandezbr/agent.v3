@@ -100,7 +100,6 @@ func (s *Integration) processWorkItems(projid, projname string, sender *objsende
 				if err := sender.Send(i); err != nil {
 					s.logger.Error("error sending work item", "err", err, "id", i.RefID)
 				}
-				s.processChangelogs(projid, i.Identifier, i.RefID, sender)
 			}
 		})
 	}
@@ -116,32 +115,6 @@ func (s *Integration) processWorkItems(projid, projname string, sender *objsende
 		fetchitems(ids)
 	}
 	async.Wait()
-	return sender.Done()
-}
-
-func (s *Integration) processChangelogs(projid, identifier, itemid string, sender *objsender.Session) error {
-
-	// First we need to get the IDs of the items that hav changed after the fromdate
-	// Then we need to get each changelog individually.
-	sender, err := sender.Session(work.ChangelogModelName.String(), itemid, identifier)
-	if err != nil {
-		s.logger.Error("error creating sender session for work changelog")
-		return err
-	}
-	changelogs, err := s.api.FetchChangeLog(projid, itemid)
-	if err := sender.SetTotal(len(changelogs)); err != nil {
-		s.logger.Error("error setting total changelogs on processChangelogs", "err", err)
-	}
-	if err != nil {
-		s.logger.Error("error fetching changlogs for item id "+itemid, "err", err)
-		return err
-	}
-	for _, c := range changelogs {
-		if err := sender.Send(c); err != nil {
-			s.logger.Error("error sending changlog", "err", err, "id", c.RefID)
-		}
-	}
-
 	return sender.Done()
 }
 

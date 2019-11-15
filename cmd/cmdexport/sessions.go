@@ -25,16 +25,21 @@ type sessions struct {
 	progressTracker *expsessions.ProgressTracker
 
 	dedupStore expsessions.DedupStore
+
+	trackProgress bool
 }
 
-func newSessions(logger hclog.Logger, export *export, reprocessHistorical bool) (_ *sessions, rerr error) {
+func newSessions(logger hclog.Logger, export *export, reprocessHistorical bool, trackProgress bool) (_ *sessions, rerr error) {
 
 	s := &sessions{}
 	s.logger = logger
 	s.export = export
 	s.commitUsers = process.NewCommitUsers()
+	s.trackProgress = trackProgress
 
-	s.progressTracker = expsessions.NewProgressTracker()
+	if s.trackProgress {
+		s.progressTracker = expsessions.NewProgressTracker()
+	}
 
 	newWriter := func(modelName string, id expsessions.ID) expsessions.Writer {
 		return expsessions.NewFileWriter(modelName, export.Locs.Uploads, id)
@@ -60,20 +65,28 @@ func newSessions(logger hclog.Logger, export *export, reprocessHistorical bool) 
 		LastProcessed: export.lastProcessed,
 		NewWriter:     newWriter,
 		SendProgress: func(progressPath expsessions.ProgressPath, current, total int) {
-			s.progressTracker.Update(progressPath.StringsWithObjectNames(), current, total)
+			if s.trackProgress {
+				s.progressTracker.Update(progressPath.StringsWithObjectNames(), current, total)
+			}
 		},
 		SendProgressDone: func(progressPath expsessions.ProgressPath) {
-			s.progressTracker.Done(progressPath.StringsWithObjectNames())
+			if s.trackProgress {
+				s.progressTracker.Done(progressPath.StringsWithObjectNames())
+			}
 		},
 	})
 
-	ticker := time.NewTicker(10 * time.Second)
-	go func() {
-		for {
-			<-ticker.C
-			s.sendProgress()
-		}
-	}()
+	if s.trackProgress {
+
+		ticker := time.NewTicker(10 * time.Second)
+		go func() {
+			for {
+				<-ticker.C
+				s.sendProgress()
+			}
+		}()
+
+	}
 
 	return s, nil
 }
@@ -111,8 +124,11 @@ func (s *sessions) sendProgress() {
 }
 
 func (s *sessions) Close() error {
-	// send last process data at the end when complete
-	s.sendProgress()
+
+	if s.trackProgress {
+		// send last process data at the end when complete
+		s.sendProgress()
+	}
 
 	if s.dedupStore != nil {
 		newObjs, dups := s.dedupStore.Stats()

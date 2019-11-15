@@ -12,16 +12,15 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/archive"
 	"github.com/pinpt/agent.next/pkg/fsconf"
-	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/go-common/fileutil"
 	"github.com/pinpt/go-common/upload"
-	"github.com/pinpt/integration-sdk/agent"
 )
 
 func Run(ctx context.Context,
 	logger hclog.Logger,
 	pinpointRoot string,
-	data *agent.ExportRequest) (parts int, size int64, err error) {
+	uploadURL string,
+	apiKey string) (parts int, size int64, err error) {
 
 	fsc := fsconf.New(pinpointRoot)
 
@@ -30,7 +29,6 @@ func Run(ctx context.Context,
 		return
 	}
 
-	uploadURL := *data.UploadURL
 	fileName := time.Now().Format(time.RFC3339)
 	fileName = strings.ReplaceAll(fileName, ":", "_")
 
@@ -42,17 +40,7 @@ func Run(ctx context.Context,
 	}
 	logger.Info("uploading export result", "upload_url", uploadURL, "zip_path", zipPath)
 
-	// job config is sent as part of the upload so we can get basic information along side the
-	// job zipfile so we don't have to crack it open to see what is in it
-	jobconfig := map[string]interface{}{
-		"customer_id":  data.CustomerID,
-		"job_id":       data.JobID,
-		"uuid":         data.CustomerID,
-		"request_date": data.RequestDate.Epoch,
-		"finish_date":  datetime.EpochNow(),
-		"integrations": data.Integrations,
-	}
-	parts, size, err = runUpload(logger, zipPath, uploadURL, jobconfig, data.UploadHeaders)
+	parts, size, err = runUpload(logger, zipPath, uploadURL, apiKey)
 	if err != nil {
 		return
 	}
@@ -74,7 +62,7 @@ func zipFilesJSON(logger hclog.Logger, target, source string) error {
 	return archive.ZipFiles(target, source, files)
 }
 
-func runUpload(logger hclog.Logger, zipPath, uploadURL string, jobconfig map[string]interface{}, headers []string) (parts int, size int64, err error) {
+func runUpload(logger hclog.Logger, zipPath, uploadURL, apiKey string) (parts int, size int64, err error) {
 
 	f, err := os.Open(zipPath)
 	defer f.Close()
@@ -83,8 +71,7 @@ func runUpload(logger hclog.Logger, zipPath, uploadURL string, jobconfig map[str
 	}
 
 	parts, size, err = upload.Upload(upload.Options{
-		Job:         jobconfig,
-		Headers:     headers,
+		APIKey:      apiKey,
 		Body:        f,
 		ContentType: "application/zip",
 		URL:         uploadURL,

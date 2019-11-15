@@ -14,10 +14,12 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
 	"github.com/pinpt/agent.next/pkg/exportrepo"
+	"github.com/pinpt/agent.next/pkg/fs"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/integrationid"
+	"github.com/pinpt/agent.next/pkg/memorylogs"
 
-	"github.com/hashicorp/go-plugin"
+	plugin "github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
 	"github.com/pinpt/agent.next/rpcdef"
@@ -55,6 +57,9 @@ type export struct {
 }
 
 func newExport(opts Opts) (*export, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	s := &export{}
 
 	startTime := time.Now()
@@ -99,7 +104,8 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
-	s.sessions, err = newSessions(s.Logger, s, opts.ReprocessHistorical)
+	trackProgress := os.Getenv("PP_AGENT_NO_TRACK_PROGRESS") == ""
+	s.sessions, err = newSessions(s.Logger, s, opts.ReprocessHistorical, trackProgress)
 	if err != nil {
 		return nil, err
 	}
@@ -122,6 +128,8 @@ func newExport(opts Opts) (*export, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	memorylogs.Start(ctx, s.Logger, 5*time.Second)
 
 	exportRes := s.runExports()
 	close(s.gitProcessingRepos)
@@ -180,6 +188,14 @@ func (s *export) Destroy() {
 }
 
 func (s *export) tempFilesInUploads() ([]string, error) {
+	uploadsExist, err := fs.Exists(s.Locs.Uploads)
+	if err != nil {
+		return nil, fmt.Errorf("Could not check if uploads dir exist: %v", err)
+	}
+	if !uploadsExist {
+		return nil, nil
+	}
+
 	var rec func(string) ([]string, error)
 	rec = func(p string) (res []string, rerr error) {
 		items, err := ioutil.ReadDir(p)
@@ -407,6 +423,7 @@ func (s *export) runExports() map[integrationid.ID]runResult {
 			if !ok {
 				panic("no config for integration")
 			}
+
 			_, err := integration.RPCClient().Export(ctx, exportConfig)
 			if err != nil {
 				ret(err)
