@@ -69,7 +69,7 @@ func (s *FileWriter) Close() error {
 		return err
 	}
 
-	return os.Rename(s.loc+".temp", s.loc)
+	return os.Rename(s.loc+".temp.gz", s.loc)
 }
 
 func (s *FileWriter) createStreamIfNeeded() error {
@@ -86,7 +86,7 @@ func (s *FileWriter) createStream(outputDir string) error {
 	if err != nil {
 		return err
 	}
-	stream, err := io.NewJSONStream(s.loc + ".temp")
+	stream, err := io.NewJSONStream(s.loc + ".temp.gz")
 	if err != nil {
 		return err
 	}

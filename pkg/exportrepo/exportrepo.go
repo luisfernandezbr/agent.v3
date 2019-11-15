@@ -66,6 +66,7 @@ type Opts struct {
 type PR struct {
 	ID            string
 	RefID         string
+	BranchName    string
 	URL           string
 	LastCommitSHA string
 }
@@ -296,10 +297,9 @@ func (s *Export) branches(ctx context.Context) error {
 					continue
 				}
 				obj := sourcecode.PullRequestBranch{
-					PullRequestID: pr.ID,
-					RefID:         pr.RefID,
-					// TODO: this is not correct, data.Name would be empty for pr branches
-					//Name:                   data.Name,
+					PullRequestID:          pr.ID,
+					RefID:                  pr.RefID,
+					Name:                   pr.BranchName,
 					URL:                    pr.URL,
 					RefType:                s.opts.RefType,
 					CustomerID:             s.opts.CustomerID,
@@ -311,8 +311,6 @@ func (s *Export) branches(ctx context.Context) error {
 					BranchedFromCommitIds:  s.commitIDs(data.BranchedFromCommits),
 					CommitShas:             data.Commits,
 					CommitIds:              commitIDs,
-					FirstCommitSha:         data.Commits[0],
-					FirstCommitID:          commitIDs[0],
 					BehindDefaultCount:     int64(data.BehindDefaultCount),
 					AheadDefaultCount:      int64(data.AheadDefaultCount),
 					RepoID:                 s.opts.RepoID,

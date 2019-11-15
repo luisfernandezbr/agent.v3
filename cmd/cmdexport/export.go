@@ -198,7 +198,7 @@ func (s *export) tempFilesInUploads() ([]string, error) {
 				res = append(res, sr...)
 				continue
 			}
-			if !strings.HasSuffix(n, ".temp") {
+			if !strings.HasSuffix(n, ".temp.gz") {
 				continue
 			}
 			res = append(res, n)
@@ -315,6 +315,7 @@ func (s *export) gitProcessing() (hadErrors bool, _ error) {
 			pr2.ID = pr1.ID
 			pr2.RefID = pr1.RefID
 			pr2.URL = pr1.URL
+			pr2.BranchName = pr1.BranchName
 			pr2.LastCommitSHA = pr1.LastCommitSHA
 			opts.PRs = append(opts.PRs, pr2)
 		}

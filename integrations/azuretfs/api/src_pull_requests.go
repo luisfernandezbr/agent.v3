@@ -90,6 +90,7 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 				ID:            api.IDs.CodePullRequest(repoRefID, pridstring),
 				RefID:         pridstring,
 				URL:           pr.URL,
+				BranchName:    pr.SourceBranch,
 				LastCommitSHA: pr.commitshas[len(pr.commitshas)-1],
 			})
 			fetchprsMutex.Unlock()
