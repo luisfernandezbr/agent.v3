@@ -3,7 +3,6 @@ package cmdservicerunnorestarts
 import (
 	"context"
 	"errors"
-	"io"
 	"os"
 	"sync"
 	"time"
@@ -79,8 +78,9 @@ type exporter struct {
 }
 
 type exportRequest struct {
-	Done chan bool
-	Data *agent.ExportRequest
+	Done      chan bool
+	Data      *agent.ExportRequest
+	MessageID string
 }
 
 func newExporter(opts exporterOpts) *exporter {
@@ -104,7 +104,7 @@ func newExporter(opts exporterOpts) *exporter {
 func (s *exporter) Run() {
 	for req := range s.ExportQueue {
 		s.SetRunning(true)
-		s.export(req.Data)
+		s.export(req.Data, req.MessageID)
 		s.SetRunning(false)
 		req.Done <- true
 	}
@@ -185,13 +185,13 @@ func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started
 	return s.sendExportEvent(ctx, jobID, data, ints, isIncremental)
 }
 
-func (s *exporter) export(data *agent.ExportRequest) {
+func (s *exporter) export(data *agent.ExportRequest, messageID string) {
 	ctx := context.Background()
 	started := time.Now()
 	if err := s.sendStartExportEvent(ctx, data.JobID, data.Integrations); err != nil {
 		s.logger.Error("error sending export response start event", "err", err)
 	}
-	isIncremental, partsCount, fileSize, err := s.doExport(ctx, data)
+	isIncremental, partsCount, fileSize, err := s.doExport(ctx, data, messageID)
 	if err != nil {
 		s.logger.Error("export finished with error", "err", err)
 	} else {
@@ -202,7 +202,7 @@ func (s *exporter) export(data *agent.ExportRequest) {
 	}
 }
 
-func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (isIncremental []bool, partsCount int, fileSize int64, rerr error) {
+func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest, messageID string) (isIncremental []bool, partsCount int, fileSize int64, rerr error) {
 	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
 
 	if len(data.UploadHeaders) == 0 {
@@ -253,18 +253,11 @@ func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (isI
 		return
 	}
 
-	exportLogSender := newExportLogSender(s.logger, s.conf, data.JobID)
 	s.opts.AgentConfig.Backend.ExportJobID = data.JobID
-	if err := s.execExport(ctx, integrations, data.ReprocessHistorical, exportLogSender); err != nil {
+	if err := s.execExport(ctx, integrations, data.ReprocessHistorical, messageID); err != nil {
 		rerr = err
 		return
 	}
-	if err := exportLogSender.FlushAndClose(); err != nil {
-		s.logger.Error("could not send export logs to the server", "err", err)
-		rerr = err
-		return
-	}
-
 	s.logger.Info("export finished, running upload")
 	if partsCount, fileSize, err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, data); err != nil {
 		if err == cmdupload.ErrNoFilesFound {
@@ -294,7 +287,7 @@ func (s *exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport
 	return ts, nil
 }
 
-func (s *exporter) execExport(ctx context.Context, integrations []cmdexport.Integration, reprocessHistorical bool, exportLogWriter io.Writer) error {
+func (s *exporter) execExport(ctx context.Context, integrations []cmdexport.Integration, reprocessHistorical bool, messageID string) error {
 	c := &subCommand{
 		ctx:          ctx,
 		logger:       s.logger,
@@ -305,17 +298,13 @@ func (s *exporter) execExport(ctx context.Context, integrations []cmdexport.Inte
 		deviceInfo:   s.deviceInfo,
 	}
 	c.validate()
-	if exportLogWriter != nil {
-		c.logWriter = &exportLogWriter
-	}
-
 	args := []string{
 		"--log-level", logutils.LogLevelToString(s.opts.LogLevelSubcommands),
 	}
 	if reprocessHistorical {
 		args = append(args, "--reprocess-historical=true")
 	}
-	err := c.run("export", nil, args...)
+	err := c.run("export", messageID, nil, args...)
 	if err != nil {
 		return err
 	}

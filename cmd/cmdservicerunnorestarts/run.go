@@ -2,6 +2,7 @@ package cmdservicerunnorestarts
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/encrypt"
 
+	"github.com/pinpt/go-common/eventing"
 	pjson "github.com/pinpt/go-common/json"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -49,6 +51,20 @@ func Run(ctx context.Context, opts Opts) error {
 		return err
 	}
 	return s.Run(ctx)
+}
+
+type messageHeader struct {
+	CustomerID string `json:"customer_id"`
+	Encoding   string `json:"encoding"`
+	MessageID  string `json:"message_id"`
+	MessageTS  string `json:"message_ts"`
+	UUID       string `json:"uuid"`
+}
+
+func parseHeader(m map[string]string) (header messageHeader) {
+	b, _ := json.Marshal(m)
+	json.Unmarshal(b, &header)
+	return
 }
 
 type runner struct {
@@ -168,7 +184,7 @@ func (s *runner) runTestMockExport() error {
 	reprocessHistorical := true
 
 	ctx := context.Background()
-	return s.exporter.execExport(ctx, integrations, reprocessHistorical, nil)
+	return s.exporter.execExport(ctx, integrations, reprocessHistorical, "")
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {
@@ -227,7 +243,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 
 	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		req := instance.Object().(*agent.IntegrationRequest)
-
+		headers := parseHeader(instance.Message().Headers)
 		integration := req.Integration
 
 		s.logger.Info("received integration request", "integration", integration.Name)
@@ -259,7 +275,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 
 		auth := integration.Authorization.ToMap()
 
-		res, err := s.validate(ctx, integration.Name, IntegrationType(req.Integration.SystemType), auth)
+		res, err := s.validate(ctx, integration.Name, headers.MessageID, IntegrationType(req.Integration.SystemType), auth)
 		if err != nil {
 			return rerr(fmt.Errorf("could not call validate, err: %v", err))
 		}
@@ -299,8 +315,9 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for onboarding requests")
 
-	processOnboard := func(integration map[string]interface{}, systemType IntegrationType, objectType string) (_ cmdexportonboarddata.Result, rerr error) {
+	processOnboard := func(msg eventing.Message, integration map[string]interface{}, systemType IntegrationType, objectType string) (_ cmdexportonboarddata.Result, rerr error) {
 		s.logger.Info("received onboard request", "type", objectType)
+		header := parseHeader(msg.Headers)
 
 		ctx := context.Background()
 		conf, err := configFromEvent(integration, systemType, s.conf.PPEncryptionKey)
@@ -309,7 +326,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 			return
 		}
 
-		data, err := s.getOnboardData(ctx, conf, objectType)
+		data, err := s.getOnboardData(ctx, conf, header.MessageID, objectType)
 		if err != nil {
 			rerr = err
 			return
@@ -324,7 +341,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		}
 
 		req := instance.Object().(*agent.UserRequest)
-		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "users")
+		data, err := processOnboard(instance.Message(), req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "users")
 		if err != nil {
 			rerr(err)
 			return
@@ -367,7 +384,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		}
 
 		req := instance.Object().(*agent.RepoRequest)
-		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "repos")
+		data, err := processOnboard(instance.Message(), req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "repos")
 
 		if err != nil {
 			rerr(err)
@@ -409,7 +426,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		}
 
 		req := instance.Object().(*agent.ProjectRequest)
-		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "projects")
+		data, err := processOnboard(instance.Message(), req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "projects")
 		if err != nil {
 			rerr(err)
 			return
@@ -449,7 +466,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		}
 
 		req := instance.Object().(*agent.WorkStatusRequest)
-		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "workconfig")
+		data, err := processOnboard(instance.Message(), req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "workconfig")
 		if err != nil {
 			rerr(err)
 			return
@@ -560,11 +577,12 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 
 		ev := instance.Object().(*agent.ExportRequest)
 		s.logger.Info("received export request", "id", ev.ID, "uuid", ev.UUID, "request_date", ev.RequestDate.Rfc3339)
-
+		headers := parseHeader(instance.Message().Headers)
 		done := make(chan bool)
 		s.exporter.ExportQueue <- exportRequest{
-			Done: done,
-			Data: ev,
+			Done:      done,
+			Data:      ev,
+			MessageID: headers.MessageID,
 		}
 		<-done
 		return nil, nil

@@ -12,21 +12,21 @@ import (
 	"github.com/pinpt/go-common/api"
 )
 
-type exportLogSender struct {
-	logger      hclog.Logger
-	conf        agentconf.Config
-	exportJobID string
+type commandLogSender struct {
+	logger    hclog.Logger
+	conf      agentconf.Config
+	messageID string
 
 	ch     chan []byte
 	buf    []byte
 	closed chan bool
 }
 
-func newExportLogSender(logger hclog.Logger, conf agentconf.Config, exportJobID string) *exportLogSender {
-	s := &exportLogSender{}
+func newCommandLogSender(logger hclog.Logger, conf agentconf.Config, messageID string) *commandLogSender {
+	s := &commandLogSender{}
 	s.logger = logger.Named("log-sender")
 	s.conf = conf
-	s.exportJobID = exportJobID
+	s.messageID = messageID
 
 	s.ch = make(chan []byte, 10000)
 	s.closed = make(chan bool)
@@ -50,7 +50,7 @@ func newExportLogSender(logger hclog.Logger, conf agentconf.Config, exportJobID 
 	return s
 }
 
-func (s *exportLogSender) upload() {
+func (s *commandLogSender) upload() {
 	perr := func(err error) {
 		s.logger.Error("could not upload export log", "err", err)
 	}
@@ -62,7 +62,7 @@ func (s *exportLogSender) upload() {
 		return
 	}
 
-	url += "log/agent/" + s.conf.DeviceID + "/" + s.exportJobID
+	url += "log/agent/" + s.conf.DeviceID + "/" + s.messageID
 
 	//s.logger.Debug("uploading log", "size", len(s.buf), "url", url)
 
@@ -107,14 +107,14 @@ func (s *exportLogSender) upload() {
 	resp.Body.Close()
 }
 
-func (s *exportLogSender) Write(b []byte) (n int, _ error) {
+func (s *commandLogSender) Write(b []byte) (n int, _ error) {
 	bCopy := make([]byte, len(b))
 	copy(bCopy, b)
 	s.ch <- bCopy
 	return len(b), nil
 }
 
-func (s *exportLogSender) FlushAndClose() error {
+func (s *commandLogSender) FlushAndClose() error {
 	close(s.ch)
 	<-s.closed
 	if len(s.buf) == 0 {
