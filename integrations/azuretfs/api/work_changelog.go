@@ -33,6 +33,7 @@ func (api *API) fetchChangeLog(projid, issueid string) (changelogs []work.IssueC
 					continue
 				}
 				changelogs = append(changelogs, work.IssueChangeLog{
+					RefID:       fmt.Sprintf("%d", changelog.ID),
 					CreatedDate: createdDate,
 					Field:       name,
 					From:        from,
