@@ -251,7 +251,7 @@ func IssuesAndChangelogsPage(
 			for _, data := range cl.Items {
 
 				item := work.IssueChangeLog{}
-				//item.RefID = cl.ID // TODO: add in datamodel
+				item.RefID = cl.ID
 				item.Ordinal = ordinal
 
 				ordinal++
