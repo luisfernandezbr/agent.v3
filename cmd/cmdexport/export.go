@@ -158,8 +158,8 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
-	_, failed, err := s.printExportRes(exportRes, hadGitErrors)
-	if len(failed) > 0 {
+	err = s.printExportRes(exportRes, hadGitErrors)
+	if err != nil {
 		return nil, err
 	}
 
@@ -324,8 +324,10 @@ func (s *export) runExports() map[integrationid.ID]runResult {
 }
 
 // printExportRes show info on which exports works and which failed.
-func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors bool) (success, failed []integrationid.ID, rerr error) {
-	s.Logger.Debug("Printing export results for all integrations")
+func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors bool) error {
+	s.Logger.Info("Printing export results for all integrations")
+
+	var successNoGit, failedNoGit []integrationid.ID
 
 	for id, integration := range s.Integrations {
 		ires := res[id]
@@ -334,26 +336,36 @@ func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors
 			if err := s.Command.CloseOnlyIntegrationAndHandlePanic(integration); err != nil {
 				s.Logger.Error("Could not close integration", "err", err)
 			}
-			failed = append(failed, id)
+			failedNoGit = append(failedNoGit, id)
 			continue
 		}
 
 		s.Logger.Info("Export success", "integration", id, "dur", ires.Duration.String())
-		success = append(success, id)
+		successNoGit = append(successNoGit, id)
 	}
 
 	dur := time.Since(s.StartTime)
 
+	successAll := successNoGit
+	failedAll := failedNoGit
+
 	if gitHadErrors {
-		failed = append(failed, integrationid.ID{Name: "git"})
+		failedAll = append(failedAll, integrationid.ID{Name: "git"})
+	} else {
+		successAll = append(failedAll, integrationid.ID{Name: "git"})
 	}
 
-	if len(failed) > 0 {
-		s.Logger.Error("Some exports failed", "failed", failed, "succeded", success, "dur", dur.String())
-		rerr = errors.New("One or more integrations failed")
-		return
+	if len(failedAll) > 0 {
+		s.Logger.Error("Some exports failed", "failed", failedAll, "succeded", successAll, "dur", dur.String())
+		// Only mark complete run as failed when integrations fail, git repo errors should not fail those, we only log and retry in incrementals
+		if len(failedNoGit) > 0 {
+			return errors.New("One or more integrations failed, failing export")
+		} else {
+			s.Logger.Error("Git processing failed on one or more repos. We are not marking whole export failed in this case. See the logs for details.")
+		}
+		return nil
 	}
 
-	s.Logger.Info("Exports completed", "succeded", success, "dur", dur.String())
-	return
+	s.Logger.Info("Exports completed", "succeded", successAll, "dur", dur.String())
+	return nil
 }

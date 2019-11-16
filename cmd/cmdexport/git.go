@@ -2,6 +2,7 @@ package cmdexport
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/exportrepo"
@@ -72,10 +73,14 @@ func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 			opts.PRs = append(opts.PRs, pr2)
 		}
 		exp := exportrepo.New(opts, s.Locs)
-		repoDirName, duration, err := exp.Run(ctx)
-
+		runResult := exp.Run(ctx)
+		if runResult.SessionErr != nil {
+			fatalError = err
+			return
+		}
+		repoDirName := runResult.RepoNameUsedInCacheDir
+		err := runResult.OtherErr
 		s.sessions.expsession.Progress(sessionRoot, i, 0)
-
 		if err == exportrepo.ErrRevParseFailed {
 			reposFailedRevParse++
 			continue
@@ -86,6 +91,7 @@ func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 		} else {
 			logger.Info("Finished processing git repo", "repo", repoDirName)
 		}
+		duration := runResult.Duration
 		ripsrcDuration += duration.Ripsrc
 		gitClonecDuration += duration.Clone
 	}
@@ -104,9 +110,14 @@ func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 			logger.Error("Error processing git repo", "repo", k, "err", err)
 		}
 		logger.Error("Error in git repo processing", "count", i, "dur", time.Since(start).String(), "repos_failed", len(resErrors))
+
+		if len(resErrors) > 5 {
+			fatalError = fmt.Errorf("More than 5 repos errored on git/ripsrc, failing export. Failed: %v", len(resErrors))
+			return
+		}
+
 		hadErrors = true
 		return
-
 	}
 
 	err = s.sessions.expsession.Done(sessionRoot, nil)

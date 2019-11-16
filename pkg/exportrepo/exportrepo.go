@@ -25,7 +25,6 @@ import (
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/ids"
-	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 	"github.com/pinpt/ripsrc/ripsrc"
@@ -81,6 +80,8 @@ type Export struct {
 	lastProcessedKey       []string
 
 	rip *ripsrc.Ripsrc
+
+	sessions *sessions
 }
 
 func New(opts Opts, locs fsconf.Locs) *Export {
@@ -101,7 +102,57 @@ type ExportDuration struct {
 	Ripsrc time.Duration
 }
 
-func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, duration ExportDuration, rerr error) {
+// Result is the result of the export run.
+type Result struct {
+	// RepoNameUsedInCacheDir name suitable for file system.
+	RepoNameUsedInCacheDir string
+	// Duration is the information on time taken.
+	Duration ExportDuration
+	// SessionErr contains an error if it was not possible to open/close sessions.
+	// We fail full export on these errors, since these would be related to fs errors
+	// and would lead to invalid session files.
+	SessionErr error
+	// OtherErr is mostly risprc error or other errors in processing that is not related to closing sessions properly.
+	OtherErr error
+}
+
+func (s *Export) Run(ctx context.Context) (res Result) {
+	s.repoNameUsedInCacheDir = gitclone.RepoNameUsedInCacheDir(s.opts.UniqueName, s.opts.RepoID)
+	s.logger = s.logger.With("repo", s.repoNameUsedInCacheDir)
+	s.lastProcessedKey = []string{"ripsrc", s.repoNameUsedInCacheDir}
+
+	s.sessions = newSessions(s.opts.Sessions, s.opts.SessionRootID, s.repoNameUsedInCacheDir)
+
+	err := s.sessions.Open()
+	if err != nil {
+		res.SessionErr = err
+		return
+	}
+
+	res.Duration, res.OtherErr = s.run(ctx)
+
+	err = s.sessions.Close()
+	if err != nil {
+		res.SessionErr = err
+		return
+	}
+
+	return
+}
+
+func (s *Export) lastProcessedGet(keyLocal ...string) interface{} {
+	key := append(s.lastProcessedKey, keyLocal...)
+	return s.opts.LastProcessed.Get(key...)
+}
+
+func (s *Export) lastProcessedSet(val interface{}, keyLocal ...string) error {
+	key := append(s.lastProcessedKey, keyLocal...)
+	return s.opts.LastProcessed.Set(val, key...)
+}
+
+const lpBranches = "branches"
+
+func (s *Export) run(ctx context.Context) (duration ExportDuration, rerr error) {
 	err := os.MkdirAll(s.locs.Temp, 0777)
 	if err != nil {
 		rerr = err
@@ -109,7 +160,7 @@ func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, durati
 	}
 	s.logger.Debug("git clone started", "repo", s.opts.UniqueName)
 	clonestarted := time.Now()
-	checkoutDir, cacheDir, err := s.clone(ctx)
+	checkoutDir, _, err := s.clone(ctx)
 	if err != nil {
 		rerr = err
 		return
@@ -121,13 +172,9 @@ func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, durati
 		return
 	}
 
-	s.repoNameUsedInCacheDir = filepath.Base(cacheDir)
-	repoNameUsedInCacheDir = s.repoNameUsedInCacheDir
-
-	s.logger = s.logger.With("repo", s.repoNameUsedInCacheDir)
 	s.ripsrcSetup(checkoutDir)
 
-	skipsrc, remotebranches, err := s.skipRipsrc(ctx, repoNameUsedInCacheDir, checkoutDir)
+	skipsrc, remotebranches, err := s.skipRipsrc(ctx, checkoutDir)
 	if err != nil {
 		rerr = err
 		return
@@ -136,7 +183,8 @@ func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, durati
 		s.logger.Info("no changes to this repo, skipping ripsrc")
 		return
 	}
-	ripsrcstarted := time.Now()
+
+	ripsrcStarted := time.Now()
 	s.logger.Info("ripsrc started", "repo", s.opts.UniqueName)
 	if err = s.branches(ctx); err != nil {
 		rerr = err
@@ -147,10 +195,11 @@ func (s *Export) Run(ctx context.Context) (repoNameUsedInCacheDir string, durati
 		rerr = err
 		return
 	}
-	duration.Ripsrc = time.Since(ripsrcstarted)
+
+	duration.Ripsrc = time.Since(ripsrcStarted)
 	s.logger.Info("ripsrc finished", "duration", duration.Ripsrc, "repo", s.opts.UniqueName)
 
-	rerr = s.opts.LastProcessed.Set(remotebranches, repoNameUsedInCacheDir, "branches")
+	rerr = s.lastProcessedSet(remotebranches, lpBranches)
 	return
 }
 
@@ -207,9 +256,7 @@ func (s *Export) ripsrcSetup(repoDir string) {
 	opts.PullRequestSHAs = prSHAs
 	s.logger.Info("requested pull request shas from ripsrc", "l", len(prSHAs))
 
-	s.lastProcessedKey = []string{"ripsrc", s.repoNameUsedInCacheDir}
-
-	lastCommit := s.opts.LastProcessed.Get(s.lastProcessedKey...)
+	lastCommit := s.lastProcessedGet(lpCommit)
 	if lastCommit != nil {
 		opts.CommitFromIncl = lastCommit.(string)
 		opts.CommitFromMakeNonIncl = true
@@ -224,10 +271,10 @@ func (s *Export) ripsrcSetup(repoDir string) {
 	s.rip = ripsrc.New(opts)
 }
 
-func (s *Export) skipRipsrc(ctx context.Context, reponame string, checkoutdir string) (bool, map[string]branchmeta.Branch, error) {
+func (s *Export) skipRipsrc(ctx context.Context, checkoutdir string) (bool, map[string]branchmeta.Branch, error) {
 	cachedbranches := make(map[string]branchmeta.Branch)
 	remotebranches := make(map[string]branchmeta.Branch)
-	cached := s.opts.LastProcessed.Get(reponame, "branches")
+	cached := s.lastProcessedGet(lpBranches)
 	if cached != nil {
 		if err := structmarshal.StructToStruct(cached, &cachedbranches); err != nil {
 			return true, nil, err
@@ -249,25 +296,8 @@ func (s *Export) skipRipsrc(ctx context.Context, reponame string, checkoutdir st
 	return skip, remotebranches, nil
 }
 
-var sessionsIn = integrationid.ID{
-	Name: "git",
-}
-
-func (s *Export) session(model string) (expsessions.ID, error) {
-	id, _, err := s.opts.Sessions.Session(model, s.opts.SessionRootID, s.repoNameUsedInCacheDir, s.repoNameUsedInCacheDir)
-	return id, err
-}
-
 func (s *Export) branches(ctx context.Context) error {
 	sessions := s.opts.Sessions
-	branchSessionID, err := s.session(sourcecode.BranchModelName.String())
-	if err != nil {
-		return err
-	}
-	prBranchSessionID, err := s.session(sourcecode.PullRequestBranchModelName.String())
-	if err != nil {
-		return err
-	}
 
 	res := make(chan ripsrc.Branch)
 	done := make(chan error)
@@ -315,7 +345,7 @@ func (s *Export) branches(ctx context.Context) error {
 					AheadDefaultCount:      int64(data.AheadDefaultCount),
 					RepoID:                 s.opts.RepoID,
 				}
-				err := sessions.Write(prBranchSessionID, []map[string]interface{}{
+				err := sessions.Write(s.sessions.PRBranch, []map[string]interface{}{
 					obj.ToMap(),
 				})
 				if err != nil {
@@ -343,7 +373,7 @@ func (s *Export) branches(ctx context.Context) error {
 					AheadDefaultCount:      int64(data.AheadDefaultCount),
 					RepoID:                 s.opts.RepoID,
 				}
-				err := sessions.Write(branchSessionID, []map[string]interface{}{
+				err := sessions.Write(s.sessions.Branch, []map[string]interface{}{
 					obj.ToMap(),
 				})
 				if err != nil {
@@ -355,7 +385,7 @@ func (s *Export) branches(ctx context.Context) error {
 		done <- nil
 	}()
 
-	err = s.rip.Branches(ctx, res)
+	err := s.rip.Branches(ctx, res)
 	err2 := <-done
 
 	if err != nil {
@@ -364,13 +394,6 @@ func (s *Export) branches(ctx context.Context) error {
 
 	if err2 != nil {
 		return err2
-	}
-
-	if err := sessions.Done(branchSessionID, nil); err != nil {
-		return err
-	}
-	if err := sessions.Done(prBranchSessionID, nil); err != nil {
-		return err
 	}
 
 	return nil
@@ -386,6 +409,8 @@ func (s *Export) commitID(sha string) string {
 func (s *Export) commitIDs(shas []string) (res []string) {
 	return ids.CodeCommits(s.opts.CustomerID, s.opts.RefType, s.opts.RepoID, shas)
 }
+
+const lpCommit = "commit"
 
 func (s *Export) code(ctx context.Context) error {
 	started := time.Now()
@@ -410,7 +435,7 @@ func (s *Export) code(ctx context.Context) error {
 	<-done
 
 	if lastProcessed != "" {
-		err := s.opts.LastProcessed.Set(lastProcessed, s.lastProcessedKey...)
+		err := s.lastProcessedSet(lastProcessed, lpCommit)
 		if err != nil {
 			return err
 		}
@@ -424,33 +449,14 @@ func (s *Export) code(ctx context.Context) error {
 
 func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA string, _ error) {
 	sessions := s.opts.Sessions
-	blameSession, err := s.session(sourcecode.BlameModelName.String())
-	if err != nil {
-		return "", err
-	}
-	commitSession, err := s.session(sourcecode.CommitModelName.String())
-	if err != nil {
-		return "", err
-	}
-
-	defer func() {
-		err := sessions.Done(blameSession, nil)
-		if err != nil {
-			panic(err)
-		}
-		err = sessions.Done(commitSession, nil)
-		if err != nil {
-			panic(err)
-		}
-	}()
 
 	writeBlame := func(obj sourcecode.Blame) error {
-		return sessions.Write(blameSession, []map[string]interface{}{
+		return sessions.Write(s.sessions.Blame, []map[string]interface{}{
 			obj.ToMap(),
 		})
 	}
 	writeCommit := func(obj sourcecode.Commit) error {
-		return sessions.Write(commitSession, []map[string]interface{}{
+		return sessions.Write(s.sessions.Commit, []map[string]interface{}{
 			obj.ToMap(),
 		})
 	}
