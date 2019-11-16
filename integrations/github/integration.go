@@ -521,16 +521,11 @@ func (s *Integration) exportGit(repo api.Repo, prs []PRMeta) error {
 	args.CommitURLTemplate = commitURLTemplate(repo, s.config.RepoURLPrefix)
 	args.BranchURLTemplate = branchURLTemplate(repo, s.config.RepoURLPrefix)
 	for _, pr := range prs {
-		pr2 := rpcdef.GitRepoFetchPR{}
-		pr2.ID = pr.ID
-		pr2.RefID = pr.RefID
-		pr2.URL = pr.URL
 		if pr.LastCommitSHA == "" {
-			s.logger.Info("pr.LastCommitSHA is missing", "repo", repo.NameWithOwner, "pr", pr.URL)
+			s.logger.Error("pr.LastCommitSHA is missing", "repo", repo.NameWithOwner, "pr", pr.URL)
 			continue
 		}
-		pr2.LastCommitSHA = pr.LastCommitSHA
-		args.PRs = append(args.PRs, pr2)
+		args.PRs = append(args.PRs, rpcdef.GitRepoFetchPR(pr))
 	}
 
 	err = s.agent.ExportGitRepo(args)
@@ -591,6 +586,7 @@ func (s *Integration) exportPullRequestsForRepo(
 				meta.ID = s.qc.PullRequestID(repoID, pr.RefID)
 				meta.RefID = pr.RefID
 				meta.URL = pr.URL
+				meta.BranchName = pr.BranchName
 				meta.LastCommitSHA = pr.LastCommitSHA
 				res = append(res, meta)
 			}
