@@ -13,9 +13,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
-	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/fs"
-	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/pkg/memorylogs"
 
@@ -134,13 +132,13 @@ func newExport(opts Opts) (*export, error) {
 	exportRes := s.runExports()
 	close(s.gitProcessingRepos)
 
-	hadErrors := false
+	hadGitErrors := false
 	select {
-	case hadErrors = <-gitProcessingDone:
+	case hadGitErrors = <-gitProcessingDone:
 	case <-time.After(1 * time.Second):
 		// only log this if there is actual work needed for git repos
 		s.Logger.Info("Waiting for git repo processing to complete")
-		hadErrors = <-gitProcessingDone
+		hadGitErrors = <-gitProcessingDone
 	}
 
 	err = s.updateLastProcessedTimestamps(startTime)
@@ -160,9 +158,9 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
-	_, failed := s.printExportRes(exportRes, hadErrors)
+	_, failed, err := s.printExportRes(exportRes, hadGitErrors)
 	if len(failed) > 0 {
-		return nil, errors.New("One or more integrations failed")
+		return nil, err
 	}
 
 	tempFiles, err := s.tempFilesInUploads()
@@ -274,119 +272,6 @@ func (s *export) updateLastProcessedTimestamps(startTime time.Time) error {
 	return nil
 }
 
-func (s *export) gitProcessing() (hadErrors bool, _ error) {
-	logger := s.Logger.Named("git")
-
-	if s.Opts.AgentConfig.SkipGit {
-		logger.Warn("SkipGit is true, skipping git clone and ripsrc for all repos")
-		for range s.gitProcessingRepos {
-		}
-		return false, nil
-	}
-
-	logger.Info("starting git repo processing")
-
-	i := 0
-	reposFailedRevParse := 0
-	var start time.Time
-
-	ctx := context.Background()
-	sessionRoot, _, err := s.sessions.expsession.SessionRootTracking(integrationid.ID{
-		Name: "git",
-	}, "git")
-	if err != nil {
-		logger.Error("could not create session for git export", "err", err.Error())
-		return true, nil
-	}
-
-	resErrors := map[string]error{}
-	var ripsrcDuration time.Duration
-	var gitClonecDuration time.Duration
-	for fetch := range s.gitProcessingRepos {
-		if i == 0 {
-			start = time.Now()
-		}
-		i++
-		access := gitclone.AccessDetails{}
-		access.URL = fetch.URL
-
-		opts := exportrepo.Opts{
-			Logger:     s.Logger.With("c", i),
-			CustomerID: s.Opts.AgentConfig.CustomerID,
-			RepoID:     fetch.RepoID,
-			UniqueName: fetch.UniqueName,
-			RefType:    fetch.RefType,
-
-			LastProcessed: s.lastProcessed,
-			RepoAccess:    access,
-
-			CommitURLTemplate: fetch.CommitURLTemplate,
-			BranchURLTemplate: fetch.BranchURLTemplate,
-
-			Sessions:      s.sessions.expsession,
-			SessionRootID: sessionRoot,
-		}
-		for _, pr1 := range fetch.PRs {
-			pr2 := exportrepo.PR{}
-			pr2.ID = pr1.ID
-			pr2.RefID = pr1.RefID
-			pr2.URL = pr1.URL
-			pr2.BranchName = pr1.BranchName
-			pr2.LastCommitSHA = pr1.LastCommitSHA
-			opts.PRs = append(opts.PRs, pr2)
-		}
-		exp := exportrepo.New(opts, s.Locs)
-		repoDirName, duration, err := exp.Run(ctx)
-
-		s.sessions.expsession.Progress(sessionRoot, i, 0)
-
-		if err == exportrepo.ErrRevParseFailed {
-			reposFailedRevParse++
-			continue
-		}
-		if err != nil {
-			logger.Error("Error processing git repo", "repo", repoDirName, "err", err)
-			resErrors[repoDirName] = err
-		} else {
-			logger.Info("Finished processing git repo", "repo", repoDirName)
-		}
-		ripsrcDuration += duration.Ripsrc
-		gitClonecDuration += duration.Clone
-	}
-
-	if i == 0 {
-		logger.Info("Finished git repo processing: No git repos found")
-		return false, nil
-	}
-
-	if reposFailedRevParse != 0 {
-		logger.Warn("Skipped ripsrc on empty repos", "repos", reposFailedRevParse)
-	}
-
-	if len(resErrors) != 0 {
-		for k, err := range resErrors {
-			logger.Error("Error processing git repo", "repo", k, "err", err)
-		}
-		logger.Error("Error in git repo processing", "count", i, "dur", time.Since(start).String(), "repos_failed", len(resErrors))
-		return true, nil
-
-	}
-
-	err = s.sessions.expsession.Done(sessionRoot, nil)
-	if err != nil {
-		logger.Error("could not close session for git export", "err", err.Error())
-		return true, nil
-	}
-
-	logger.Info("Finished git repo processing", "count", i,
-		"duration", time.Since(start).String(),
-		"gitclone", gitClonecDuration.String(),
-		"ripsrc", ripsrcDuration.String(),
-	)
-
-	return false, nil
-}
-
 type runResult struct {
 	Err      error
 	Duration time.Duration
@@ -438,7 +323,8 @@ func (s *export) runExports() map[integrationid.ID]runResult {
 	return res
 }
 
-func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors bool) (success, failed []integrationid.ID) {
+// printExportRes show info on which exports works and which failed.
+func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors bool) (success, failed []integrationid.ID, rerr error) {
 	s.Logger.Debug("Printing export results for all integrations")
 
 	for id, integration := range s.Integrations {
@@ -464,9 +350,10 @@ func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors
 
 	if len(failed) > 0 {
 		s.Logger.Error("Some exports failed", "failed", failed, "succeded", success, "dur", dur.String())
-	} else {
-		s.Logger.Info("Exports completed", "succeded", success, "dur", dur.String())
+		rerr = errors.New("One or more integrations failed")
+		return
 	}
 
+	s.Logger.Info("Exports completed", "succeded", success, "dur", dur.String())
 	return
 }
