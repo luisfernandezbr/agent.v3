@@ -42,6 +42,9 @@ type Integration struct {
 
 	clientManager *reqstats.ClientManager
 	clients       reqstats.Clients
+
+	exportPullRequestsForRepoFailed   []RepoError
+	exportPullRequestsForRepoFailedMu sync.Mutex
 }
 
 func NewIntegration(logger hclog.Logger) *Integration {
@@ -297,6 +300,15 @@ func (s *Integration) export(ctx context.Context) error {
 
 	s.logger.Debug(s.clientManager.PrintStats())
 
+	if len(s.exportPullRequestsForRepoFailed) == 0 {
+		s.logger.Info("Completed github export without errors")
+	} else {
+		s.logger.Error("Github export failed when getting prs and other data for the following repos")
+		for _, re := range s.exportPullRequestsForRepoFailed {
+			s.logger.Error("Failed getting repo data", "repo", re.Repo.NameWithOwner, "err", re.Err)
+		}
+	}
+
 	return nil
 }
 
@@ -454,41 +466,12 @@ func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsen
 						return
 					}
 
-					prSender, err := repoSender.Session(sourcecode.PullRequestModelName.String(), repo.ID, repo.NameWithOwner)
+					err := s.exportPullRequestsAndRelated(logger, repo, repoSender)
 					if err != nil {
 						rerr(err)
 						return
 					}
-					prCommitsSender, err := repoSender.Session(sourcecode.PullRequestCommitModelName.String(), repo.ID, repo.NameWithOwner)
-					if err != nil {
-						rerr(err)
-						return
-					}
-					prs, err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
-					if err != nil {
-						rerr(err)
-						return
-					}
-					err = s.exportGit(repo, prs)
-					if err != nil {
-						rerr(err)
-						return
-					}
-					err = prSender.Done()
-					if err != nil {
-						rerr(err)
-						return
-					}
-					err = prCommitsSender.Done()
-					if err != nil {
-						rerr(err)
-						return
-					}
-					err = repoSender.IncProgress()
-					if err != nil {
-						rerr(err)
-						return
-					}
+
 				}
 			}()
 		}
@@ -536,6 +519,76 @@ func (s *Integration) exportGit(repo api.Repo, prs []PRMeta) error {
 }
 
 type PRMeta rpcdef.GitRepoFetchPR
+
+type RepoError struct {
+	Repo api.Repo
+	Err  error
+}
+
+func (s *Integration) exportPullRequestsAndRelated(logger hclog.Logger, repo api.Repo, repoSender *objsender.Session) error {
+
+	prSender, err := repoSender.Session(sourcecode.PullRequestModelName.String(), repo.ID, repo.NameWithOwner)
+	if err != nil {
+		return err
+	}
+	prCommitsSender, err := repoSender.Session(sourcecode.PullRequestCommitModelName.String(), repo.ID, repo.NameWithOwner)
+	if err != nil {
+		return err
+	}
+
+	prs, err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
+	if err != nil {
+
+		re := RepoError{}
+		re.Repo = repo
+		re.Err = err
+		s.exportPullRequestsForRepoFailedMu.Lock()
+
+		s.exportPullRequestsForRepoFailed = append(s.exportPullRequestsForRepoFailed, re)
+		failedCount := len(s.exportPullRequestsForRepoFailed)
+		s.exportPullRequestsForRepoFailedMu.Unlock()
+
+		logger.Error("Failed getting exportPullRequestsForRepo", "err", err, "repo", repo.NameWithOwner)
+
+		prErr := err
+
+		err = prSender.DoneWithoutUpdatingLastProcessed()
+		if err != nil {
+			return err
+		}
+		err = prCommitsSender.DoneWithoutUpdatingLastProcessed()
+		if err != nil {
+			return err
+		}
+
+		if failedCount > 5 {
+			return fmt.Errorf("Failed getting exportPullRequestsForRepo for more than 5 repos, failing immediately. last: repo: %v err: %v", repo.NameWithOwner, prErr)
+		}
+
+	} else {
+
+		err = s.exportGit(repo, prs)
+		if err != nil {
+			return err
+		}
+
+		err = prSender.Done()
+		if err != nil {
+			return err
+		}
+		err = prCommitsSender.Done()
+		if err != nil {
+			return err
+		}
+
+	}
+
+	err = repoSender.IncProgress()
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func (s *Integration) exportPullRequestsForRepo(
 	logger hclog.Logger, repo api.Repo,
