@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -82,7 +83,6 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 		return
 	}
 	defer resp.Body.Close()
-
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		rerr = err
@@ -96,9 +96,34 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 			rerr = fmt.Errorf(`resp resp.StatusCode != 200, got %v, can't retry, too many retries already`, resp.StatusCode)
 			return
 		}
+		limitReset := resp.Header.Get("X-RateLimit-Reset")
+		waitTime := 30 * time.Minute
+
+		// set defaults in case limitReset returns ""
+		if limitReset != "" {
+			if i, err := strconv.Atoi(limitReset); err != nil {
+				s.logger.Error("can't convert X-RateLimit-Reset to number", "err", err)
+			} else {
+				waitTime = time.Until(time.Unix(int64(i), 0))
+			}
+		}
+
+		if waitTime < 5*time.Minute {
+			waitTime = 5 * time.Minute
+		}
+		if waitTime > 30*time.Minute {
+			waitTime = 30 * time.Minute
+		}
 
 		s.logger.Warn("api request failed due to throttling, will sleep for 30m and retry, this should only happen if hourly quota is used up, check here (https://developer.github.com/v4/guides/resource-limitations/#returning-a-calls-rate-limit-status)", "body", string(b), "retryThrottled", retryThrottled)
-		time.Sleep(30 * time.Minute)
+
+		paused := time.Now()
+		resumeDate := paused.Add(waitTime)
+		s.agent.SendPauseEvent(fmt.Sprintf("github paused, will resume in %v", waitTime), resumeDate)
+
+		time.Sleep(waitTime)
+
+		s.agent.SendResumeEvent(fmt.Sprintf("github resumed, time elapsed %v", time.Since(paused)))
 
 		return s.makeRequestRetryThrottled(reqDef, res, retryThrottled+1)
 

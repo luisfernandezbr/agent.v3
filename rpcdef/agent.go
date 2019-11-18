@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pinpt/agent.next/rpcdef/proto"
 )
@@ -42,6 +43,10 @@ type Agent interface {
 
 	// OAuthNewAccessToken returns a new access token for integrations with UseOAuth: true. It askes agent to retrieve a new token from backend based on refresh token agent has.
 	OAuthNewAccessToken() (token string, _ error)
+
+	SendPauseEvent(msg string, resumeDate time.Time) error
+
+	SendResumeEvent(msg string) error
 }
 
 type ExportObj struct {
@@ -92,6 +97,7 @@ type GitRepoFetchPR struct {
 	ID            string
 	RefID         string
 	URL           string
+	BranchName    string
 	LastCommitSHA string
 }
 
@@ -105,6 +111,9 @@ func (s GitRepoFetchPR) Validate() error {
 	}
 	if s.URL == "" {
 		missing = append(missing, "URL")
+	}
+	if s.BranchName == "" {
+		missing = append(missing, "BranchName")
 	}
 	if s.LastCommitSHA == "" {
 		missing = append(missing, "LastCommitSHA")
@@ -191,6 +200,7 @@ func (s *AgentServer) ExportGitRepo(ctx context.Context, req *proto.ExportGitRep
 		pr2.ID = pr.Id
 		pr2.RefID = pr.RefId
 		pr2.URL = pr.Url
+		pr2.BranchName = pr.BranchName
 		pr2.LastCommitSHA = pr.LastCommitSha
 		fetch.PRs = append(fetch.PRs, pr2)
 	}
@@ -226,6 +236,22 @@ func (s *AgentServer) OAuthNewAccessToken(ctx context.Context, req *proto.Empty)
 	resp.Token = token
 
 	return resp, err
+}
+
+func (s *AgentServer) SendPauseEvent(ctx context.Context, req *proto.SendPauseEventReq) (resp *proto.Empty, rerr error) {
+	resp = &proto.Empty{}
+	date, err := time.Parse(time.RFC3339, req.Rfc3339)
+	if err != nil {
+		return nil, err
+	}
+	rerr = s.Impl.SendPauseEvent(req.Message, date)
+	return
+}
+
+func (s *AgentServer) SendResumeEvent(ctx context.Context, req *proto.SendResumeEventReq) (resp *proto.Empty, err error) {
+	resp = &proto.Empty{}
+	err = s.Impl.SendResumeEvent(req.Message)
+	return
 }
 
 type AgentClient struct {
@@ -290,6 +316,7 @@ func (s *AgentClient) ExportGitRepo(fetch GitRepoFetch) error {
 		pr2.Id = pr.ID
 		pr2.RefId = pr.RefID
 		pr2.Url = pr.URL
+		pr2.BranchName = pr.BranchName
 		pr2.LastCommitSha = pr.LastCommitSHA
 		args.Prs = append(args.Prs, pr2)
 	}
@@ -333,4 +360,27 @@ func (s *AgentClient) OAuthNewAccessToken() (token string, _ error) {
 		return "", err
 	}
 	return resp.Token, nil
+}
+
+func (s *AgentClient) SendPauseEvent(msg string, resumeDate time.Time) error {
+	args := &proto.SendPauseEventReq{
+		Message: msg,
+		Rfc3339: resumeDate.Format(time.RFC3339),
+	}
+	_, err := s.client.SendPauseEvent(context.Background(), args)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *AgentClient) SendResumeEvent(msg string) error {
+	args := &proto.SendResumeEventReq{
+		Message: msg,
+	}
+	_, err := s.client.SendResumeEvent(context.Background(), args)
+	if err != nil {
+		return err
+	}
+	return nil
 }
