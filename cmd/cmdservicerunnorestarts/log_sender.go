@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -115,11 +116,12 @@ func (s *commandLogSender) Write(b []byte) (int, error) {
 
 	// this should always be json, but check just in case
 	var m map[string]string
-	if e := json.Unmarshal(b, &m); e == nil {
-		m["_cmd"] = s.cmdname
-		b, _ = json.Marshal(m)
-		b = append(b, '\n')
+	if err := json.Unmarshal(b, &m); err != nil {
+		return res, fmt.Errorf("backend logs should always be sent in json format. %v", err)
 	}
+	m["_cmd"] = s.cmdname
+	b, _ = json.Marshal(m)
+	b = append(b, '\n')
 
 	bCopy := make([]byte, len(b))
 	copy(bCopy, b)
