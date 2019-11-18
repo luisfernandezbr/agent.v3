@@ -54,16 +54,15 @@ func Run(ctx context.Context, opts Opts) error {
 }
 
 type messageHeader struct {
-	CustomerID string `json:"customer_id"`
-	Encoding   string `json:"encoding"`
-	MessageID  string `json:"message_id"`
-	MessageTS  string `json:"message_ts"`
-	UUID       string `json:"uuid"`
+	MessageID string `json:"message_id"`
 }
 
-func parseHeader(m map[string]string) (header messageHeader) {
-	b, _ := json.Marshal(m)
-	json.Unmarshal(b, &header)
+func parseHeader(m map[string]string) (header messageHeader, err error) {
+	b, err := json.Marshal(m)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(b, &header)
 	return
 }
 
@@ -243,7 +242,10 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 
 	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		req := instance.Object().(*agent.IntegrationRequest)
-		headers := parseHeader(instance.Message().Headers)
+		headers, err := parseHeader(instance.Message().Headers)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing header. err %v", err)
+		}
 		integration := req.Integration
 
 		s.logger.Info("received integration request", "integration", integration.Name)
@@ -315,9 +317,12 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for onboarding requests")
 
-	processOnboard := func(msg eventing.Message, integration map[string]interface{}, systemType IntegrationType, objectType string) (_ cmdexportonboarddata.Result, rerr error) {
+	processOnboard := func(msg eventing.Message, integration map[string]interface{}, systemType IntegrationType, objectType string) (data cmdexportonboarddata.Result, rerr error) {
 		s.logger.Info("received onboard request", "type", objectType)
-		header := parseHeader(msg.Headers)
+		header, err := parseHeader(msg.Headers)
+		if err != nil {
+			return data, fmt.Errorf("error parsing header. err %v", err)
+		}
 
 		ctx := context.Background()
 		conf, err := configFromEvent(integration, systemType, s.conf.PPEncryptionKey)
@@ -326,7 +331,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 			return
 		}
 
-		data, err := s.getOnboardData(ctx, conf, header.MessageID, objectType)
+		data, err = s.getOnboardData(ctx, conf, header.MessageID, objectType)
 		if err != nil {
 			rerr = err
 			return
@@ -577,12 +582,15 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 
 		ev := instance.Object().(*agent.ExportRequest)
 		s.logger.Info("received export request", "id", ev.ID, "uuid", ev.UUID, "request_date", ev.RequestDate.Rfc3339)
-		headers := parseHeader(instance.Message().Headers)
+		header, err := parseHeader(instance.Message().Headers)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing header. err %v", err)
+		}
 		done := make(chan bool)
 		s.exporter.ExportQueue <- exportRequest{
 			Done:      done,
 			Data:      ev,
-			MessageID: headers.MessageID,
+			MessageID: header.MessageID,
 		}
 		<-done
 		return nil, nil
