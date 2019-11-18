@@ -154,9 +154,7 @@ message OAuthNewAccessTokenResp {
 
 message SendPauseEventReq {
     string message = 1;
-	int64 epoch = 2;
-	int64 offset = 3;
-	string rfc3339 = 4;
+	string rfc3339 = 2;
 }
 
 message SendResumeEventReq {

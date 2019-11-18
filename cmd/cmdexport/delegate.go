@@ -65,8 +65,9 @@ func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
 	return s.export.OAuthNewAccessToken(s.in.Name)
 }
 
-func (s agentDelegate) SendPauseEvent(msg string, resumeDate datetime.Date) error {
-	return s.export.SendPauseEvent(s.in, msg, resumeDate)
+func (s agentDelegate) SendPauseEvent(msg string, rfc3339 string) error {
+	d, _ := datetime.NewDate(rfc3339)
+	return s.export.SendPauseEvent(s.in, msg, *d)
 }
 
 func (s agentDelegate) SendResumeEvent(msg string) error {

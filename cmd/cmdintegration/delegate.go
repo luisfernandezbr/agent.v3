@@ -3,7 +3,6 @@ package cmdintegration
 import (
 	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/rpcdef"
-	"github.com/pinpt/go-common/datetime"
 )
 
 type AgentDelegateMinimal interface {
@@ -49,7 +48,7 @@ func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
 	return s.min.OAuthNewAccessToken(s.in.Name)
 }
 
-func (s agentDelegate) SendPauseEvent(msg string, resumeDate datetime.Date) error {
+func (s agentDelegate) SendPauseEvent(msg string, rfc3339 string) error {
 	return nil
 }
 

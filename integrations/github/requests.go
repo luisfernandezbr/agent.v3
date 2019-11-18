@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/pinpt/go-common/datetime"
 )
 
 func (s *Integration) makeRequest(query string, res interface{}) error {
@@ -98,20 +96,22 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 			rerr = fmt.Errorf(`resp resp.StatusCode != 200, got %v, can't retry, too many retries already`, resp.StatusCode)
 			return
 		}
-		limitTeset := resp.Header.Get("X-RateLimit-Reset")
-		// set defaults in case limitTeset returns ""
-		tmpDate, _ := datetime.NewDateWithTime(time.Now().Add(30 * time.Minute))
-		resumeDate := *tmpDate
-		if limitTeset != "" {
-			if i, e := strconv.Atoi(limitTeset); e == nil {
-				resumeDate = datetime.NewDateFromEpoch(int64(i * 1000))
+		limitReset := resp.Header.Get("X-RateLimit-Reset")
+		// set defaults in case limitReset returns ""
+		resumeDate := time.Now().Add(1 * time.Minute)
+		if limitReset != "" {
+			if i, err := strconv.Atoi(limitReset); err == nil {
+				resumeDate = time.Unix(int64(i), 0)
+			} else {
+				s.logger.Error("can't convert X-RateLimit-Reset to number", "err", err)
 			}
 		}
-		waitTime := time.Until(datetime.DateFromEpoch(resumeDate.Epoch))
+		waitTime := time.Until(resumeDate)
 		paused := time.Now()
 		s.logger.Warn("api request failed due to throttling, will sleep for 30m and retry, this should only happen if hourly quota is used up, check here (https://developer.github.com/v4/guides/resource-limitations/#returning-a-calls-rate-limit-status)", "body", string(b), "retryThrottled", retryThrottled)
 
-		s.agent.SendPauseEvent(fmt.Sprintf("github paused, will resume in %v", waitTime), resumeDate)
+		rfc3339 := resumeDate.Format(time.RFC3339)
+		s.agent.SendPauseEvent(fmt.Sprintf("github paused, will resume in %v", waitTime), rfc3339)
 		time.Sleep(waitTime)
 		s.agent.SendResumeEvent(fmt.Sprintf("github resumed, time elapsed %v", time.Since(paused)))
 
