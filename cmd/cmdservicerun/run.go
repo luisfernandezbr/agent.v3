@@ -25,6 +25,7 @@ type Opts struct {
 	PinpointRoot string
 	Enroll       struct {
 		Run          bool
+		Channel      string
 		Code         string
 		SkipValidate bool
 	}
@@ -81,7 +82,9 @@ func (s *runner) CaptureShutdown(cancel func(), done chan error) {
 func (s *runner) runEnroll() error {
 	args := []string{"enroll-no-service-run",
 		s.opts.Enroll.Code,
-		"--pinpoint-root", s.opts.PinpointRoot}
+		"--pinpoint-root", s.opts.PinpointRoot,
+		"--channel", s.opts.Enroll.Channel,
+	}
 	if s.opts.Enroll.SkipValidate {
 		args = append(args, "--skip-validate")
 	}
