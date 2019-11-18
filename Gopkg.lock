@@ -476,7 +476,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b9770b4c1e0f65263e2308a04689836c408207ce6163938f822ad12183da6516"
+  digest = "1:9561bd883a4332a8e11a1461e3eb86e484c0595179b2cb7686331fd8f26d65ef"
   name = "github.com/pinpt/ripsrc"
   packages = [
     "ripsrc",
@@ -497,7 +497,7 @@
     "ripsrc/pkg/logger",
   ]
   pruneopts = "T"
-  revision = "bffb02cb7b44160a64e35d982f928e9e23a2d8f8"
+  revision = "b9d44a592df9feb47d29a1f5aeecb343baf541a2"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"

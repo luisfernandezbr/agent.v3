@@ -1,6 +1,8 @@
 package cmdintegration
 
 import (
+	"time"
+
 	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/rpcdef"
 )
@@ -46,4 +48,12 @@ func (s agentDelegate) SessionProgress(id int, current, total int) error {
 
 func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
 	return s.min.OAuthNewAccessToken(s.in.Name)
+}
+
+func (s agentDelegate) SendPauseEvent(msg string, resumeDate time.Time) error {
+	return nil
+}
+
+func (s agentDelegate) SendResumeEvent(msg string) error {
+	return nil
 }
