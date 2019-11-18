@@ -146,13 +146,17 @@ var cmdExportRepo = &cobra.Command{
 		}
 
 		exp := exportrepo.New(opts, locs)
-		_, dur, err := exp.Run(ctx)
-		if err != nil {
-			exitWithErr(logger, err)
+		res := exp.Run(ctx)
+		if res.SessionErr != nil {
+			exitWithErr(logger, fmt.Errorf("session err: %v", err))
+		}
+		if res.OtherErr != nil {
+			exitWithErr(logger, fmt.Errorf("other err: %v", err))
 		}
 		if err := lastProcessed.Save(); err != nil {
 			exitWithErr(logger, err)
 		}
+		dur := res.Duration
 		logger.Info("export-repo completed", "duration", time.Since(started), "gitclone", dur.Clone.String(), "ripsrc", dur.Ripsrc.String())
 
 	},

@@ -31,12 +31,16 @@ type CloneResults struct {
 	CacheDir string
 }
 
+func RepoNameUsedInCacheDir(repoName, repoID string) string {
+	return escapeForFS(repoName) + "-" + repoID
+}
+
 // CloneWithCache mirrors a provided repo into dirs.CacheRoot/name-repoID. And then checkout a copy into dirs.Checkout
 // Automatically retries on errors.
 func CloneWithCache(ctx context.Context, logger hclog.Logger, access AccessDetails, dirs Dirs, repoID string, name string) (res CloneResults, rerr error) {
 	logger = logger.Named("git")
 
-	dirName := escapeForFS(name) + "-" + repoID
+	dirName := RepoNameUsedInCacheDir(name, repoID)
 	logger = logger.With("repo", dirName)
 
 	started := time.Now()
