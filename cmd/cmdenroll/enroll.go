@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pinpt/go-common/api"
 	pstrings "github.com/pinpt/go-common/strings"
 
 	"github.com/pinpt/agent.next/pkg/date"
@@ -133,6 +134,8 @@ func (s *enroller) SendEvent(ctx context.Context) error {
 			"uuid": s.deviceID,
 		},
 	}
+
+	s.logger.Debug("will use the following url", "c", s.opts.Channel, "u", api.BackendURL("XadminX", s.opts.Channel))
 
 	err := event.Publish(ctx, reqEvent, s.opts.Channel, "")
 	if err != nil {
