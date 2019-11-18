@@ -55,7 +55,7 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 		pr.SourceBranch = strings.TrimPrefix(p.SourceBranch, "refs/heads/")
 		pr.TargetBranch = strings.TrimPrefix(p.TargetBranch, "refs/heads/")
 		async.Do(func() {
-			commits, err := api.fetchPullRequestCommits(repoRefID, pr.PullRequestID)
+			commits, err := api.fetchPullRequestCommits(repoid, pr.PullRequestID)
 			pridstring := fmt.Sprintf("%d", pr.PullRequestID)
 			if err != nil {
 				api.logger.Error("error fetching commits for PR, skipping", "pr_id", pr.PullRequestID, "repo_id", repoid, "err", err)
