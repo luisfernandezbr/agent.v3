@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pinpt/agent.next/rpcdef/proto"
 )
@@ -43,7 +44,7 @@ type Agent interface {
 	// OAuthNewAccessToken returns a new access token for integrations with UseOAuth: true. It askes agent to retrieve a new token from backend based on refresh token agent has.
 	OAuthNewAccessToken() (token string, _ error)
 
-	SendPauseEvent(msg string, rfc3339 string) error
+	SendPauseEvent(msg string, resumeDate time.Time) error
 
 	SendResumeEvent(msg string) error
 }
@@ -237,9 +238,13 @@ func (s *AgentServer) OAuthNewAccessToken(ctx context.Context, req *proto.Empty)
 	return resp, err
 }
 
-func (s *AgentServer) SendPauseEvent(ctx context.Context, req *proto.SendPauseEventReq) (resp *proto.Empty, err error) {
+func (s *AgentServer) SendPauseEvent(ctx context.Context, req *proto.SendPauseEventReq) (resp *proto.Empty, rerr error) {
 	resp = &proto.Empty{}
-	err = s.Impl.SendPauseEvent(req.Message, req.Rfc3339)
+	date, err := time.Parse(time.RFC3339, req.Rfc3339)
+	if err != nil {
+		return nil, err
+	}
+	rerr = s.Impl.SendPauseEvent(req.Message, date)
 	return
 }
 
@@ -357,10 +362,10 @@ func (s *AgentClient) OAuthNewAccessToken() (token string, _ error) {
 	return resp.Token, nil
 }
 
-func (s *AgentClient) SendPauseEvent(msg string, rfc3339 string) error {
+func (s *AgentClient) SendPauseEvent(msg string, resumeDate time.Time) error {
 	args := &proto.SendPauseEventReq{
 		Message: msg,
-		Rfc3339: rfc3339,
+		Rfc3339: resumeDate.Format(time.RFC3339),
 	}
 	_, err := s.client.SendPauseEvent(context.Background(), args)
 	if err != nil {

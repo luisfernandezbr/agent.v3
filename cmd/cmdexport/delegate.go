@@ -1,10 +1,11 @@
 package cmdexport
 
 import (
+	"time"
+
 	"github.com/pinpt/agent.next/pkg/expsessions"
 	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/rpcdef"
-	"github.com/pinpt/go-common/datetime"
 )
 
 type agentDelegate struct {
@@ -65,9 +66,8 @@ func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
 	return s.export.OAuthNewAccessToken(s.in.Name)
 }
 
-func (s agentDelegate) SendPauseEvent(msg string, rfc3339 string) error {
-	d, _ := datetime.NewDate(rfc3339)
-	return s.export.SendPauseEvent(s.in, msg, *d)
+func (s agentDelegate) SendPauseEvent(msg string, resumeDate time.Time) error {
+	return s.export.SendPauseEvent(s.in, msg, resumeDate)
 }
 
 func (s agentDelegate) SendResumeEvent(msg string) error {
