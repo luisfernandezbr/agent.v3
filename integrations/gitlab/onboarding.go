@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/gitlab/api"
 	"github.com/pinpt/agent.next/rpcdef"
+	pjson "github.com/pinpt/go-common/json"
 )
 
 func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.OnboardExportType, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
@@ -45,6 +46,8 @@ func (s *Integration) onboardExportRepos(ctx context.Context) (res rpcdef.Onboar
 	}
 
 	res.Data = records
+
+	s.logger.Info("", "REPOS", pjson.Stringify(records))
 
 	return res, nil
 }
