@@ -55,6 +55,7 @@ func TestClone(logger hclog.Logger, url string, tempDirRoot string) error {
 		if strings.Contains(line, "Receiving objects:") ||
 			strings.Contains(line, "Counting objects:") ||
 			strings.Contains(line, "Enumerating objects:") ||
+			strings.Contains(line, "Unpacking objects:") ||
 			strings.Contains(line, "You appear to have cloned an empty repository") {
 			// If we see one of these lines, it means credentials are valid
 
