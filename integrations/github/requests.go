@@ -142,6 +142,11 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 
 		s.logger.Info("api request failed", "body", string(b), "code", resp.StatusCode, "url", s.config.APIURL, "reqBody", string(reqDef.Body))
 		rerr = fmt.Errorf(`github request failed with status code %v`, resp.StatusCode)
+
+		if resp.StatusCode == 502 {
+			isErrorRetryable = true
+			return
+		}
 		isErrorRetryable = false
 		return
 	}

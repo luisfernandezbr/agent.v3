@@ -4,6 +4,7 @@
 COMMITSHA ?= $(shell git rev-parse HEAD | cut -c1-8)
 
 build:
+	rm -rf dist
 	go run ./cmd/agent-dev build
 
 clean:

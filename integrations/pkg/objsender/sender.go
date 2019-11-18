@@ -188,3 +188,12 @@ func (s *Session) Done() error {
 	s.agent.ExportDone(strconv.Itoa(s.sessionID), s.startTime.Format(time.RFC3339))
 	return nil
 }
+
+func (s *Session) DoneWithoutUpdatingLastProcessed() error {
+	err := s.batch.Flush()
+	if err != nil {
+		return err
+	}
+	s.agent.ExportDone(strconv.Itoa(s.sessionID), s.lastProcessed)
+	return nil
+}

@@ -63,29 +63,18 @@ func (s *JiraCommon) IssuesAndChangelogs(
 					rerr(err)
 					return
 				}
-				senderChangelogs, err := projectSender.Session(work.ChangelogModelName.String(), p.JiraID, p.Key)
-				if err != nil {
-					rerr(err)
-					return
-				}
 
 				// p is defined above
 				// fieldByID is read-only
 				// senderIssues and senderChangelogs are sender which support concurrency
 				// sprints support concurrency for processIssueSprint
-				err = s.issuesAndChangelogsForProject(p, fieldByID, senderIssues, senderChangelogs, sprints)
+				err = s.issuesAndChangelogsForProject(p, fieldByID, senderIssues, sprints)
 				if err != nil {
 					rerr(err)
 					return
 				}
 
 				err = senderIssues.Done()
-				if err != nil {
-					rerr(err)
-					return
-				}
-
-				err = senderChangelogs.Done()
 				if err != nil {
 					rerr(err)
 					return
@@ -142,13 +131,12 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 	project Project,
 	fieldByID map[string]*work.CustomField,
 	senderIssues *objsender.Session,
-	senderChangelogs *objsender.Session,
 	sprints *Sprints) error {
 
 	s.opts.Logger.Info("processing issues and changelogs for project", "project", project.Key)
 
 	err := jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
-		pi, resIssues, resChangelogs, err := jiracommonapi.IssuesAndChangelogsPage(s.CommonQC(), project, fieldByID, senderIssues.LastProcessedTime(), paginationParams)
+		pi, resIssues, err := jiracommonapi.IssuesAndChangelogsPage(s.CommonQC(), project, fieldByID, senderIssues.LastProcessedTime(), paginationParams)
 		if err != nil {
 			rerr = err
 			return
@@ -178,14 +166,6 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 
 		for _, obj := range resIssues {
 			err := senderIssues.Send(obj)
-			if err != nil {
-				rerr = err
-				return
-			}
-		}
-
-		for _, obj := range resChangelogs {
-			err := senderChangelogs.Send(obj)
 			if err != nil {
 				rerr = err
 				return

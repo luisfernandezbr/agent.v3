@@ -3,27 +3,24 @@ package cmdupload
 import (
 	"context"
 	"errors"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/pinpt/go-common/fileutil"
-
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/archive"
 	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/go-common/fileutil"
+	"github.com/pinpt/go-common/upload"
 )
 
 func Run(ctx context.Context,
 	logger hclog.Logger,
 	pinpointRoot string,
-	uploadURL string) (size int64, err error) {
+	uploadURL string,
+	apiKey string) (parts int, size int64, err error) {
 
 	fsc := fsconf.New(pinpointRoot)
 
@@ -43,7 +40,7 @@ func Run(ctx context.Context,
 	}
 	logger.Info("uploading export result", "upload_url", uploadURL, "zip_path", zipPath)
 
-	size, err = upload(logger, zipPath, uploadURL)
+	parts, size, err = runUpload(logger, zipPath, uploadURL, apiKey)
 	if err != nil {
 		return
 	}
@@ -65,40 +62,20 @@ func zipFilesJSON(logger hclog.Logger, target, source string) error {
 	return archive.ZipFiles(target, source, files)
 }
 
-func upload(logger hclog.Logger, zipPath, uploadURL string) (size int64, err error) {
+func runUpload(logger hclog.Logger, zipPath, uploadURL, apiKey string) (parts int, size int64, err error) {
 
 	f, err := os.Open(zipPath)
 	defer f.Close()
 	if err != nil {
-		return 0, err
-	}
-	fi, err := f.Stat()
-	if err != nil {
-		return 0, err
-	}
-	req, err := http.NewRequest(http.MethodPut, uploadURL, f)
-	if err != nil {
-		return 0, err
-	}
-	size = fi.Size()
-	req.ContentLength = size
-	req.Header.Set("Content-Type", "application/zip")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == 200 {
-		io.Copy(ioutil.Discard, resp.Body) // copy even if we don't read
-		logger.Info("Upload completed without error")
-		return size, nil
+		return 0, 0, err
 	}
 
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return 0, err
-	}
-	logger.Error("Upload failed", "response_status", resp.StatusCode, "response", string(data))
-	return 0, fmt.Errorf("upload failed with server status code: %v", resp.StatusCode)
+	parts, size, err = upload.Upload(upload.Options{
+		APIKey:      apiKey,
+		Body:        f,
+		ContentType: "application/zip",
+		URL:         uploadURL,
+	})
+
+	return
 }

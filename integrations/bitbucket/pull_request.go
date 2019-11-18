@@ -92,6 +92,7 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 					meta.ID = s.qc.IDs.CodePullRequest(repoID, pr.RefID)
 					meta.RefID = pr.RefID
 					meta.URL = pr.URL
+					meta.BranchName = pr.BranchName
 					meta.LastCommitSHA = commits[0].Sha
 					res = append(res, meta)
 				}

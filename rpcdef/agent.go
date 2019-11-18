@@ -98,6 +98,7 @@ type GitRepoFetchPR struct {
 	ID            string
 	RefID         string
 	URL           string
+	BranchName    string
 	LastCommitSHA string
 }
 
@@ -111,6 +112,9 @@ func (s GitRepoFetchPR) Validate() error {
 	}
 	if s.URL == "" {
 		missing = append(missing, "URL")
+	}
+	if s.BranchName == "" {
+		missing = append(missing, "BranchName")
 	}
 	if s.LastCommitSHA == "" {
 		missing = append(missing, "LastCommitSHA")
@@ -197,6 +201,7 @@ func (s *AgentServer) ExportGitRepo(ctx context.Context, req *proto.ExportGitRep
 		pr2.ID = pr.Id
 		pr2.RefID = pr.RefId
 		pr2.URL = pr.Url
+		pr2.BranchName = pr.BranchName
 		pr2.LastCommitSHA = pr.LastCommitSha
 		fetch.PRs = append(fetch.PRs, pr2)
 	}
@@ -313,6 +318,7 @@ func (s *AgentClient) ExportGitRepo(fetch GitRepoFetch) error {
 		pr2.Id = pr.ID
 		pr2.RefId = pr.RefID
 		pr2.Url = pr.URL
+		pr2.BranchName = pr.BranchName
 		pr2.LastCommitSha = pr.LastCommitSHA
 		args.Prs = append(args.Prs, pr2)
 	}
