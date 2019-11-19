@@ -21,7 +21,6 @@ func NewLogger(cmd *cobra.Command) Logger {
 	s := Logger{
 		opts: optsFromCommand(cmd),
 	}
-	s.opts.Output = os.Stdout
 	s.writers = []io.Writer{os.Stdout}
 	s.Logger = hclog.New(s.opts)
 	s.Level = s.opts.Level
