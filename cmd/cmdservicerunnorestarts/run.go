@@ -91,10 +91,13 @@ func newRunner(opts Opts) (*runner, error) {
 	s := &runner{}
 	s.opts = opts
 	s.fsconf = fsconf.New(opts.PinpointRoot)
+	s.conf, err = agentconf.Load(s.fsconf.Config2)
+	if err != nil {
+		return nil, err
+	}
 	s.agentConfig = s.getAgentConfig()
 	s.deviceInfo = s.getDeviceInfoOpts()
-	s.conf, err = agentconf.Load(s.fsconf.Config2)
-	return s, err
+	return s, nil
 }
 
 type closefunc func()
