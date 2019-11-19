@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/date"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent.next/pkg/agentconf"
@@ -17,6 +19,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/iloader"
 	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/integration-sdk/agent"
 )
@@ -214,21 +217,12 @@ func (s *Command) CloseOnlyIntegrationAndHandlePanic(integration *iloader.Integr
 		fmt.Println(panicOut)
 		if s.Opts.AgentConfig.Backend.Enable {
 			data := &agent.Crash{
-				Data:  &panicOut,
-				Error: &panicOut,
-				Type:  agent.CrashTypeCrash,
+				Data:      &panicOut,
+				Type:      agent.CrashTypeCrash,
+				Component: "integration/" + integration.ID.String(),
 			}
-
-			s.Deviceinfo.AppendCommonInfo(data)
-			publishEvent := event.PublishEvent{
-				Object: data,
-				Headers: map[string]string{
-					"uuid":        s.EnrollConf.DeviceID,
-					"customer_id": s.EnrollConf.CustomerID,
-					"job_id":      s.Opts.AgentConfig.Backend.ExportJobID,
-				},
-			}
-			if err := event.Publish(context.Background(), publishEvent, s.EnrollConf.Channel, s.EnrollConf.APIKey); err != nil {
+			date.ConvertToModel(time.Now(), &data.CrashDate)
+			if err := s.sendEvent(data); err != nil {
 				s.Logger.Error("error sending agent.Crash to backend", "err", err)
 			}
 		}
@@ -245,4 +239,51 @@ func (s *Command) CaptureShutdown() {
 	<-c
 	plugin.CleanupClients()
 	os.Exit(1)
+}
+
+func (s *Command) SendPauseEvent(in integrationid.ID, msg string, resumeDate time.Time) error {
+
+	data := &agent.Pause{
+		Data:        &msg,
+		Type:        agent.PauseTypePause,
+		Integration: in.String(),
+		JobID:       s.Opts.AgentConfig.Backend.ExportJobID,
+	}
+	date.ConvertToModel(resumeDate, &data.ResumeDate)
+	date.ConvertToModel(time.Now(), &data.EventDate)
+	if err := s.sendEvent(data); err != nil {
+		return fmt.Errorf("error sending agent.Pause to backend. err %v", err)
+	}
+	return nil
+}
+func (s *Command) SendResumeEvent(in integrationid.ID, msg string) error {
+
+	data := &agent.Resume{
+		Data:        &msg,
+		Type:        agent.ResumeTypeResume,
+		Integration: in.String(),
+		JobID:       s.Opts.AgentConfig.Backend.ExportJobID,
+	}
+	date.ConvertToModel(time.Now(), &data.EventDate)
+	if err := s.sendEvent(data); err != nil {
+		return fmt.Errorf("error sending agent.Resume to backend. err %v", err)
+	}
+
+	return nil
+}
+
+func (s *Command) sendEvent(data datamodel.Model) error {
+	if !s.Opts.AgentConfig.Backend.Enable {
+		return nil
+	}
+	s.Deviceinfo.AppendCommonInfo(data)
+	publishEvent := event.PublishEvent{
+		Object: data,
+		Headers: map[string]string{
+			"uuid":        s.EnrollConf.DeviceID,
+			"customer_id": s.EnrollConf.CustomerID,
+			"job_id":      s.Opts.AgentConfig.Backend.ExportJobID,
+		},
+	}
+	return event.Publish(context.Background(), publishEvent, s.EnrollConf.Channel, s.EnrollConf.APIKey)
 }

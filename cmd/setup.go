@@ -119,7 +119,7 @@ func integrationCommandFlags(cmd *cobra.Command) {
 
 func defaultIntegrationsDir() string {
 	if insideDocker {
-		return "./integrations"
+		return "/bin/integrations"
 	}
 	return ""
 }

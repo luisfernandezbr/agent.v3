@@ -113,6 +113,7 @@ var cmdEnroll = &cobra.Command{
 		}
 
 		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
+		channel, _ := cmd.Flags().GetString("channel")
 
 		ctx := context.Background()
 		opts := cmdservicerun.Opts{}
@@ -120,6 +121,7 @@ var cmdEnroll = &cobra.Command{
 		opts.PinpointRoot = pinpointRoot
 		opts.Enroll.Run = true
 		opts.Enroll.Code = args[0]
+		opts.Enroll.Channel = channel
 		opts.Enroll.SkipValidate = skipValidate
 		err = cmdservicerun.Run(ctx, opts)
 		if err != nil {
@@ -283,6 +285,7 @@ var cmdServiceRunNoRestarts = &cobra.Command{
 			return
 		}
 
+		// TODO: this isn't working
 		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
 
 		ctx := context.Background()

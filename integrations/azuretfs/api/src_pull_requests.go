@@ -55,15 +55,15 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 		pr.SourceBranch = strings.TrimPrefix(p.SourceBranch, "refs/heads/")
 		pr.TargetBranch = strings.TrimPrefix(p.TargetBranch, "refs/heads/")
 		async.Do(func() {
-			commits, err := api.fetchPullRequestCommits(repoRefID, pr.PullRequestID)
+			commits, err := api.fetchPullRequestCommits(pr.Repository.ID, pr.PullRequestID)
 			pridstring := fmt.Sprintf("%d", pr.PullRequestID)
 			if err != nil {
-				api.logger.Error("error fetching commits for PR, skipping", "pr_id", pr.PullRequestID, "repo_id", repoid, "err", err)
+				api.logger.Error("error fetching commits for PR, skipping", "pr_id", pr.PullRequestID, "repo_id", pr.Repository.ID, "err", err)
 				return
 			}
 			prcsender, err := prsender.Session(sourcecode.PullRequestCommitModelName.String(), pridstring, pridstring)
 			if err != nil {
-				api.logger.Error("error creating sender session for pull request commits", "pr_id", pr.PullRequestID, "repo_id", repoid, "err", err)
+				api.logger.Error("error creating sender session for pull request commits", "pr_id", pr.PullRequestID, "repo_id", pr.Repository.ID, "err", err)
 				return
 			}
 			if err := prcsender.SetTotal(len(commits)); err != nil {
@@ -79,7 +79,7 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 			}
 			prrsender, err := prsender.Session(sourcecode.PullRequestReviewModelName.String(), pridstring, pridstring)
 			if err != nil {
-				api.logger.Error("error creating sender session for pull request reviews", "pr_id", pr.PullRequestID, "repo_id", repoid, "err", err)
+				api.logger.Error("error creating sender session for pull request reviews", "pr_id", pr.PullRequestID, "repo_id", pr.Repository.ID, "err", err)
 				return
 			}
 			if err := prrsender.SetTotal(len(pr.Reviewers)); err != nil {
@@ -90,6 +90,7 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 				ID:            api.IDs.CodePullRequest(repoRefID, pridstring),
 				RefID:         pridstring,
 				URL:           pr.URL,
+				BranchName:    pr.SourceBranch,
 				LastCommitSHA: pr.commitshas[len(pr.commitshas)-1],
 			})
 			fetchprsMutex.Unlock()

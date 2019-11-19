@@ -19,7 +19,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/jsonstore"
 	"github.com/pinpt/agent.next/pkg/logutils"
 
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/integration-sdk/agent"
 )
@@ -156,9 +156,6 @@ func (s *exporter) sendExportEvent(ctx context.Context, jobID string, data *agen
 }
 
 func (s *exporter) sendStartExportEvent(ctx context.Context, jobID string, ints []agent.ExportRequestIntegrations) error {
-	if !s.opts.AgentConfig.Backend.Enable {
-		return nil
-	}
 	data := &agent.ExportResponse{
 		State:   agent.ExportResponseStateStarting,
 		Success: true,
@@ -166,14 +163,15 @@ func (s *exporter) sendStartExportEvent(ctx context.Context, jobID string, ints 
 	return s.sendExportEvent(ctx, jobID, data, ints, nil)
 }
 
-func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started, ended time.Time, filesize int64, uploadurl *string, ints []agent.ExportRequestIntegrations, isIncremental []bool, err error) error {
+func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started, ended time.Time, partsCount int, filesize int64, uploadurl *string, ints []agent.ExportRequestIntegrations, isIncremental []bool, err error) error {
 	if !s.opts.AgentConfig.Backend.Enable {
 		return nil
 	}
 	data := &agent.ExportResponse{
-		State:     agent.ExportResponseStateCompleted,
-		Size:      filesize,
-		UploadURL: uploadurl,
+		State:           agent.ExportResponseStateCompleted,
+		Size:            filesize,
+		UploadURL:       uploadurl,
+		UploadPartCount: int64(partsCount),
 	}
 	date.ConvertToModel(started, &data.StartDate)
 	date.ConvertToModel(ended, &data.EndDate)
@@ -186,23 +184,30 @@ func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started
 	}
 	return s.sendExportEvent(ctx, jobID, data, ints, isIncremental)
 }
+
 func (s *exporter) export(data *agent.ExportRequest) {
 	ctx := context.Background()
+	if len(data.Integrations) == 0 {
+		s.logger.Error("passed export request has no integrations, ignoring it")
+		return
+	}
+
 	started := time.Now()
 	if err := s.sendStartExportEvent(ctx, data.JobID, data.Integrations); err != nil {
 		s.logger.Error("error sending export response start event", "err", err)
 	}
-	isIncremental, fileSize, err := s.doExport(ctx, data)
+	isIncremental, partsCount, fileSize, err := s.doExport(ctx, data)
 	if err != nil {
 		s.logger.Error("export finished with error", "err", err)
 	} else {
 		s.logger.Info("sent back export result")
 	}
-	if err := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), fileSize, data.UploadURL, data.Integrations, isIncremental, err); err != nil {
+	if err := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), partsCount, fileSize, data.UploadURL, data.Integrations, isIncremental, err); err != nil {
 		s.logger.Error("error sending export response stop event", "err", err)
 	}
 }
-func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (isIncremental []bool, fileSize int64, rerr error) {
+
+func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (isIncremental []bool, partsCount int, fileSize int64, rerr error) {
 	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
 
 	var integrations []cmdexport.Integration
@@ -261,11 +266,10 @@ func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (isI
 	}
 
 	s.logger.Info("export finished, running upload")
-	fileSize, err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL)
-	if err != nil {
+	if partsCount, fileSize, err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL, s.conf.APIKey); err != nil {
 		if err == cmdupload.ErrNoFilesFound {
 			s.logger.Info("skipping upload, no files generated")
-			// do not return errors when no files to upload, which is ok for inremental
+			// do not return errors when no files to upload, which is ok for incremental
 		} else {
 			rerr = err
 			return
@@ -292,14 +296,13 @@ func (s *exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport
 
 func (s *exporter) execExport(ctx context.Context, integrations []cmdexport.Integration, reprocessHistorical bool, exportLogWriter io.Writer) error {
 	c := &subCommand{
-		ctx:             ctx,
-		logger:          s.logger,
-		tmpdir:          s.opts.FSConf.Temp,
-		config:          s.opts.AgentConfig,
-		conf:            s.conf,
-		integrations:    integrations,
-		integrationsDir: s.opts.IntegrationsDir,
-		deviceInfo:      s.deviceInfo,
+		ctx:          ctx,
+		logger:       s.logger,
+		tmpdir:       s.opts.FSConf.Temp,
+		config:       s.opts.AgentConfig,
+		conf:         s.conf,
+		integrations: integrations,
+		deviceInfo:   s.deviceInfo,
 	}
 	c.validate()
 	if exportLogWriter != nil {

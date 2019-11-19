@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -77,9 +75,9 @@ func newRunner(opts Opts) (*runner, error) {
 type closefunc func()
 
 func (s *runner) Run(ctx context.Context) error {
-	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"))
+	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot)
 
-	if build.IsProduction() && runtime.GOOS == "linux" {
+	if build.IsProduction() && runtime.GOOS == "linux" && os.Getenv("PP_AGENT_UPDATE_ENABLED") != "" {
 		version := os.Getenv("PP_AGENT_UPDATE")
 		if version != "" {
 			err := build.ValidateVersion(version)
@@ -106,16 +104,16 @@ func (s *runner) Run(ctx context.Context) error {
 
 	s.agentConfig = s.getAgentConfig()
 
+	err = s.sendCrashes()
+	if err != nil {
+		return fmt.Errorf("could not send crashes, err: %v", err)
+	}
+
 	s.deviceInfo = s.getDeviceInfoOpts()
 
 	err = s.sendStart(context.Background())
 	if err != nil {
 		return fmt.Errorf("could not send start event, err: %v", err)
-	}
-
-	err = s.sendCrashes()
-	if err != nil {
-		return fmt.Errorf("could not send crashes, err: %v", err)
 	}
 
 	s.exporter = newExporter(exporterOpts{
@@ -126,6 +124,7 @@ func (s *runner) Run(ctx context.Context) error {
 		FSConf:              s.fsconf,
 		PPEncryptionKey:     s.conf.PPEncryptionKey,
 		AgentConfig:         s.agentConfig,
+		IntegrationsDir:     s.fsconf.Integrations,
 	})
 
 	go func() {
@@ -186,42 +185,6 @@ func (s *runner) runTestMockExport() error {
 
 	ctx := context.Background()
 	return s.exporter.execExport(ctx, integrations, reprocessHistorical, nil)
-}
-
-func (s *runner) sendCrashes() error {
-	ctx := context.Background()
-	dir := s.fsconf.ServiceRunCrashes
-	files, err := ioutil.ReadDir(dir)
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	for _, f := range files {
-		s.logger.Info("sending crash file", "f", f.Name())
-		loc := filepath.Join(dir, f.Name())
-		b, err := ioutil.ReadFile(loc)
-		if err != nil {
-			return err
-		}
-		data := string(b)
-		ev := &agent.Crash{
-			Data:  &data,
-			Error: &data,
-			Type:  agent.CrashTypeCrash,
-		}
-		s.deviceInfo.AppendCommonInfo(ev)
-		err = s.sendEvent(ctx, ev, "", nil)
-		if err != nil {
-			return err
-		}
-		err = os.Remove(loc)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {
@@ -706,6 +669,7 @@ func (s *runner) getAgentConfig() (res cmdintegration.AgentConfig) {
 	res.CustomerID = s.conf.CustomerID
 	res.PinpointRoot = s.opts.PinpointRoot
 	res.Backend.Enable = true
+	res.IntegrationsDir = s.opts.IntegrationsDir
 	return
 }
 

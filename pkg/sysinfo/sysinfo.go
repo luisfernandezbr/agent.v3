@@ -27,11 +27,16 @@ type SystemInfo struct {
 }
 
 func GetID() string {
-	id := pos.Getenv("PP_AGENT_ID", os.Getenv("PP_UUID")) // for the cloud agent, allow it to be overriden
-	if id == "" {
-		id, _ = machineid.ProtectedID("pinpoint-agent")
-	}
+	id, _ := GetID2()
 	return id
+}
+
+func GetID2() (string, error) {
+	id := pos.Getenv("PP_AGENT_ID", os.Getenv("PP_UUID")) // for the cloud agent, allow it to be overriden
+	if id != "" {
+		return id, nil
+	}
+	return machineid.ProtectedID("pinpoint-agent")
 }
 
 func getDefault(root string) SystemInfo {

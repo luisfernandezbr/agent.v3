@@ -20,7 +20,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/exportrepo"
 	"github.com/pinpt/agent.next/pkg/gitclone"
 
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/hash"
 	"github.com/spf13/cobra"
 )
@@ -146,13 +146,17 @@ var cmdExportRepo = &cobra.Command{
 		}
 
 		exp := exportrepo.New(opts, locs)
-		_, dur, err := exp.Run(ctx)
-		if err != nil {
-			exitWithErr(logger, err)
+		res := exp.Run(ctx)
+		if res.SessionErr != nil {
+			exitWithErr(logger, fmt.Errorf("session err: %v", err))
+		}
+		if res.OtherErr != nil {
+			exitWithErr(logger, fmt.Errorf("other err: %v", err))
 		}
 		if err := lastProcessed.Save(); err != nil {
 			exitWithErr(logger, err)
 		}
+		dur := res.Duration
 		logger.Info("export-repo completed", "duration", time.Since(started), "gitclone", dur.Clone.String(), "ripsrc", dur.Ripsrc.String())
 
 	},
@@ -179,20 +183,22 @@ func getPinpointRoot(cmd *cobra.Command) (string, error) {
 }
 
 var cmdUpload = &cobra.Command{
-	Use:   "upload <upload_url>",
+	Use:   "upload <upload_url> <api_key>",
 	Short: "Upload processed data",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := defaultLogger()
 		ctx := context.Background()
 
 		uploadURL := args[0]
+		apiKey := args[1]
+
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
 
-		_, err = cmdupload.Run(ctx, logger, pinpointRoot, uploadURL)
+		_, _, err = cmdupload.Run(ctx, logger, pinpointRoot, uploadURL, apiKey)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
