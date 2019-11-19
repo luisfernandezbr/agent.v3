@@ -94,10 +94,10 @@ func newRunner(opts Opts) (*runner, error) {
 	s.agentConfig = s.getAgentConfig()
 	s.deviceInfo = s.getDeviceInfoOpts()
 
-	sender := NewLogSender(s.opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
+	sender := newLogSender(s.opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
 	s.logger = s.opts.Logger.AddWriter(sender)
 	s.closer = func() {
-		if err := sender.FlushAndClose(); err != nil {
+		if err := sender.Close(); err != nil {
 			s.logger.Error("error closing log sender", "err", err)
 		}
 	}

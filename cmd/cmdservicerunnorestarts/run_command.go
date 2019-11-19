@@ -99,9 +99,9 @@ func (c *subCommand) run(cmdname string, messageID string, res interface{}, args
 
 	cmd := exec.CommandContext(c.ctx, os.Args[0], flags...)
 	if messageID != "" {
-		logssender := NewLogSender(c.logger, c.conf, cmdname, messageID)
+		logssender := newLogSender(c.logger, c.conf, cmdname, messageID)
 		defer func() {
-			if err := logssender.FlushAndClose(); err != nil {
+			if err := logssender.Close(); err != nil {
 				c.logger.Error("could not send export logs to the server", "err", err)
 			}
 		}()

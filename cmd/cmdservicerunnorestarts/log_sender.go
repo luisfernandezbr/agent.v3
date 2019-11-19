@@ -16,11 +16,6 @@ import (
 )
 
 // LogSender public interface in case we need to use this outside of this pkg
-type LogSender interface {
-	io.Writer
-	FlushAndClose() error
-}
-
 type logSender struct {
 	logger    hclog.Logger
 	conf      agentconf.Config
@@ -32,8 +27,8 @@ type logSender struct {
 	closed chan bool
 }
 
-// NewLogSender creates an io.Writer that sends logs to elastic, use it with logger.AddWriter()
-func NewLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) LogSender {
+// newLogSender creates an io.Writer that sends logs to elastic, use it with logger.AddWriter()
+func newLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) io.WriteCloser {
 	s := &logSender{}
 	s.logger = logger.Named("log-sender")
 	s.conf = conf
@@ -137,7 +132,7 @@ func (s *logSender) Write(b []byte) (int, error) {
 	return res, nil
 }
 
-func (s *logSender) FlushAndClose() error {
+func (s *logSender) Close() error {
 	close(s.ch)
 	<-s.closed
 	if len(s.buf) == 0 {
