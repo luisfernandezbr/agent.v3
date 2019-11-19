@@ -85,6 +85,8 @@ func ReposPage(qc QueryContext, groupName string, params url.Values, stopOnUpdat
 		WebURL      string    `json:"web_url"`
 	}
 
+	params.Set("with_shared", "no")
+
 	page, err = qc.Request(objectPath, params, &rr)
 	if err != nil {
 		return
@@ -134,6 +136,8 @@ func ReposPageCommon(qc QueryContext, groupName string, params url.Values) (page
 	qc.Logger.Debug("repos request")
 
 	objectPath := pstrings.JoinURL("groups", url.QueryEscape(groupName), "projects")
+
+	params.Set("with_shared", "no")
 
 	var rr []struct {
 		ID            int64  `json:"id"`
