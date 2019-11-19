@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -14,7 +15,12 @@ import (
 	"github.com/pinpt/go-common/api"
 )
 
-type commandLogSender struct {
+type LogSender interface {
+	io.Writer
+	FlushAndClose() error
+}
+
+type logSender struct {
 	logger    hclog.Logger
 	conf      agentconf.Config
 	messageID string
@@ -25,8 +31,8 @@ type commandLogSender struct {
 	closed chan bool
 }
 
-func newCommandLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) *commandLogSender {
-	s := &commandLogSender{}
+func commandLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) LogSender {
+	s := &logSender{}
 	s.logger = logger.Named("log-sender")
 	s.conf = conf
 	s.messageID = messageID
@@ -53,7 +59,7 @@ func newCommandLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, me
 	return s
 }
 
-func (s *commandLogSender) upload() {
+func (s *logSender) upload() {
 	perr := func(err error) {
 		s.logger.Error("could not upload export log", "err", err)
 	}
@@ -110,12 +116,12 @@ func (s *commandLogSender) upload() {
 	resp.Body.Close()
 }
 
-func (s *commandLogSender) Write(b []byte) (int, error) {
+func (s *logSender) Write(b []byte) (int, error) {
 	// we must return the number of bytes that were passed in, crashes otherwise
 	res := len(b)
 
 	// this should always be json, but check just in case
-	var m map[string]string
+	var m map[string]interface{}
 	if err := json.Unmarshal(b, &m); err != nil {
 		return res, fmt.Errorf("backend logs should always be sent in json format. %v", err)
 	}
@@ -129,7 +135,7 @@ func (s *commandLogSender) Write(b []byte) (int, error) {
 	return res, nil
 }
 
-func (s *commandLogSender) FlushAndClose() error {
+func (s *logSender) FlushAndClose() error {
 	close(s.ch)
 	<-s.closed
 	if len(s.buf) == 0 {

@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
 	"github.com/pinpt/agent.next/pkg/date"
 
 	"github.com/hashicorp/go-hclog"
@@ -25,7 +26,7 @@ import (
 )
 
 type Opts struct {
-	Logger hclog.Logger
+	Logger cmdlogger.Logger
 
 	AgentConfig  AgentConfig
 	Integrations []Integration

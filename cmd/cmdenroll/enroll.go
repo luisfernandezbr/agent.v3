@@ -8,6 +8,7 @@ import (
 
 	pstrings "github.com/pinpt/go-common/strings"
 
+	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/encrypt"
 	"github.com/pinpt/agent.next/pkg/sysinfo"
@@ -19,7 +20,6 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/integration-sdk/agent"
 
@@ -29,7 +29,7 @@ import (
 )
 
 type Opts struct {
-	Logger       hclog.Logger
+	Logger       cmdlogger.Logger
 	PinpointRoot string
 	Code         string
 	Channel      string
@@ -44,7 +44,7 @@ func Run(ctx context.Context, opts Opts) error {
 }
 
 type enroller struct {
-	logger hclog.Logger
+	logger cmdlogger.Logger
 	opts   Opts
 	fsconf fsconf.Locs
 
