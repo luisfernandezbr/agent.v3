@@ -15,6 +15,7 @@ import (
 	"github.com/pinpt/go-common/api"
 )
 
+// LogSender public interface in case we need to use this outside of this pkg
 type LogSender interface {
 	io.Writer
 	FlushAndClose() error
@@ -31,7 +32,8 @@ type logSender struct {
 	closed chan bool
 }
 
-func commandLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) LogSender {
+// NewLogSender creates an io.Writer that sends logs to elastic, use it with logger.AddWriter()
+func NewLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) LogSender {
 	s := &logSender{}
 	s.logger = logger.Named("log-sender")
 	s.conf = conf

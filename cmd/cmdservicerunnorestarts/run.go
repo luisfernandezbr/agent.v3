@@ -52,7 +52,7 @@ func Run(ctx context.Context, opts Opts) error {
 	if err != nil {
 		return err
 	}
-	sender := commandLogSender(opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
+	sender := NewLogSender(opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
 	s.logger = opts.Logger.AddWriter(sender)
 	defer func() {
 		if err := sender.FlushAndClose(); err != nil {
