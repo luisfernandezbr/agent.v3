@@ -52,6 +52,13 @@ func Run(ctx context.Context, opts Opts) error {
 	if err != nil {
 		return err
 	}
+	sender := commandLogSender(opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
+	s.logger = opts.Logger.AddWriter(sender)
+	defer func() {
+		if err := sender.FlushAndClose(); err != nil {
+			opts.Logger.Error("error closing log sender", "err", err)
+		}
+	}()
 	return s.Run(ctx)
 }
 
@@ -87,13 +94,7 @@ func newRunner(opts Opts) (*runner, error) {
 	s.agentConfig = s.getAgentConfig()
 	s.deviceInfo = s.getDeviceInfoOpts()
 	s.conf, err = agentconf.Load(s.fsconf.Config2)
-	if err != nil {
-		return nil, err
-	}
-	sender := commandLogSender(opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
-	s.logger = opts.Logger.AddWriter(sender)
-
-	return s, nil
+	return s, err
 }
 
 type closefunc func()
