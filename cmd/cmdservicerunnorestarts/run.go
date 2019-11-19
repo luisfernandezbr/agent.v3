@@ -75,7 +75,7 @@ func newRunner(opts Opts) (*runner, error) {
 type closefunc func()
 
 func (s *runner) Run(ctx context.Context) error {
-	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot)
+	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot, "integrations-dir", s.opts.IntegrationsDir)
 
 	if build.IsProduction() && runtime.GOOS == "linux" && os.Getenv("PP_AGENT_UPDATE_ENABLED") != "" {
 		version := os.Getenv("PP_AGENT_UPDATE")
@@ -184,7 +184,7 @@ func (s *runner) runTestMockExport() error {
 	reprocessHistorical := true
 
 	ctx := context.Background()
-	return s.exporter.execExport(ctx, integrations, reprocessHistorical, nil)
+	return s.exporter.execExport(ctx, integrations, reprocessHistorical, nil, "mock-job-id")
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {
@@ -668,7 +668,6 @@ func (s *runner) sendEvent(ctx context.Context, agentEvent datamodel.Model, jobI
 func (s *runner) getAgentConfig() (res cmdintegration.AgentConfig) {
 	res.CustomerID = s.conf.CustomerID
 	res.PinpointRoot = s.opts.PinpointRoot
-	res.Backend.Enable = true
 	res.IntegrationsDir = s.opts.IntegrationsDir
 	return
 }

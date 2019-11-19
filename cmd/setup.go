@@ -102,6 +102,10 @@ func flagPinpointRoot(cmd *cobra.Command) {
 	cmd.Flags().String("pinpoint-root", def, "Custom location of pinpoint work dir.")
 }
 
+func flagIntegrationsDir(cmd *cobra.Command) {
+	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
+}
+
 func flagsLogger(cmd *cobra.Command) {
 	cmd.Flags().String("log-format", "", "Set to json to see log output in json")
 	cmd.Flags().String("log-level", "debug", "Log level (debug or info)")
@@ -114,7 +118,7 @@ func integrationCommandFlags(cmd *cobra.Command) {
 	cmd.Flags().String("agent-config-file", "", "Agent config json as file")
 	cmd.Flags().String("integrations-json", "", "Integrations config as json")
 	cmd.Flags().String("integrations-file", "", "Integrations config json as file")
-	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
+	flagIntegrationsDir(cmd)
 }
 
 func defaultIntegrationsDir() string {

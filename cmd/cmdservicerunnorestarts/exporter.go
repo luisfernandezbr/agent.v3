@@ -254,8 +254,8 @@ func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest) (isI
 	}
 
 	exportLogSender := newExportLogSender(s.logger, s.conf, data.JobID)
-	s.opts.AgentConfig.Backend.ExportJobID = data.JobID
-	if err := s.execExport(ctx, integrations, data.ReprocessHistorical, exportLogSender); err != nil {
+
+	if err := s.execExport(ctx, integrations, data.ReprocessHistorical, exportLogSender, data.JobID); err != nil {
 		rerr = err
 		return
 	}
@@ -294,12 +294,18 @@ func (s *exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport
 	return ts, nil
 }
 
-func (s *exporter) execExport(ctx context.Context, integrations []cmdexport.Integration, reprocessHistorical bool, exportLogWriter io.Writer) error {
+func (s *exporter) execExport(ctx context.Context, integrations []cmdexport.Integration,
+	reprocessHistorical bool, exportLogWriter io.Writer, exportJobID string) error {
+
+	agentConfig := s.opts.AgentConfig
+	agentConfig.Backend.Enable = true
+	agentConfig.Backend.ExportJobID = exportJobID
+
 	c := &subCommand{
 		ctx:          ctx,
 		logger:       s.logger,
 		tmpdir:       s.opts.FSConf.Temp,
-		config:       s.opts.AgentConfig,
+		config:       agentConfig,
 		conf:         s.conf,
 		integrations: integrations,
 		deviceInfo:   s.deviceInfo,
