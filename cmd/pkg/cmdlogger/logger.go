@@ -3,16 +3,38 @@ package cmdlogger
 import (
 	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/filelog"
-	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/spf13/cobra"
 )
 
-func Stdout(cmd *cobra.Command) hclog.Logger {
-	return hclog.New(optsFromCommand(cmd))
+// Logger the logger object
+type Logger struct {
+	hclog.Logger
+	Level   hclog.Level
+	opts    *hclog.LoggerOptions
+	writers []io.Writer
+}
+
+// NewLogger Creates a new Logger with default values
+func NewLogger(cmd *cobra.Command) Logger {
+	s := Logger{
+		opts: optsFromCommand(cmd),
+	}
+	s.opts.Output = os.Stdout
+	s.writers = []io.Writer{os.Stdout}
+	s.Logger = hclog.New(s.opts)
+	s.Level = s.opts.Level
+	return s
+}
+
+// AddWriter Appends a writer to the Logger
+func (s Logger) AddWriter(writer io.Writer) Logger {
+	logger := s
+	logger.writers = append(logger.writers, writer)
+	logger.opts.Output = io.MultiWriter(logger.writers...)
+	logger.Logger = hclog.New(s.opts)
+	return logger
 }
 
 func optsFromCommand(cmd *cobra.Command) *hclog.LoggerOptions {
@@ -36,30 +58,27 @@ func optsFromCommand(cmd *cobra.Command) *hclog.LoggerOptions {
 	return opts
 }
 
-func CopyToFile(cmd *cobra.Command, logger hclog.Logger, pinpointRoot string) (_ hclog.Logger, _ hclog.Level, ok bool) {
-	if pinpointRoot == "" {
-		var err error
-		pinpointRoot, err = fsconf.DefaultRoot()
-		if err != nil {
-			logger.Error("could not get default pinpoint-root", "err", err)
-			return
-		}
-	}
-	fsloc := fsconf.New(pinpointRoot)
-	if len(os.Args) <= 1 {
-		logger.Error("could not create log file, len(os.Args) <= 1, and we use subcommand as name")
-		return
-	}
-	logFile := filepath.Join(fsloc.Logs, os.Args[1])
-	wr, err := filelog.NewSyncWriter(logFile)
-	if err != nil {
-		logger.Error("could not create log file", "err", err)
-		return
-	}
-	opts := optsFromCommand(cmd)
-	opts.Output = io.MultiWriter(os.Stdout, wr)
-	res := hclog.New(opts)
-	res.Info("initialized logger", "cmd", os.Args[1], "file", logFile)
-	return res, opts.Level, true
+// func (s Logger) Info(msg string, args ...interface{}) {
+// 	s.Logger.Info("=====> "+msg, args...)
+// }
 
+// Named Create a logger that will prepend the name string on the front of all messages.
+func (s Logger) Named(name string) hclog.Logger {
+	logger := s
+	logger.Logger = logger.Logger.Named(name)
+	return logger
+}
+
+// With Creates a sublogger that will always have the given key/value pairs
+func (s Logger) With(args ...interface{}) hclog.Logger {
+	logger := s
+	logger.Logger = logger.Logger.With(args...)
+	return logger
+}
+
+// ResetNamed Create a logger that will prepend the name string on the front of all messages
+func (s Logger) ResetNamed(name string) hclog.Logger {
+	logger := s
+	logger.Logger = logger.Logger.ResetNamed(name)
+	return logger
 }
