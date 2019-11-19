@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/gitlab/api"
 	"github.com/pinpt/agent.next/rpcdef"
-	pjson "github.com/pinpt/go-common/json"
 )
 
 func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.OnboardExportType, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
@@ -32,8 +31,10 @@ func (s *Integration) onboardExportRepos(ctx context.Context) (res rpcdef.Onboar
 
 	var records []map[string]interface{}
 
+	s.logger.Info("groups", "names", groupNames)
+
 	for _, groupName := range groupNames {
-		api.PaginateStartAt(s.logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
+		err := api.PaginateStartAt(s.logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
 			pi, repos, err := api.ReposOnboardPage(s.qc, groupName, paginationParams)
 			if err != nil {
 				return pi, err
@@ -43,11 +44,12 @@ func (s *Integration) onboardExportRepos(ctx context.Context) (res rpcdef.Onboar
 			}
 			return pi, nil
 		})
+		if err != nil {
+			return res, err
+		}
 	}
 
 	res.Data = records
-
-	s.logger.Info("", "REPOS", pjson.Stringify(records))
 
 	return res, nil
 }

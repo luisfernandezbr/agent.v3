@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -28,6 +27,7 @@ func ReposOnboardPage(qc QueryContext, groupName string, params url.Values) (pag
 
 	params.Set("membership", "true")
 	params.Set("per_page", "100")
+	params.Set("with_shared", "no")
 
 	var rr []struct {
 		CreatedAt   time.Time `json:"created_at"`
@@ -43,7 +43,7 @@ func ReposOnboardPage(qc QueryContext, groupName string, params url.Values) (pag
 	}
 
 	for _, v := range rr {
-		ID := fmt.Sprint(v.ID)
+		ID := strconv.FormatInt(v.ID, 10)
 		repo := &agent.RepoResponseRepos{
 			RefID:       ID,
 			RefType:     qc.RefType,
@@ -162,56 +162,6 @@ func ReposPageCommon(qc QueryContext, groupName string, params url.Values) (page
 func getRepoID(gID string) string {
 	tokens := strings.Split(gID, "/")
 	return tokens[len(tokens)-1]
-}
-
-type PaginateStartAtFn func(log hclog.Logger, paginationParams url.Values) (page PageInfo, _ error)
-
-func PaginateStartAt(log hclog.Logger, fn PaginateStartAtFn) error {
-	pageOffset := 0
-	nextPage := "1"
-	for {
-		q := url.Values{}
-		q.Add("page", nextPage)
-		pageInfo, err := fn(log, q)
-		if err != nil {
-			return err
-		}
-		if pageInfo.Page == pageInfo.TotalPages {
-			return nil
-		}
-		if pageInfo.PageSize == 0 {
-			return errors.New("pageSize is 0")
-		}
-
-		nextPage = pageInfo.NextPage
-		pageOffset += pageInfo.PageSize
-	}
-}
-
-type PaginateNewerThanFn func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (PageInfo, error)
-
-func PaginateNewerThan(log hclog.Logger, lastProcessed time.Time, fn PaginateNewerThanFn) error {
-	nextPage := "1"
-	p := url.Values{}
-	p.Set("per_page", "100")
-
-	for {
-		p.Add("page", nextPage)
-		if !lastProcessed.IsZero() {
-			p.Add("order_by", "last_activity_at")
-		}
-		pageInfo, err := fn(log, p, lastProcessed)
-		if err != nil {
-			return err
-		}
-		if pageInfo.Page == pageInfo.TotalPages {
-			return nil
-		}
-		if pageInfo.PageSize == 0 {
-			return errors.New("pageSize is 0")
-		}
-		nextPage = pageInfo.NextPage
-	}
 }
 
 func repoLastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (lastCommit agent.RepoResponseReposLastCommit, err error) {

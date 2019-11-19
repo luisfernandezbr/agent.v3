@@ -63,6 +63,7 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 	if err != nil {
 		return page, err
 	}
+	req.Header.Set("Accept", "application/json")
 	s.setAuthHeader(req)
 
 	resp, err := s.httpClient.Do(req)
@@ -95,7 +96,7 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 
 	var total int
 	if rawTotalSize != "" {
-		total, err = strconv.Atoi(resp.Header.Get("X-Total"))
+		total, err = strconv.Atoi(rawTotalSize)
 		if err != nil {
 			return page, err
 		}
