@@ -120,7 +120,13 @@ func (s *commandLogSender) Write(b []byte) (int, error) {
 		return res, fmt.Errorf("backend logs should always be sent in json format. %v", err)
 	}
 	m["_cmd"] = s.cmdname
-	b, _ = json.Marshal(m)
+
+	var err error
+	b, err = json.Marshal(m)
+	if err != nil {
+		return res, err
+	}
+
 	b = append(b, '\n')
 
 	bCopy := make([]byte, len(b))
