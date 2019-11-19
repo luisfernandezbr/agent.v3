@@ -52,13 +52,7 @@ func Run(ctx context.Context, opts Opts) error {
 	if err != nil {
 		return err
 	}
-	sender := NewLogSender(opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
-	s.logger = opts.Logger.AddWriter(sender)
-	defer func() {
-		if err := sender.FlushAndClose(); err != nil {
-			opts.Logger.Error("error closing log sender", "err", err)
-		}
-	}()
+	defer s.closer()
 	return s.Run(ctx)
 }
 
@@ -84,19 +78,30 @@ type runner struct {
 
 	agentConfig cmdintegration.AgentConfig
 	deviceInfo  deviceinfo.CommonInfo
+	closer      func()
 }
 
 func newRunner(opts Opts) (*runner, error) {
-	var err error
 	s := &runner{}
 	s.opts = opts
 	s.fsconf = fsconf.New(opts.PinpointRoot)
+
+	var err error
 	s.conf, err = agentconf.Load(s.fsconf.Config2)
 	if err != nil {
 		return nil, err
 	}
 	s.agentConfig = s.getAgentConfig()
 	s.deviceInfo = s.getDeviceInfoOpts()
+
+	sender := NewLogSender(s.opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
+	s.logger = s.opts.Logger.AddWriter(sender)
+	s.closer = func() {
+		if err := sender.FlushAndClose(); err != nil {
+			s.logger.Error("error closing log sender", "err", err)
+		}
+	}
+
 	return s, nil
 }
 
@@ -104,13 +109,12 @@ type closefunc func()
 
 func (s *runner) Run(ctx context.Context) error {
 	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot)
-	var err error
+
 	//err := s.downloadIntegrationsIfMissing()
 	//if err != nil {
 	//		return fmt.Errorf("Could not download integration binaries: %v", err)
 	//}
-
-	err = s.sendCrashes()
+	err := s.sendCrashes()
 	if err != nil {
 		return fmt.Errorf("could not send crashes, err: %v", err)
 	}
