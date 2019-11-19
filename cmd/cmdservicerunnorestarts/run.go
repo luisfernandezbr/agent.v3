@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
+	"github.com/pinpt/agent.next/pkg/build"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 
@@ -75,10 +77,24 @@ type closefunc func()
 func (s *runner) Run(ctx context.Context) error {
 	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot)
 
-	//err := s.downloadIntegrationsIfMissing()
-	//if err != nil {
-	//		return fmt.Errorf("Could not download integration binaries: %v", err)
-	//}
+	if build.IsProduction() && runtime.GOOS == "linux" && os.Getenv("PP_AGENT_UPDATE_ENABLED") != "" {
+		version := os.Getenv("PP_AGENT_UPDATE")
+		if version != "" {
+			err := build.ValidateVersion(version)
+			if err != nil {
+				return fmt.Errorf("Could not self-update, invalid version in PP_AGENT_UPDATE: %v", err)
+			}
+			err = s.update(version)
+			if err != nil {
+				return fmt.Errorf("Could not self-update: %v", err)
+			}
+		} else {
+			err := s.downloadIntegrationsIfMissing()
+			if err != nil {
+				return fmt.Errorf("Could not download integration binaries: %v", err)
+			}
+		}
+	}
 
 	var err error
 	s.conf, err = agentconf.Load(s.fsconf.Config2)

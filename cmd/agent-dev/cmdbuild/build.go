@@ -12,7 +12,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/archive"
 )
 
-func build(opts Opts, platforms Platforms) {
+func doBuild(opts Opts, platforms Platforms) {
 	fmt.Println("Building for platforms", platforms)
 
 	{
@@ -100,26 +100,27 @@ func getCommitSHA() string {
 }
 
 func buildAgent(opts Opts, pl Platform, ldflags string) {
-	name := filepath.Join(opts.BuildDir, "bin", pl.Name, "pinpoint-agent")
+	out := filepath.Join(opts.BuildDir, "bin", pl.Name, "pinpoint-agent")
 	if pl.GOOS == "windows" {
-		name += ".exe"
+		out += ".exe"
 	}
-	exe("GOOS="+pl.GOOS, "go", "build", "-ldflags", ldflags, "-tags", "prod", "-o", name)
+	exe([]string{"GOOS=" + pl.GOOS, "CGO_ENABLED=0"}, "go", "build", "-ldflags", ldflags, "-tags", "prod", "-o", out)
 }
 
 func buildIntegration(opts Opts, in string, pl Platform) {
-	o := filepath.Join(opts.BuildDir, "bin", pl.Name, "integrations", in)
+	out := filepath.Join(opts.BuildDir, "bin", pl.Name, "integrations", in)
 	if pl.GOOS == "windows" {
-		o += ".exe"
+		out += ".exe"
 	}
-	exe("GOOS="+pl.GOOS, "go", "build", "-o", o, "./integrations/"+in)
+
+	exe([]string{"GOOS=" + pl.GOOS, "CGO_ENABLED=0"}, "go", "build", "-o", out, "./integrations/"+in)
 }
 
-func exe(env string, command ...string) {
+func exe(env []string, command ...string) {
 	fmt.Println(env, command)
 	cmd := exec.Command(command[0], command[1:]...)
 
-	cmd.Env = append(os.Environ(), env)
+	cmd.Env = append(os.Environ(), env...)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	err := cmd.Run()
