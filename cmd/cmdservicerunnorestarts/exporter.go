@@ -187,6 +187,11 @@ func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started
 
 func (s *exporter) export(data *agent.ExportRequest) {
 	ctx := context.Background()
+	if len(data.Integrations) == 0 {
+		s.logger.Error("passed export request has no integrations, ignoring it")
+		return
+	}
+
 	started := time.Now()
 	if err := s.sendStartExportEvent(ctx, data.JobID, data.Integrations); err != nil {
 		s.logger.Error("error sending export response start event", "err", err)
