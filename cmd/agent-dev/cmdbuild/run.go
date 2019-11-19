@@ -44,7 +44,7 @@ func Run(opts Opts) {
 	if fileutil.FileExists(opts.BuildDir) {
 		fmt.Println("Skipping build ./dist directory exists")
 	} else {
-		build(opts, platforms)
+		doBuild(opts, platforms)
 	}
 
 	if opts.Upload {

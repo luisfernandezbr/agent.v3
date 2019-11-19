@@ -21,10 +21,12 @@ import (
 )
 
 type Opts struct {
-	Logger       hclog.Logger
-	PinpointRoot string
-	Enroll       struct {
+	Logger          hclog.Logger
+	PinpointRoot    string
+	IntegrationsDir string
+	Enroll          struct {
 		Run          bool
+		Channel      string
 		Code         string
 		SkipValidate bool
 	}
@@ -81,7 +83,9 @@ func (s *runner) CaptureShutdown(cancel func(), done chan error) {
 func (s *runner) runEnroll() error {
 	args := []string{"enroll-no-service-run",
 		s.opts.Enroll.Code,
-		"--pinpoint-root", s.opts.PinpointRoot}
+		"--pinpoint-root", s.opts.PinpointRoot,
+		"--channel", s.opts.Enroll.Channel,
+	}
 	if s.opts.Enroll.SkipValidate {
 		args = append(args, "--skip-validate")
 	}
@@ -110,7 +114,8 @@ func (s *runner) runService(ctx context.Context) error {
 	stderr := io.MultiWriter(os.Stderr, errFile)
 
 	cmd := exec.CommandContext(ctx, os.Args[0], "service-run-no-restarts",
-		"--pinpoint-root", s.opts.PinpointRoot)
+		"--pinpoint-root", s.opts.PinpointRoot,
+		"--integrations-dir", s.opts.IntegrationsDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = stderr
 	runErr := cmd.Run()

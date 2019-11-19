@@ -110,7 +110,7 @@ func (s *enroller) Run(ctx context.Context) error {
 }
 
 func (s *enroller) SendEvent(ctx context.Context) error {
-	s.logger.Debug("sending enroll event, uuid: " + s.deviceID)
+	s.logger.Debug("sending enroll event", "uuid", s.deviceID, "channel", s.opts.Channel)
 
 	data := agent.EnrollRequest{
 		Code: s.opts.Code,

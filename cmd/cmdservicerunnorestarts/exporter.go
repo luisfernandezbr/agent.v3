@@ -187,6 +187,11 @@ func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started
 
 func (s *exporter) export(data *agent.ExportRequest, messageID string) {
 	ctx := context.Background()
+	if len(data.Integrations) == 0 {
+		s.logger.Error("passed export request has no integrations, ignoring it")
+		return
+	}
+
 	started := time.Now()
 	if err := s.sendStartExportEvent(ctx, data.JobID, data.Integrations); err != nil {
 		s.logger.Error("error sending export response start event", "err", err)
@@ -248,8 +253,7 @@ func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest, mess
 		return
 	}
 
-	s.opts.AgentConfig.Backend.ExportJobID = data.JobID
-	if err := s.execExport(ctx, integrations, data.ReprocessHistorical, messageID); err != nil {
+	if err := s.execExport(ctx, integrations, data.ReprocessHistorical, messageID, data.JobID); err != nil {
 		rerr = err
 		return
 	}
@@ -282,12 +286,16 @@ func (s *exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport
 	return ts, nil
 }
 
-func (s *exporter) execExport(ctx context.Context, integrations []cmdexport.Integration, reprocessHistorical bool, messageID string) error {
+func (s *exporter) execExport(ctx context.Context, integrations []cmdexport.Integration, reprocessHistorical bool, messageID string, jobID string) error {
+
+	agentConfig := s.opts.AgentConfig
+	agentConfig.Backend.ExportJobID = jobID
+
 	c := &subCommand{
 		ctx:          ctx,
 		logger:       s.logger,
 		tmpdir:       s.opts.FSConf.Temp,
-		config:       s.opts.AgentConfig,
+		config:       agentConfig,
 		conf:         s.conf,
 		integrations: integrations,
 		deviceInfo:   s.deviceInfo,

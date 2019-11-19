@@ -16,9 +16,9 @@ type Opts struct {
 	AgentDelegates func(in integrationid.ID) rpcdef.Agent
 
 	// IntegrationsDir is a custom location of the integrations binaries
-	IntegrationsDir string `json:"integrations_dir"`
+	IntegrationsDir string
 	// DevUseCompiledIntegrations set to true to use compiled integrations in dev build. They are used by default in prod builds.
-	DevUseCompiledIntegrations bool `json:"dev_use_compiled_integrations"`
+	DevUseCompiledIntegrations bool
 }
 
 type Loader struct {
@@ -37,6 +37,7 @@ func New(opts Opts) *Loader {
 	s.locs = opts.Locs
 	if opts.IntegrationsDir != "" {
 		s.locs.Integrations = opts.IntegrationsDir
+		s.opts.DevUseCompiledIntegrations = true // force the use of compiled integrations if integrations dir is provided
 	}
 	return s
 }

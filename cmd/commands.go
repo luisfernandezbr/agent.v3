@@ -13,10 +13,8 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdenroll"
 	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
-	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
 	"github.com/pinpt/agent.next/cmd/cmdservicerun"
 	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts"
-	"github.com/pinpt/agent.next/cmd/cmdserviceuninstall"
 	"github.com/pinpt/agent.next/cmd/cmdvalidate"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
@@ -113,6 +111,7 @@ var cmdEnroll = &cobra.Command{
 		}
 
 		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
+		channel, _ := cmd.Flags().GetString("channel")
 
 		ctx := context.Background()
 		opts := cmdservicerun.Opts{}
@@ -120,6 +119,7 @@ var cmdEnroll = &cobra.Command{
 		opts.PinpointRoot = pinpointRoot
 		opts.Enroll.Run = true
 		opts.Enroll.Code = args[0]
+		opts.Enroll.Channel = channel
 		opts.Enroll.SkipValidate = skipValidate
 		err = cmdservicerun.Run(ctx, opts)
 		if err != nil {
@@ -231,6 +231,7 @@ func init() {
 	cmdRoot.AddCommand(cmd)
 }
 
+/*
 var cmdServiceInstall = &cobra.Command{
 	Use:   "service-install",
 	Short: "Install OS service of agent",
@@ -263,7 +264,7 @@ var cmdServiceUninstall = &cobra.Command{
 
 func init() {
 	cmdRoot.AddCommand(cmdServiceUninstall)
-}
+}*/
 
 var cmdServiceRunNoRestarts = &cobra.Command{
 	Use:   "service-run-no-restarts",
@@ -283,7 +284,6 @@ var cmdServiceRunNoRestarts = &cobra.Command{
 			return
 		}
 
-		// TODO: this isn't working
 		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
 
 		ctx := context.Background()
@@ -303,6 +303,7 @@ func init() {
 	cmd := cmdServiceRunNoRestarts
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
+	flagIntegrationsDir(cmd)
 	cmdRoot.AddCommand(cmd)
 }
 
@@ -320,10 +321,13 @@ var cmdServiceRun = &cobra.Command{
 			exitWithErr(logger, err)
 		}
 
+		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
+
 		ctx := context.Background()
 		opts := cmdservicerun.Opts{}
 		opts.Logger = logger
 		opts.PinpointRoot = pinpointRoot
+		opts.IntegrationsDir = integrationsDir
 		err = cmdservicerun.Run(ctx, opts)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -335,7 +339,7 @@ func init() {
 	cmd := cmdServiceRun
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
-	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
+	flagIntegrationsDir(cmd)
 	cmdRoot.AddCommand(cmd)
 }
 
