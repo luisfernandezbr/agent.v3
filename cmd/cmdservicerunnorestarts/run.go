@@ -77,7 +77,7 @@ func parseHeader(m map[string]string) (header messageHeader, err error) {
 
 type runner struct {
 	opts     Opts
-	logger   cmdlogger.Logger
+	logger   hclog.Logger
 	fsconf   fsconf.Locs
 	conf     agentconf.Config
 	exporter *exporter

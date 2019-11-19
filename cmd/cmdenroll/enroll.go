@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	hclog "github.com/hashicorp/go-hclog"
 	pstrings "github.com/pinpt/go-common/strings"
 
-	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/encrypt"
 	"github.com/pinpt/agent.next/pkg/sysinfo"
@@ -29,7 +29,7 @@ import (
 )
 
 type Opts struct {
-	Logger       cmdlogger.Logger
+	Logger       hclog.Logger
 	PinpointRoot string
 	Code         string
 	Channel      string
@@ -44,7 +44,7 @@ func Run(ctx context.Context, opts Opts) error {
 }
 
 type enroller struct {
-	logger cmdlogger.Logger
+	logger hclog.Logger
 	opts   Opts
 	fsconf fsconf.Locs
 

@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
 
@@ -69,7 +70,7 @@ var cmdRoot = &cobra.Command{
 	},
 }
 
-func exitWithErr(logger cmdlogger.Logger, err error) {
+func exitWithErr(logger hclog.Logger, err error) {
 	logger.Error("error: " + err.Error())
 	os.Exit(1)
 }
@@ -135,7 +136,7 @@ func defaultIntegrationsDir() string {
 	return ""
 }
 
-func integrationCommandOpts(cmd *cobra.Command) (cmdlogger.Logger, cmdintegration.Opts) {
+func integrationCommandOpts(cmd *cobra.Command) (hclog.Logger, cmdintegration.Opts) {
 	logger := cmdlogger.NewLogger(cmd)
 
 	opts := cmdintegration.Opts{}
@@ -209,12 +210,12 @@ func integrationCommandOpts(cmd *cobra.Command) (cmdlogger.Logger, cmdintegratio
 }
 
 type outputFile struct {
-	logger cmdlogger.Logger
+	logger hclog.Logger
 	close  io.Closer
 	Writer io.Writer
 }
 
-func newOutputFile(logger cmdlogger.Logger, cmd *cobra.Command) *outputFile {
+func newOutputFile(logger hclog.Logger, cmd *cobra.Command) *outputFile {
 	s := &outputFile{}
 	s.logger = logger
 
