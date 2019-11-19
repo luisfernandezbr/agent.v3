@@ -669,6 +669,7 @@ func (s *runner) getAgentConfig() (res cmdintegration.AgentConfig) {
 	res.CustomerID = s.conf.CustomerID
 	res.PinpointRoot = s.opts.PinpointRoot
 	res.IntegrationsDir = s.opts.IntegrationsDir
+	res.Backend.Enable = true
 	return
 }
 
