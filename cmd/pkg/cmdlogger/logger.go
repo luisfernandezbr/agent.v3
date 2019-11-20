@@ -14,6 +14,7 @@ type Logger struct {
 	Level   hclog.Level
 	opts    *hclog.LoggerOptions
 	writers []io.Writer
+	cmdName string
 }
 
 // NewLogger Creates a new Logger with default values
@@ -21,6 +22,7 @@ func NewLogger(cmd *cobra.Command) Logger {
 	s := Logger{
 		opts: optsFromCommand(cmd),
 	}
+	s.cmdName = cmd.Use
 	s.writers = []io.Writer{os.Stdout}
 	s.Logger = hclog.New(s.opts)
 	s.Level = s.opts.Level
@@ -76,4 +78,34 @@ func (s Logger) ResetNamed(name string) hclog.Logger {
 	logger := s
 	logger.Logger = logger.Logger.ResetNamed(name)
 	return logger
+}
+
+// Trace emits a message and key/value pairs at the TRACE level
+func (s Logger) Trace(msg string, args ...interface{}) {
+	arr := append([]interface{}{"_cmd", s.cmdName}, args...)
+	s.Logger.Trace(msg, arr...)
+}
+
+// Debug emits a message and key/value pairs at the DEBUG level
+func (s Logger) Debug(msg string, args ...interface{}) {
+	arr := append([]interface{}{"_cmd", s.cmdName}, args...)
+	s.Logger.Debug(msg, arr...)
+}
+
+// Info emits a message and key/value pairs at the INFO level
+func (s Logger) Info(msg string, args ...interface{}) {
+	arr := append([]interface{}{"_cmd", s.cmdName}, args...)
+	s.Logger.Info(msg, arr...)
+}
+
+// Warn emits a message and key/value pairs at the WARN level
+func (s Logger) Warn(msg string, args ...interface{}) {
+	arr := append([]interface{}{"_cmd", s.cmdName}, args...)
+	s.Logger.Warn(msg, arr...)
+}
+
+// Error emits a message and key/value pairs at the ERROR level
+func (s Logger) Error(msg string, args ...interface{}) {
+	arr := append([]interface{}{"_cmd", s.cmdName}, args...)
+	s.Logger.Error(msg, arr...)
 }
