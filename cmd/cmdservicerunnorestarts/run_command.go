@@ -29,7 +29,6 @@ type subCommand struct {
 	conf         agentconf.Config
 	integrations []cmdvalidateconfig.Integration
 	deviceInfo   deviceinfo.CommonInfo
-	logWriter    *io.Writer
 }
 
 func (c *subCommand) validate() {
@@ -60,7 +59,7 @@ func (c *subCommand) err(arg string, err error) error {
 	return fmt.Errorf("could not run subcommand %v err: %v", arg, err)
 }
 
-func (c *subCommand) run(cmdname string, res interface{}, args ...string) error {
+func (c *subCommand) run(cmdname string, messageID string, res interface{}, args ...string) error {
 
 	fs, err := newFsPassedParams(c.tmpdir, []kv{
 		{"--agent-config-file", c.config},
@@ -99,14 +98,20 @@ func (c *subCommand) run(cmdname string, res interface{}, args ...string) error 
 	defer os.Remove(logsfile.Name())
 
 	cmd := exec.CommandContext(c.ctx, os.Args[0], flags...)
+	if messageID != "" {
+		logssender := newCommandLogSender(c.logger, c.conf, cmdname, messageID)
+		defer func() {
+			if err := logssender.FlushAndClose(); err != nil {
+				c.logger.Error("could not send export logs to the server", "err", err)
+			}
+		}()
 
-	if c.logWriter != nil {
-		cmd.Stdout = io.MultiWriter(os.Stdout, *c.logWriter)
+		cmd.Stdout = io.MultiWriter(os.Stdout, logssender)
+		cmd.Stderr = io.MultiWriter(os.Stderr, logsfile, logssender)
 	} else {
 		cmd.Stdout = os.Stdout
+		cmd.Stderr = io.MultiWriter(os.Stderr, logsfile)
 	}
-	cmd.Stderr = io.MultiWriter(os.Stderr, logsfile)
-
 	if err := cmd.Run(); err != nil {
 		logsfile.Close()
 		if err2 := c.handlePanic(logsfile.Name(), cmdname); err2 != nil {

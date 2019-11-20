@@ -9,7 +9,7 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 )
 
-func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integration, objectType string) (res cmdexportonboarddata.Result, _ error) {
+func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integration, messageID string, objectType string) (res cmdexportonboarddata.Result, _ error) {
 	s.logger.Info("getting onboarding data for integration", "name", config.Name, "objectType", objectType)
 
 	integrations := []cmdvalidateconfig.Integration{config}
@@ -26,7 +26,7 @@ func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integ
 
 	c.validate()
 
-	err := c.run("export-onboard-data", &res, "--object-type", objectType)
+	err := c.run("export-onboard-data", messageID, &res, "--object-type", objectType)
 
 	s.logger.Info("getting onboard data completed", "success", res.Success, "err", res.Error)
 	if err != nil {

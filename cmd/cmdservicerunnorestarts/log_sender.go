@@ -3,6 +3,8 @@ package cmdservicerunnorestarts
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -12,22 +14,23 @@ import (
 	"github.com/pinpt/go-common/api"
 )
 
-type exportLogSender struct {
-	logger      hclog.Logger
-	conf        agentconf.Config
-	exportJobID string
+type commandLogSender struct {
+	logger    hclog.Logger
+	conf      agentconf.Config
+	messageID string
+	cmdname   string
 
 	ch     chan []byte
 	buf    []byte
 	closed chan bool
 }
 
-func newExportLogSender(logger hclog.Logger, conf agentconf.Config, exportJobID string) *exportLogSender {
-	s := &exportLogSender{}
+func newCommandLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) *commandLogSender {
+	s := &commandLogSender{}
 	s.logger = logger.Named("log-sender")
 	s.conf = conf
-	s.exportJobID = exportJobID
-
+	s.messageID = messageID
+	s.cmdname = cmdname
 	s.ch = make(chan []byte, 10000)
 	s.closed = make(chan bool)
 
@@ -50,7 +53,7 @@ func newExportLogSender(logger hclog.Logger, conf agentconf.Config, exportJobID 
 	return s
 }
 
-func (s *exportLogSender) upload() {
+func (s *commandLogSender) upload() {
 	perr := func(err error) {
 		s.logger.Error("could not upload export log", "err", err)
 	}
@@ -62,7 +65,7 @@ func (s *exportLogSender) upload() {
 		return
 	}
 
-	url += "log/agent/" + s.conf.DeviceID + "/" + s.exportJobID
+	url += "log/agent/" + s.conf.DeviceID + "/" + s.messageID
 
 	//s.logger.Debug("uploading log", "size", len(s.buf), "url", url)
 
@@ -107,14 +110,32 @@ func (s *exportLogSender) upload() {
 	resp.Body.Close()
 }
 
-func (s *exportLogSender) Write(b []byte) (n int, _ error) {
+func (s *commandLogSender) Write(b []byte) (int, error) {
+	// we must return the number of bytes that were passed in, crashes otherwise
+	res := len(b)
+
+	// this should always be json, but check just in case
+	var m map[string]string
+	if err := json.Unmarshal(b, &m); err != nil {
+		return res, fmt.Errorf("backend logs should always be sent in json format. %v", err)
+	}
+	m["_cmd"] = s.cmdname
+
+	var err error
+	b, err = json.Marshal(m)
+	if err != nil {
+		return res, err
+	}
+
+	b = append(b, '\n')
+
 	bCopy := make([]byte, len(b))
 	copy(bCopy, b)
 	s.ch <- bCopy
-	return len(b), nil
+	return res, nil
 }
 
-func (s *exportLogSender) FlushAndClose() error {
+func (s *commandLogSender) FlushAndClose() error {
 	close(s.ch)
 	<-s.closed
 	if len(s.buf) == 0 {
