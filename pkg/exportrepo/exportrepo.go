@@ -271,9 +271,9 @@ func (s *Export) ripsrcSetup(repoDir string) {
 	s.rip = ripsrc.New(opts)
 }
 
-func (s *Export) skipRipsrc(ctx context.Context, checkoutdir string) (bool, map[string]branchmeta.BranchWithCommitTime, error) {
-	cachedbranches := make(map[string]branchmeta.BranchWithCommitTime)
-	remotebranches := make(map[string]branchmeta.BranchWithCommitTime)
+func (s *Export) skipRipsrc(ctx context.Context, checkoutdir string) (bool, map[string]branchmeta.Branch, error) {
+	cachedbranches := make(map[string]branchmeta.Branch)
+	remotebranches := make(map[string]branchmeta.Branch)
 	cached := s.lastProcessedGet(lpBranches)
 	if cached != nil {
 		if err := structmarshal.StructToStruct(cached, &cachedbranches); err != nil {
@@ -291,7 +291,10 @@ func (s *Export) skipRipsrc(ctx context.Context, checkoutdir string) (bool, map[
 		return true, nil, err
 	}
 	for _, b := range br {
-		remotebranches[b.Name] = b
+		remotebranches[b.Name] = branchmeta.Branch{
+			Name:   b.Name,
+			Commit: b.Commit,
+		}
 	}
 	skip := reflect.DeepEqual(cachedbranches, remotebranches)
 	return skip, remotebranches, nil
