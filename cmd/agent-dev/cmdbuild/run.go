@@ -7,10 +7,10 @@ import (
 )
 
 type Opts struct {
-	BuildDir string
-	Version  string // version to use in s3 upload
-	Upload   bool   // set to true to upload to s3
-
+	BuildDir     string
+	Version      string // version to use in s3 upload
+	Upload       bool   // set to true to upload to s3
+	OnlyUpload   bool   // set to true to skip build and upload existing files in dist dir. Also sets upload to true.
 	OnlyPlatform string // only build for this platform
 	OnlyAgent    bool   // build only agent and skip the rest
 }
@@ -41,13 +41,13 @@ func Run(opts Opts) {
 		panic("passed platform is not valid: " + opts.OnlyPlatform)
 	}
 
-	if fileutil.FileExists(opts.BuildDir) {
+	if fileutil.FileExists(opts.BuildDir) && opts.OnlyUpload {
 		fmt.Println("Skipping build ./dist directory exists")
 	} else {
 		doBuild(opts, platforms)
 	}
 
-	if opts.Upload {
+	if opts.Upload || opts.OnlyUpload {
 		upload(opts)
 	}
 

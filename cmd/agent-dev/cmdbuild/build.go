@@ -13,6 +13,11 @@ import (
 )
 
 func doBuild(opts Opts, platforms Platforms) {
+	err := os.RemoveAll(opts.BuildDir)
+	if err != nil {
+		panic(err)
+	}
+
 	fmt.Println("Building for platforms", platforms)
 
 	{

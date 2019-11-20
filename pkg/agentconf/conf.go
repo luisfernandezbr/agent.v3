@@ -18,6 +18,7 @@ type Config struct {
 	// SystemID normally does not change across installs on the same machine. But to be safe we keep it in config as well.
 	SystemID        string `json:"system_id"`
 	PPEncryptionKey string `json:"pp_encryption_key"`
+	IntegrationsDir string `json:"integrations-dir"`
 
 	// ExtraIntegrations defines additional integrations that will run on every export trigger in service-run. This is needed to run a custom integration for one of our customers. You need to add these custom integrations to config manually after enroll.
 	ExtraIntegrations []struct {

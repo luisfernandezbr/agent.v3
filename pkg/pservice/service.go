@@ -26,19 +26,30 @@ func AsyncRunBg(fn func(context.Context) error) (done chan error, cancel func())
 	return AsyncRun(context.Background(), fn)
 }
 
-func Retrying(logger hclog.Logger, run Run, delay RetryDelayFn) Run {
+func Retrying(logger hclog.Logger, run Run, delay RetryDelayFn, resetFailuresAfter time.Duration) Run {
 	logger = logger.Named("retrying")
 	return func(ctx context.Context) error {
 		i := 0
 		for {
 			logger.Info("starting service", "run", i)
+			runStart := time.Now()
 			err := run(ctx)
-			i++
-			wait := delay(i)
-			if err == nil {
-				logger.Info("service exited with no error, restarting", "after", wait.String())
+			runEnd := time.Now()
+			dur := runEnd.Sub(runStart)
+			logger.Info("service exited", "err", err, "dur", dur, "run", i)
+
+			var wait time.Duration
+			if dur > resetFailuresAfter {
+				logger.Info("service was running longer than " + resetFailuresAfter.String() + " resetting run count")
+				i = 0
 			} else {
-				logger.Error("service exited with error, restarting", "err", err, "after", wait.String())
+				i++
+				wait = delay(i)
+			}
+			if err == nil {
+				logger.Info("waiting to restart", "after", wait.String())
+			} else {
+				logger.Error("waiting to restart", "err", err, "after", wait.String())
 			}
 			timer := time.NewTimer(wait)
 			select {

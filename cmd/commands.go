@@ -67,11 +67,14 @@ var cmdEnrollNoServiceRun = &cobra.Command{
 			}
 		}
 
+		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
+
 		err = cmdenroll.Run(ctx, cmdenroll.Opts{
-			Logger:       logger,
-			PinpointRoot: pinpointRoot,
-			Code:         code,
-			Channel:      channel,
+			Logger:          logger,
+			PinpointRoot:    pinpointRoot,
+			IntegrationsDir: integrationsDir,
+			Code:            code,
+			Channel:         channel,
 		})
 		if err != nil {
 			exitWithErr(logger, err)
@@ -85,6 +88,7 @@ func init() {
 	cmd := cmdEnrollNoServiceRun
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
+	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
 	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
 	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
 	cmdRoot.AddCommand(cmd)
@@ -112,11 +116,13 @@ var cmdEnroll = &cobra.Command{
 
 		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
 		channel, _ := cmd.Flags().GetString("channel")
+		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
 
 		ctx := context.Background()
 		opts := cmdservicerun.Opts{}
 		opts.Logger = logger
 		opts.PinpointRoot = pinpointRoot
+		opts.IntegrationsDir = integrationsDir
 		opts.Enroll.Run = true
 		opts.Enroll.Code = args[0]
 		opts.Enroll.Channel = channel
@@ -284,14 +290,11 @@ var cmdServiceRunNoRestarts = &cobra.Command{
 			return
 		}
 
-		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
-
 		ctx := context.Background()
 		opts := cmdservicerunnorestarts.Opts{}
 		opts.Logger = logger
 		opts.LogLevelSubcommands = level
 		opts.PinpointRoot = pinpointRoot
-		opts.IntegrationsDir = integrationsDir
 		err = cmdservicerunnorestarts.Run(ctx, opts)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -303,7 +306,6 @@ func init() {
 	cmd := cmdServiceRunNoRestarts
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
-	flagIntegrationsDir(cmd)
 	cmdRoot.AddCommand(cmd)
 }
 
@@ -321,13 +323,10 @@ var cmdServiceRun = &cobra.Command{
 			exitWithErr(logger, err)
 		}
 
-		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
-
 		ctx := context.Background()
 		opts := cmdservicerun.Opts{}
 		opts.Logger = logger
 		opts.PinpointRoot = pinpointRoot
-		opts.IntegrationsDir = integrationsDir
 		err = cmdservicerun.Run(ctx, opts)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -339,7 +338,6 @@ func init() {
 	cmd := cmdServiceRun
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
-	flagIntegrationsDir(cmd)
 	cmdRoot.AddCommand(cmd)
 }
 
