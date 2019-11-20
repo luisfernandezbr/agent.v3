@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	hclog "github.com/hashicorp/go-hclog"
 	pstrings "github.com/pinpt/go-common/strings"
 
 	"github.com/pinpt/agent.next/pkg/date"
@@ -19,7 +20,6 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/integration-sdk/agent"
 

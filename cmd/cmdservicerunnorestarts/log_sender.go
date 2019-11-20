@@ -14,7 +14,8 @@ import (
 	"github.com/pinpt/go-common/api"
 )
 
-type commandLogSender struct {
+// LogSender public interface in case we need to use this outside of this pkg
+type logSender struct {
 	logger    hclog.Logger
 	conf      agentconf.Config
 	messageID string
@@ -25,8 +26,9 @@ type commandLogSender struct {
 	closed chan bool
 }
 
-func newCommandLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) *commandLogSender {
-	s := &commandLogSender{}
+// newLogSender creates an io.Writer that sends logs to elastic, use it with logger.AddWriter()
+func newLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) *logSender {
+	s := &logSender{}
 	s.logger = logger.Named("log-sender")
 	s.conf = conf
 	s.messageID = messageID
@@ -53,7 +55,7 @@ func newCommandLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, me
 	return s
 }
 
-func (s *commandLogSender) upload() {
+func (s *logSender) upload() {
 	perr := func(err error) {
 		s.logger.Error("could not upload export log", "err", err)
 	}
@@ -110,7 +112,7 @@ func (s *commandLogSender) upload() {
 	resp.Body.Close()
 }
 
-func (s *commandLogSender) Write(b []byte) (int, error) {
+func (s *logSender) Write(b []byte) (int, error) {
 	// we must return the number of bytes that were passed in, crashes otherwise
 	res := len(b)
 
@@ -135,7 +137,7 @@ func (s *commandLogSender) Write(b []byte) (int, error) {
 	return res, nil
 }
 
-func (s *commandLogSender) FlushAndClose() error {
+func (s *logSender) Close() error {
 	close(s.ch)
 	<-s.closed
 	if len(s.buf) == 0 {

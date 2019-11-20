@@ -7,16 +7,18 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
 
+	"github.com/pinpt/agent.next/pkg/filelog"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 
 	"github.com/fatih/color"
-	hclog "github.com/hashicorp/go-hclog"
 	ps "github.com/mitchellh/go-ps"
 	"github.com/spf13/cobra"
 )
@@ -92,6 +94,23 @@ func getPinpointRoot(cmd *cobra.Command) (root string, err error) {
 	return root, nil
 }
 
+func pinpointLogWriter(pinpointRoot string) (io.Writer, error) {
+	if pinpointRoot == "" {
+		var err error
+		pinpointRoot, err = fsconf.DefaultRoot()
+		if err != nil {
+			return nil, err
+		}
+	}
+	fsloc := fsconf.New(pinpointRoot)
+	if len(os.Args) <= 1 {
+		return nil, fmt.Errorf("could not create log file, len(os.Args) <= 1, and we use subcommand as name")
+	}
+	logFile := filepath.Join(fsloc.Logs, os.Args[1])
+	wr, err := filelog.NewSyncWriter(logFile)
+	return wr, err
+}
+
 var insideDocker = isInsideDocker()
 
 func flagPinpointRoot(cmd *cobra.Command) {
@@ -125,7 +144,7 @@ func defaultIntegrationsDir() string {
 }
 
 func integrationCommandOpts(cmd *cobra.Command) (hclog.Logger, cmdintegration.Opts) {
-	logger := cmdlogger.Stdout(cmd)
+	logger := cmdlogger.NewLogger(cmd)
 
 	opts := cmdintegration.Opts{}
 
@@ -189,12 +208,11 @@ func integrationCommandOpts(cmd *cobra.Command) (hclog.Logger, cmdintegration.Op
 		exitWithErr(logger, errors.New("missing integrations-json"))
 	}
 
-	var ok bool
-	opts.Logger, _, ok = cmdlogger.CopyToFile(cmd, logger, opts.AgentConfig.PinpointRoot)
-	if !ok {
-		os.Exit(1)
+	logWriter, err := pinpointLogWriter(opts.AgentConfig.PinpointRoot)
+	if err != nil {
+		exitWithErr(logger, err)
 	}
-
+	opts.Logger = logger.AddWriter(logWriter)
 	return opts.Logger, opts
 }
 

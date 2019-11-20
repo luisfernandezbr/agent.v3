@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/build"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
@@ -21,14 +22,15 @@ import (
 	"github.com/pinpt/agent.next/pkg/encrypt"
 
 	"github.com/pinpt/go-common/eventing"
+	"github.com/pinpt/go-common/hash"
 	pjson "github.com/pinpt/go-common/json"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/integration-sdk/agent"
 
+	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
 
 	"github.com/pinpt/go-common/datamodel"
@@ -38,7 +40,7 @@ import (
 )
 
 type Opts struct {
-	Logger hclog.Logger
+	Logger cmdlogger.Logger
 	// LogLevelSubcommands specifies the log level to pass to sub commands.
 	// Pass the same as used for logger.
 	// We need it here, because there is no way to get it from logger.
@@ -76,26 +78,43 @@ type runner struct {
 
 	agentConfig cmdintegration.AgentConfig
 	deviceInfo  deviceinfo.CommonInfo
+
+	logSender *logSender
 }
 
 func newRunner(opts Opts) (*runner, error) {
 	s := &runner{}
 	s.opts = opts
-	s.logger = opts.Logger
 	s.fsconf = fsconf.New(opts.PinpointRoot)
+
+	var err error
+	s.conf, err = agentconf.Load(s.fsconf.Config2)
+	if err != nil {
+		return nil, err
+	}
+	s.agentConfig = s.getAgentConfig()
+	s.deviceInfo = s.getDeviceInfoOpts()
+
+	s.logSender = newLogSender(s.opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
+	s.logger = s.opts.Logger.AddWriter(s.logSender)
+
 	return s, nil
 }
 
 type closefunc func()
 
-func (s *runner) Run(ctx context.Context) error {
-	s.logger.Info("Starting service", "pinpoint-root", s.opts.PinpointRoot)
-
-	var err error
-	s.conf, err = agentconf.Load(s.fsconf.Config2)
-	if err != nil {
-		return err
+func (s *runner) close() {
+	if err := s.logSender.Close(); err != nil {
+		s.logger.Error("error closing log sender", "err", err)
 	}
+}
+
+func (s *runner) Run(ctx context.Context) error {
+	defer func() {
+		s.close()
+	}()
+
+	s.logger.Info("Starting service", "pinpoint-root", s.opts.PinpointRoot)
 
 	s.logger.Info("Config", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot, "integrations-dir", s.conf.IntegrationsDir)
 
@@ -126,14 +145,10 @@ func (s *runner) Run(ctx context.Context) error {
 		}
 	}
 
-	s.agentConfig = s.getAgentConfig()
-
-	err = s.sendCrashes()
+	err := s.sendCrashes()
 	if err != nil {
 		return fmt.Errorf("could not send crashes, err: %v", err)
 	}
-
-	s.deviceInfo = s.getDeviceInfoOpts()
 
 	err = s.sendStart(context.Background())
 	if err != nil {

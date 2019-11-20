@@ -41,17 +41,18 @@ var cmdEnrollNoServiceRun = &cobra.Command{
 		cmd.Flags().Set("log-format", "json")
 
 		code := args[0]
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
 
 		// once we have pinpoint root, we can also log to a file
-		logger, _, ok := cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
-		if !ok {
-			return
+		logWriter, err := pinpointLogWriter(pinpointRoot)
+		if err != nil {
+			exitWithErr(logger, err)
 		}
+		logger = logger.AddWriter(logWriter)
 
 		channel, _ := cmd.Flags().GetString("channel")
 		ctx := context.Background()
@@ -108,7 +109,7 @@ var cmdEnroll = &cobra.Command{
 		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
 		cmd.Flags().Set("log-format", "json")
 
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -243,7 +244,7 @@ var cmdServiceInstall = &cobra.Command{
 	Short: "Install OS service of agent",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		err := cmdserviceinstall.Run(logger)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -260,7 +261,7 @@ var cmdServiceUninstall = &cobra.Command{
 	Short: "Uninstall OS service of agent, but keep data and configuration",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		err := cmdserviceuninstall.Run(logger)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -280,20 +281,21 @@ var cmdServiceRunNoRestarts = &cobra.Command{
 
 		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
 		cmd.Flags().Set("log-format", "json")
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
-		logger, level, ok := cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
-		if !ok {
-			return
+		logWriter, err := pinpointLogWriter(pinpointRoot)
+		if err != nil {
+			exitWithErr(logger, err)
 		}
+		logger = logger.AddWriter(logWriter)
 
 		ctx := context.Background()
 		opts := cmdservicerunnorestarts.Opts{}
 		opts.Logger = logger
-		opts.LogLevelSubcommands = level
+		opts.LogLevelSubcommands = logger.Level
 		opts.PinpointRoot = pinpointRoot
 		err = cmdservicerunnorestarts.Run(ctx, opts)
 		if err != nil {
@@ -317,7 +319,7 @@ var cmdServiceRun = &cobra.Command{
 		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
 		cmd.Flags().Set("log-format", "json")
 
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -361,7 +363,7 @@ var cmdValidate = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		ctx := context.Background()
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)
