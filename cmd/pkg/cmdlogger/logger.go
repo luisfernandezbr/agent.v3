@@ -57,10 +57,6 @@ func optsFromCommand(cmd *cobra.Command) *hclog.LoggerOptions {
 	return opts
 }
 
-// func (s Logger) Info(msg string, args ...interface{}) {
-// 	s.Logger.Info("=====> "+msg, args...)
-// }
-
 // Named Create a logger that will prepend the name string on the front of all messages.
 func (s Logger) Named(name string) hclog.Logger {
 	logger := s

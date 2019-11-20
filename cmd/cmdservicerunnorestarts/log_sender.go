@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -28,7 +27,7 @@ type logSender struct {
 }
 
 // newLogSender creates an io.Writer that sends logs to elastic, use it with logger.AddWriter()
-func newLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) io.WriteCloser {
+func newLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) *logSender {
 	s := &logSender{}
 	s.logger = logger.Named("log-sender")
 	s.conf = conf

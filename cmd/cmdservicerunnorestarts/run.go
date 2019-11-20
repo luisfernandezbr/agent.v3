@@ -53,7 +53,6 @@ func Run(ctx context.Context, opts Opts) error {
 	if err != nil {
 		return err
 	}
-	defer s.closer()
 	return s.Run(ctx)
 }
 
@@ -79,7 +78,8 @@ type runner struct {
 
 	agentConfig cmdintegration.AgentConfig
 	deviceInfo  deviceinfo.CommonInfo
-	closer      func()
+
+	logSender *logSender
 }
 
 func newRunner(opts Opts) (*runner, error) {
@@ -95,20 +95,25 @@ func newRunner(opts Opts) (*runner, error) {
 	s.agentConfig = s.getAgentConfig()
 	s.deviceInfo = s.getDeviceInfoOpts()
 
-	sender := newLogSender(s.opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
-	s.logger = s.opts.Logger.AddWriter(sender)
-	s.closer = func() {
-		if err := sender.Close(); err != nil {
-			s.logger.Error("error closing log sender", "err", err)
-		}
-	}
+	s.logSender = newLogSender(s.opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
+	s.logger = s.opts.Logger.AddWriter(s.logSender)
 
 	return s, nil
 }
 
 type closefunc func()
 
+func (s *runner) close() {
+	if err := s.logSender.Close(); err != nil {
+		s.logger.Error("error closing log sender", "err", err)
+	}
+}
+
 func (s *runner) Run(ctx context.Context) error {
+	defer func() {
+		s.close()
+	}()
+
 	s.logger.Info("Starting service", "pinpoint-root", s.opts.PinpointRoot)
 
 	s.logger.Info("Config", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot, "integrations-dir", s.conf.IntegrationsDir)
