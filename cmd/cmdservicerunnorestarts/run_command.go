@@ -55,11 +55,11 @@ func (c *subCommand) validate() {
 	}
 }
 
-func (c *subCommand) err(arg string, err error) error {
-	return fmt.Errorf("could not run subcommand %v err: %v", arg, err)
-}
-
 func (c *subCommand) run(cmdname string, messageID string, res interface{}, args ...string) error {
+
+	rerr := func(err error) error {
+		return fmt.Errorf("could not run subcommand %v err: %v", cmdname, err)
+	}
 
 	fs, err := newFsPassedParams(c.tmpdir, []kv{
 		{"--agent-config-file", c.config},
@@ -67,7 +67,7 @@ func (c *subCommand) run(cmdname string, messageID string, res interface{}, args
 	})
 	defer fs.Clean()
 	if err != nil {
-		return err
+		return rerr(err)
 	}
 	flags := append([]string{cmdname}, fs.Args()...)
 	flags = append(flags, "--log-format", "json")
@@ -76,7 +76,7 @@ func (c *subCommand) run(cmdname string, messageID string, res interface{}, args
 	}
 
 	if err := os.MkdirAll(c.tmpdir, 0777); err != nil {
-		return err
+		return rerr(err)
 	}
 	var outfile *os.File
 	// the output goes into os.File, don't create the os.File if there is no res
@@ -92,7 +92,7 @@ func (c *subCommand) run(cmdname string, messageID string, res interface{}, args
 
 	logsfile, err := ioutil.TempFile(c.tmpdir, "")
 	if err != nil {
-		return err
+		return rerr(err)
 	}
 	defer logsfile.Close()
 	defer os.Remove(logsfile.Name())
@@ -101,7 +101,8 @@ func (c *subCommand) run(cmdname string, messageID string, res interface{}, args
 	if messageID != "" {
 		logssender := newLogSender(c.logger, c.conf, cmdname, messageID)
 		defer func() {
-			if err := logssender.Close(); err != nil {
+			err := logssender.Close()
+			if err != nil {
 				c.logger.Error("could not send export logs to the server", "err", err)
 			}
 		}()
@@ -113,22 +114,24 @@ func (c *subCommand) run(cmdname string, messageID string, res interface{}, args
 		cmd.Stderr = io.MultiWriter(os.Stderr, logsfile)
 	}
 	if err := cmd.Run(); err != nil {
-		logsfile.Close()
-		if err2 := c.handlePanic(logsfile.Name(), cmdname); err2 != nil {
-			return c.err(cmdname, fmt.Errorf("command err: %v. could not crash report file, err: %v", err, err2))
+		if err := logsfile.Close(); err != nil {
+			return rerr(fmt.Errorf("could not close stderr file: %v", err))
 		}
-		return c.err(cmdname, err)
+		err2 := c.handlePanic(logsfile.Name(), cmdname)
+		if err2 != nil {
+			return rerr(fmt.Errorf("could not get crash report file: %v command failed with: %v", err2, err))
+		}
+		return rerr(fmt.Errorf("run: %v", err))
 	}
-	logsfile.Close()
 
 	if res != nil {
 		b, err := ioutil.ReadFile(outfile.Name())
 		if err != nil {
-			return c.err(cmdname, err)
+			return rerr(err)
 		}
 		err = json.Unmarshal(b, res)
 		if err != nil {
-			return c.err(cmdname, fmt.Errorf("invalid data returned in command output, expecting json, err %v", err))
+			return rerr(fmt.Errorf("invalid data returned in command output, expecting json, err %v", err))
 		}
 	}
 	return nil
