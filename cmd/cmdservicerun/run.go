@@ -84,6 +84,7 @@ func (s *runner) runEnroll() error {
 	args := []string{"enroll-no-service-run",
 		s.opts.Enroll.Code,
 		"--pinpoint-root", s.opts.PinpointRoot,
+		"--integrations-dir", s.opts.IntegrationsDir,
 		"--channel", s.opts.Enroll.Channel,
 	}
 	if s.opts.Enroll.SkipValidate {
@@ -114,8 +115,7 @@ func (s *runner) runService(ctx context.Context) error {
 	stderr := io.MultiWriter(os.Stderr, errFile)
 
 	cmd := exec.CommandContext(ctx, os.Args[0], "service-run-no-restarts",
-		"--pinpoint-root", s.opts.PinpointRoot,
-		"--integrations-dir", s.opts.IntegrationsDir)
+		"--pinpoint-root", s.opts.PinpointRoot)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = stderr
 	runErr := cmd.Run()
