@@ -169,6 +169,7 @@ func convertConfigGitlab(integrationNameBackend string, systemTypeBackend Integr
 		APIToken      string   `json:"apitoken"`
 		ExcludedRepos []string `json:"excluded_repos"`
 		ServerType    string   `json:"server_type"`
+		AccessToken   string   `json:"access_token"`
 	}
 
 	err := structmarshal.MapToStruct(cb, &config)
@@ -177,28 +178,31 @@ func convertConfigGitlab(integrationNameBackend string, systemTypeBackend Integr
 		return
 	}
 
-	{
-		v, ok := cb["api_token"].(string)
-		if !ok {
-			errStr("missing api_token")
-			return
-		}
-		config.APIToken = v
-	}
+	accessToken, _ := cb["access_token"].(string)
 
-	{
-		v, ok := cb["url"].(string)
-		if !ok {
-			errStr("missing url")
-			return
+	if accessToken != "" {
+		// this is gitlab.com cloud auth
+		config.APIToken = accessToken
+		config.URL = "https://gitlab.com"
+		config.ServerType = "cloud"
+	} else {
+		{
+			v, ok := cb["api_token"].(string)
+			if !ok {
+				errStr("missing api_token")
+				return
+			}
+			config.APIToken = v
 		}
-		config.URL = v
-
-		if config.URL == "https://gitlab.com" {
-			config.ServerType = "cloud"
-		} else {
-			config.ServerType = "on-premise"
+		{
+			v, ok := cb["url"].(string)
+			if !ok {
+				errStr("missing url")
+				return
+			}
+			config.URL = v
 		}
+		config.ServerType = "on-premise"
 	}
 
 	config.ExcludedRepos = exclusions

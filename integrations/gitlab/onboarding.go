@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/integrations/gitlab/api"
@@ -23,24 +24,29 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 }
 
 func (s *Integration) onboardExportRepos(ctx context.Context) (res rpcdef.OnboardExportResult, _ error) {
-	groupNames, err := api.Groups(s.qc)
+	groupNames, err := api.GroupsAll(s.qc)
 	if err != nil {
 		return res, err
 	}
 
 	var records []map[string]interface{}
 
+	s.logger.Info("groups", "names", groupNames)
+
 	for _, groupName := range groupNames {
-		api.PaginateGraphQL(s.logger, func(log hclog.Logger, pageSize string, after string) (string, error) {
-			afterCursor, repos, err := api.ReposOnboardPageGraphQL(s.qc, groupName, pageSize, after)
+		err := api.PaginateStartAt(s.logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
+			pi, repos, err := api.ReposOnboardPage(s.qc, groupName, paginationParams)
 			if err != nil {
-				return "", err
+				return pi, err
 			}
 			for _, repo := range repos {
 				records = append(records, repo.ToMap())
 			}
-			return afterCursor, nil
+			return pi, nil
 		})
+		if err != nil {
+			return res, err
+		}
 	}
 
 	res.Data = records
