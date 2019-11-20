@@ -392,7 +392,6 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 			if err != nil {
 				rerr(fmt.Errorf("invalid data format returned in agent onboard: %v", err))
 			}
-			s.logger.Info("", "REPOS-SENT", pjson.Stringify(records))
 			for _, rec := range records {
 				repo := &agent.RepoResponseRepos{}
 				repo.FromMap(rec)
