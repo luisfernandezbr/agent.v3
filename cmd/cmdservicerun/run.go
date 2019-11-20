@@ -63,8 +63,9 @@ func (s *runner) Run() error {
 	}
 	s.logger.Info("starting service-run-with-restarts")
 
-	delay := pservice.ExpRetryDelayFn(15*time.Second, time.Hour, 2)
-	done, cancel := pservice.AsyncRunBg(pservice.Retrying(s.logger, s.runService, delay))
+	delay := pservice.ExpRetryDelayFn(15*time.Second, 3*time.Hour, 2)
+	resetFailuresAfter := 24 * time.Hour
+	done, cancel := pservice.AsyncRunBg(pservice.Retrying(s.logger, s.runService, delay, resetFailuresAfter))
 
 	s.CaptureShutdown(cancel, done)
 	return nil
@@ -137,7 +138,7 @@ func (s *runner) runService(ctx context.Context) error {
 		// only keep files with actual crashes
 		err := os.Remove(errFileLoc)
 		if err != nil {
-			return fmt.Errorf("could not remove empty file for err output: %v", err)
+			s.logger.Error("could not remove empty file for err output", "err", err)
 		}
 	} else {
 		// if there was a crash create a metadata file

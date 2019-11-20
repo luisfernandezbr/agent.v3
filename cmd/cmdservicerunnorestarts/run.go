@@ -84,19 +84,25 @@ func (s *runner) Run(ctx context.Context) error {
 
 	s.logger.Info("Config", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot, "integrations-dir", s.conf.IntegrationsDir)
 
-	if build.IsProduction() && runtime.GOOS == "linux" && os.Getenv("PP_AGENT_UPDATE_ENABLED") != "" {
+	if build.IsProduction() &&
+		(runtime.GOOS == "linux" || runtime.GOOS == "windows") &&
+		os.Getenv("PP_AGENT_UPDATE_ENABLED") != "" {
 		version := os.Getenv("PP_AGENT_UPDATE_VERSION")
 		if version != "" {
 			err := build.ValidateVersion(version)
 			if err != nil {
 				return fmt.Errorf("Could not self-update, invalid version in PP_AGENT_UPDATE_VERSION: %v", err)
 			}
-			err = s.update(version)
-			if err != nil {
-				return fmt.Errorf("Could not self-update: %v", err)
+			if version == os.Getenv("PP_AGENT_VERSION") {
+				s.logger.Info("already at wanted version", "v", version)
+			} else {
+				err = s.update(version)
+				if err != nil {
+					return fmt.Errorf("Could not self-update: %v", err)
+				}
+				s.logger.Info("Updated the agent, restarting...")
+				return nil
 			}
-			s.logger.Info("Updated the agent, restarting...")
-			return nil
 		} else {
 			err := s.downloadIntegrationsIfMissing()
 			if err != nil {
