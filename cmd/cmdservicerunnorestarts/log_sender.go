@@ -111,7 +111,6 @@ func (s *logSender) upload() {
 }
 
 func (s *logSender) Write(b []byte) (int, error) {
-	// we must return the number of bytes that were passed in, crashes otherwise
 	bCopy := make([]byte, len(b))
 	copy(bCopy, b)
 	s.ch <- bCopy
