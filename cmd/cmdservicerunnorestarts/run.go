@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/build"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 
@@ -44,7 +46,6 @@ type Opts struct {
 	// We need it here, because there is no way to get it from logger.
 	LogLevelSubcommands hclog.Level
 	PinpointRoot        string
-	IntegrationsDir     string
 }
 
 func Run(ctx context.Context, opts Opts) error {
@@ -108,12 +109,37 @@ func newRunner(opts Opts) (*runner, error) {
 type closefunc func()
 
 func (s *runner) Run(ctx context.Context) error {
-	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot)
+	s.logger.Info("Starting service", "pinpoint-root", s.opts.PinpointRoot)
 
-	//err := s.downloadIntegrationsIfMissing()
-	//if err != nil {
-	//		return fmt.Errorf("Could not download integration binaries: %v", err)
-	//}
+	s.logger.Info("Config", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot, "integrations-dir", s.conf.IntegrationsDir)
+
+	if build.IsProduction() &&
+		(runtime.GOOS == "linux" || runtime.GOOS == "windows") &&
+		os.Getenv("PP_AGENT_UPDATE_ENABLED") != "" {
+		version := os.Getenv("PP_AGENT_UPDATE_VERSION")
+		if version != "" {
+			err := build.ValidateVersion(version)
+			if err != nil {
+				return fmt.Errorf("Could not self-update, invalid version in PP_AGENT_UPDATE_VERSION: %v", err)
+			}
+			if version == os.Getenv("PP_AGENT_VERSION") {
+				s.logger.Info("already at wanted version", "v", version)
+			} else {
+				err = s.update(version)
+				if err != nil {
+					return fmt.Errorf("Could not self-update: %v", err)
+				}
+				s.logger.Info("Updated the agent, restarting...")
+				return nil
+			}
+		} else {
+			err := s.downloadIntegrationsIfMissing()
+			if err != nil {
+				return fmt.Errorf("Could not download integration binaries: %v", err)
+			}
+		}
+	}
+
 	err := s.sendCrashes()
 	if err != nil {
 		return fmt.Errorf("could not send crashes, err: %v", err)
@@ -192,7 +218,8 @@ func (s *runner) runTestMockExport() error {
 	reprocessHistorical := true
 
 	ctx := context.Background()
-	return s.exporter.execExport(ctx, integrations, reprocessHistorical, "")
+
+	return s.exporter.execExport(ctx, integrations, reprocessHistorical, "mock-msg-id", "mock-job-id")
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {
@@ -687,15 +714,15 @@ func (s *runner) sendEvent(ctx context.Context, agentEvent datamodel.Model, jobI
 func (s *runner) getAgentConfig() (res cmdintegration.AgentConfig) {
 	res.CustomerID = s.conf.CustomerID
 	res.PinpointRoot = s.opts.PinpointRoot
+	res.IntegrationsDir = s.conf.IntegrationsDir
 	res.Backend.Enable = true
-	res.IntegrationsDir = s.opts.IntegrationsDir
 	return
 }
 
 func (s *runner) getDeviceInfoOpts() deviceinfo.CommonInfo {
 	return deviceinfo.CommonInfo{
 		CustomerID: s.conf.CustomerID,
-		Root:       s.agentConfig.PinpointRoot,
+		Root:       s.opts.PinpointRoot,
 		SystemID:   s.conf.SystemID,
 		DeviceID:   s.conf.DeviceID,
 	}

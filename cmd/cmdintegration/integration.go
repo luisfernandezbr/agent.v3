@@ -105,6 +105,8 @@ func NewCommand(opts Opts) (*Command, error) {
 	s.Opts = opts
 	s.Logger = opts.Logger
 
+	s.Logger.Debug("starting command", "pinpoint-root", opts.AgentConfig.PinpointRoot, "integrations-dir", opts.AgentConfig.IntegrationsDir)
+
 	s.StartTime = time.Now()
 
 	var err error

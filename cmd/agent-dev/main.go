@@ -223,11 +223,13 @@ var cmdBuild = &cobra.Command{
 			platform = ""
 		}
 		onlyAgent, _ := cmd.Flags().GetBool("only-agent")
+		onlyUpload, _ := cmd.Flags().GetBool("only-upload")
 
 		cmdbuild.Run(cmdbuild.Opts{
 			BuildDir:     "./dist",
 			Version:      version,
 			Upload:       upload,
+			OnlyUpload:   onlyUpload,
 			OnlyPlatform: platform,
 			OnlyAgent:    onlyAgent,
 		})
@@ -236,8 +238,9 @@ var cmdBuild = &cobra.Command{
 
 func init() {
 	cmd := cmdBuild
-	cmd.Flags().String("version", "dev", "Version to use for release")
+	cmd.Flags().String("version", "test", "Version to use for release")
 	cmd.Flags().Bool("upload", false, "Set to true to upload release to S3")
+	cmd.Flags().Bool("only-upload", false, "Set to true to skip build and upload existing files in dist dir")
 	cmd.Flags().String("platform", "all", "Limit to specific platform")
 	cmd.Flags().Bool("only-agent", false, "Only build agent and skip the rest (for developement)")
 	cmdRoot.AddCommand(cmd)

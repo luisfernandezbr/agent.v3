@@ -13,10 +13,8 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdenroll"
 	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
-	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
 	"github.com/pinpt/agent.next/cmd/cmdservicerun"
 	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts"
-	"github.com/pinpt/agent.next/cmd/cmdserviceuninstall"
 	"github.com/pinpt/agent.next/cmd/cmdvalidate"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
@@ -70,11 +68,14 @@ var cmdEnrollNoServiceRun = &cobra.Command{
 			}
 		}
 
+		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
+
 		err = cmdenroll.Run(ctx, cmdenroll.Opts{
-			Logger:       logger,
-			PinpointRoot: pinpointRoot,
-			Code:         code,
-			Channel:      channel,
+			Logger:          logger,
+			PinpointRoot:    pinpointRoot,
+			IntegrationsDir: integrationsDir,
+			Code:            code,
+			Channel:         channel,
 		})
 		if err != nil {
 			exitWithErr(logger, err)
@@ -88,6 +89,7 @@ func init() {
 	cmd := cmdEnrollNoServiceRun
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
+	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
 	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
 	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
 	cmdRoot.AddCommand(cmd)
@@ -114,13 +116,17 @@ var cmdEnroll = &cobra.Command{
 		}
 
 		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
+		channel, _ := cmd.Flags().GetString("channel")
+		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
 
 		ctx := context.Background()
 		opts := cmdservicerun.Opts{}
 		opts.Logger = logger
 		opts.PinpointRoot = pinpointRoot
+		opts.IntegrationsDir = integrationsDir
 		opts.Enroll.Run = true
 		opts.Enroll.Code = args[0]
+		opts.Enroll.Channel = channel
 		opts.Enroll.SkipValidate = skipValidate
 		err = cmdservicerun.Run(ctx, opts)
 		if err != nil {
@@ -232,6 +238,7 @@ func init() {
 	cmdRoot.AddCommand(cmd)
 }
 
+/*
 var cmdServiceInstall = &cobra.Command{
 	Use:   "service-install",
 	Short: "Install OS service of agent",
@@ -264,7 +271,7 @@ var cmdServiceUninstall = &cobra.Command{
 
 func init() {
 	cmdRoot.AddCommand(cmdServiceUninstall)
-}
+}*/
 
 var cmdServiceRunNoRestarts = &cobra.Command{
 	Use:   "service-run-no-restarts",
@@ -285,15 +292,11 @@ var cmdServiceRunNoRestarts = &cobra.Command{
 		}
 		logger = logger.AddWriter(logWriter)
 
-		// TODO: this isn't working
-		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
-
 		ctx := context.Background()
 		opts := cmdservicerunnorestarts.Opts{}
 		opts.Logger = logger
 		opts.LogLevelSubcommands = logger.Level
 		opts.PinpointRoot = pinpointRoot
-		opts.IntegrationsDir = integrationsDir
 		err = cmdservicerunnorestarts.Run(ctx, opts)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -337,7 +340,6 @@ func init() {
 	cmd := cmdServiceRun
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
-	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
 	cmdRoot.AddCommand(cmd)
 }
 

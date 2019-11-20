@@ -36,8 +36,15 @@ func Execute() {
 	// using commit as extra debug info
 	os.Setenv("PP_AGENT_COMMIT", Commit)
 
-	// need the list of integrations for download
-	os.Setenv("PP_INTEGRATION_BINARIES_ALL", IntegrationBinariesAll)
+	{
+		// list of integrations for download
+		// allow setting up from commandline for development use
+		v := os.Getenv("PP_INTEGRATION_BINARIES_ALL")
+		if v == "" {
+			os.Setenv("PP_INTEGRATION_BINARIES_ALL", IntegrationBinariesAll)
+		}
+	}
+
 	cmdRoot.Execute()
 }
 
@@ -126,7 +133,7 @@ func integrationCommandFlags(cmd *cobra.Command) {
 	cmd.Flags().String("agent-config-file", "", "Agent config json as file")
 	cmd.Flags().String("integrations-json", "", "Integrations config as json")
 	cmd.Flags().String("integrations-file", "", "Integrations config json as file")
-	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
+	cmd.Flags().String("integrations-dir", "", "Integrations dir")
 }
 
 func defaultIntegrationsDir() string {
