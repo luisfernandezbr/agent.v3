@@ -3,6 +3,7 @@ package cmdlogger
 import (
 	"io"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
@@ -14,6 +15,7 @@ type Logger struct {
 	Level   hclog.Level
 	opts    *hclog.LoggerOptions
 	writers []io.Writer
+	cmdName string
 }
 
 // NewLogger Creates a new Logger with default values
@@ -21,6 +23,7 @@ func NewLogger(cmd *cobra.Command) Logger {
 	s := Logger{
 		opts: optsFromCommand(cmd),
 	}
+	s.cmdName = cmd.Use
 	s.writers = []io.Writer{os.Stdout}
 	s.Logger = hclog.New(s.opts)
 	s.Level = s.opts.Level
@@ -76,4 +79,34 @@ func (s Logger) ResetNamed(name string) hclog.Logger {
 	logger := s
 	logger.Logger = logger.Logger.ResetNamed(name)
 	return logger
+}
+
+// Trace emits a message and key/value pairs at the TRACE level
+func (s Logger) Trace(msg string, args ...interface{}) {
+	s.Logger.Trace(msg, s.withName(args)...)
+}
+
+// Debug emits a message and key/value pairs at the DEBUG level
+func (s Logger) Debug(msg string, args ...interface{}) {
+	s.Logger.Debug(msg, s.withName(args)...)
+}
+
+// Info emits a message and key/value pairs at the INFO level
+func (s Logger) Info(msg string, args ...interface{}) {
+	s.Logger.Info(msg, s.withName(args)...)
+}
+
+// Warn emits a message and key/value pairs at the WARN level
+func (s Logger) Warn(msg string, args ...interface{}) {
+	s.Logger.Warn(msg, s.withName(args)...)
+}
+
+// Error emits a message and key/value pairs at the ERROR level
+func (s Logger) Error(msg string, args ...interface{}) {
+	s.Logger.Error(msg, s.withName(args)...)
+}
+
+func (s Logger) withName(args ...interface{}) []interface{} {
+	p := strings.Split(s.cmdName, " ")
+	return append([]interface{}{"_cmd", p[0]}, args...)
 }

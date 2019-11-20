@@ -115,29 +115,6 @@ func (s *logSender) Write(b []byte) (int, error) {
 	copy(bCopy, b)
 	s.ch <- bCopy
 	return len(b), nil
-	/*
-		// we must return the number of bytes that were passed in, crashes otherwise
-		res := len(b)
-
-		// this should always be json, but check just in case
-		var m map[string]interface{}
-		if err := json.Unmarshal(b, &m); err != nil {
-			return res, fmt.Errorf("backend logs should always be sent in json format. %v", err)
-		}
-		m["_cmd"] = s.cmdname
-
-		var err error
-		b, err = json.Marshal(m)
-		if err != nil {
-			return res, err
-		}
-
-		b = append(b, '\n')
-
-		bCopy := make([]byte, len(b))
-		copy(bCopy, b)
-		s.ch <- bCopy
-		return res, nil*/
 }
 
 func (s *logSender) Close() error {
