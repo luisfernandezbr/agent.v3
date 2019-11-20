@@ -62,6 +62,10 @@ go run . export --agent-config-json='{"customer_id":"c1"}' --integrations-json='
 ## Datamodel notes
 github.PullRequestComment does not include comments created from review, these go to github.PullRequestReview. We do not currently store the text of those.
 
+## Performance
+
+It takes ~?m on pinpoint organization for initial export and ~?m for incremental immediately after. Using ?% of github.com hourly quota.
+
 ## How to support incremental exports?
 Since graphql doesn't support since parameter on all objects, we iterate backwards using updated at timestamp, when we get to the object which was updated before last run we stop.
 
@@ -70,10 +74,6 @@ It was possible in github v3 rest api, but in v4 graphql it's only supported for
 There is a possible issue with iterating backwards using updated_at. If an object is updated while we are iterating, it could move from the page we haven't seen yet to the end we already iterated. It's not a big deal, since it would be picked up on next incremental export.
 
 Possible performance optimization is to limit the number of records returned to 1 for first incremental request, to quickly see if there are any records. Not worth doing now.
-
-## Performance
-
-It takes ~?m on pinpoint organization for initial export and ~?m for incremental immediately after. Using ?% of github.com hourly quota.
 
 ## How to iterate on initial export and possibly continue on interruption?
 
@@ -105,12 +105,13 @@ This is needed so that incremental export does not have to get call for pr comme
 
 testing different cases
 
-- create pr, note updatedAt date, 2019-06-24T16:07:35Z
-- create a comment on pr, see pr updated_at date, 2019-06-24T16:11:20Z (updated)
-- edit the comment on pr, see pr updated_at date, 2019-06-24T16:12:19Z (updated)
-- create review on pr, see pr updated_at date, 2019-06-24T17:45:30Z
-- edit review on pr (resolve conversation), see pr updated_at date, 2019-06-24T17:45:30Z (does not change)
-- update comment on pr, date: 2019-06-24T17:52:23Z
+- create pr, note updatedAt date
+- create a comment on pr, see pr updated_at date (updated)
+- edit the comment on pr, see pr updated_at date (updated)
+- create review on pr, see pr updated_at date (updated)
+- edit review on pr (resolve conversation), see pr updated_at date (does not change)
+- update comment on pr, date: 2019-06-24T17:52:23Z (updated)
+- adding commit to pr, updates the date (updated)
 
 So when fetching pr comments we can only fetch comments for prs with new updated_at date.
 

@@ -64,17 +64,17 @@ func PaginateNewerThan(lastProcessed time.Time, fn PaginateNewerThanFn) error {
 	}
 	cursor := ""
 	for {
-		q := "last: " + strconv.Itoa(defaultPageSize)
+		q := "first: " + strconv.Itoa(defaultPageSize)
 		if cursor != "" {
-			q += " before:" + pjson.Stringify(cursor)
+			q += " after:" + pjson.Stringify(cursor)
 		}
-		q += " orderBy: {field:UPDATED_AT, direction: ASC}"
+		q += " orderBy: {field:UPDATED_AT, direction: DESC}"
 		pi, err := fn(q, lastProcessed)
 		if err != nil {
 			return err
 		}
-		if pi.HasPreviousPage {
-			cursor = pi.StartCursor
+		if pi.HasNextPage {
+			cursor = pi.EndCursor
 		} else {
 			return nil
 		}
