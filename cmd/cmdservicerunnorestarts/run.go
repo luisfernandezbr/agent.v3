@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -80,6 +81,8 @@ type runner struct {
 	deviceInfo  deviceinfo.CommonInfo
 
 	logSender *logSender
+
+	onboardingInProgress int64
 }
 
 func newRunner(opts Opts) (*runner, error) {
@@ -359,6 +362,11 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 	s.logger.Info("listening for onboarding requests")
 
 	processOnboard := func(msg eventing.Message, integration map[string]interface{}, systemType IntegrationType, objectType string) (data cmdexportonboarddata.Result, rerr error) {
+		atomic.AddInt64(&s.onboardingInProgress, 1)
+		defer func() {
+			atomic.AddInt64(&s.onboardingInProgress, -1)
+		}()
+
 		s.logger.Info("received onboard request", "type", objectType)
 		header, err := parseHeader(msg.Headers)
 		if err != nil {
@@ -382,6 +390,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 	}
 
 	cbUser := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
+
 		rerr := func(err error) {
 			s.logger.Error("could not process onboard event", "err", err)
 		}
@@ -425,6 +434,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 	}
 
 	cbRepo := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
+
 		rerr := func(err error) {
 			s.logger.Error("could not process onboard event", "err", err)
 		}
@@ -467,6 +477,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 	}
 
 	cbProject := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
+
 		rerr := func(err error) {
 			s.logger.Error("could not process onboard event", "err", err)
 		}
@@ -507,6 +518,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 	}
 
 	cbWorkconfig := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
+
 		rerr := func(err error) {
 			s.logger.Error("could not process onboard event", "err", err)
 		}
@@ -685,16 +697,21 @@ func (s *runner) sendStop(ctx context.Context) error {
 }
 
 func (s *runner) sendPing(ctx context.Context) error {
-	agentEvent := &agent.Ping{
+	ev := &agent.Ping{
 		Type:    agent.PingTypePing,
 		Success: true,
 	}
+	onboardingInProgress := atomic.LoadInt64(&s.onboardingInProgress)
+	ev.Onboarding = onboardingInProgress != 0
+
 	if s.exporter.IsRunning() {
-		agentEvent.State = agent.PingStateExporting
+		ev.State = agent.PingStateExporting
+		ev.Exporting = true
 	} else {
-		agentEvent.State = agent.PingStateIdle
+		ev.State = agent.PingStateIdle
+		ev.Exporting = false
 	}
-	return s.sendEvent(ctx, agentEvent, "", nil)
+	return s.sendEvent(ctx, ev, "", nil)
 }
 
 func (s *runner) sendEvent(ctx context.Context, agentEvent datamodel.Model, jobID string, extraHeaders map[string]string) error {
