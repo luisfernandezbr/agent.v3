@@ -7,11 +7,21 @@ import (
 	"github.com/pinpt/agent.next/pkg/ids2"
 )
 
+// ServerType server type
+type ServerType string
+
+const (
+	// CLOUD server type
+	CLOUD ServerType = "cloud"
+	// ON_PREMISE server type
+	ON_PREMISE ServerType = "on-premise"
+)
+
+// QueryContext query context
 type QueryContext struct {
-	BaseURL        string
-	Logger         hclog.Logger
-	Request        func(objPath string, params url.Values, res interface{}) (PageInfo, error)
-	RequestGraphQL func(query string, res interface{}) (err error)
+	BaseURL string
+	Logger  hclog.Logger
+	Request func(objPath string, params url.Values, res interface{}) (PageInfo, error)
 
 	CustomerID string
 	RefType    string
@@ -20,6 +30,7 @@ type QueryContext struct {
 	IDs          ids2.Gen
 }
 
+// PageInfo page info
 type PageInfo struct {
 	PageSize   int
 	NextPage   string

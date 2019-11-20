@@ -20,18 +20,13 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-const (
-	CLOUD      = "cloud"
-	ON_PREMISE = "on-premise"
-)
-
 type Config struct {
 	commonrepo.FilterConfig
-	URL                string `json:"url"`
-	APIToken           string `json:"apitoken"`
-	OnlyGit            bool   `json:"only_git"`
-	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
-	ServerType         string `json:"server_type"`
+	URL                string         `json:"url"`
+	APIToken           string         `json:"apitoken"`
+	OnlyGit            bool           `json:"only_git"`
+	InsecureSkipVerify bool           `json:"insecure_skip_verify"`
+	ServerType         api.ServerType `json:"server_type"`
 }
 
 type Integration struct {
@@ -83,7 +78,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	groups, err := api.Groups(s.qc)
+	groups, err := api.GroupsAll(s.qc)
 	if err != nil {
 		rerr(err)
 		return
@@ -94,13 +89,13 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 
 LOOP:
 	for _, group := range groups {
-		_, repos, err := api.ReposPageRESTAll(s.qc, group, params)
+		_, repos, err := api.ReposPageCommon(s.qc, group, params)
 		if err != nil {
 			rerr(err)
 			return
 		}
 		if len(repos) > 0 {
-			repoURL, err := getRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repos[0].NameWithOwner)
+			repoURL, err := s.getRepoURL(repos[0].NameWithOwner)
 			if err != nil {
 				rerr(err)
 				return
@@ -141,13 +136,12 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts := api.RequesterOpts{}
 		opts.Logger = s.logger
 		opts.APIURL = s.config.URL + "/api/v4"
-		opts.APIGraphQL = s.config.URL + "/api/graphql"
 		opts.APIToken = s.config.APIToken
 		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
+		opts.ServerType = s.config.ServerType
 		requester := api.NewRequester(opts)
 
 		s.qc.Request = requester.Request
-		s.qc.RequestGraphQL = requester.RequestGraphQL
 		s.qc.IDs = ids2.New(s.customerID, s.refType)
 	}
 
@@ -172,7 +166,7 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	if conf.ServerType == "" {
 		return rerr("server type is missing")
 	}
-	if conf.ServerType != CLOUD && conf.ServerType != ON_PREMISE {
+	if conf.ServerType != api.CLOUD && conf.ServerType != api.ON_PREMISE {
 		return rerr("server type invalid: type %s", conf.ServerType)
 	}
 
@@ -182,13 +176,13 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 
 func (s *Integration) export(ctx context.Context) (err error) {
 
-	if s.config.ServerType == ON_PREMISE {
+	if s.config.ServerType == api.ON_PREMISE {
 		if err = UsersEmails(s); err != nil {
 			return err
 		}
 	}
 
-	groupNames, err := api.Groups(s.qc)
+	groupNames, err := api.GroupsAll(s.qc)
 	if err != nil {
 		return err
 	}
@@ -214,7 +208,7 @@ func (s *Integration) export(ctx context.Context) (err error) {
 }
 
 func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchPR) error {
-	repoURL, err := getRepoURL(s.config.URL, url.UserPassword("token", s.config.APIToken), repo.NameWithOwner)
+	repoURL, err := s.getRepoURL(repo.NameWithOwner)
 	if err != nil {
 		return err
 	}
@@ -270,7 +264,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 		return err
 	}
 
-	if s.config.ServerType == CLOUD {
+	if s.config.ServerType == api.CLOUD {
 		userSender, err := objsender.Root(s.agent, sourcecode.UserModelName.String())
 		if err != nil {
 			return err
@@ -328,7 +322,7 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 	}
 
 	err := api.PaginateNewerThan(s.logger, sender.LastProcessedTime(), func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, repos, err := api.ReposPageREST(s.qc, groupName, parameters, stopOnUpdatedAt)
+		pi, repos, err := api.ReposPage(s.qc, groupName, parameters, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
 		}
@@ -490,12 +484,18 @@ func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo common
 	return
 }
 
-func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {
-	u, err := url.Parse(repoURLPrefix)
+func (s *Integration) getRepoURL(nameWithOwner string) (string, error) {
+	u, err := url.Parse(s.config.URL)
 	if err != nil {
 		return "", err
 	}
-	u.User = user
+	var prefix string
+	if s.config.ServerType == api.CLOUD {
+		prefix = "oauth2"
+	} else {
+		prefix = "token"
+	}
+	u.User = url.UserPassword(prefix, s.config.APIToken)
 	u.Path = nameWithOwner
 	return u.String(), nil
 }
