@@ -3,6 +3,7 @@ package cmdlogger
 import (
 	"io"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
@@ -82,30 +83,30 @@ func (s Logger) ResetNamed(name string) hclog.Logger {
 
 // Trace emits a message and key/value pairs at the TRACE level
 func (s Logger) Trace(msg string, args ...interface{}) {
-	arr := append([]interface{}{"_cmd", s.cmdName}, args...)
-	s.Logger.Trace(msg, arr...)
+	s.Logger.Trace(msg, s.withName(args)...)
 }
 
 // Debug emits a message and key/value pairs at the DEBUG level
 func (s Logger) Debug(msg string, args ...interface{}) {
-	arr := append([]interface{}{"_cmd", s.cmdName}, args...)
-	s.Logger.Debug(msg, arr...)
+	s.Logger.Debug(msg, s.withName(args)...)
 }
 
 // Info emits a message and key/value pairs at the INFO level
 func (s Logger) Info(msg string, args ...interface{}) {
-	arr := append([]interface{}{"_cmd", s.cmdName}, args...)
-	s.Logger.Info(msg, arr...)
+	s.Logger.Info(msg, s.withName(args)...)
 }
 
 // Warn emits a message and key/value pairs at the WARN level
 func (s Logger) Warn(msg string, args ...interface{}) {
-	arr := append([]interface{}{"_cmd", s.cmdName}, args...)
-	s.Logger.Warn(msg, arr...)
+	s.Logger.Warn(msg, s.withName(args)...)
 }
 
 // Error emits a message and key/value pairs at the ERROR level
 func (s Logger) Error(msg string, args ...interface{}) {
-	arr := append([]interface{}{"_cmd", s.cmdName}, args...)
-	s.Logger.Error(msg, arr...)
+	s.Logger.Error(msg, s.withName(args)...)
+}
+
+func (s Logger) withName(args ...interface{}) []interface{} {
+	p := strings.Split(s.cmdName, " ")
+	return append([]interface{}{"_cmd", p[0]}, args...)
 }
