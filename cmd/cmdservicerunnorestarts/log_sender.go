@@ -115,7 +115,7 @@ func (s *commandLogSender) Write(b []byte) (int, error) {
 	res := len(b)
 
 	// this should always be json, but check just in case
-	var m map[string]string
+	var m map[string]interface{}
 	if err := json.Unmarshal(b, &m); err != nil {
 		return res, fmt.Errorf("backend logs should always be sent in json format. %v", err)
 	}
