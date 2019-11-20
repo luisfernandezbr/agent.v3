@@ -298,7 +298,6 @@ func (s *exporter) execExport(ctx context.Context, integrations []cmdexport.Inte
 	reprocessHistorical bool, exportLogWriter io.Writer, exportJobID string) error {
 
 	agentConfig := s.opts.AgentConfig
-	agentConfig.Backend.Enable = true
 	agentConfig.Backend.ExportJobID = exportJobID
 
 	c := &subCommand{
