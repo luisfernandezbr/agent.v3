@@ -42,7 +42,6 @@ type Opts struct {
 	// We need it here, because there is no way to get it from logger.
 	LogLevelSubcommands hclog.Level
 	PinpointRoot        string
-	IntegrationsDir     string
 }
 
 func Run(ctx context.Context, opts Opts) error {
@@ -75,18 +74,34 @@ func newRunner(opts Opts) (*runner, error) {
 type closefunc func()
 
 func (s *runner) Run(ctx context.Context) error {
-	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot, "integrations-dir", s.opts.IntegrationsDir)
+	s.logger.Info("Starting service", "pinpoint-root", s.opts.PinpointRoot)
 
-	if build.IsProduction() && runtime.GOOS == "linux" && os.Getenv("PP_AGENT_UPDATE_ENABLED") != "" {
-		version := os.Getenv("PP_AGENT_UPDATE")
+	var err error
+	s.conf, err = agentconf.Load(s.fsconf.Config2)
+	if err != nil {
+		return err
+	}
+
+	s.logger.Info("Config", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot, "integrations-dir", s.conf.IntegrationsDir)
+
+	if build.IsProduction() &&
+		(runtime.GOOS == "linux" || runtime.GOOS == "windows") &&
+		os.Getenv("PP_AGENT_UPDATE_ENABLED") != "" {
+		version := os.Getenv("PP_AGENT_UPDATE_VERSION")
 		if version != "" {
 			err := build.ValidateVersion(version)
 			if err != nil {
-				return fmt.Errorf("Could not self-update, invalid version in PP_AGENT_UPDATE: %v", err)
+				return fmt.Errorf("Could not self-update, invalid version in PP_AGENT_UPDATE_VERSION: %v", err)
 			}
-			err = s.update(version)
-			if err != nil {
-				return fmt.Errorf("Could not self-update: %v", err)
+			if version == os.Getenv("PP_AGENT_VERSION") {
+				s.logger.Info("already at wanted version", "v", version)
+			} else {
+				err = s.update(version)
+				if err != nil {
+					return fmt.Errorf("Could not self-update: %v", err)
+				}
+				s.logger.Info("Updated the agent, restarting...")
+				return nil
 			}
 		} else {
 			err := s.downloadIntegrationsIfMissing()
@@ -94,12 +109,6 @@ func (s *runner) Run(ctx context.Context) error {
 				return fmt.Errorf("Could not download integration binaries: %v", err)
 			}
 		}
-	}
-
-	var err error
-	s.conf, err = agentconf.Load(s.fsconf.Config2)
-	if err != nil {
-		return err
 	}
 
 	s.agentConfig = s.getAgentConfig()
@@ -668,7 +677,7 @@ func (s *runner) sendEvent(ctx context.Context, agentEvent datamodel.Model, jobI
 func (s *runner) getAgentConfig() (res cmdintegration.AgentConfig) {
 	res.CustomerID = s.conf.CustomerID
 	res.PinpointRoot = s.opts.PinpointRoot
-	res.IntegrationsDir = s.opts.IntegrationsDir
+	res.IntegrationsDir = s.conf.IntegrationsDir
 	res.Backend.Enable = true
 	return
 }
@@ -676,7 +685,7 @@ func (s *runner) getAgentConfig() (res cmdintegration.AgentConfig) {
 func (s *runner) getDeviceInfoOpts() deviceinfo.CommonInfo {
 	return deviceinfo.CommonInfo{
 		CustomerID: s.conf.CustomerID,
-		Root:       s.agentConfig.PinpointRoot,
+		Root:       s.opts.PinpointRoot,
 		SystemID:   s.conf.SystemID,
 		DeviceID:   s.conf.DeviceID,
 	}

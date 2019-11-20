@@ -29,10 +29,11 @@ import (
 )
 
 type Opts struct {
-	Logger       hclog.Logger
-	PinpointRoot string
-	Code         string
-	Channel      string
+	Logger          hclog.Logger
+	PinpointRoot    string
+	IntegrationsDir string
+	Code            string
+	Channel         string
 }
 
 func Run(ctx context.Context, opts Opts) error {
@@ -221,6 +222,7 @@ func (s *enroller) ProcessResult(res agent.EnrollResponse) error {
 	conf.Channel = s.opts.Channel
 	conf.DeviceID = s.deviceID
 	conf.SystemID = deviceinfo.SystemID()
+	conf.IntegrationsDir = s.opts.IntegrationsDir
 	var err error
 	conf.PPEncryptionKey, err = encrypt.GenerateKey()
 	if err != nil {

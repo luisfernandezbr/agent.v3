@@ -24,7 +24,7 @@ func TestServiceRetryingCancelImmediately(t *testing.T) {
 
 	service := Retrying(logger, run, func(retry int) time.Duration {
 		return time.Microsecond
-	})
+	}, time.Hour)
 
 	done, cancel := AsyncRunBg(service)
 	<-runStart
@@ -51,7 +51,7 @@ func TestServiceRetryingRetries(t *testing.T) {
 
 	service := Retrying(logger, run, func(retry int) time.Duration {
 		return time.Nanosecond
-	})
+	}, time.Hour)
 
 	done, cancel := AsyncRunBg(service)
 	<-runStart
@@ -60,6 +60,37 @@ func TestServiceRetryingRetries(t *testing.T) {
 	runEnd <- errors.New("e")
 	<-runStart
 
+	fmt.Println("cancel")
+	cancel()
+	runEnd <- nil
+
+	err := <-done
+	if err != nil {
+		t.Fatal("should never return error", err)
+	}
+}
+
+func TestServiceRetryingResetAfter(t *testing.T) {
+	logger := hclog.New(hclog.DefaultOptions)
+
+	runStart := make(chan bool)
+	runEnd := make(chan error)
+
+	run := func(ctx context.Context) error {
+		fmt.Println("started")
+		runStart <- true
+		return <-runEnd
+	}
+
+	service := Retrying(logger, run, func(retry int) time.Duration {
+		panic("should never run, since we reset to zero after Nanosecond")
+	}, time.Nanosecond)
+
+	done, cancel := AsyncRunBg(service)
+	<-runStart
+	time.Sleep(2 * time.Nanosecond)
+	runEnd <- nil
+	<-runStart
 	fmt.Println("cancel")
 	cancel()
 	runEnd <- nil
@@ -86,7 +117,7 @@ func TestServiceRetryingCancelPropagation(t *testing.T) {
 
 	service := Retrying(logger, run, func(retry int) time.Duration {
 		return time.Nanosecond
-	})
+	}, time.Hour)
 
 	done, cancel := AsyncRunBg(service)
 	<-runStart
