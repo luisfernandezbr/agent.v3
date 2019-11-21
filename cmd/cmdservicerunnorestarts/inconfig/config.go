@@ -15,7 +15,12 @@ import (
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 )
 
-func ConfigFromEvent(data map[string]interface{}, systemType IntegrationType, encryptionKey string) (res cmdintegration.Integration, rerr error) {
+// ConfigFromEvent converts the config received from backend export or onboarding events and
+// converts it to config that integrations can accept (cmdintegration.Integration).
+// Also requires encryptionKey to decrypt the auth data.
+func ConfigFromEvent(data map[string]interface{},
+	systemType IntegrationType,
+	encryptionKey string) (res cmdintegration.Integration, rerr error) {
 	var obj struct {
 		Name          string `json:"name"`
 		Authorization struct {
@@ -65,6 +70,7 @@ type agentIntegration struct {
 	Type string
 }
 
+// ConvertConfig is similar to ConfigFromEvent, both convert backend config to integration config. But if ConfigFromEvent requires encryption key, ConvertConfig can process the configuration passed directly, which we use in validate.
 func ConvertConfig(integrationNameBackend string, systemTypeBackend IntegrationType, configBackend map[string]interface{}, exclusions []string) (configAgent map[string]interface{}, agentIn agentIntegration, rerr error) {
 
 	var fn func(integrationNameBackend string, systemTypeBackend IntegrationType, configBackend map[string]interface{}, exclusions []string) (configAgent map[string]interface{}, agentIn agentIntegration, rerr error)

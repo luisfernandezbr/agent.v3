@@ -1,3 +1,4 @@
+// Package exporter for scheduling and executing exports as part of service-run
 package exporter
 
 import (
@@ -25,6 +26,7 @@ import (
 	"github.com/pinpt/integration-sdk/agent"
 )
 
+// Opts are the options for Exporter
 type Opts struct {
 	Logger hclog.Logger
 	// LogLevelSubcommands specifies the log level to pass to sub commands.
@@ -42,7 +44,10 @@ type Opts struct {
 	IntegrationsDir string
 }
 
+// Exporter schedules and executes exports
 type Exporter struct {
+	// ExportQueue for queuing the exports
+	// Exports happen serially, with only one happening at once
 	ExportQueue chan Request
 
 	conf agentconf.Config
@@ -54,12 +59,17 @@ type Exporter struct {
 	deviceInfo deviceinfo.CommonInfo
 }
 
+// Request is the export request to put into the ExportQueue
 type Request struct {
-	Done      chan bool
-	Data      *agent.ExportRequest
+	// Done is the callback for when the export is completed
+	Done chan bool
+	// Data is the ExportRequest data received from the server
+	Data *agent.ExportRequest
+	// MessageID is the message id received from the server in headers
 	MessageID string
 }
 
+// New creates exporter
 func New(opts Opts) (*Exporter, error) {
 	if opts.PPEncryptionKey == "" {
 		return nil, errors.New(`opts.PPEncryptionKey == ""`)
@@ -78,6 +88,7 @@ func New(opts Opts) (*Exporter, error) {
 	return s, nil
 }
 
+// Run starts processing ExportQueue. This is a blocking call.
 func (s *Exporter) Run() {
 	for req := range s.ExportQueue {
 		s.setRunning(true)
@@ -92,8 +103,9 @@ func (s *Exporter) setRunning(ex bool) {
 	s.mu.Lock()
 	s.exporting = ex
 	s.mu.Unlock()
-
 }
+
+// IsRunning returns true if there is an export in progress
 func (s *Exporter) IsRunning() bool {
 	s.mu.Lock()
 	ex := s.exporting
@@ -230,7 +242,7 @@ func (s *Exporter) doExport(ctx context.Context, data *agent.ExportRequest, mess
 		return
 	}
 
-	if err := s.ExecExport(ctx, integrations, data.ReprocessHistorical, messageID, data.JobID); err != nil {
+	if err := s.execExport(ctx, integrations, data.ReprocessHistorical, messageID, data.JobID); err != nil {
 		rerr = err
 		return
 	}
@@ -263,7 +275,7 @@ func (s *Exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport
 	return ts, nil
 }
 
-func (s *Exporter) ExecExport(ctx context.Context, integrations []cmdexport.Integration, reprocessHistorical bool, messageID string, jobID string) error {
+func (s *Exporter) execExport(ctx context.Context, integrations []cmdexport.Integration, reprocessHistorical bool, messageID string, jobID string) error {
 
 	agentConfig := s.opts.AgentConfig
 	agentConfig.Backend.ExportJobID = jobID

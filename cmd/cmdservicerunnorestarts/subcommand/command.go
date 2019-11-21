@@ -1,3 +1,8 @@
+// Package subcommand provides a way to execute subcommands
+// while passing the arguments and output via filesystem
+// to avoid data size limitations.
+// It also shares the configuration and other params needed
+// to run cmdintegration and handles panics.
 package subcommand
 
 import (
@@ -16,13 +21,14 @@ import (
 	"github.com/pinpt/integration-sdk/agent"
 
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/logsender"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/logsender"
 )
 
+// Opts are options needed to create Command
 type Opts struct {
 	Logger            hclog.Logger
 	Tmpdir            string
@@ -32,6 +38,7 @@ type Opts struct {
 	DeviceInfo        deviceinfo.CommonInfo
 }
 
+// Command is struct for executing cmdintegration based commands
 type Command struct {
 	ctx          context.Context
 	logger       hclog.Logger
@@ -42,6 +49,7 @@ type Command struct {
 	deviceInfo   deviceinfo.CommonInfo
 }
 
+// New creates a command
 func New(opts Opts) (*Command, error) {
 	rerr := func(str string) (*Command, error) {
 		return nil, errors.New("subcommand: initialization: " + str)
@@ -74,6 +82,7 @@ func New(opts Opts) (*Command, error) {
 	return s, nil
 }
 
+// Run executes the command
 func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res interface{}, args ...string) error {
 
 	rerr := func(err error) error {

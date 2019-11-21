@@ -12,7 +12,6 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/build"
 
-	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 
 	"github.com/pinpt/go-common/hash"
@@ -201,13 +200,14 @@ func (s *runner) Run(ctx context.Context) error {
 
 	defer esub()
 
-	if os.Getenv("PP_AGENT_SERVICE_TEST_MOCK") != "" {
-		s.logger.Info("PP_AGENT_SERVICE_TEST_MOCK passed, running test mock export")
-		err := s.runTestMockExport()
-		if err != nil {
-			return fmt.Errorf("could not export mock, err: %v", err)
-		}
-	}
+	/*
+		if os.Getenv("PP_AGENT_SERVICE_TEST_MOCK") != "" {
+			s.logger.Info("PP_AGENT_SERVICE_TEST_MOCK passed, running test mock export")
+			err := s.runTestMockExport()
+			if err != nil {
+				return fmt.Errorf("could not export mock, err: %v", err)
+			}
+		}*/
 
 	s.logger.Info("waiting for requests...")
 
@@ -215,19 +215,6 @@ func (s *runner) Run(ctx context.Context) error {
 	<-block
 
 	return nil
-}
-
-func (s *runner) runTestMockExport() error {
-
-	in := cmdexport.Integration{}
-	in.Name = "mock"
-	in.Config = map[string]interface{}{"k1": "v1"}
-	integrations := []cmdexport.Integration{in}
-	reprocessHistorical := true
-
-	ctx := context.Background()
-
-	return s.exporter.ExecExport(ctx, integrations, reprocessHistorical, "mock-msg-id", "mock-job-id")
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {

@@ -1,3 +1,7 @@
+// Package updater handles agent updates. It downloads binaries based
+// on provided version for both agent and integrations and replaces
+// them in place.
+// It also downloads built-in integrations if only agent binary is present.
 package updater
 
 import (
@@ -18,11 +22,13 @@ import (
 
 const s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
 
+// Updater handles agent and built-in integration updates
 type Updater struct {
 	logger hclog.Logger
 	fsconf fsconf.Locs
 }
 
+// New creates updater
 func New(logger hclog.Logger, fsconf fsconf.Locs) *Updater {
 	return &Updater{
 		logger: logger,
@@ -30,6 +36,9 @@ func New(logger hclog.Logger, fsconf fsconf.Locs) *Updater {
 	}
 }
 
+// DownloadIntegrationsIfMissing downloads integrations if those
+// are not present in integrations dir. This would happen
+// if use only downloaded the agent binary.
 func (s *Updater) DownloadIntegrationsIfMissing() error {
 	dir := s.fsconf.Integrations
 	exists, err := fs.Exists(dir)
@@ -69,6 +78,7 @@ func (s *Updater) DownloadIntegrationsIfMissing() error {
 	return nil
 }
 
+// Update updates both the agent and integrations to the specified version.
 func (s *Updater) Update(version string) error {
 	err := os.MkdirAll(s.fsconf.Temp, 0777)
 	if err != nil {

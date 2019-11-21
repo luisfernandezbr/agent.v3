@@ -1,3 +1,4 @@
+// Package logsender contains log Writer that sends the logs to the backend.
 package logsender
 
 import (
@@ -12,6 +13,7 @@ import (
 	"github.com/pinpt/go-common/api"
 )
 
+// Sender is a log Writer that send the logs to the backend
 type Sender struct {
 	logger    hclog.Logger
 	conf      agentconf.Config
@@ -23,6 +25,7 @@ type Sender struct {
 	closed chan bool
 }
 
+// New creates Sender
 func New(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) *Sender {
 	s := &Sender{}
 	s.logger = logger.Named("log-sender")
@@ -108,6 +111,7 @@ func (s *Sender) upload() {
 	resp.Body.Close()
 }
 
+// Write implements write interface that can be used by logger.
 func (s *Sender) Write(b []byte) (int, error) {
 	bCopy := make([]byte, len(b))
 	copy(bCopy, b)
@@ -115,6 +119,7 @@ func (s *Sender) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
+// Close flushes buffered data and uploads it.
 func (s *Sender) Close() error {
 	close(s.ch)
 	<-s.closed

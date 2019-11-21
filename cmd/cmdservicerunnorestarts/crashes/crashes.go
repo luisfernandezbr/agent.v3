@@ -1,3 +1,4 @@
+// Package crashes handle sending the crash logs to the server
 package crashes
 
 import (
@@ -16,12 +17,15 @@ import (
 	"github.com/pinpt/go-common/datamodel"
 )
 
+// CrashSender handles sending of crash logs to the server
 type CrashSender struct {
 	logger    hclog.Logger
 	fsconf    fsconf.Locs
 	sendEvent func(ctx context.Context, ev datamodel.Model) error
 }
 
+// New creates CrashSender
+// sendEvent is the function that send the model to backend. It also has to append common device info.
 func New(logger hclog.Logger, fsconf fsconf.Locs, sendEvent func(ctx context.Context, ev datamodel.Model) error) *CrashSender {
 	s := &CrashSender{}
 	s.logger = logger
@@ -30,6 +34,8 @@ func New(logger hclog.Logger, fsconf fsconf.Locs, sendEvent func(ctx context.Con
 	return s
 }
 
+// Send check the filesystem for crash logs and send all that are found.
+// Only returns erros in case it was not possible to read the crash dir.
 func (s *CrashSender) Send() error {
 	dir := s.fsconf.ServiceRunCrashes
 	files, err := ioutil.ReadDir(dir)

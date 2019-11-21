@@ -1,18 +1,18 @@
 package inconfig
 
-// IntegrationType is the enumeration type for system_type
+// IntegrationType is the enumeration type for backend system_type
 type IntegrationType int32
 
 const (
-	// IntegrationTypeWork is the enumeration value for work
+	// IntegrationTypeWork is for work
 	IntegrationTypeWork IntegrationType = 0
-	// IntegrationTypeSourcecode is the enumeration value for sourcecode
+	// IntegrationTypeSourcecode is for sourcecode
 	IntegrationTypeSourcecode IntegrationType = 1
-	// IntegrationTypeCodequality is the enumeration value for codequality
+	// IntegrationTypeCodequality is for codequality
 	IntegrationTypeCodequality IntegrationType = 2
 )
 
-// String returns the string value for IntegrationSystemType
+// String returns the string value
 func (v IntegrationType) String() string {
 	switch int32(v) {
 	case 0:
