@@ -38,13 +38,10 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error parsing header. err %v", err)
 		}
-		done := make(chan bool)
 		s.exporter.ExportQueue <- exporter.Request{
-			Done:      done,
 			Data:      ev,
 			MessageID: header.MessageID,
 		}
-		<-done
 		return nil, nil
 	}
 

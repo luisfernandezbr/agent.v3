@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/exporter/fsqueue"
 	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/inconfig"
 	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/subcommand"
 	"github.com/pinpt/agent.next/cmd/cmdupload"
@@ -20,6 +21,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
 	"github.com/pinpt/agent.next/pkg/logutils"
+	"github.com/pinpt/agent.next/pkg/structmarshal"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/cmd/cmdexport"
@@ -57,12 +59,13 @@ type Exporter struct {
 	mu         sync.Mutex
 	exporting  bool
 	deviceInfo deviceinfo.CommonInfo
+
+	queue                 *fsqueue.Queue
+	queueRequestForwarder chan fsqueue.Request
 }
 
 // Request is the export request to put into the ExportQueue
 type Request struct {
-	// Done is the callback for when the export is completed
-	Done chan bool
 	// Data is the ExportRequest data received from the server
 	Data *agent.ExportRequest
 	// MessageID is the message id received from the server in headers
@@ -85,16 +88,36 @@ func New(opts Opts) (*Exporter, error) {
 	}
 	s.logger = opts.Logger
 	s.ExportQueue = make(chan Request)
+	var err error
+	s.queue, s.queueRequestForwarder, err = fsqueue.New(opts.Logger, s.opts.FSConf.ServiceRunCrashes)
+	if err != nil {
+		return nil, err
+	}
 	return s, nil
 }
 
 // Run starts processing ExportQueue. This is a blocking call.
 func (s *Exporter) Run() {
+	go func() {
+		for req := range s.queueRequestForwarder {
+			req2 := Request{}
+			err := structmarshal.MapToStruct(req.Data, &req2)
+			if err != nil {
+				s.logger.Error("could not unmarshal export request from map", "err", err)
+			}
+			s.setRunning(true)
+			s.export(req2.Data, req2.MessageID)
+			s.setRunning(false)
+			req.Done <- struct{}{}
+		}
+	}()
+
 	for req := range s.ExportQueue {
-		s.setRunning(true)
-		s.export(req.Data, req.MessageID)
-		s.setRunning(false)
-		req.Done <- true
+		m, err := structmarshal.StructToMap(req)
+		if err != nil {
+			s.logger.Error("could not marshal export request to map", "err", err)
+		}
+		s.queue.Input <- m
 	}
 	return
 }

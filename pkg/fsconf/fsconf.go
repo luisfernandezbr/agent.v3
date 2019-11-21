@@ -30,6 +30,9 @@ type Locs struct {
 	// LastProcessedFile stores timestamps or other data to mark last processed objects
 	LastProcessedFile string
 
+	// ExportQueueFile stores exports requests
+	ExportQueueFile string
+
 	// DedupFile contains hashes of all objects sent in incrementals to avoid sending the same objects multiple times
 	DedupFile string
 }
@@ -70,6 +73,7 @@ func New(pinpointRoot string) Locs {
 
 	s.Config2 = j(s.Root, "config.json")
 	s.LastProcessedFile = j(s.State, "last_processed.json")
+	s.ExportQueueFile = j(s.State, "export_queue.json")
 	s.DedupFile = j(s.State, "dedup.json")
 
 	return s
