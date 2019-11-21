@@ -1,8 +1,9 @@
-package cmdservicerunnorestarts
+package subcommand
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -21,41 +22,58 @@ import (
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
 )
 
-type subCommand struct {
+type Opts struct {
+	Logger            hclog.Logger
+	Tmpdir            string
+	IntegrationConfig cmdintegration.AgentConfig
+	AgentConfig       agentconf.Config
+	Integrations      []cmdvalidateconfig.Integration
+	DeviceInfo        deviceinfo.CommonInfo
+}
+
+type Command struct {
 	ctx          context.Context
 	logger       hclog.Logger
 	tmpdir       string
 	config       cmdintegration.AgentConfig
-	conf         agentconf.Config
+	agentConfig  agentconf.Config
 	integrations []cmdvalidateconfig.Integration
 	deviceInfo   deviceinfo.CommonInfo
 }
 
-func (c *subCommand) validate() {
-	if c.ctx == nil {
-		panic("context is nil")
+func New(opts Opts) (*Command, error) {
+	rerr := func(str string) (*Command, error) {
+		return nil, errors.New("subcommand: initialization: " + str)
 	}
-	if c.logger == nil {
-		panic("temp dir is nil")
+	if opts.Logger == nil {
+		return rerr(`opts.Logger == nil`)
 	}
-	if c.tmpdir == "" {
-		panic("temp dir is nil")
+	if opts.Tmpdir == "" {
+		return rerr(`opts.Tmpdir == ""`)
 	}
-	if c.config.PinpointRoot == "" {
-		panic("c.config.PinpointRoot is nil")
+	if opts.IntegrationConfig.PinpointRoot == "" {
+		return rerr(`opts.IntegrationConfig.PinpointRoot == ""`)
 	}
-	if c.conf.DeviceID == "" {
-		panic("c.conf.DeviceID is nil")
+	if opts.AgentConfig.DeviceID == "" {
+		return rerr(`opts.AgentConfig.DeviceID == ""`)
 	}
-	if c.integrations == nil {
-		panic("integrations is nil")
+	if opts.Integrations == nil {
+		return rerr(`opts.Integrations == nil`)
 	}
-	if c.deviceInfo.CustomerID == "" {
-		panic("c.deviceInfo.CustomerID is nil")
+	if opts.DeviceInfo.CustomerID == "" {
+		return rerr(`opts.DeviceInfo.CustomerID == ""`)
 	}
+	s := &Command{}
+	s.logger = opts.Logger
+	s.tmpdir = opts.Tmpdir
+	s.config = opts.IntegrationConfig
+	s.agentConfig = opts.AgentConfig
+	s.integrations = opts.Integrations
+	s.deviceInfo = opts.DeviceInfo
+	return s, nil
 }
 
-func (c *subCommand) run(cmdname string, messageID string, res interface{}, args ...string) error {
+func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res interface{}, args ...string) error {
 
 	rerr := func(err error) error {
 		return fmt.Errorf("could not run subcommand %v err: %v", cmdname, err)
@@ -99,7 +117,7 @@ func (c *subCommand) run(cmdname string, messageID string, res interface{}, args
 
 	cmd := exec.CommandContext(c.ctx, os.Args[0], flags...)
 	if messageID != "" {
-		logssender := newLogSender(c.logger, c.conf, cmdname, messageID)
+		logssender := newLogSender(c.logger, c.agentConfig, cmdname, messageID)
 		defer func() {
 			err := logssender.Close()
 			if err != nil {
@@ -137,7 +155,7 @@ func (c *subCommand) run(cmdname string, messageID string, res interface{}, args
 	return nil
 }
 
-func (c *subCommand) handlePanic(filename, cmdname string) error {
+func (c *Command) handlePanic(filename, cmdname string) error {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
@@ -162,7 +180,7 @@ func (c *subCommand) handlePanic(filename, cmdname string) error {
 			"job_id":      c.config.Backend.ExportJobID,
 		},
 	}
-	if err := event.Publish(context.Background(), publishEvent, c.conf.Channel, c.conf.APIKey); err != nil {
+	if err := event.Publish(context.Background(), publishEvent, c.agentConfig.Channel, c.agentConfig.APIKey); err != nil {
 		return fmt.Errorf("error sending agent.Crash to backend, err: %v", err)
 	}
 	return nil

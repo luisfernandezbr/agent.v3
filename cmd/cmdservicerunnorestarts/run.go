@@ -38,6 +38,8 @@ import (
 	"github.com/pinpt/go-common/event/action"
 	pstrings "github.com/pinpt/go-common/strings"
 	isdk "github.com/pinpt/integration-sdk"
+
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/exporter"
 )
 
 type Opts struct {
@@ -75,7 +77,7 @@ type runner struct {
 	logger   hclog.Logger
 	fsconf   fsconf.Locs
 	conf     agentconf.Config
-	exporter *exporter
+	exporter *exporter.Exporter
 
 	agentConfig cmdintegration.AgentConfig
 	deviceInfo  deviceinfo.CommonInfo

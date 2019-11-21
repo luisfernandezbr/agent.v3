@@ -1,4 +1,4 @@
-package cmdservicerunnorestarts
+package exporter
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/inconfig"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/subcommand"
 	"github.com/pinpt/agent.next/cmd/cmdupload"
 	"github.com/pinpt/go-common/event"
 
@@ -22,31 +24,6 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/integration-sdk/agent"
 )
-
-// IntegrationType is the enumeration type for system_type
-type IntegrationType int32
-
-const (
-	// IntegrationTypeWork is the enumeration value for work
-	IntegrationTypeWork IntegrationType = 0
-	// IntegrationTypeSourcecode is the enumeration value for sourcecode
-	IntegrationTypeSourcecode IntegrationType = 1
-	// IntegrationTypeCodequality is the enumeration value for codequality
-	IntegrationTypeCodequality IntegrationType = 2
-)
-
-// String returns the string value for IntegrationSystemType
-func (v IntegrationType) String() string {
-	switch int32(v) {
-	case 0:
-		return "WORK"
-	case 1:
-		return "SOURCECODE"
-	case 2:
-		return "CODEQUALITY"
-	}
-	return "unset"
-}
 
 type exporterOpts struct {
 	Logger hclog.Logger
@@ -227,7 +204,7 @@ func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest, mess
 
 	for _, integration := range data.Integrations {
 		s.logger.Info("exporting integration", "name", integration.Name, "len(exclusions)", len(integration.Exclusions))
-		conf, err := configFromEvent(integration.ToMap(), IntegrationType(integration.SystemType), s.opts.PPEncryptionKey)
+		conf, err := inconfig.ConfigFromEvent(integration.ToMap(), inconfig.IntegrationType(integration.SystemType), s.opts.PPEncryptionKey)
 		if err != nil {
 			rerr = err
 			return
@@ -291,23 +268,24 @@ func (s *exporter) execExport(ctx context.Context, integrations []cmdexport.Inte
 	agentConfig := s.opts.AgentConfig
 	agentConfig.Backend.ExportJobID = jobID
 
-	c := &subCommand{
-		ctx:          ctx,
-		logger:       s.logger,
-		tmpdir:       s.opts.FSConf.Temp,
-		config:       agentConfig,
-		conf:         s.conf,
-		integrations: integrations,
-		deviceInfo:   s.deviceInfo,
+	c, err := subcommand.New(subcommand.Opts{
+		Logger:            s.logger,
+		Tmpdir:            s.opts.FSConf.Temp,
+		IntegrationConfig: agentConfig,
+		AgentConfig:       s.conf,
+		Integrations:      integrations,
+		DeviceInfo:        s.deviceInfo,
+	})
+	if err != nil {
+		return err
 	}
-	c.validate()
 	args := []string{
 		"--log-level", logutils.LogLevelToString(s.opts.LogLevelSubcommands),
 	}
 	if reprocessHistorical {
 		args = append(args, "--reprocess-historical=true")
 	}
-	err := c.run("export", messageID, nil, args...)
+	err = c.Run(ctx, "export", messageID, nil, args...)
 	if err != nil {
 		return err
 	}

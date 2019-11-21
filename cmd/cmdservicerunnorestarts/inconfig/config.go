@@ -1,4 +1,4 @@
-package cmdservicerunnorestarts
+package inconfig
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/structmarshal"
 )
 
-func configFromEvent(data map[string]interface{}, systemType IntegrationType, encryptionKey string) (res cmdintegration.Integration, rerr error) {
+func ConfigFromEvent(data map[string]interface{}, systemType IntegrationType, encryptionKey string) (res cmdintegration.Integration, rerr error) {
 	var obj struct {
 		Name          string `json:"name"`
 		Authorization struct {
