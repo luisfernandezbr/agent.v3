@@ -48,7 +48,7 @@ func ConfigFromEvent(data map[string]interface{}, systemType IntegrationType, en
 		return
 	}
 
-	configAgent, agentIn, err := convertConfig(obj.Name, systemType, authObj, obj.Exclusions)
+	configAgent, agentIn, err := ConvertConfig(obj.Name, systemType, authObj, obj.Exclusions)
 	if err != nil {
 		rerr = fmt.Errorf("config object in event is not valid: %v", err)
 		return
@@ -65,7 +65,7 @@ type agentIntegration struct {
 	Type string
 }
 
-func convertConfig(integrationNameBackend string, systemTypeBackend IntegrationType, configBackend map[string]interface{}, exclusions []string) (configAgent map[string]interface{}, agentIn agentIntegration, rerr error) {
+func ConvertConfig(integrationNameBackend string, systemTypeBackend IntegrationType, configBackend map[string]interface{}, exclusions []string) (configAgent map[string]interface{}, agentIn agentIntegration, rerr error) {
 
 	var fn func(integrationNameBackend string, systemTypeBackend IntegrationType, configBackend map[string]interface{}, exclusions []string) (configAgent map[string]interface{}, agentIn agentIntegration, rerr error)
 

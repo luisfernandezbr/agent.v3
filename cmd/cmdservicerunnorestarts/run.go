@@ -40,6 +40,8 @@ import (
 	isdk "github.com/pinpt/integration-sdk"
 
 	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/exporter"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/inconfig"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/logsender"
 )
 
 type Opts struct {
@@ -82,7 +84,7 @@ type runner struct {
 	agentConfig cmdintegration.AgentConfig
 	deviceInfo  deviceinfo.CommonInfo
 
-	logSender *logSender
+	logSender *logsender.Sender
 
 	onboardingInProgress int64
 }
@@ -100,7 +102,7 @@ func newRunner(opts Opts) (*runner, error) {
 	s.agentConfig = s.getAgentConfig()
 	s.deviceInfo = s.getDeviceInfoOpts()
 
-	s.logSender = newLogSender(s.opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
+	s.logSender = logsender.New(s.opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
 	s.logger = s.opts.Logger.AddWriter(s.logSender)
 
 	return s, nil
@@ -160,7 +162,7 @@ func (s *runner) Run(ctx context.Context) error {
 		return fmt.Errorf("could not send start event, err: %v", err)
 	}
 
-	s.exporter = newExporter(exporterOpts{
+	s.exporter, err = exporter.New(exporter.Opts{
 		Logger:              s.logger,
 		LogLevelSubcommands: s.opts.LogLevelSubcommands,
 		PinpointRoot:        s.opts.PinpointRoot,
@@ -170,6 +172,9 @@ func (s *runner) Run(ctx context.Context) error {
 		AgentConfig:         s.agentConfig,
 		IntegrationsDir:     s.fsconf.Integrations,
 	})
+	if err != nil {
+		return fmt.Errorf("could not initialize exporter, err: %v", err)
+	}
 
 	go func() {
 		s.sendPings()
@@ -229,7 +234,7 @@ func (s *runner) runTestMockExport() error {
 
 	ctx := context.Background()
 
-	return s.exporter.execExport(ctx, integrations, reprocessHistorical, "mock-msg-id", "mock-job-id")
+	return s.exporter.ExecExport(ctx, integrations, reprocessHistorical, "mock-msg-id", "mock-job-id")
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {
@@ -323,7 +328,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 
 		auth := integration.Authorization.ToMap()
 
-		res, err := s.validate(ctx, integration.Name, headers.MessageID, IntegrationType(req.Integration.SystemType), auth)
+		res, err := s.validate(ctx, integration.Name, headers.MessageID, inconfig.IntegrationType(req.Integration.SystemType), auth)
 		if err != nil {
 			return rerr(fmt.Errorf("could not call validate, err: %v", err))
 		}
@@ -363,7 +368,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for onboarding requests")
 
-	processOnboard := func(msg eventing.Message, integration map[string]interface{}, systemType IntegrationType, objectType string) (data cmdexportonboarddata.Result, rerr error) {
+	processOnboard := func(msg eventing.Message, integration map[string]interface{}, systemType inconfig.IntegrationType, objectType string) (data cmdexportonboarddata.Result, rerr error) {
 		atomic.AddInt64(&s.onboardingInProgress, 1)
 		defer func() {
 			atomic.AddInt64(&s.onboardingInProgress, -1)
@@ -376,7 +381,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		}
 
 		ctx := context.Background()
-		conf, err := configFromEvent(integration, systemType, s.conf.PPEncryptionKey)
+		conf, err := inconfig.ConfigFromEvent(integration, systemType, s.conf.PPEncryptionKey)
 		if err != nil {
 			rerr = err
 			return
@@ -398,7 +403,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		}
 
 		req := instance.Object().(*agent.UserRequest)
-		data, err := processOnboard(instance.Message(), req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "users")
+		data, err := processOnboard(instance.Message(), req.Integration.ToMap(), inconfig.IntegrationType(req.Integration.SystemType), "users")
 		if err != nil {
 			rerr(err)
 			return
@@ -442,7 +447,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		}
 
 		req := instance.Object().(*agent.RepoRequest)
-		data, err := processOnboard(instance.Message(), req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "repos")
+		data, err := processOnboard(instance.Message(), req.Integration.ToMap(), inconfig.IntegrationType(req.Integration.SystemType), "repos")
 
 		if err != nil {
 			rerr(err)
@@ -485,7 +490,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		}
 
 		req := instance.Object().(*agent.ProjectRequest)
-		data, err := processOnboard(instance.Message(), req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "projects")
+		data, err := processOnboard(instance.Message(), req.Integration.ToMap(), inconfig.IntegrationType(req.Integration.SystemType), "projects")
 		if err != nil {
 			rerr(err)
 			return
@@ -526,7 +531,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		}
 
 		req := instance.Object().(*agent.WorkStatusRequest)
-		data, err := processOnboard(instance.Message(), req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "workconfig")
+		data, err := processOnboard(instance.Message(), req.Integration.ToMap(), inconfig.IntegrationType(req.Integration.SystemType), "workconfig")
 		if err != nil {
 			rerr(err)
 			return
@@ -642,7 +647,7 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 			return nil, fmt.Errorf("error parsing header. err %v", err)
 		}
 		done := make(chan bool)
-		s.exporter.ExportQueue <- exportRequest{
+		s.exporter.ExportQueue <- exporter.Request{
 			Done:      done,
 			Data:      ev,
 			MessageID: header.MessageID,

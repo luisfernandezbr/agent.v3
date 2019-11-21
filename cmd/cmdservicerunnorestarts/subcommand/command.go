@@ -20,6 +20,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/logsender"
 )
 
 type Opts struct {
@@ -117,16 +118,16 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 
 	cmd := exec.CommandContext(c.ctx, os.Args[0], flags...)
 	if messageID != "" {
-		logssender := newLogSender(c.logger, c.agentConfig, cmdname, messageID)
+		ls := logsender.New(c.logger, c.agentConfig, cmdname, messageID)
 		defer func() {
-			err := logssender.Close()
+			err := ls.Close()
 			if err != nil {
 				c.logger.Error("could not send export logs to the server", "err", err)
 			}
 		}()
 
-		cmd.Stdout = io.MultiWriter(os.Stdout, logssender)
-		cmd.Stderr = io.MultiWriter(os.Stderr, logsfile, logssender)
+		cmd.Stdout = io.MultiWriter(os.Stdout, ls)
+		cmd.Stderr = io.MultiWriter(os.Stderr, logsfile, ls)
 	} else {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = io.MultiWriter(os.Stderr, logsfile)

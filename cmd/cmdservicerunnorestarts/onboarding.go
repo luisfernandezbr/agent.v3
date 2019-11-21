@@ -5,6 +5,7 @@ import (
 
 	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/subcommand"
 
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 )
@@ -14,19 +15,20 @@ func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integ
 
 	integrations := []cmdvalidateconfig.Integration{config}
 
-	c := &subCommand{
-		ctx:          ctx,
-		logger:       s.logger,
-		tmpdir:       s.fsconf.Temp,
-		config:       s.agentConfig,
-		conf:         s.conf,
-		integrations: integrations,
-		deviceInfo:   s.deviceInfo,
+	c, err := subcommand.New(subcommand.Opts{
+		Logger:            s.logger,
+		Tmpdir:            s.fsconf.Temp,
+		IntegrationConfig: s.agentConfig,
+		AgentConfig:       s.conf,
+		Integrations:      integrations,
+		DeviceInfo:        s.deviceInfo,
+	})
+
+	if err != nil {
+		return res, err
 	}
 
-	c.validate()
-
-	err := c.run("export-onboard-data", messageID, &res, "--object-type", objectType)
+	err = c.Run(ctx, "export-onboard-data", messageID, &res, "--object-type", objectType)
 
 	s.logger.Info("getting onboard data completed", "success", res.Success, "err", res.Error)
 	if err != nil {
