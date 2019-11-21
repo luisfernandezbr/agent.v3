@@ -55,7 +55,7 @@ func NewIntegration(opts IntegrationOpts) (*Integration, error) {
 	s := &Integration{}
 	s.ID = opts.ID
 	s.opts = opts
-	s.logger = opts.Logger.With("integration", s.opts.ID.String())
+	s.logger = opts.Logger.With("intg", s.opts.ID.String())
 	err := s.setupLogFile()
 	if err != nil {
 		return nil, err
