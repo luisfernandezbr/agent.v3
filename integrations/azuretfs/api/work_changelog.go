@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -46,6 +47,10 @@ func (api *API) fetchChangeLog(projid, issueid string) (changelogs []work.IssueC
 			}
 		}
 	}
+	sort.Slice(changelogs, func(i int, j int) bool {
+		return changelogs[i].CreatedDate.Epoch < changelogs[j].CreatedDate.Epoch
+	})
+
 	return
 }
 
