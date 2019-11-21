@@ -1,8 +1,14 @@
-package cmdservicerunnorestarts
+// Package subcommand provides a way to execute subcommands
+// while passing the arguments and output via filesystem
+// to avoid data size limitations.
+// It also shares the configuration and other params needed
+// to run cmdintegration and handles panics.
+package subcommand
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,47 +21,68 @@ import (
 	"github.com/pinpt/integration-sdk/agent"
 
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/logsender"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
 )
 
-type subCommand struct {
-	ctx          context.Context
+// Opts are options needed to create Command
+type Opts struct {
+	Logger            hclog.Logger
+	Tmpdir            string
+	IntegrationConfig cmdintegration.AgentConfig
+	AgentConfig       agentconf.Config
+	Integrations      []cmdvalidateconfig.Integration
+	DeviceInfo        deviceinfo.CommonInfo
+}
+
+// Command is struct for executing cmdintegration based commands
+type Command struct {
 	logger       hclog.Logger
 	tmpdir       string
 	config       cmdintegration.AgentConfig
-	conf         agentconf.Config
+	agentConfig  agentconf.Config
 	integrations []cmdvalidateconfig.Integration
 	deviceInfo   deviceinfo.CommonInfo
 }
 
-func (c *subCommand) validate() {
-	if c.ctx == nil {
-		panic("context is nil")
+// New creates a command
+func New(opts Opts) (*Command, error) {
+	rerr := func(str string) (*Command, error) {
+		return nil, errors.New("subcommand: initialization: " + str)
 	}
-	if c.logger == nil {
-		panic("temp dir is nil")
+	if opts.Logger == nil {
+		return rerr(`opts.Logger == nil`)
 	}
-	if c.tmpdir == "" {
-		panic("temp dir is nil")
+	if opts.Tmpdir == "" {
+		return rerr(`opts.Tmpdir == ""`)
 	}
-	if c.config.PinpointRoot == "" {
-		panic("c.config.PinpointRoot is nil")
+	if opts.IntegrationConfig.PinpointRoot == "" {
+		return rerr(`opts.IntegrationConfig.PinpointRoot == ""`)
 	}
-	if c.conf.DeviceID == "" {
-		panic("c.conf.DeviceID is nil")
+	if opts.AgentConfig.DeviceID == "" {
+		return rerr(`opts.AgentConfig.DeviceID == ""`)
 	}
-	if c.integrations == nil {
-		panic("integrations is nil")
+	if opts.Integrations == nil {
+		return rerr(`opts.Integrations == nil`)
 	}
-	if c.deviceInfo.CustomerID == "" {
-		panic("c.deviceInfo.CustomerID is nil")
+	if opts.DeviceInfo.CustomerID == "" {
+		return rerr(`opts.DeviceInfo.CustomerID == ""`)
 	}
+	s := &Command{}
+	s.logger = opts.Logger
+	s.tmpdir = opts.Tmpdir
+	s.config = opts.IntegrationConfig
+	s.agentConfig = opts.AgentConfig
+	s.integrations = opts.Integrations
+	s.deviceInfo = opts.DeviceInfo
+	return s, nil
 }
 
-func (c *subCommand) run(cmdname string, messageID string, res interface{}, args ...string) error {
+// Run executes the command
+func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res interface{}, args ...string) error {
 
 	rerr := func(err error) error {
 		return fmt.Errorf("could not run subcommand %v err: %v", cmdname, err)
@@ -97,18 +124,18 @@ func (c *subCommand) run(cmdname string, messageID string, res interface{}, args
 	defer logsfile.Close()
 	defer os.Remove(logsfile.Name())
 
-	cmd := exec.CommandContext(c.ctx, os.Args[0], flags...)
+	cmd := exec.CommandContext(ctx, os.Args[0], flags...)
 	if messageID != "" {
-		logssender := newLogSender(c.logger, c.conf, cmdname, messageID)
+		ls := logsender.New(c.logger, c.agentConfig, cmdname, messageID)
 		defer func() {
-			err := logssender.Close()
+			err := ls.Close()
 			if err != nil {
 				c.logger.Error("could not send export logs to the server", "err", err)
 			}
 		}()
 
-		cmd.Stdout = io.MultiWriter(os.Stdout, logssender)
-		cmd.Stderr = io.MultiWriter(os.Stderr, logsfile, logssender)
+		cmd.Stdout = io.MultiWriter(os.Stdout, ls)
+		cmd.Stderr = io.MultiWriter(os.Stderr, logsfile, ls)
 	} else {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = io.MultiWriter(os.Stderr, logsfile)
@@ -137,7 +164,7 @@ func (c *subCommand) run(cmdname string, messageID string, res interface{}, args
 	return nil
 }
 
-func (c *subCommand) handlePanic(filename, cmdname string) error {
+func (c *Command) handlePanic(filename, cmdname string) error {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
@@ -162,7 +189,7 @@ func (c *subCommand) handlePanic(filename, cmdname string) error {
 			"job_id":      c.config.Backend.ExportJobID,
 		},
 	}
-	if err := event.Publish(context.Background(), publishEvent, c.conf.Channel, c.conf.APIKey); err != nil {
+	if err := event.Publish(context.Background(), publishEvent, c.agentConfig.Channel, c.agentConfig.APIKey); err != nil {
 		return fmt.Errorf("error sending agent.Crash to backend, err: %v", err)
 	}
 	return nil

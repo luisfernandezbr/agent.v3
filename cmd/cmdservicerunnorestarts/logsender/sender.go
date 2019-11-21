@@ -1,4 +1,5 @@
-package cmdservicerunnorestarts
+// Package logsender contains log Writer that sends the logs to the backend.
+package logsender
 
 import (
 	"bytes"
@@ -12,8 +13,8 @@ import (
 	"github.com/pinpt/go-common/api"
 )
 
-// LogSender public interface in case we need to use this outside of this pkg
-type logSender struct {
+// Sender is a log Writer that send the logs to the backend
+type Sender struct {
 	logger    hclog.Logger
 	conf      agentconf.Config
 	messageID string
@@ -24,9 +25,9 @@ type logSender struct {
 	closed chan bool
 }
 
-// newLogSender creates an io.Writer that sends logs to elastic, use it with logger.AddWriter()
-func newLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) *logSender {
-	s := &logSender{}
+// New creates Sender
+func New(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) *Sender {
+	s := &Sender{}
 	s.logger = logger.Named("log-sender")
 	s.conf = conf
 	s.messageID = messageID
@@ -53,7 +54,7 @@ func newLogSender(logger hclog.Logger, conf agentconf.Config, cmdname, messageID
 	return s
 }
 
-func (s *logSender) upload() {
+func (s *Sender) upload() {
 	perr := func(err error) {
 		s.logger.Error("could not upload export log", "err", err)
 	}
@@ -110,14 +111,16 @@ func (s *logSender) upload() {
 	resp.Body.Close()
 }
 
-func (s *logSender) Write(b []byte) (int, error) {
+// Write implements write interface that can be used by logger.
+func (s *Sender) Write(b []byte) (int, error) {
 	bCopy := make([]byte, len(b))
 	copy(bCopy, b)
 	s.ch <- bCopy
 	return len(b), nil
 }
 
-func (s *logSender) Close() error {
+// Close flushes buffered data and uploads it.
+func (s *Sender) Close() error {
 	close(s.ch)
 	<-s.closed
 	if len(s.buf) == 0 {

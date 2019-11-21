@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/inconfig"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/subcommand"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 )
 
@@ -20,14 +22,14 @@ func depointer(data map[string]interface{}) (map[string]interface{}, error) {
 	return res, nil
 }
 
-func (s *runner) validate(ctx context.Context, name string, messageID string, systemType IntegrationType, config map[string]interface{}) (res cmdvalidateconfig.Result, _ error) {
+func (s *runner) validate(ctx context.Context, name string, messageID string, systemType inconfig.IntegrationType, config map[string]interface{}) (res cmdvalidateconfig.Result, _ error) {
 	s.logger.Info("validating config for integration", "name", name)
 	// convert to non pointer strings
 	config, err := depointer(config)
 	if err != nil {
 		return res, err
 	}
-	inConf, agentIn, err := convertConfig(name, systemType, config, []string{})
+	inConf, agentIn, err := inconfig.ConvertConfig(name, systemType, config, []string{})
 	if err != nil {
 		return res, err
 	}
@@ -38,18 +40,19 @@ func (s *runner) validate(ctx context.Context, name string, messageID string, sy
 
 	integrations := []cmdvalidateconfig.Integration{in}
 
-	c := &subCommand{
-		ctx:          ctx,
-		logger:       s.logger,
-		tmpdir:       s.fsconf.Temp,
-		config:       s.agentConfig,
-		conf:         s.conf,
-		integrations: integrations,
-		deviceInfo:   s.deviceInfo,
+	c, err := subcommand.New(subcommand.Opts{
+		Logger:            s.logger,
+		Tmpdir:            s.fsconf.Temp,
+		IntegrationConfig: s.agentConfig,
+		AgentConfig:       s.conf,
+		Integrations:      integrations,
+		DeviceInfo:        s.deviceInfo,
+	})
+	if err != nil {
+		return res, err
 	}
-	c.validate()
 
-	err = c.run("validate-config", messageID, &res)
+	err = c.Run(ctx, "validate-config", messageID, &res)
 	if err != nil {
 		return res, err
 	}

@@ -1,4 +1,5 @@
-package cmdservicerunnorestarts
+// Package crashes handle sending the crash logs to the server
+package crashes
 
 import (
 	"context"
@@ -8,11 +9,34 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/integration-sdk/agent"
+
+	"github.com/pinpt/go-common/datamodel"
 )
 
-func (s *runner) sendCrashes() error {
+// CrashSender handles sending of crash logs to the server
+type CrashSender struct {
+	logger    hclog.Logger
+	fsconf    fsconf.Locs
+	sendEvent func(ctx context.Context, ev datamodel.Model) error
+}
+
+// New creates CrashSender
+// sendEvent is the function that send the model to backend. It also has to append common device info.
+func New(logger hclog.Logger, fsconf fsconf.Locs, sendEvent func(ctx context.Context, ev datamodel.Model) error) *CrashSender {
+	s := &CrashSender{}
+	s.logger = logger
+	s.fsconf = fsconf
+	s.sendEvent = sendEvent
+	return s
+}
+
+// Send check the filesystem for crash logs and send all that are found.
+// Only returns erros in case it was not possible to read the crash dir.
+func (s *CrashSender) Send() error {
 	dir := s.fsconf.ServiceRunCrashes
 	files, err := ioutil.ReadDir(dir)
 	if os.IsNotExist(err) {
@@ -30,7 +54,7 @@ func (s *runner) sendCrashes() error {
 	return nil
 }
 
-func (s *runner) sendCrashFile(loc string) error {
+func (s *CrashSender) sendCrashFile(loc string) error {
 	ctx := context.Background()
 	n := filepath.Base(loc)
 	if filepath.Ext(n) != ".log" {
@@ -60,10 +84,10 @@ func (s *runner) sendCrashFile(loc string) error {
 		Type:      agent.CrashTypeCrash,
 		Component: "service",
 	}
+
 	date.ConvertToModel(metaObj.CrashDate, &ev.CrashDate)
 
-	s.deviceInfo.AppendCommonInfo(ev)
-	err = s.sendEvent(ctx, ev, "", nil)
+	err = s.sendEvent(ctx, ev)
 	if err != nil {
 		return err
 	}
