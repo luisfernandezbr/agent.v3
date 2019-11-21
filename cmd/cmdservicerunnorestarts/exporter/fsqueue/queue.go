@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sync"
 
-	"github.com/pinpt/agent.next/pkg/fs"
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/fs"
 )
 
 type Request struct {
@@ -87,6 +88,10 @@ func (s *Queue) dataDone(id int) error {
 
 func (s *Queue) save() error {
 	b, err := json.Marshal(s.pending)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(filepath.Dir(s.file), 0777)
 	if err != nil {
 		return err
 	}

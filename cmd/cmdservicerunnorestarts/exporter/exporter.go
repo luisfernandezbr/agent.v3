@@ -4,6 +4,7 @@ package exporter
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -89,9 +90,9 @@ func New(opts Opts) (*Exporter, error) {
 	s.logger = opts.Logger
 	s.ExportQueue = make(chan Request)
 	var err error
-	s.queue, s.queueRequestForwarder, err = fsqueue.New(opts.Logger, s.opts.FSConf.ServiceRunCrashes)
+	s.queue, s.queueRequestForwarder, err = fsqueue.New(opts.Logger, s.opts.FSConf.ExportQueueFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not create fsqueue: %v", err)
 	}
 	return s, nil
 }
@@ -109,6 +110,13 @@ func (s *Exporter) Run() {
 			s.export(req2.Data, req2.MessageID)
 			s.setRunning(false)
 			req.Done <- struct{}{}
+		}
+	}()
+
+	go func() {
+		err := s.queue.Run(context.Background())
+		if err != nil {
+			panic(err)
 		}
 	}()
 

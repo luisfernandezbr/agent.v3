@@ -149,6 +149,11 @@ func (s *runner) Run(ctx context.Context) error {
 		return fmt.Errorf("could not send crashes, err: %v", err)
 	}
 
+	err = s.sendEnabled(ctx)
+	if err != nil {
+		return fmt.Errorf("could not send enabled request, err: %v", err)
+	}
+
 	err = s.sendStart(context.Background())
 	if err != nil {
 		return fmt.Errorf("could not send start event, err: %v", err)
@@ -171,14 +176,10 @@ func (s *runner) Run(ctx context.Context) error {
 	go func() {
 		s.sendPings()
 	}()
+
 	go func() {
 		s.exporter.Run()
 	}()
-
-	err = s.sendEnabled(ctx)
-	if err != nil {
-		return fmt.Errorf("could not send enabled request, err: %v", err)
-	}
 
 	isub, err := s.handleIntegrationEvents(ctx)
 	if err != nil {

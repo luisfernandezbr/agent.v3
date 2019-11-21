@@ -40,7 +40,6 @@ type Opts struct {
 
 // Command is struct for executing cmdintegration based commands
 type Command struct {
-	ctx          context.Context
 	logger       hclog.Logger
 	tmpdir       string
 	config       cmdintegration.AgentConfig
@@ -125,7 +124,7 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 	defer logsfile.Close()
 	defer os.Remove(logsfile.Name())
 
-	cmd := exec.CommandContext(c.ctx, os.Args[0], flags...)
+	cmd := exec.CommandContext(ctx, os.Args[0], flags...)
 	if messageID != "" {
 		ls := logsender.New(c.logger, c.agentConfig, cmdname, messageID)
 		defer func() {
