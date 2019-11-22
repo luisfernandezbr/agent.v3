@@ -65,3 +65,10 @@ func (s Gen) WorkUser(refID string) string {
 func (s Gen) WorkUserAssociatedRefID(associatedRefID string) string {
 	return hash.Values(s.customerID, s.refType, associatedRefID)
 }
+
+func (s Gen) WorkSprintID(sprintID string) string {
+	if sprintID == "" {
+		return ""
+	}
+	return work.NewSprintID(s.customerID, sprintID, s.refType)
+}

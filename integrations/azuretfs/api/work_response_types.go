@@ -1,11 +1,20 @@
 package api
 
-import "time"
+import (
+	"time"
+
+	"github.com/pinpt/agent.next/pkg/ids2"
+)
 
 // used in changelogResponse struct and work_changelog.go
 type changelogField struct {
 	NewValue interface{} `json:"newValue"`
 	OldValue interface{} `json:"oldvalue"`
+}
+
+type changelogFieldWithIDGen struct {
+	changelogField
+	gen ids2.Gen
 }
 
 // used in work_changelog.go - fetchChangeLog
