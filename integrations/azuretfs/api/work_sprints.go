@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/integration-sdk/work"
@@ -35,7 +34,6 @@ func (api *API) FetchSprint(projid string, teamid string) (sprints []*work.Sprin
 		date.ConvertToModel(r.Attributes.StartDate, &sprint.StartedDate)
 		date.ConvertToModel(r.Attributes.FinishDate, &sprint.EndedDate)
 		date.ConvertToModel(r.Attributes.FinishDate, &sprint.CompletedDate)
-		date.ConvertToModel(time.Now(), &sprint.FetchedDate)
 		sprints = append(sprints, &sprint)
 	}
 	return sprints, err
