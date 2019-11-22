@@ -46,7 +46,7 @@ func newSessions(logger hclog.Logger, export *export, reprocessHistorical bool, 
 	}
 
 	// we dedup objects in incremental processing, as perf optimization do not store hashes for hitorical export
-	if !reprocessHistorical {
+	if !reprocessHistorical && os.Getenv("PP_AGENT_DISABLE_DEDUP") == "" {
 		var err error
 		s.dedupStore, err = expsessions.NewDedupStore(export.Locs.DedupFile)
 		if err != nil {

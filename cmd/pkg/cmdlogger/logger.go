@@ -3,6 +3,7 @@ package cmdlogger
 import (
 	"io"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
@@ -14,6 +15,7 @@ type Logger struct {
 	Level   hclog.Level
 	opts    *hclog.LoggerOptions
 	writers []io.Writer
+	cmdName string
 }
 
 // NewLogger Creates a new Logger with default values
@@ -21,19 +23,25 @@ func NewLogger(cmd *cobra.Command) Logger {
 	s := Logger{
 		opts: optsFromCommand(cmd),
 	}
+	s.cmdName = strings.Split(cmd.Use, " ")[0]
+
 	s.writers = []io.Writer{os.Stdout}
-	s.Logger = hclog.New(s.opts)
+	s.Logger = hclog.New(s.opts).With("comp", s.cmdName)
 	s.Level = s.opts.Level
 	return s
 }
 
 // AddWriter Appends a writer to the Logger
 func (s Logger) AddWriter(writer io.Writer) Logger {
-	logger := s
-	logger.writers = append(logger.writers, writer)
-	logger.opts.Output = io.MultiWriter(logger.writers...)
-	logger.Logger = hclog.New(s.opts)
-	return logger
+	res := s
+	// copy to avoid overwriting writers in same underlying array
+	wrs := make([]io.Writer, len(s.writers))
+	copy(wrs, s.writers)
+	wrs = append(wrs, writer)
+	res.writers = wrs
+	res.opts.Output = io.MultiWriter(res.writers...)
+	res.Logger = hclog.New(s.opts).With("comp", s.cmdName)
+	return res
 }
 
 func optsFromCommand(cmd *cobra.Command) *hclog.LoggerOptions {
@@ -55,25 +63,4 @@ func optsFromCommand(cmd *cobra.Command) *hclog.LoggerOptions {
 		opts.Level = hclog.Debug
 	}
 	return opts
-}
-
-// Named Create a logger that will prepend the name string on the front of all messages.
-func (s Logger) Named(name string) hclog.Logger {
-	logger := s
-	logger.Logger = logger.Logger.Named(name)
-	return logger
-}
-
-// With Creates a sublogger that will always have the given key/value pairs
-func (s Logger) With(args ...interface{}) hclog.Logger {
-	logger := s
-	logger.Logger = logger.Logger.With(args...)
-	return logger
-}
-
-// ResetNamed Create a logger that will prepend the name string on the front of all messages
-func (s Logger) ResetNamed(name string) hclog.Logger {
-	logger := s
-	logger.Logger = logger.Logger.ResetNamed(name)
-	return logger
 }

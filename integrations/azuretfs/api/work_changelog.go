@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -46,12 +47,18 @@ func (api *API) fetchChangeLog(projid, issueid string) (changelogs []work.IssueC
 			}
 		}
 	}
+	sort.Slice(changelogs, func(i int, j int) bool {
+		return changelogs[i].CreatedDate.Epoch < changelogs[j].CreatedDate.Epoch
+	})
+
 	return
 }
 
 func changeLogExtractCreatedDate(changelog changelogResponse) work.IssueChangeLogCreatedDate {
 	var createdDate work.IssueChangeLogCreatedDate
-	if field, ok := changelog.Fields["System.CreatedDate"]; ok {
+	// This field is always there
+	// System.ChangedDate is the created date if there is only one changelog
+	if field, ok := changelog.Fields["System.ChangedDate"]; ok {
 		created, err := time.Parse(time.RFC3339, fmt.Sprint(field.NewValue))
 		if err == nil {
 			date.ConvertToModel(created, &createdDate)

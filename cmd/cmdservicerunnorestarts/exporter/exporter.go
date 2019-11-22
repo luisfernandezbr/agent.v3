@@ -1,13 +1,18 @@
-package cmdservicerunnorestarts
+// Package exporter for scheduling and executing exports as part of service-run
+package exporter
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/exporter/fsqueue"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/inconfig"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/subcommand"
 	"github.com/pinpt/agent.next/cmd/cmdupload"
 	"github.com/pinpt/go-common/event"
 
@@ -17,38 +22,15 @@ import (
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/jsonstore"
 	"github.com/pinpt/agent.next/pkg/logutils"
+	"github.com/pinpt/agent.next/pkg/structmarshal"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/integration-sdk/agent"
 )
 
-// IntegrationType is the enumeration type for system_type
-type IntegrationType int32
-
-const (
-	// IntegrationTypeWork is the enumeration value for work
-	IntegrationTypeWork IntegrationType = 0
-	// IntegrationTypeSourcecode is the enumeration value for sourcecode
-	IntegrationTypeSourcecode IntegrationType = 1
-	// IntegrationTypeCodequality is the enumeration value for codequality
-	IntegrationTypeCodequality IntegrationType = 2
-)
-
-// String returns the string value for IntegrationSystemType
-func (v IntegrationType) String() string {
-	switch int32(v) {
-	case 0:
-		return "WORK"
-	case 1:
-		return "SOURCECODE"
-	case 2:
-		return "CODEQUALITY"
-	}
-	return "unset"
-}
-
-type exporterOpts struct {
+// Opts are the options for Exporter
+type Opts struct {
 	Logger hclog.Logger
 	// LogLevelSubcommands specifies the log level to pass to sub commands.
 	// Pass the same as used for logger.
@@ -65,29 +47,38 @@ type exporterOpts struct {
 	IntegrationsDir string
 }
 
-type exporter struct {
-	ExportQueue chan exportRequest
+// Exporter schedules and executes exports
+type Exporter struct {
+	// ExportQueue for queuing the exports
+	// Exports happen serially, with only one happening at once
+	ExportQueue chan Request
 
 	conf agentconf.Config
 
 	logger     hclog.Logger
-	opts       exporterOpts
+	opts       Opts
 	mu         sync.Mutex
 	exporting  bool
 	deviceInfo deviceinfo.CommonInfo
+
+	queue                 *fsqueue.Queue
+	queueRequestForwarder chan fsqueue.Request
 }
 
-type exportRequest struct {
-	Done      chan bool
-	Data      *agent.ExportRequest
+// Request is the export request to put into the ExportQueue
+type Request struct {
+	// Data is the ExportRequest data received from the server
+	Data *agent.ExportRequest
+	// MessageID is the message id received from the server in headers
 	MessageID string
 }
 
-func newExporter(opts exporterOpts) *exporter {
+// New creates exporter
+func New(opts Opts) (*Exporter, error) {
 	if opts.PPEncryptionKey == "" {
-		panic(`opts.PPEncryptionKey == ""`)
+		return nil, errors.New(`opts.PPEncryptionKey == ""`)
 	}
-	s := &exporter{}
+	s := &Exporter{}
 	s.opts = opts
 	s.conf = opts.Conf
 	s.deviceInfo = deviceinfo.CommonInfo{
@@ -97,33 +88,62 @@ func newExporter(opts exporterOpts) *exporter {
 		Root:       s.opts.PinpointRoot,
 	}
 	s.logger = opts.Logger
-	s.ExportQueue = make(chan exportRequest)
-	return s
+	s.ExportQueue = make(chan Request)
+	var err error
+	s.queue, s.queueRequestForwarder, err = fsqueue.New(opts.Logger, s.opts.FSConf.ExportQueueFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not create fsqueue: %v", err)
+	}
+	return s, nil
 }
 
-func (s *exporter) Run() {
+// Run starts processing ExportQueue. This is a blocking call.
+func (s *Exporter) Run() {
+	go func() {
+		for req := range s.queueRequestForwarder {
+			req2 := Request{}
+			err := structmarshal.MapToStruct(req.Data, &req2)
+			if err != nil {
+				s.logger.Error("could not unmarshal export request from map", "err", err)
+			}
+			s.setRunning(true)
+			s.export(req2.Data, req2.MessageID)
+			s.setRunning(false)
+			req.Done <- struct{}{}
+		}
+	}()
+
+	go func() {
+		err := s.queue.Run(context.Background())
+		if err != nil {
+			panic(err)
+		}
+	}()
+
 	for req := range s.ExportQueue {
-		s.SetRunning(true)
-		s.export(req.Data, req.MessageID)
-		s.SetRunning(false)
-		req.Done <- true
+		m, err := structmarshal.StructToMap(req)
+		if err != nil {
+			s.logger.Error("could not marshal export request to map", "err", err)
+		}
+		s.queue.Input <- m
 	}
 	return
 }
 
-func (s *exporter) SetRunning(ex bool) {
+func (s *Exporter) setRunning(ex bool) {
 	s.mu.Lock()
 	s.exporting = ex
 	s.mu.Unlock()
-
 }
-func (s *exporter) IsRunning() bool {
+
+// IsRunning returns true if there is an export in progress
+func (s *Exporter) IsRunning() bool {
 	s.mu.Lock()
 	ex := s.exporting
 	s.mu.Unlock()
 	return ex
 }
-func (s *exporter) sendExportEvent(ctx context.Context, jobID string, data *agent.ExportResponse, ints []agent.ExportRequestIntegrations, isIncremental []bool) error {
+func (s *Exporter) sendExportEvent(ctx context.Context, jobID string, data *agent.ExportResponse, ints []agent.ExportRequestIntegrations, isIncremental []bool) error {
 	data.JobID = jobID
 	data.RefType = "export"
 	data.Type = agent.ExportResponseTypeExport
@@ -155,7 +175,7 @@ func (s *exporter) sendExportEvent(ctx context.Context, jobID string, data *agen
 	return event.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
 }
 
-func (s *exporter) sendStartExportEvent(ctx context.Context, jobID string, ints []agent.ExportRequestIntegrations) error {
+func (s *Exporter) sendStartExportEvent(ctx context.Context, jobID string, ints []agent.ExportRequestIntegrations) error {
 	data := &agent.ExportResponse{
 		State:   agent.ExportResponseStateStarting,
 		Success: true,
@@ -163,7 +183,7 @@ func (s *exporter) sendStartExportEvent(ctx context.Context, jobID string, ints 
 	return s.sendExportEvent(ctx, jobID, data, ints, nil)
 }
 
-func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started, ended time.Time, partsCount int, filesize int64, uploadurl *string, ints []agent.ExportRequestIntegrations, isIncremental []bool, err error) error {
+func (s *Exporter) sendEndExportEvent(ctx context.Context, jobID string, started, ended time.Time, partsCount int, filesize int64, uploadurl *string, ints []agent.ExportRequestIntegrations, isIncremental []bool, err error) error {
 	if !s.opts.AgentConfig.Backend.Enable {
 		return nil
 	}
@@ -185,7 +205,7 @@ func (s *exporter) sendEndExportEvent(ctx context.Context, jobID string, started
 	return s.sendExportEvent(ctx, jobID, data, ints, isIncremental)
 }
 
-func (s *exporter) export(data *agent.ExportRequest, messageID string) {
+func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
 	ctx := context.Background()
 	if len(data.Integrations) == 0 {
 		s.logger.Error("passed export request has no integrations, ignoring it")
@@ -207,7 +227,7 @@ func (s *exporter) export(data *agent.ExportRequest, messageID string) {
 	}
 }
 
-func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest, messageID string) (isIncremental []bool, partsCount int, fileSize int64, rerr error) {
+func (s *Exporter) doExport(ctx context.Context, data *agent.ExportRequest, messageID string) (isIncremental []bool, partsCount int, fileSize int64, rerr error) {
 	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
 
 	var integrations []cmdexport.Integration
@@ -227,7 +247,7 @@ func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest, mess
 
 	for _, integration := range data.Integrations {
 		s.logger.Info("exporting integration", "name", integration.Name, "len(exclusions)", len(integration.Exclusions))
-		conf, err := configFromEvent(integration.ToMap(), IntegrationType(integration.SystemType), s.opts.PPEncryptionKey)
+		conf, err := inconfig.ConfigFromEvent(integration.ToMap(), inconfig.IntegrationType(integration.SystemType), s.opts.PPEncryptionKey)
 		if err != nil {
 			rerr = err
 			return
@@ -270,7 +290,7 @@ func (s *exporter) doExport(ctx context.Context, data *agent.ExportRequest, mess
 	return
 }
 
-func (s *exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport.Integration) (string, error) {
+func (s *Exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport.Integration) (string, error) {
 	id, err := in.ID()
 	if err != nil {
 		return "", err
@@ -286,28 +306,29 @@ func (s *exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport
 	return ts, nil
 }
 
-func (s *exporter) execExport(ctx context.Context, integrations []cmdexport.Integration, reprocessHistorical bool, messageID string, jobID string) error {
+func (s *Exporter) execExport(ctx context.Context, integrations []cmdexport.Integration, reprocessHistorical bool, messageID string, jobID string) error {
 
 	agentConfig := s.opts.AgentConfig
 	agentConfig.Backend.ExportJobID = jobID
 
-	c := &subCommand{
-		ctx:          ctx,
-		logger:       s.logger,
-		tmpdir:       s.opts.FSConf.Temp,
-		config:       agentConfig,
-		conf:         s.conf,
-		integrations: integrations,
-		deviceInfo:   s.deviceInfo,
+	c, err := subcommand.New(subcommand.Opts{
+		Logger:            s.logger,
+		Tmpdir:            s.opts.FSConf.Temp,
+		IntegrationConfig: agentConfig,
+		AgentConfig:       s.conf,
+		Integrations:      integrations,
+		DeviceInfo:        s.deviceInfo,
+	})
+	if err != nil {
+		return err
 	}
-	c.validate()
 	args := []string{
 		"--log-level", logutils.LogLevelToString(s.opts.LogLevelSubcommands),
 	}
 	if reprocessHistorical {
 		args = append(args, "--reprocess-historical=true")
 	}
-	err := c.run("export", messageID, nil, args...)
+	err = c.Run(ctx, "export", messageID, nil, args...)
 	if err != nil {
 		return err
 	}

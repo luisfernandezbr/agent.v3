@@ -1,4 +1,8 @@
-package cmdservicerunnorestarts
+// Package updater handles agent updates. It downloads binaries based
+// on provided version for both agent and integrations and replaces
+// them in place.
+// It also downloads built-in integrations if only agent binary is present.
+package updater
 
 import (
 	"errors"
@@ -10,11 +14,32 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/build"
 	"github.com/pinpt/agent.next/pkg/fs"
+	"github.com/pinpt/agent.next/pkg/fsconf"
 )
 
-func (s *runner) downloadIntegrationsIfMissing() error {
+const s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
+
+// Updater handles agent and built-in integration updates
+type Updater struct {
+	logger hclog.Logger
+	fsconf fsconf.Locs
+}
+
+// New creates updater
+func New(logger hclog.Logger, fsconf fsconf.Locs) *Updater {
+	return &Updater{
+		logger: logger,
+		fsconf: fsconf,
+	}
+}
+
+// DownloadIntegrationsIfMissing downloads integrations if those
+// are not present in integrations dir. This would happen
+// if use only downloaded the agent binary.
+func (s *Updater) DownloadIntegrationsIfMissing() error {
 	dir := s.fsconf.Integrations
 	exists, err := fs.Exists(dir)
 	if err != nil {
@@ -53,7 +78,8 @@ func (s *runner) downloadIntegrationsIfMissing() error {
 	return nil
 }
 
-func (s *runner) update(version string) error {
+// Update updates both the agent and integrations to the specified version.
+func (s *Updater) Update(version string) error {
 	err := os.MkdirAll(s.fsconf.Temp, 0777)
 	if err != nil {
 		return err
@@ -93,7 +119,7 @@ func (s *runner) update(version string) error {
 
 const distBinaryName = "pinpoint-agent"
 
-func (s *runner) downloadIntegrations(version string, dir string) error {
+func (s *Updater) downloadIntegrations(version string, dir string) error {
 
 	bins := build.BuiltinIntegrationBinaries()
 	if len(bins) == 0 {
@@ -115,7 +141,7 @@ func (s *runner) downloadIntegrations(version string, dir string) error {
 	return nil
 }
 
-func (s *runner) updateAgent(version, downloadDir string) error {
+func (s *Updater) updateAgent(version, downloadDir string) error {
 	loc, err := os.Executable()
 	if err != nil {
 		return err
@@ -132,7 +158,7 @@ func (s *runner) updateAgent(version, downloadDir string) error {
 	return nil
 }
 
-func (s *runner) updateIntegrations(version string, downloadDir string) error {
+func (s *Updater) updateIntegrations(version string, downloadDir string) error {
 	downloadedIntegrations := filepath.Join(downloadDir, "integrations")
 	ok, err := fs.Exists(s.fsconf.Integrations)
 	if err != nil {
@@ -204,7 +230,7 @@ func replaceRestoringIfFailed(loc string, repl string, tmpDir string) error {
 	return nil
 }
 
-func (s *runner) downloadBinary(urlPath string, version string, tmpDir string) (loc string, rerr error) {
+func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) (loc string, rerr error) {
 	platform := runtime.GOOS
 	switch platform {
 	case "windows", "linux":
@@ -249,5 +275,3 @@ func (s *runner) downloadBinary(urlPath string, version string, tmpDir string) (
 
 	return
 }
-
-const s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
