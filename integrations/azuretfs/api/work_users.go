@@ -3,6 +3,7 @@ package api
 import (
 	"regexp"
 
+	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/work"
 )
 
@@ -16,7 +17,7 @@ func (api *API) FetchWorkUsers(projid string, teamids []string) (users []*work.U
 	}
 	for _, u := range rawusers {
 		users = append(users, &work.User{
-			AvatarURL:  &u.ImageURL,
+			AvatarURL:  pstrings.Pointer(u.ImageURL),
 			CustomerID: api.customerid,
 			Name:       doubleSlashRegex.ReplaceAllString(u.DisplayName, ""),
 			RefID:      u.ID,
