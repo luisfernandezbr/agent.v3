@@ -18,7 +18,7 @@ func (api *API) FetchSprint(projid string, teamid string) (sprints []*work.Sprin
 			CustomerID: api.customerid,
 			// Goal is missing
 			Name:    r.Name,
-			RefID:   r.ID,
+			RefID:   r.Path, // ID's don't match changelog IDs, use path here and IterationPath there
 			RefType: api.reftype,
 		}
 		switch r.Attributes.TimeFrame {

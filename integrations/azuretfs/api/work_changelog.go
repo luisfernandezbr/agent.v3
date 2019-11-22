@@ -9,7 +9,6 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/structmarshal"
-	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/integration-sdk/work"
 )
 
@@ -177,25 +176,24 @@ var changelogFields = map[string]changeogFieldExtractor{
 		return work.IssueChangeLogFieldPriority, changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	"System.Id": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
-		return work.IssueChangeLogFieldProjectID, changelogToString(item.OldValue), changelogToString(item.NewValue)
+		oldvalue := item.gen.WorkProject(changelogToString(item.OldValue))
+		newvalue := item.gen.WorkProject(changelogToString(item.NewValue))
+		return work.IssueChangeLogFieldProjectID, oldvalue, newvalue
 	},
 	"System.TeamProject": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
-		return work.IssueChangeLogFieldIdentifier, changelogToString(item.OldValue), changelogToString(item.NewValue)
+		oldvalue := item.gen.WorkIssue(changelogToString(item.OldValue))
+		newvalue := item.gen.WorkIssue(changelogToString(item.NewValue))
+		return work.IssueChangeLogFieldIdentifier, oldvalue, newvalue
 	},
-	"System.IterationId": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
+	"System.IterationPath": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
 		oldvalue := item.gen.WorkSprintID(changelogToString(item.OldValue))
 		newvalue := item.gen.WorkSprintID(changelogToString(item.NewValue))
 		return work.IssueChangeLogFieldSprintIds, oldvalue, newvalue
 	},
 	"parent": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
-		var from, to string
-		if changelogToString(item.OldValue) != "" {
-			from = hash.Values("Issue", "item.CustomerID", "jira", item.OldValue)
-		}
-		if changelogToString(item.NewValue) != "" {
-			to = hash.Values("Issue", "item.CustomerID", "jira", item.NewValue)
-		}
-		return work.IssueChangeLogFieldParentID, from, to
+		oldvalue := item.gen.WorkIssue(changelogToString(item.OldValue))
+		newvalue := item.gen.WorkIssue(changelogToString(item.NewValue))
+		return work.IssueChangeLogFieldParentID, oldvalue, newvalue
 	},
 	// "Epic Link": func(item work.IssueChangeLog) (string, interface{}, interface{}) {
 	// 	var from, to string
