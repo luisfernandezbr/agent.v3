@@ -4,9 +4,11 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/httpdefaults"
@@ -27,20 +29,26 @@ type Requester struct {
 	httpClient *http.Client
 }
 
-func NewRequester(opts RequesterOpts) *Requester {
-	s := &Requester{}
-	s.opts = opts
-	s.logger = opts.Logger
+func NewRequester(opts RequesterOpts) *Engine {
+	re := &Engine{}
 
 	{
 		c := &http.Client{}
 		transport := httpdefaults.DefaultTransport()
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: opts.InsecureSkipVerify}
 		c.Transport = transport
-		s.httpClient = c
+		re.SetClient(c)
 	}
 
-	return s
+	re.SetupEngine(opts.APIURL, opts.APIToken, opts.Logger)
+	re.StartEngine()
+	opts.Logger.Info("All setted")
+	re.logger.Info("All setted2", re.Error())
+	return re
+	// s := &Requester{}
+	// s.opts = opts
+	// s.logger = opts.Logger
+
 }
 
 func (s *Requester) setAuthHeader(req *http.Request) {
@@ -72,8 +80,17 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 	}
 	defer resp.Body.Close()
 
+	for k, v := range resp.Header {
+		if strings.Contains("RateLimit", k) {
+			s.logger.Debug(">>>>>>>>>>>", k, strings.Join(v, ","))
+		}
+	}
+
 	if resp.StatusCode != 200 {
 		s.logger.Debug("api request failed", "url", u)
+
+		bts, _ := ioutil.ReadAll(resp.Body)
+		s.logger.Debug("response", "BODY", string(bts))
 
 		return page, fmt.Errorf(`gitlab returned invalid status code: %v`, resp.StatusCode)
 	}

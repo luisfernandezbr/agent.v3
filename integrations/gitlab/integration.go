@@ -141,7 +141,8 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.ServerType = s.config.ServerType
 		requester := api.NewRequester(opts)
 
-		s.qc.Request = requester.Request
+		s.qc.Re = requester
+		s.qc.Request = requester.MakeRequest
 		s.qc.IDs = ids2.New(s.customerID, s.refType)
 	}
 
