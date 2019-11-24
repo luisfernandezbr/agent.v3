@@ -139,9 +139,10 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.APIToken = s.config.APIToken
 		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
 		opts.ServerType = s.config.ServerType
+		opts.Concurrency = make(chan bool, 10)
+		opts.Agent = s.agent
 		requester := api.NewRequester(opts)
 
-		s.qc.Re = requester
 		s.qc.Request = requester.MakeRequest
 		s.qc.IDs = ids2.New(s.customerID, s.refType)
 	}
@@ -257,11 +258,12 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 		return err
 	}
 
-	// export repos
-	if err = s.exportRepos(ctx, logger, repoSender, groupName, repos); err != nil {
+	if err = repoSender.SetTotal(len(repos)); err != nil {
 		return err
 	}
-	if err = repoSender.SetTotal(len(repos)); err != nil {
+
+	// export repos
+	if err = s.exportRepos(ctx, logger, repoSender, groupName, repos); err != nil {
 		return err
 	}
 

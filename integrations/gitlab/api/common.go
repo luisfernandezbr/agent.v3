@@ -28,7 +28,7 @@ type QueryContext struct {
 
 	UserEmailMap map[string]string
 	IDs          ids2.Gen
-	Re           *Engine
+	Re           *RequesterOpts
 }
 
 // PageInfo page info
