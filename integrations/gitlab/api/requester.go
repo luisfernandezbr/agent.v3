@@ -134,7 +134,7 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 
 	resp, err := e.opts.Client.Do(req)
 	if err != nil {
-		return false, pi, err
+		return true, pi, err
 	}
 	defer resp.Body.Close()
 	b, err := ioutil.ReadAll(resp.Body)
@@ -163,16 +163,13 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 
 	if resp.StatusCode != http.StatusOK {
 
-		if resp.StatusCode == http.StatusInternalServerError {
-			return true, pi, err
-		}
-
 		if resp.StatusCode == http.StatusTooManyRequests {
 			return rateLimited()
 		}
 
-		err := fmt.Errorf(`gitlab returned invalid status code: %v`, resp.StatusCode)
-		return false, pi, err
+		e.opts.Logger.Warn("gitlab returned invalid status code, retrying", "code", resp.StatusCode, "retry", retryThrottled)
+
+		return true, pi, err
 	}
 	err = json.Unmarshal(b, &r.Response)
 	if err != nil {
