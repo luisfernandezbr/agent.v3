@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	hclog "github.com/hashicorp/go-hclog"
 	pstrings "github.com/pinpt/go-common/strings"
 
 	"github.com/pinpt/agent.next/pkg/date"
@@ -19,7 +20,6 @@ import (
 
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/integration-sdk/agent"
 
@@ -29,10 +29,11 @@ import (
 )
 
 type Opts struct {
-	Logger       hclog.Logger
-	PinpointRoot string
-	Code         string
-	Channel      string
+	Logger          hclog.Logger
+	PinpointRoot    string
+	IntegrationsDir string
+	Code            string
+	Channel         string
 }
 
 func Run(ctx context.Context, opts Opts) error {
@@ -110,7 +111,7 @@ func (s *enroller) Run(ctx context.Context) error {
 }
 
 func (s *enroller) SendEvent(ctx context.Context) error {
-	s.logger.Debug("sending enroll event, uuid: " + s.deviceID)
+	s.logger.Debug("sending enroll event", "uuid", s.deviceID, "channel", s.opts.Channel)
 
 	data := agent.EnrollRequest{
 		Code: s.opts.Code,
@@ -221,6 +222,7 @@ func (s *enroller) ProcessResult(res agent.EnrollResponse) error {
 	conf.Channel = s.opts.Channel
 	conf.DeviceID = s.deviceID
 	conf.SystemID = deviceinfo.SystemID()
+	conf.IntegrationsDir = s.opts.IntegrationsDir
 	var err error
 	conf.PPEncryptionKey, err = encrypt.GenerateKey()
 	if err != nil {

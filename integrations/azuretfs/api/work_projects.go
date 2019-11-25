@@ -1,6 +1,7 @@
 package api
 
 import (
+	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/work"
 )
 
@@ -18,7 +19,7 @@ func (api *API) FetchProjects(excludedids []string) (projects []*work.Project, e
 		projects = append(projects, &work.Project{
 			Active:      p.State == "wellFormed",
 			CustomerID:  api.customerid,
-			Description: &p.Description,
+			Description: pstrings.Pointer(p.Description),
 			Identifier:  p.Name,
 			Name:        p.Name,
 			RefID:       p.ID,

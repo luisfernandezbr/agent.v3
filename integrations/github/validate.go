@@ -22,6 +22,38 @@ func (s *Integration) checkEnterpriseVersion() error {
 	return nil
 }
 
+var requiredScopes = []string{"read:org", "repo", "user", "read:user", "user:email"}
+
+func (s *Integration) checkTokenScopes() error {
+	// https://developer.github.com/apps/building-oauth-apps/understanding-scopes-for-oauth-apps/
+	scopes, err := api.TokenScopes(s.qc)
+	if err != nil {
+		return err
+	}
+	m := map[string]bool{}
+	for _, sc := range scopes {
+		m[sc] = true
+	}
+	scopeErr := func(sc string) error {
+		return fmt.Errorf("No required scope %v. Scopes wanted: %v got: %v", sc, requiredScopes, scopes)
+	}
+	if !m["read:org"] && !m["admin:org"] {
+		return scopeErr("read:org")
+	}
+	if !m["repo"] {
+		return scopeErr("repo")
+	}
+	if !m["user"] {
+		if !m["read:user"] {
+			return scopeErr("read:user")
+		}
+		if !m["user:email"] {
+			return scopeErr("user:email")
+		}
+	}
+	return nil
+}
+
 func (s *Integration) ValidateConfig(ctx context.Context,
 	exportConfig rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
 
@@ -32,6 +64,12 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 	err := s.initWithConfig(exportConfig)
 	if err != nil {
 		rerr(err)
+		return
+	}
+
+	err = s.checkTokenScopes()
+	if err != nil {
+		rerr(fmt.Errorf("Token scope err: %v", err))
 		return
 	}
 

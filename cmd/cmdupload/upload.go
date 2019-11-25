@@ -3,6 +3,7 @@ package cmdupload
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -62,20 +63,37 @@ func zipFilesJSON(logger hclog.Logger, target, source string) error {
 	return archive.ZipFiles(target, source, files)
 }
 
-func runUpload(logger hclog.Logger, zipPath, uploadURL, apiKey string) (parts int, size int64, err error) {
+func runUpload(logger hclog.Logger, zipPath, uploadURL, apiKey string) (parts int, uploadedSize int64, rerr error) {
 
 	f, err := os.Open(zipPath)
 	defer f.Close()
 	if err != nil {
-		return 0, 0, err
+		rerr = err
+		return
 	}
+	fi, err := f.Stat()
+	if err != nil {
+		rerr = err
+		return
+	}
+	zipSize := fi.Size()
 
-	parts, size, err = upload.Upload(upload.Options{
+	parts, uploadedSize, err = upload.Upload(upload.Options{
 		APIKey:      apiKey,
 		Body:        f,
 		ContentType: "application/zip",
 		URL:         uploadURL,
 	})
+
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	if uploadedSize != zipSize {
+		rerr = fmt.Errorf("invalid updated size, zip: %v uploaded: %v", zipSize, uploadedSize)
+		return
+	}
 
 	return
 }

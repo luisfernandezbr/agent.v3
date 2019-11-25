@@ -3,16 +3,45 @@ package cmdlogger
 import (
 	"io"
 	"os"
-	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/filelog"
-	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/spf13/cobra"
 )
 
-func Stdout(cmd *cobra.Command) hclog.Logger {
-	return hclog.New(optsFromCommand(cmd))
+// Logger the logger object
+type Logger struct {
+	hclog.Logger
+	Level   hclog.Level
+	opts    *hclog.LoggerOptions
+	writers []io.Writer
+	cmdName string
+}
+
+// NewLogger Creates a new Logger with default values
+func NewLogger(cmd *cobra.Command) Logger {
+	s := Logger{
+		opts: optsFromCommand(cmd),
+	}
+	s.cmdName = strings.Split(cmd.Use, " ")[0]
+
+	s.writers = []io.Writer{os.Stdout}
+	s.Logger = hclog.New(s.opts).With("comp", s.cmdName)
+	s.Level = s.opts.Level
+	return s
+}
+
+// AddWriter Appends a writer to the Logger
+func (s Logger) AddWriter(writer io.Writer) Logger {
+	res := s
+	// copy to avoid overwriting writers in same underlying array
+	wrs := make([]io.Writer, len(s.writers))
+	copy(wrs, s.writers)
+	wrs = append(wrs, writer)
+	res.writers = wrs
+	res.opts.Output = io.MultiWriter(res.writers...)
+	res.Logger = hclog.New(s.opts).With("comp", s.cmdName)
+	return res
 }
 
 func optsFromCommand(cmd *cobra.Command) *hclog.LoggerOptions {
@@ -34,32 +63,4 @@ func optsFromCommand(cmd *cobra.Command) *hclog.LoggerOptions {
 		opts.Level = hclog.Debug
 	}
 	return opts
-}
-
-func CopyToFile(cmd *cobra.Command, logger hclog.Logger, pinpointRoot string) (_ hclog.Logger, _ hclog.Level, ok bool) {
-	if pinpointRoot == "" {
-		var err error
-		pinpointRoot, err = fsconf.DefaultRoot()
-		if err != nil {
-			logger.Error("could not get default pinpoint-root", "err", err)
-			return
-		}
-	}
-	fsloc := fsconf.New(pinpointRoot)
-	if len(os.Args) <= 1 {
-		logger.Error("could not create log file, len(os.Args) <= 1, and we use subcommand as name")
-		return
-	}
-	logFile := filepath.Join(fsloc.Logs, os.Args[1])
-	wr, err := filelog.NewSyncWriter(logFile)
-	if err != nil {
-		logger.Error("could not create log file", "err", err)
-		return
-	}
-	opts := optsFromCommand(cmd)
-	opts.Output = io.MultiWriter(os.Stdout, wr)
-	res := hclog.New(opts)
-	res.Info("initialized logger", "cmd", os.Args[1], "file", logFile)
-	return res, opts.Level, true
-
 }

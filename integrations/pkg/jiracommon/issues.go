@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent.next/integrations/pkg/objsender"
@@ -33,7 +32,6 @@ func (s *JiraCommon) IssuesAndChangelogs(
 	projects []Project,
 	fieldByID map[string]*work.CustomField) error {
 
-	startedSprintExport := time.Now()
 	sprints := NewSprints()
 
 	projectsChan := projectsToChan(projects)
@@ -115,8 +113,6 @@ func (s *JiraCommon) IssuesAndChangelogs(
 		default:
 			return fmt.Errorf("invalid status for sprint: %v", data.State)
 		}
-
-		date.ConvertToModel(startedSprintExport, &item.FetchedDate)
 
 		err = senderSprints.Send(item)
 		if err != nil {

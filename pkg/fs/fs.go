@@ -2,8 +2,97 @@ package fs
 
 import (
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 )
+
+func ChmodFilesInDir(dir string, mode os.FileMode) error {
+	items, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, item := range items {
+		n := filepath.Join(dir, item.Name())
+		if item.IsDir() {
+			err := ChmodFilesInDir(n, mode)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		err := os.Chmod(n, mode)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func Copy(src, dst string) error {
+	fi, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if fi.IsDir() {
+		return CopyDir(src, dst)
+	}
+	return CopyFile(src, dst)
+}
+
+func CopyDir(src, dst string) error {
+	err := os.Mkdir(dst, 0777)
+	if err != nil {
+		return err
+	}
+	items, err := ioutil.ReadDir(src)
+	if err != nil {
+		return err
+	}
+	for _, item := range items {
+		s := filepath.Join(src, item.Name())
+		d := filepath.Join(dst, item.Name())
+
+		if item.IsDir() {
+			err := CopyDir(s, d)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		err := CopyFile(s, d)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func CopyFile(src, dst string) error {
+	srcf, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcf.Close()
+	dstf, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstf.Close()
+	_, err = io.Copy(dstf, srcf)
+	if err != nil {
+		return err
+	}
+	err = dstf.Sync()
+	if err != nil {
+		return err
+	}
+	err = dstf.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func WriteToTempAndRename(r io.Reader, loc string) error {
 	temp := loc + ".tmp"

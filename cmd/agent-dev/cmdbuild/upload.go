@@ -4,17 +4,20 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/pinpt/agent.next/pkg/build"
 )
 
 func upload(opts Opts) {
-	if opts.Version == "" {
-		panic("version required")
+	err := build.ValidateVersion(opts.Version)
+	if err != nil {
+		fmt.Println("invalid version", "err", err)
+		os.Exit(1)
 	}
+
 	fmt.Println("Uploading to S3")
 	awsSession := session.New(
 		&aws.Config{
@@ -55,10 +58,10 @@ func uploadDir(awsSession *session.Session, localPath string, bucket string, pre
 			Body:   file,
 		})
 		if err != nil {
-			if strings.Contains(err.Error(), "expired") {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+			fmt.Println("Upload failed")
+			fmt.Println(err)
+			os.Exit(1)
+			//if strings.Contains(err.Error(), "expired") {
 		}
 		fmt.Println("Uploaded", path, result.Location)
 	}
@@ -70,8 +73,12 @@ func (f fileWalk) Walk(path string, info os.FileInfo, err error) error {
 	if err != nil {
 		return err
 	}
-	if !info.IsDir() {
-		f <- path
+	if info.Name() == ".DS_Store" {
+		return nil
 	}
+	if info.IsDir() {
+		return nil
+	}
+	f <- path
 	return nil
 }

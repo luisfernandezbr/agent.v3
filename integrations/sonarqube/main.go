@@ -34,6 +34,7 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 }
 
 func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
+
 	if err := s.initConfig(ctx, config); err != nil {
 		return res, err
 	}

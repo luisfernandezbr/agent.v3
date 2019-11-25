@@ -281,9 +281,10 @@ func (s *Export) skipRipsrc(ctx context.Context, checkoutdir string) (bool, map[
 		}
 	}
 	opts := branchmeta.Opts{
-		Logger:    s.logger,
-		RepoDir:   checkoutdir,
-		UseOrigin: true,
+		Logger:         s.logger,
+		RepoDir:        checkoutdir,
+		UseOrigin:      true,
+		IncludeDefault: true,
 	}
 	br, err := branchmeta.Get(ctx, opts)
 	if err != nil {

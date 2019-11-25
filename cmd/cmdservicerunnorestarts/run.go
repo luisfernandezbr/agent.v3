@@ -2,45 +2,45 @@ package cmdservicerunnorestarts
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
+	"runtime"
+	"sync/atomic"
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
+	hclog "github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/build"
 
-	"github.com/pinpt/agent.next/cmd/cmdexport"
-	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 
-	"github.com/pinpt/agent.next/pkg/encrypt"
+	"github.com/pinpt/go-common/hash"
 
-	pjson "github.com/pinpt/go-common/json"
-
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/integration-sdk/agent"
 
+	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
 
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"
-	pstrings "github.com/pinpt/go-common/strings"
 	isdk "github.com/pinpt/integration-sdk"
+
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/crashes"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/exporter"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/logsender"
+	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/updater"
 )
 
 type Opts struct {
-	Logger hclog.Logger
+	Logger cmdlogger.Logger
 	// LogLevelSubcommands specifies the log level to pass to sub commands.
 	// Pass the same as used for logger.
 	// We need it here, because there is no way to get it from logger.
 	LogLevelSubcommands hclog.Level
 	PinpointRoot        string
-	IntegrationsDir     string
 }
 
 func Run(ctx context.Context, opts Opts) error {
@@ -51,56 +51,115 @@ func Run(ctx context.Context, opts Opts) error {
 	return s.Run(ctx)
 }
 
+type messageHeader struct {
+	MessageID string `json:"message_id"`
+}
+
+func parseHeader(m map[string]string) (header messageHeader, err error) {
+	b, err := json.Marshal(m)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(b, &header)
+	return
+}
+
 type runner struct {
 	opts     Opts
 	logger   hclog.Logger
 	fsconf   fsconf.Locs
 	conf     agentconf.Config
-	exporter *exporter
+	exporter *exporter.Exporter
 
 	agentConfig cmdintegration.AgentConfig
 	deviceInfo  deviceinfo.CommonInfo
+
+	logSender *logsender.Sender
+
+	onboardingInProgress int64
 }
 
 func newRunner(opts Opts) (*runner, error) {
 	s := &runner{}
 	s.opts = opts
-	s.logger = opts.Logger
 	s.fsconf = fsconf.New(opts.PinpointRoot)
+
+	var err error
+	s.conf, err = agentconf.Load(s.fsconf.Config2)
+	if err != nil {
+		return nil, err
+	}
+	s.agentConfig = s.getAgentConfig()
+	s.deviceInfo = s.getDeviceInfoOpts()
+
+	s.logSender = logsender.New(s.opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
+	s.logger = s.opts.Logger.AddWriter(s.logSender)
+
 	return s, nil
 }
 
 type closefunc func()
 
+func (s *runner) close() {
+	if err := s.logSender.Close(); err != nil {
+		s.logger.Error("error closing log sender", "err", err)
+	}
+}
+
 func (s *runner) Run(ctx context.Context) error {
-	s.logger.Info("Starting service", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot)
+	defer func() {
+		s.close()
+	}()
 
-	//err := s.downloadIntegrationsIfMissing()
-	//if err != nil {
-	//		return fmt.Errorf("Could not download integration binaries: %v", err)
-	//}
+	s.logger.Info("Starting service", "pinpoint-root", s.opts.PinpointRoot)
 
-	var err error
-	s.conf, err = agentconf.Load(s.fsconf.Config2)
-	if err != nil {
-		return err
+	s.logger.Info("Config", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot, "integrations-dir", s.conf.IntegrationsDir)
+
+	if build.IsProduction() &&
+		(runtime.GOOS == "linux" || runtime.GOOS == "windows") &&
+		os.Getenv("PP_AGENT_UPDATE_ENABLED") != "" {
+		version := os.Getenv("PP_AGENT_UPDATE_VERSION")
+		if version != "" {
+			err := build.ValidateVersion(version)
+			if err != nil {
+				return fmt.Errorf("Could not self-update, invalid version in PP_AGENT_UPDATE_VERSION: %v", err)
+			}
+			if version == os.Getenv("PP_AGENT_VERSION") {
+				s.logger.Info("already at wanted version", "v", version)
+			} else {
+				upd := updater.New(s.logger, s.fsconf)
+				err = upd.Update(version)
+				if err != nil {
+					return fmt.Errorf("Could not self-update: %v", err)
+				}
+				s.logger.Info("Updated the agent, restarting...")
+				return nil
+			}
+		} else {
+			upd := updater.New(s.logger, s.fsconf)
+			err := upd.DownloadIntegrationsIfMissing()
+			if err != nil {
+				return fmt.Errorf("Could not download integration binaries: %v", err)
+			}
+		}
 	}
 
-	s.agentConfig = s.getAgentConfig()
-
-	err = s.sendCrashes()
+	err := crashes.New(s.logger, s.fsconf, s.sendEventAppendingDeviceInfoDefault).Send()
 	if err != nil {
 		return fmt.Errorf("could not send crashes, err: %v", err)
 	}
 
-	s.deviceInfo = s.getDeviceInfoOpts()
+	err = s.sendEnabled(ctx)
+	if err != nil {
+		return fmt.Errorf("could not send enabled request, err: %v", err)
+	}
 
 	err = s.sendStart(context.Background())
 	if err != nil {
 		return fmt.Errorf("could not send start event, err: %v", err)
 	}
 
-	s.exporter = newExporter(exporterOpts{
+	s.exporter, err = exporter.New(exporter.Opts{
 		Logger:              s.logger,
 		LogLevelSubcommands: s.opts.LogLevelSubcommands,
 		PinpointRoot:        s.opts.PinpointRoot,
@@ -110,18 +169,17 @@ func (s *runner) Run(ctx context.Context) error {
 		AgentConfig:         s.agentConfig,
 		IntegrationsDir:     s.fsconf.Integrations,
 	})
+	if err != nil {
+		return fmt.Errorf("could not initialize exporter, err: %v", err)
+	}
 
 	go func() {
 		s.sendPings()
 	}()
+
 	go func() {
 		s.exporter.Run()
 	}()
-
-	err = s.sendEnabled(ctx)
-	if err != nil {
-		return fmt.Errorf("could not send enabled request, err: %v", err)
-	}
 
 	isub, err := s.handleIntegrationEvents(ctx)
 	if err != nil {
@@ -143,13 +201,14 @@ func (s *runner) Run(ctx context.Context) error {
 
 	defer esub()
 
-	if os.Getenv("PP_AGENT_SERVICE_TEST_MOCK") != "" {
-		s.logger.Info("PP_AGENT_SERVICE_TEST_MOCK passed, running test mock export")
-		err := s.runTestMockExport()
-		if err != nil {
-			return fmt.Errorf("could not export mock, err: %v", err)
-		}
-	}
+	/*
+		if os.Getenv("PP_AGENT_SERVICE_TEST_MOCK") != "" {
+			s.logger.Info("PP_AGENT_SERVICE_TEST_MOCK passed, running test mock export")
+			err := s.runTestMockExport()
+			if err != nil {
+				return fmt.Errorf("could not export mock, err: %v", err)
+			}
+		}*/
 
 	s.logger.Info("waiting for requests...")
 
@@ -157,18 +216,6 @@ func (s *runner) Run(ctx context.Context) error {
 	<-block
 
 	return nil
-}
-
-func (s *runner) runTestMockExport() error {
-
-	in := cmdexport.Integration{}
-	in.Name = "mock"
-	in.Config = map[string]interface{}{"k1": "v1"}
-	integrations := []cmdexport.Integration{in}
-	reprocessHistorical := true
-
-	ctx := context.Background()
-	return s.exporter.execExport(ctx, integrations, reprocessHistorical, nil)
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {
@@ -207,315 +254,6 @@ func (f *modelFactory) New(name datamodel.ModelNameType) datamodel.Model {
 
 var factory action.ModelFactory = &modelFactory{}
 
-func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error) {
-	s.logger.Info("listening for integration requests")
-
-	errorsChan := make(chan error, 1)
-
-	actionConfig := action.Config{
-		APIKey:  s.conf.APIKey,
-		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
-		Channel: s.conf.Channel,
-		Factory: factory,
-		Topic:   agent.IntegrationRequestTopic.String(),
-		Errors:  errorsChan,
-		Headers: map[string]string{
-			"customer_id": s.conf.CustomerID,
-			"uuid":        s.conf.DeviceID,
-		},
-	}
-
-	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
-		req := instance.Object().(*agent.IntegrationRequest)
-
-		integration := req.Integration
-
-		s.logger.Info("received integration request", "integration", integration.Name)
-
-		s.logger.Info("sending back integration response")
-
-		// TODO: add connection validation
-
-		sendEvent := func(resp *agent.IntegrationResponse) (datamodel.ModelSendEvent, error) {
-			s.deviceInfo.AppendCommonInfo(resp)
-			return datamodel.NewModelSendEvent(resp), nil
-		}
-
-		resp := &agent.IntegrationResponse{}
-		resp.RefType = integration.Name
-		resp.RefID = integration.RefID
-		resp.RequestID = req.ID
-
-		resp.UUID = s.conf.DeviceID
-		date.ConvertToModel(time.Now(), &resp.EventDate)
-
-		rerr := func(err error) (datamodel.ModelSendEvent, error) {
-			s.logger.Error("integration request failed", "err", err)
-			// error for everything else
-			resp.Type = agent.IntegrationResponseTypeIntegration
-			resp.Error = pstrings.Pointer(err.Error())
-			return sendEvent(resp)
-		}
-
-		auth := integration.Authorization.ToMap()
-
-		res, err := s.validate(ctx, integration.Name, IntegrationType(req.Integration.SystemType), auth)
-		if err != nil {
-			return rerr(fmt.Errorf("could not call validate, err: %v", err))
-		}
-
-		if !res.Success {
-			return rerr(errors.New(strings.Join(res.Errors, ", ")))
-		}
-
-		encrAuthData, err := encrypt.EncryptString(pjson.Stringify(auth), s.conf.PPEncryptionKey)
-		if err != nil {
-			return rerr(err)
-		}
-
-		resp.Message = "Success. Integration validated."
-		resp.Success = true
-		resp.Type = agent.IntegrationResponseTypeIntegration
-		resp.Authorization = encrAuthData
-		return sendEvent(resp)
-	}
-
-	go func() {
-		for err := range errorsChan {
-			s.logger.Error("error in integration requests", "err", err)
-		}
-	}()
-
-	sub, err := action.Register(ctx, action.NewAction(cb), actionConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	sub.WaitForReady()
-
-	return func() { sub.Close() }, nil
-}
-
-func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) {
-	s.logger.Info("listening for onboarding requests")
-
-	processOnboard := func(integration map[string]interface{}, systemType IntegrationType, objectType string) (_ cmdexportonboarddata.Result, rerr error) {
-		s.logger.Info("received onboard request", "type", objectType)
-
-		ctx := context.Background()
-		conf, err := configFromEvent(integration, systemType, s.conf.PPEncryptionKey)
-		if err != nil {
-			rerr = err
-			return
-		}
-
-		data, err := s.getOnboardData(ctx, conf, objectType)
-		if err != nil {
-			rerr = err
-			return
-		}
-
-		return data, nil
-	}
-
-	cbUser := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
-		rerr := func(err error) {
-			s.logger.Error("could not process onboard event", "err", err)
-		}
-
-		req := instance.Object().(*agent.UserRequest)
-		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "users")
-		if err != nil {
-			rerr(err)
-			return
-		}
-		resp := &agent.UserResponse{}
-		resp.Type = agent.UserResponseTypeUser
-		resp.RefType = req.RefType
-		resp.RefID = req.RefID
-		resp.RequestID = req.ID
-		resp.IntegrationID = req.Integration.ID
-
-		resp.Success = data.Success
-		if data.Error != "" {
-			resp.Error = pstrings.Pointer(data.Error)
-		}
-		if data.Data != nil {
-			var obj cmdexportonboarddata.DataUsers
-			err := structmarshal.AnyToAny(data.Data, &obj)
-			if err != nil {
-				rerr(fmt.Errorf("invalid data format returned in agent onboard: %v", err))
-			}
-			for _, rec := range obj.Users {
-				user := agent.UserResponseUsers{}
-				user.FromMap(rec)
-				resp.Users = append(resp.Users, user)
-			}
-			for _, rec := range obj.Teams {
-				team := agent.UserResponseTeams{}
-				team.FromMap(rec)
-				resp.Teams = append(resp.Teams, team)
-			}
-		}
-		s.deviceInfo.AppendCommonInfo(resp)
-		return datamodel.NewModelSendEvent(resp), nil
-	}
-
-	cbRepo := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
-		rerr := func(err error) {
-			s.logger.Error("could not process onboard event", "err", err)
-		}
-
-		req := instance.Object().(*agent.RepoRequest)
-		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "repos")
-
-		if err != nil {
-			rerr(err)
-			return
-		}
-
-		resp := &agent.RepoResponse{}
-		resp.Type = agent.RepoResponseTypeRepo
-		resp.RefType = req.RefType
-		resp.RefID = req.RefID
-		resp.RequestID = req.ID
-		resp.IntegrationID = req.Integration.ID
-
-		resp.Success = data.Success
-		if data.Error != "" {
-			resp.Error = pstrings.Pointer(data.Error)
-		}
-
-		if data.Data != nil {
-			var records cmdexportonboarddata.DataRepos
-			err := structmarshal.AnyToAny(data.Data, &records)
-			if err != nil {
-				rerr(fmt.Errorf("invalid data format returned in agent onboard: %v", err))
-			}
-			for _, rec := range records {
-				repo := &agent.RepoResponseRepos{}
-				repo.FromMap(rec)
-				resp.Repos = append(resp.Repos, *repo)
-			}
-		}
-
-		s.deviceInfo.AppendCommonInfo(resp)
-		return datamodel.NewModelSendEvent(resp), nil
-	}
-
-	cbProject := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
-		rerr := func(err error) {
-			s.logger.Error("could not process onboard event", "err", err)
-		}
-
-		req := instance.Object().(*agent.ProjectRequest)
-		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "projects")
-		if err != nil {
-			rerr(err)
-			return
-		}
-
-		resp := &agent.ProjectResponse{}
-		resp.Type = agent.ProjectResponseTypeProject
-		resp.RefType = req.RefType
-		resp.RefID = req.RefID
-		resp.RequestID = req.ID
-		resp.IntegrationID = req.Integration.ID
-
-		resp.Success = data.Success
-		if data.Error != "" {
-			resp.Error = pstrings.Pointer(data.Error)
-		}
-
-		if data.Data != nil {
-			var records cmdexportonboarddata.DataProjects
-			err := structmarshal.AnyToAny(data.Data, &records)
-			if err != nil {
-				rerr(fmt.Errorf("invalid data format returned in agent onboard: %v", err))
-			}
-			for _, rec := range records {
-				project := &agent.ProjectResponseProjects{}
-				project.FromMap(rec)
-				resp.Projects = append(resp.Projects, *project)
-			}
-		}
-		s.deviceInfo.AppendCommonInfo(resp)
-		return datamodel.NewModelSendEvent(resp), nil
-	}
-
-	cbWorkconfig := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
-		rerr := func(err error) {
-			s.logger.Error("could not process onboard event", "err", err)
-		}
-
-		req := instance.Object().(*agent.WorkStatusRequest)
-		data, err := processOnboard(req.Integration.ToMap(), IntegrationType(req.Integration.SystemType), "workconfig")
-		if err != nil {
-			rerr(err)
-			return
-		}
-
-		resp := &agent.WorkStatusResponse{}
-		resp.Type = agent.WorkStatusResponseTypeProject
-		resp.RefType = req.RefType
-		resp.RefID = req.RefID
-		resp.RequestID = req.ID
-		resp.IntegrationID = req.Integration.ID
-
-		resp.Success = data.Success
-		if data.Error != "" {
-			resp.Error = pstrings.Pointer(data.Error)
-		}
-
-		workStatuses := &agent.WorkStatusResponseWorkConfig{}
-		if data.Data != nil {
-			var m cmdexportonboarddata.DataWorkConfig
-			err := structmarshal.AnyToAny(data.Data, &m)
-			if err != nil {
-				rerr(fmt.Errorf("invalid data format returned in agent onboard: %v", err))
-			}
-			workStatuses.FromMap(m)
-			resp.WorkConfig = *workStatuses
-		}
-
-		s.deviceInfo.AppendCommonInfo(resp)
-
-		return datamodel.NewModelSendEvent(resp), nil
-	}
-
-	usub, err := action.Register(ctx, action.NewAction(cbUser), s.newSubConfig(agent.UserRequestTopic.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	rsub, err := action.Register(ctx, action.NewAction(cbRepo), s.newSubConfig(agent.RepoRequestTopic.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	psub, err := action.Register(ctx, action.NewAction(cbProject), s.newSubConfig(agent.ProjectRequestTopic.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	wsub, err := action.Register(ctx, action.NewAction(cbWorkconfig), s.newSubConfig(agent.WorkStatusRequestTopic.String()))
-	if err != nil {
-		panic(err)
-	}
-
-	usub.WaitForReady()
-	rsub.WaitForReady()
-	psub.WaitForReady()
-	wsub.WaitForReady()
-
-	return func() {
-		usub.Close()
-		rsub.Close()
-		psub.Close()
-		wsub.Close()
-	}, nil
-}
-
 func (s *runner) newSubConfig(topic string) action.Config {
 	errorsChan := make(chan error, 1)
 	go func() {
@@ -536,55 +274,6 @@ func (s *runner) newSubConfig(topic string) action.Config {
 		},
 		Offset: "earliest",
 	}
-}
-
-func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
-	s.logger.Info("listening for export requests")
-
-	errors := make(chan error, 1)
-
-	actionConfig := action.Config{
-		APIKey:  s.conf.APIKey,
-		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
-		Channel: s.conf.Channel,
-		Factory: factory,
-		Topic:   agent.ExportRequestTopic.String(),
-		Errors:  errors,
-		Headers: map[string]string{
-			"customer_id": s.conf.CustomerID,
-			"uuid":        s.conf.DeviceID,
-		},
-	}
-
-	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
-
-		ev := instance.Object().(*agent.ExportRequest)
-		s.logger.Info("received export request", "id", ev.ID, "uuid", ev.UUID, "request_date", ev.RequestDate.Rfc3339)
-
-		done := make(chan bool)
-		s.exporter.ExportQueue <- exportRequest{
-			Done: done,
-			Data: ev,
-		}
-		<-done
-		return nil, nil
-	}
-
-	go func() {
-		for err := range errors {
-			s.logger.Error("error in integration requests", "err", err)
-		}
-	}()
-
-	sub, err := action.Register(ctx, action.NewAction(cb), actionConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	sub.WaitForReady()
-
-	return func() { sub.Close() }, nil
-
 }
 
 func (s *runner) sendPings() {
@@ -618,16 +307,21 @@ func (s *runner) sendStop(ctx context.Context) error {
 }
 
 func (s *runner) sendPing(ctx context.Context) error {
-	agentEvent := &agent.Ping{
+	ev := &agent.Ping{
 		Type:    agent.PingTypePing,
 		Success: true,
 	}
+	onboardingInProgress := atomic.LoadInt64(&s.onboardingInProgress)
+	ev.Onboarding = onboardingInProgress != 0
+
 	if s.exporter.IsRunning() {
-		agentEvent.State = agent.PingStateExporting
+		ev.State = agent.PingStateExporting
+		ev.Exporting = true
 	} else {
-		agentEvent.State = agent.PingStateIdle
+		ev.State = agent.PingStateIdle
+		ev.Exporting = false
 	}
-	return s.sendEvent(ctx, agentEvent, "", nil)
+	return s.sendEvent(ctx, ev, "", nil)
 }
 
 func (s *runner) sendEvent(ctx context.Context, agentEvent datamodel.Model, jobID string, extraHeaders map[string]string) error {
@@ -649,18 +343,28 @@ func (s *runner) sendEvent(ctx context.Context, agentEvent datamodel.Model, jobI
 	return event.Publish(ctx, e, s.conf.Channel, s.conf.APIKey)
 }
 
+func (s *runner) sendEventAppendingDeviceInfo(ctx context.Context, event datamodel.Model, jobID string, extraHeaders map[string]string) error {
+	s.deviceInfo.AppendCommonInfo(event)
+	return s.sendEvent(ctx, event, jobID, extraHeaders)
+}
+
+func (s *runner) sendEventAppendingDeviceInfoDefault(ctx context.Context, event datamodel.Model) error {
+	s.deviceInfo.AppendCommonInfo(event)
+	return s.sendEvent(ctx, event, "", nil)
+}
+
 func (s *runner) getAgentConfig() (res cmdintegration.AgentConfig) {
 	res.CustomerID = s.conf.CustomerID
 	res.PinpointRoot = s.opts.PinpointRoot
+	res.IntegrationsDir = s.conf.IntegrationsDir
 	res.Backend.Enable = true
-	res.IntegrationsDir = s.opts.IntegrationsDir
 	return
 }
 
 func (s *runner) getDeviceInfoOpts() deviceinfo.CommonInfo {
 	return deviceinfo.CommonInfo{
 		CustomerID: s.conf.CustomerID,
-		Root:       s.agentConfig.PinpointRoot,
+		Root:       s.opts.PinpointRoot,
 		SystemID:   s.conf.SystemID,
 		DeviceID:   s.conf.DeviceID,
 	}

@@ -13,10 +13,8 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdenroll"
 	"github.com/pinpt/agent.next/cmd/cmdexport"
 	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
-	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
 	"github.com/pinpt/agent.next/cmd/cmdservicerun"
 	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts"
-	"github.com/pinpt/agent.next/cmd/cmdserviceuninstall"
 	"github.com/pinpt/agent.next/cmd/cmdvalidate"
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
@@ -43,17 +41,18 @@ var cmdEnrollNoServiceRun = &cobra.Command{
 		cmd.Flags().Set("log-format", "json")
 
 		code := args[0]
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
 
 		// once we have pinpoint root, we can also log to a file
-		logger, _, ok := cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
-		if !ok {
-			return
+		logWriter, err := pinpointLogWriter(pinpointRoot)
+		if err != nil {
+			exitWithErr(logger, err)
 		}
+		logger = logger.AddWriter(logWriter)
 
 		channel, _ := cmd.Flags().GetString("channel")
 		ctx := context.Background()
@@ -69,11 +68,14 @@ var cmdEnrollNoServiceRun = &cobra.Command{
 			}
 		}
 
+		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
+
 		err = cmdenroll.Run(ctx, cmdenroll.Opts{
-			Logger:       logger,
-			PinpointRoot: pinpointRoot,
-			Code:         code,
-			Channel:      channel,
+			Logger:          logger,
+			PinpointRoot:    pinpointRoot,
+			IntegrationsDir: integrationsDir,
+			Code:            code,
+			Channel:         channel,
 		})
 		if err != nil {
 			exitWithErr(logger, err)
@@ -87,6 +89,7 @@ func init() {
 	cmd := cmdEnrollNoServiceRun
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
+	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
 	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
 	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
 	cmdRoot.AddCommand(cmd)
@@ -106,20 +109,24 @@ var cmdEnroll = &cobra.Command{
 		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
 		cmd.Flags().Set("log-format", "json")
 
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
 
 		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
+		channel, _ := cmd.Flags().GetString("channel")
+		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
 
 		ctx := context.Background()
 		opts := cmdservicerun.Opts{}
 		opts.Logger = logger
 		opts.PinpointRoot = pinpointRoot
+		opts.IntegrationsDir = integrationsDir
 		opts.Enroll.Run = true
 		opts.Enroll.Code = args[0]
+		opts.Enroll.Channel = channel
 		opts.Enroll.SkipValidate = skipValidate
 		err = cmdservicerun.Run(ctx, opts)
 		if err != nil {
@@ -231,12 +238,13 @@ func init() {
 	cmdRoot.AddCommand(cmd)
 }
 
+/*
 var cmdServiceInstall = &cobra.Command{
 	Use:   "service-install",
 	Short: "Install OS service of agent",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		err := cmdserviceinstall.Run(logger)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -253,7 +261,7 @@ var cmdServiceUninstall = &cobra.Command{
 	Short: "Uninstall OS service of agent, but keep data and configuration",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		err := cmdserviceuninstall.Run(logger)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -263,7 +271,7 @@ var cmdServiceUninstall = &cobra.Command{
 
 func init() {
 	cmdRoot.AddCommand(cmdServiceUninstall)
-}
+}*/
 
 var cmdServiceRunNoRestarts = &cobra.Command{
 	Use:   "service-run-no-restarts",
@@ -273,25 +281,22 @@ var cmdServiceRunNoRestarts = &cobra.Command{
 
 		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
 		cmd.Flags().Set("log-format", "json")
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
-		logger, level, ok := cmdlogger.CopyToFile(cmd, logger, pinpointRoot)
-		if !ok {
-			return
+		logWriter, err := pinpointLogWriter(pinpointRoot)
+		if err != nil {
+			exitWithErr(logger, err)
 		}
-
-		// TODO: this isn't working
-		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
+		logger = logger.AddWriter(logWriter)
 
 		ctx := context.Background()
 		opts := cmdservicerunnorestarts.Opts{}
 		opts.Logger = logger
-		opts.LogLevelSubcommands = level
+		opts.LogLevelSubcommands = logger.Level
 		opts.PinpointRoot = pinpointRoot
-		opts.IntegrationsDir = integrationsDir
 		err = cmdservicerunnorestarts.Run(ctx, opts)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -314,7 +319,7 @@ var cmdServiceRun = &cobra.Command{
 		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
 		cmd.Flags().Set("log-format", "json")
 
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -335,7 +340,6 @@ func init() {
 	cmd := cmdServiceRun
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
-	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
 	cmdRoot.AddCommand(cmd)
 }
 
@@ -359,7 +363,7 @@ var cmdValidate = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		ctx := context.Background()
-		logger := cmdlogger.Stdout(cmd)
+		logger := cmdlogger.NewLogger(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
 			exitWithErr(logger, err)

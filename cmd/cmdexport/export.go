@@ -356,7 +356,7 @@ func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors
 	}
 
 	if len(failedAll) > 0 {
-		s.Logger.Error("Some exports failed", "failed", failedAll, "succeded", successAll, "dur", dur.String())
+		s.Logger.Error("Some exports failed", "failed", failedAll, "succeeded", successAll, "dur", dur.String())
 		// Only mark complete run as failed when integrations fail, git repo errors should not fail those, we only log and retry in incrementals
 		if len(failedNoGit) > 0 {
 			return errors.New("One or more integrations failed, failing export")
@@ -366,6 +366,6 @@ func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors
 		return nil
 	}
 
-	s.Logger.Info("Exports completed", "succeded", successAll, "dur", dur.String())
+	s.Logger.Info("Exports completed", "succeeded", successAll, "dur", dur.String())
 	return nil
 }

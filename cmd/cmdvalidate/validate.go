@@ -17,10 +17,10 @@ import (
 
 func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, err error) {
 
-	const GB = 1024 * 1024 * 1024
+	const GiB = 1024 * 1024 * 1024
 
-	const MINIMUM_MEMORY = 16 * GB
-	const MINIMUM_SPACE = 10 * GB
+	const MINIMUM_MEMORY = 16 * GiB
+	const MINIMUM_SPACE = 10 * GiB
 	const MINIMUM_NUM_CPU = 2
 	const MINIMUM_GIT_VERSION = "2.13.0"
 
@@ -39,7 +39,7 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 		logger.Error("git", "msg", err.Error())
 		err = nil
 	} else {
-		currentGitVersion = strings.Trim(strings.Split(string(bts), " ")[2], "\n")
+		currentGitVersion = string(bts)
 	}
 
 	err = os.MkdirAll(root, 0777)
@@ -48,21 +48,26 @@ func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, 
 	}
 	sysInfo := sysinfo.GetSystemInfo(root)
 
-	if sysInfo.TotalMemory < MINIMUM_MEMORY {
-		val.invalid("memory", number.ToBytesSize(int64(sysInfo.TotalMemory)), number.ToBytesSize(int64(MINIMUM_MEMORY)))
+	minMemory := 0.9 * MINIMUM_MEMORY
+	if sysInfo.TotalMemory < uint64(minMemory) {
+		val.invalid("memory", number.ToBytesSize(int64(sysInfo.TotalMemory)), number.ToBytesSize(MINIMUM_MEMORY))
 	}
-	if sysInfo.FreeSpace < MINIMUM_SPACE {
-		val.invalid("space", number.ToBytesSize(int64(sysInfo.FreeSpace)), number.ToBytesSize(int64(MINIMUM_SPACE)))
+	minSpace := 0.9 * MINIMUM_SPACE
+	if sysInfo.FreeSpace < uint64(minSpace) {
+		val.invalid("space", number.ToBytesSize(int64(sysInfo.FreeSpace)), number.ToBytesSize(MINIMUM_SPACE))
 		logger.Info("using pinpoint root", "dir", root)
 	}
 	if sysInfo.NumCPU < MINIMUM_NUM_CPU {
 		val.invalid("cpus", strconv.FormatInt(int64(sysInfo.NumCPU), 10), strconv.FormatInt(MINIMUM_NUM_CPU, 10))
 	}
 	if !skipGit {
-		cv, _ := semver.New(currentGitVersion)
-		mv, _ := semver.New(MINIMUM_GIT_VERSION)
-		if cv.LT(*mv) {
-			val.invalid("git version", currentGitVersion, MINIMUM_GIT_VERSION)
+		ok, err := gitVersionGteq(currentGitVersion, MINIMUM_GIT_VERSION)
+		if err != nil {
+			logger.Error("can't parse git version", "err", err)
+			val.invalid("git", currentGitVersion, MINIMUM_GIT_VERSION)
+		}
+		if !ok {
+			val.invalid("git", currentGitVersion, MINIMUM_GIT_VERSION)
 		}
 	}
 
@@ -84,4 +89,28 @@ func (p *validator) invalid(label, actual, expected string) {
 	msg := fmt.Sprintf("%s available %s. required %s", label, actual, expected)
 	p.isValid = false
 	p.logger.Error(msg)
+}
+
+func gitVersionGteq(version string, min string) (bool, error) {
+	version = strings.TrimSpace(version)
+	version = strings.TrimPrefix(version, "git version ")
+	parts := strings.Split(version, " ")
+	if len(parts) != 0 {
+		version = parts[0] // remove (Apple Git-117)
+	}
+	const win = ".windows."
+	if strings.Contains(version, win) {
+		p := strings.Index(version, win)
+		version = version[0:p]
+	}
+
+	versionParsed, err := semver.New(version)
+	if err != nil {
+		return false, fmt.Errorf("git version format is not semver: %v", err)
+	}
+	minParsed, err := semver.New(min)
+	if err != nil {
+		return false, fmt.Errorf("min git version requirement has invalid format: %v", err)
+	}
+	return !versionParsed.LT(*minParsed), nil
 }
