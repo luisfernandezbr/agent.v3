@@ -290,7 +290,10 @@ func (s *Export) skipRipsrc(ctx context.Context, checkoutdir string) (bool, map[
 		return true, nil, err
 	}
 	for _, b := range br {
-		remotebranches[b.Name] = b
+		remotebranches[b.Name] = branchmeta.Branch{
+			Name:   b.Name,
+			Commit: b.Commit,
+		}
 	}
 	skip := reflect.DeepEqual(cachedbranches, remotebranches)
 	return skip, remotebranches, nil
@@ -367,8 +370,8 @@ func (s *Export) branches(ctx context.Context) error {
 					BranchedFromCommitIds:  s.commitIDs(data.BranchedFromCommits),
 					CommitShas:             data.Commits,
 					CommitIds:              commitIDs,
-					FirstCommitSha:         data.Commits[0],
-					FirstCommitID:          commitIDs[0],
+					FirstCommitSha:         data.FirstCommit,
+					FirstCommitID:          s.commitID(data.FirstCommit),
 					BehindDefaultCount:     int64(data.BehindDefaultCount),
 					AheadDefaultCount:      int64(data.AheadDefaultCount),
 					RepoID:                 s.opts.RepoID,
