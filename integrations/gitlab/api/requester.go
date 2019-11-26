@@ -143,7 +143,7 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 		isErrorRetryable = true
 		return
 	}
-	rateLimited := func() (isErrorRetryable bool, pagInfi PageInfo, rerr error) {
+	rateLimited := func() (isErrorRetryable bool, pageInfo PageInfo, rerr error) {
 
 		waitTime := time.Minute * 3
 
