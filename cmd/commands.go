@@ -25,7 +25,8 @@ import (
 func isInsideDocker() bool {
 	if fileutil.FileExists("/proc/self/cgroup") {
 		buf, _ := ioutil.ReadFile("/proc/self/cgroup")
-		if bytes.Contains(buf, []byte("docker")) {
+		// check either native docker or docker inside k8s
+		if bytes.Contains(buf, []byte("docker") || bytes.Contains(buf, []byte("kubepods"))) {
 			return true
 		}
 	}
