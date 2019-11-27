@@ -1,14 +1,10 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
-
-	"github.com/pinpt/go-common/fileutil"
 
 	"github.com/pinpt/agent.next/cmd/cmdenroll"
 	"github.com/pinpt/agent.next/cmd/cmdexport"
@@ -19,18 +15,12 @@ import (
 	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
 	"github.com/pinpt/agent.next/rpcdef"
+	pos "github.com/pinpt/go-common/os"
 	"github.com/spf13/cobra"
 )
 
 func isInsideDocker() bool {
-	if fileutil.FileExists("/proc/self/cgroup") {
-		buf, _ := ioutil.ReadFile("/proc/self/cgroup")
-		// check either native docker or docker inside k8s
-		if bytes.Contains(buf, []byte("docker") || bytes.Contains(buf, []byte("kubepods"))) {
-			return true
-		}
-	}
-	return false
+	return pos.IsInsideContainer()
 }
 
 var cmdEnrollNoServiceRun = &cobra.Command{
