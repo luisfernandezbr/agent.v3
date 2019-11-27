@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/fs"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/pservice"
@@ -25,10 +25,11 @@ type Opts struct {
 	PinpointRoot    string
 	IntegrationsDir string
 	Enroll          struct {
-		Run          bool
-		Channel      string
-		Code         string
-		SkipValidate bool
+		Run               bool
+		Channel           string
+		Code              string
+		SkipValidate      bool
+		SkipConfigIfFound bool
 	}
 }
 

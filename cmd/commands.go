@@ -60,13 +60,15 @@ var cmdEnrollNoServiceRun = &cobra.Command{
 		}
 
 		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
+		skipEnroll, _ := cmd.Flags().GetBool("skip-enroll-if-found")
 
 		err = cmdenroll.Run(ctx, cmdenroll.Opts{
-			Logger:          logger,
-			PinpointRoot:    pinpointRoot,
-			IntegrationsDir: integrationsDir,
-			Code:            code,
-			Channel:         channel,
+			Logger:            logger,
+			PinpointRoot:      pinpointRoot,
+			IntegrationsDir:   integrationsDir,
+			Code:              code,
+			Channel:           channel,
+			SkipEnrollIfFound: skipEnroll,
 		})
 		if err != nil {
 			exitWithErr(logger, err)
@@ -133,6 +135,7 @@ func init() {
 	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
 	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
 	cmd.Flags().Bool("skip-service-run", false, "Set to true to skip service run. Will need to run it separately.")
+	cmd.Flags().Bool("skip-enroll-if-found", false, "skip enroll if the config is already found")
 	cmdRoot.AddCommand(cmd)
 }
 
