@@ -92,6 +92,9 @@ func (s *runner) runEnroll() error {
 	if s.opts.Enroll.SkipValidate {
 		args = append(args, "--skip-validate")
 	}
+	if s.opts.Enroll.SkipConfigIfFound {
+		args = append(args, "--skip-enroll-if-found")
+	}
 	cmd := exec.Command(os.Args[0], args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
