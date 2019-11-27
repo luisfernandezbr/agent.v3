@@ -62,7 +62,7 @@ func (s *runner) Run() error {
 			return err
 		}
 	}
-	s.logger.Info("starting service-run-with-restarts")
+	s.logger.Info("starting service-run-with-restarts", "pinpoint-root", s.opts.PinpointRoot, "integration-dir", s.opts.IntegrationsDir)
 
 	delay := pservice.ExpRetryDelayFn(15*time.Second, 3*time.Hour, 2)
 	resetFailuresAfter := 24 * time.Hour
