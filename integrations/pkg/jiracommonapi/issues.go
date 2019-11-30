@@ -26,6 +26,17 @@ type IssueWithCustomFields struct {
 	CustomFields []CustomField
 }
 
+func relativeDuration(d time.Duration) string {
+	d = d.Round(time.Minute)
+	h := d / time.Hour
+	d -= h * time.Hour
+	m := d / time.Minute
+	if h > 0 {
+		return fmt.Sprintf("-%dm", h*60+m)
+	}
+	return fmt.Sprintf("-%dm", m)
+}
+
 // IssuesAndChangelogsPage returns issues and related changelogs. Calls qc.ExportUser for each user. Current difference from jira-cloud version is that user.Key is used instead of user.AccountID everywhere.
 func IssuesAndChangelogsPage(
 	qc QueryContext,
@@ -46,7 +57,7 @@ func IssuesAndChangelogsPage(
 	jql := `project="` + project.JiraID + `"`
 
 	if !updatedSince.IsZero() {
-		s := updatedSince.Format("2006-01-02 15:04")
+		s := relativeDuration(time.Since(updatedSince))
 		jql += fmt.Sprintf(` and (created >= "%s" or updated >= "%s")`, s, s)
 	}
 
