@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/fs"
 	"github.com/pinpt/agent.next/pkg/fsconf"
 	"github.com/pinpt/agent.next/pkg/pservice"
@@ -25,10 +25,11 @@ type Opts struct {
 	PinpointRoot    string
 	IntegrationsDir string
 	Enroll          struct {
-		Run          bool
-		Channel      string
-		Code         string
-		SkipValidate bool
+		Run               bool
+		Channel           string
+		Code              string
+		SkipValidate      bool
+		SkipConfigIfFound bool
 	}
 }
 
@@ -61,7 +62,7 @@ func (s *runner) Run() error {
 			return err
 		}
 	}
-	s.logger.Info("starting service-run-with-restarts")
+	s.logger.Info("starting service-run-with-restarts", "pinpoint-root", s.opts.PinpointRoot, "integration-dir", s.opts.IntegrationsDir)
 
 	delay := pservice.ExpRetryDelayFn(15*time.Second, 3*time.Hour, 2)
 	resetFailuresAfter := 24 * time.Hour
@@ -90,6 +91,9 @@ func (s *runner) runEnroll() error {
 	}
 	if s.opts.Enroll.SkipValidate {
 		args = append(args, "--skip-validate")
+	}
+	if s.opts.Enroll.SkipConfigIfFound {
+		args = append(args, "--skip-enroll-if-found")
 	}
 	cmd := exec.Command(os.Args[0], args...)
 	cmd.Stdout = os.Stdout

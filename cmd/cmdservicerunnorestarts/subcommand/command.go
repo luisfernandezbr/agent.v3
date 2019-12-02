@@ -101,6 +101,7 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 	if args != nil {
 		flags = append(flags, args...)
 	}
+	flags = append(flags, "--pinpoint-root="+c.config.PinpointRoot)
 
 	if err := os.MkdirAll(c.tmpdir, 0777); err != nil {
 		return rerr(err)

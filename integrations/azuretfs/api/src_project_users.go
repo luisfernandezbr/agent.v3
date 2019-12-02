@@ -3,6 +3,7 @@ package api
 import (
 	"strings"
 
+	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
@@ -20,14 +21,14 @@ func (api *API) FetchSourcecodeUsers(projid string, teamids []string, usermap ma
 			usertype = sourcecode.UserTypeHuman
 		}
 		usermap[user.UniqueName] = &sourcecode.User{
-			AvatarURL:  &user.ImageURL,
+			AvatarURL:  pstrings.Pointer(user.ImageURL),
 			CustomerID: api.customerid,
 			Member:     true,
 			Name:       user.DisplayName,
 			RefID:      user.ID,
 			RefType:    api.reftype,
 			Type:       usertype,
-			Username:   &user.UniqueName,
+			Username:   pstrings.Pointer(user.UniqueName),
 		}
 	}
 	return nil

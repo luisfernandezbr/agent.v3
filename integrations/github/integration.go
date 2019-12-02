@@ -146,6 +146,7 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 		}
 		if u.Host == "api.github.com" {
 			res.APIURL = urlAppend(u.String(), "graphql")
+			res.APIURL3 = u.String()
 			res.RepoURLPrefix = "https://" + strings.TrimPrefix(u.Host, "api.")
 		} else {
 			res.APIURL = urlAppend(u.String(), "api/graphql")
