@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	pstrings "github.com/pinpt/go-common/strings"
-
 	"github.com/pinpt/integration-sdk/agent"
 )
 
@@ -23,6 +22,11 @@ type workConfigRes struct {
 	} `json:"fields"`
 }
 
+type workConfigClean struct {
+	RefName string
+	States  map[string]string // map[name]category
+}
+
 // These seem to be the default statuses
 const workConfigCompletedStatus = "Completed"
 const workConfigInProgressStatus = "InProgress"
@@ -38,99 +42,98 @@ func stringEquals(str string, vals ...string) bool {
 	}
 	return false
 }
+
+func appendString(arr []string, item string) []string {
+	if !exists(item, arr) {
+		arr = append(arr, item)
+	}
+	return arr
+}
+
 func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 
 	projects, err := api.FetchProjects(nil)
 	if err != nil {
 		return nil, err
 	}
-	var res []workConfigRes
+	rawstates := make(map[string]workConfigClean)
 	for _, project := range projects {
-		var r []workConfigRes
+		var res []workConfigRes
 		url := fmt.Sprintf(`%s/_apis/wit/workitemtypes`, project.RefID)
-		if err = api.getRequest(url, stringmap{}, &r); err != nil {
+		if err = api.getRequest(url, stringmap{}, &res); err != nil {
 			return nil, err
 		}
-		res = append(res, r...)
+		for _, r := range res {
+			var conf workConfigClean
+			var ok bool
+			if conf, ok = rawstates[r.Name]; !ok {
+				conf = workConfigClean{
+					RefName: r.ReferenceName,
+					States:  make(map[string]string),
+				}
+			}
+			for _, s := range r.States {
+				conf.States[s.Name] = s.Category
+			}
+			rawstates[r.Name] = conf
+		}
 	}
 	ws := &agent.WorkStatusResponseWorkConfig{}
-	types := make(map[string]string)
-	states := make(map[string]map[string]bool)
-	for i, r := range res {
-		// TODO: verify with other customer data
-		// assuming the top level issue is the first one
-		if i == 0 {
-			ws.TopLevelIssue = agent.WorkStatusResponseWorkConfigTopLevelIssue{
-				Name: r.Name,
-				Type: r.ReferenceName,
-			}
+	if _, ok := rawstates["Epic"]; ok {
+		ws.TopLevelIssue = agent.WorkStatusResponseWorkConfigTopLevelIssue{
+			Name: "Epic",
+			Type: rawstates["Epic"].RefName,
 		}
-		ws.Types = append(ws.Types, r.ReferenceName)
-		types[r.ReferenceName] = r.Name
-
-		for _, s := range r.States {
-			if _, o := states[s.Category]; !o {
-				states[s.Category] = make(map[string]bool)
-			}
-			states[s.Category][s.Name] = true
-		}
-	}
-
-	for k, v := range states {
-		if k == workConfigCompletedStatus || k == workConfigRemovedStatus || k == workConfigResolvedStatus {
-			if k != workConfigRemovedStatus {
-				for e := range v {
-					ws.Resolutions.WorkDone = append(ws.Resolutions.WorkDone, e)
-					ws.AllResolutions = append(ws.AllResolutions, e)
-				}
-			} else {
-				for e := range v {
-					ws.Resolutions.NoWorkDone = append(ws.Resolutions.NoWorkDone, e)
-					ws.AllResolutions = append(ws.AllResolutions, e)
-				}
-			}
-		} else {
-			for e := range v {
-				ws.AllStatuses = append(ws.AllStatuses, e)
-			}
-		}
-	}
-
-	for k := range states[workConfigProposedStatus] {
-		ws.Statuses.OpenStatus = append(ws.Statuses.OpenStatus, k)
-	}
-	for k := range states[workConfigInProgressStatus] {
-		ws.Statuses.InProgressStatus = append(ws.Statuses.InProgressStatus, k)
-	}
-	for k := range states[workConfigRemovedStatus] {
-		ws.Statuses.ClosedStatus = append(ws.Statuses.ClosedStatus, k)
-	}
-	for k := range states[workConfigCompletedStatus] {
-		ws.Statuses.ReleasedStatus = append(ws.Statuses.ReleasedStatus, k)
 	}
 	var enhancementRule agent.WorkStatusResponseWorkConfigTypeRules
 	var bugRule agent.WorkStatusResponseWorkConfigTypeRules
 	var featureRule agent.WorkStatusResponseWorkConfigTypeRules
 	var otherRule agent.WorkStatusResponseWorkConfigTypeRules
+	for _, r := range rawstates {
+		ws.Types = append(ws.Types, r.RefName)
+		for name, cat := range r.States {
+			if cat == workConfigCompletedStatus || cat == workConfigRemovedStatus || cat == workConfigResolvedStatus {
+				if cat != workConfigRemovedStatus {
+					ws.Resolutions.WorkDone = appendString(ws.Resolutions.WorkDone, name)
+				} else {
+					ws.Resolutions.NoWorkDone = appendString(ws.Resolutions.NoWorkDone, name)
+				}
+				ws.AllResolutions = appendString(ws.AllResolutions, name)
+			} else {
+				ws.AllStatuses = appendString(ws.AllStatuses, name)
+			}
 
-	for refname := range types {
+			if cat == workConfigProposedStatus {
+				ws.Statuses.OpenStatus = appendString(ws.Statuses.OpenStatus, name)
+			}
+			if cat == workConfigInProgressStatus {
+				ws.Statuses.InProgressStatus = appendString(ws.Statuses.InProgressStatus, name)
+			}
+			if cat == workConfigRemovedStatus {
+				ws.Statuses.ClosedStatus = appendString(ws.Statuses.ClosedStatus, name)
+			}
+			if cat == workConfigCompletedStatus {
+				ws.Statuses.ReleasedStatus = appendString(ws.Statuses.ReleasedStatus, name)
+			}
+		}
+
 		predicate := agent.WorkStatusResponseWorkConfigTypeRulesPredicates{
 			Field:    agent.WorkStatusResponseWorkConfigTypeRulesPredicatesFieldType,
 			Operator: agent.WorkStatusResponseWorkConfigTypeRulesPredicatesOperatorEquals,
-			Value:    pstrings.Pointer(refname),
+			Value:    pstrings.Pointer(r.RefName),
 		}
-		if stringEquals(refname,
+		if stringEquals(r.RefName,
 			"Microsoft.VSTS.WorkItemTypes.Issue",
 			"Microsoft.VSTS.WorkItemTypes.Bug",
 			"Issue", "Bug") {
 			bugRule.IssueType = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeBug
 			bugRule.Predicates = append(bugRule.Predicates, predicate)
-		} else if stringEquals(refname,
+		} else if stringEquals(r.RefName,
 			"Microsoft.VSTS.WorkItemTypes.Task",
 			"Task") {
 			enhancementRule.IssueType = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeEnhancement
 			enhancementRule.Predicates = append(enhancementRule.Predicates, predicate)
-		} else if stringEquals(refname,
+		} else if stringEquals(r.RefName,
 			"Microsoft.VSTS.WorkItemTypes.FeedbackRequest",
 			"Microsoft.VSTS.WorkItemTypes.Feature",
 			"Feature", "Feedback Request") {
@@ -142,6 +145,5 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 		}
 	}
 	ws.TypeRules = []agent.WorkStatusResponseWorkConfigTypeRules{enhancementRule, bugRule, featureRule, otherRule}
-
 	return ws, nil
 }
