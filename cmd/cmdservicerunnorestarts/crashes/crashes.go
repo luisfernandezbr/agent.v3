@@ -61,7 +61,6 @@ func (s *CrashSender) sendCrashFile(loc string) error {
 		return nil
 	}
 
-	s.logger.Info("sending crash file", "f", n)
 	b, err := ioutil.ReadFile(loc)
 	if err != nil {
 		return err
@@ -70,8 +69,13 @@ func (s *CrashSender) sendCrashFile(loc string) error {
 	metaLoc := loc + ".json"
 	b, err = ioutil.ReadFile(metaLoc)
 	if err != nil {
+		// ignore if .json is not there
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
+	s.logger.Info("sending crash file", "f", n)
 	var metaObj struct {
 		CrashDate time.Time `json:"crash_date"`
 	}
