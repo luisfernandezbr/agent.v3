@@ -184,30 +184,25 @@ func convertConfigGitlab(integrationNameBackend string, systemTypeBackend Integr
 		return
 	}
 
+	url, ok := cb["url"].(string)
+	if !ok {
+		errStr("missing url")
+		return
+	}
+
 	accessToken, _ := cb["access_token"].(string)
 
-	if accessToken != "" {
+	if url == "https://gitlab.com" {
 		// this is gitlab.com cloud auth
 		config.APIToken = accessToken
-		config.URL = "https://gitlab.com"
+		config.URL = url
 		config.ServerType = "cloud"
 	} else {
-		{
-			v, ok := cb["api_token"].(string)
-			if !ok {
-				errStr("missing api_token")
-				return
-			}
-			config.APIToken = v
-		}
-		{
-			v, ok := cb["url"].(string)
-			if !ok {
-				errStr("missing url")
-				return
-			}
-			config.URL = v
-		}
+
+		config.APIToken = accessToken
+
+		config.URL = url
+
 		config.ServerType = "on-premise"
 	}
 
