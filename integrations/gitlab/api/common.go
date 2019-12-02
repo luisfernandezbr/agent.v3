@@ -21,13 +21,14 @@ const (
 type QueryContext struct {
 	BaseURL string
 	Logger  hclog.Logger
-	Request func(objPath string, params url.Values, res interface{}) (PageInfo, error)
+	Request func(url string, params url.Values, response interface{}) (PageInfo, error)
 
 	CustomerID string
 	RefType    string
 
 	UserEmailMap map[string]string
 	IDs          ids2.Gen
+	Re           *RequesterOpts
 }
 
 // PageInfo page info

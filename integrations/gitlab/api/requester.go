@@ -4,82 +4,177 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/rpcdef"
 	"github.com/pinpt/go-common/httpdefaults"
 	pstrings "github.com/pinpt/go-common/strings"
 )
 
+// RequesterOpts requester opts
 type RequesterOpts struct {
 	Logger             hclog.Logger
 	APIURL             string
 	APIToken           string
 	InsecureSkipVerify bool
 	ServerType         ServerType
+	Concurrency        chan bool
+	Client             *http.Client
+	Agent              rpcdef.Agent
 }
 
-type Requester struct {
-	logger     hclog.Logger
-	opts       RequesterOpts
-	httpClient *http.Client
-}
-
+// NewRequester new requester
 func NewRequester(opts RequesterOpts) *Requester {
-	s := &Requester{}
-	s.opts = opts
-	s.logger = opts.Logger
-
+	re := &Requester{}
 	{
 		c := &http.Client{}
 		transport := httpdefaults.DefaultTransport()
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: opts.InsecureSkipVerify}
 		c.Transport = transport
-		s.httpClient = c
+		opts.Client = c
 	}
 
-	return s
+	re.opts = opts
+
+	return re
 }
 
-func (s *Requester) setAuthHeader(req *http.Request) {
-	if s.opts.ServerType == CLOUD {
-		req.Header.Set("Authorization", "bearer "+s.opts.APIToken)
+type internalRequest struct {
+	URL      string
+	Params   url.Values
+	Response interface{}
+	PageInfo PageInfo
+}
+
+type errorState struct {
+	sync.Mutex
+	err error
+}
+
+func (e *errorState) setError(err error) {
+	e.Lock()
+	defer e.Unlock()
+	e.err = err
+}
+
+func (e *errorState) getError() error {
+	e.Lock()
+	defer e.Unlock()
+	return e.err
+}
+
+// Requester requester
+type Requester struct {
+	opts RequesterOpts
+}
+
+// MakeRequest make request
+func (e *Requester) MakeRequest(url string, params url.Values, response interface{}) (pi PageInfo, err error) {
+	e.opts.Concurrency <- true
+	defer func() {
+		<-e.opts.Concurrency
+	}()
+
+	ir := internalRequest{
+		URL:      url,
+		Response: &response,
+		Params:   params,
+	}
+
+	return e.makeRequestRetry(&ir, 0)
+
+}
+
+const maxGeneralRetries = 2
+
+func (e *Requester) makeRequestRetry(req *internalRequest, generalRetry int) (pageInfo PageInfo, err error) {
+	var isRetryable bool
+	isRetryable, pageInfo, err = e.request(req, generalRetry+1)
+	if err != nil {
+		if !isRetryable {
+			return pageInfo, err
+		}
+		if generalRetry >= maxGeneralRetries {
+			return pageInfo, fmt.Errorf(`can't retry request, too many retries, err: %v`, err)
+		}
+		return e.makeRequestRetry(req, generalRetry+1)
+	}
+	return
+}
+
+func (e *Requester) setAuthHeader(req *http.Request) {
+	if e.opts.ServerType == CLOUD {
+		req.Header.Set("Authorization", "bearer "+e.opts.APIToken)
 	} else {
-		req.Header.Set("Private-Token", s.opts.APIToken)
+		req.Header.Set("Private-Token", e.opts.APIToken)
 	}
 }
 
-func (s *Requester) Request(objPath string, params url.Values, res interface{}) (page PageInfo, err error) {
+const maxThrottledRetries = 3
 
-	u := pstrings.JoinURL(s.opts.APIURL, objPath)
+func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetryable bool, pi PageInfo, rerr error) {
+	u := pstrings.JoinURL(e.opts.APIURL, r.URL)
 
-	if len(params) != 0 {
-		u += "?" + params.Encode()
+	if len(r.Params) != 0 {
+		u += "?" + r.Params.Encode()
 	}
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
-		return page, err
+		return false, pi, err
 	}
 	req.Header.Set("Accept", "application/json")
-	s.setAuthHeader(req)
+	e.setAuthHeader(req)
 
-	resp, err := s.httpClient.Do(req)
+	resp, err := e.opts.Client.Do(req)
 	if err != nil {
-		return page, err
+		return true, pi, err
 	}
 	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		rerr = err
+		isErrorRetryable = true
+		return
+	}
+	rateLimited := func() (isErrorRetryable bool, pageInfo PageInfo, rerr error) {
 
-	if resp.StatusCode != 200 {
-		s.logger.Debug("api request failed", "url", u)
+		waitTime := time.Minute * 3
 
-		return page, fmt.Errorf(`gitlab returned invalid status code: %v`, resp.StatusCode)
+		e.opts.Logger.Warn("api request failed due to throttling, the quota of 600 calls has been reached, will sleep for 3m and retry", "retryThrottled", retryThrottled)
+
+		paused := time.Now()
+		resumeDate := paused.Add(waitTime)
+		e.opts.Agent.SendPauseEvent(fmt.Sprintf("gitlab paused, it will resume in %v", waitTime), resumeDate)
+
+		time.Sleep(waitTime)
+
+		e.opts.Agent.SendResumeEvent(fmt.Sprintf("gitlab resumed, time elapsed %v", time.Since(paused)))
+
+		return true, PageInfo{}, nil
+
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return page, err
+	if resp.StatusCode != http.StatusOK {
+
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return rateLimited()
+		}
+
+		e.opts.Logger.Warn("gitlab returned invalid status code, retrying", "code", resp.StatusCode, "retry", retryThrottled)
+
+		return true, pi, err
+	}
+	err = json.Unmarshal(b, &r.Response)
+	if err != nil {
+		rerr = err
+		return
 	}
 
 	rawPageSize := resp.Header.Get("X-Per-Page")
@@ -88,7 +183,7 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 	if rawPageSize != "" {
 		pageSize, err = strconv.Atoi(rawPageSize)
 		if err != nil {
-			return page, err
+			return false, pi, err
 		}
 	}
 
@@ -98,11 +193,11 @@ func (s *Requester) Request(objPath string, params url.Values, res interface{}) 
 	if rawTotalSize != "" {
 		total, err = strconv.Atoi(rawTotalSize)
 		if err != nil {
-			return page, err
+			return false, pi, err
 		}
 	}
 
-	return PageInfo{
+	return false, PageInfo{
 		PageSize:   pageSize,
 		NextPage:   resp.Header.Get("X-Next-Page"),
 		Page:       resp.Header.Get("X-Page"),

@@ -184,23 +184,22 @@ func repoLastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (lastCommit 
 		AuthorEmail string    `json:"author_email"`
 	}
 
-	_, err = qc.Request(objectPath, params, &commits)
-	if err != nil {
-		return lastCommit, err
+	if _, err = qc.Request(objectPath, params, &commits); err != nil {
+		return
 	}
 
 	if len(commits) == 0 {
-		return lastCommit, nil
+		return
 	}
 
 	lastCommitSource := commits[0]
-	url, err := url.Parse(qc.BaseURL)
-	if err != nil {
-		return lastCommit, err
+	var u *url.URL
+	if u, err = url.Parse(qc.BaseURL); err != nil {
+		return
 	}
 	lastCommit = agent.RepoResponseReposLastCommit{
 		Message:   lastCommitSource.Message,
-		URL:       url.Scheme + "://" + url.Hostname() + "/" + repo.Name + "/commit/" + lastCommitSource.ID,
+		URL:       u.Scheme + "://" + u.Hostname() + "/" + repo.Name + "/commit/" + lastCommitSource.ID,
 		CommitSha: lastCommitSource.ID,
 		CommitID:  ids.CodeCommit(qc.CustomerID, qc.RefType, repo.RefID, lastCommitSource.ID),
 	}
@@ -217,20 +216,18 @@ func repoLastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (lastCommit 
 	return
 }
 
-func repoLanguage(qc QueryContext, repoID string) (string, error) {
+func repoLanguage(qc QueryContext, repoID string) (maxLanguage string, err error) {
 	qc.Logger.Debug("language request", "repo", repoID)
 
 	objectPath := pstrings.JoinURL("projects", repoID, "languages")
 
 	var languages map[string]float32
 
-	_, err := qc.Request(objectPath, nil, &languages)
-	if err != nil {
+	if _, err = qc.Request(objectPath, nil, &languages); err != nil {
 		return "", err
 	}
 
 	var maxValue float32
-	var maxLanguage string
 	for language, percentage := range languages {
 		if percentage > maxValue {
 			maxValue = percentage
