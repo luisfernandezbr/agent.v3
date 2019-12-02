@@ -48,7 +48,7 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 	for _, project := range projects {
 		var r []workConfigRes
 		url := fmt.Sprintf(`%s/_apis/wit/workitemtypes`, project.RefID)
-		if err = api.getRequest(url, stringmap{}, &res); err != nil {
+		if err = api.getRequest(url, stringmap{}, &r); err != nil {
 			return nil, err
 		}
 		res = append(res, r...)
