@@ -86,9 +86,10 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 		}
 	}
 	var enhancementRule agent.WorkStatusResponseWorkConfigTypeRules
-	var bugRule agent.WorkStatusResponseWorkConfigTypeRules
+	bugRule := make([]agent.WorkStatusResponseWorkConfigTypeRules, len(rawstates))
 	var featureRule agent.WorkStatusResponseWorkConfigTypeRules
 	var otherRule agent.WorkStatusResponseWorkConfigTypeRules
+	var i int
 	for _, r := range rawstates {
 		ws.Types = append(ws.Types, r.RefName)
 		for name, cat := range r.States {
@@ -126,8 +127,8 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 			"Microsoft.VSTS.WorkItemTypes.Issue",
 			"Microsoft.VSTS.WorkItemTypes.Bug",
 			"Issue", "Bug") {
-			bugRule.IssueType = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeBug
-			bugRule.Predicates = append(bugRule.Predicates, predicate)
+			bugRule[i].IssueType = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeBug
+			bugRule[i].Predicates = append(bugRule[i].Predicates, predicate)
 		} else if stringEquals(r.RefName,
 			"Microsoft.VSTS.WorkItemTypes.Task",
 			"Task") {
@@ -143,7 +144,9 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 			otherRule.IssueType = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeOther
 			otherRule.Predicates = append(otherRule.Predicates, predicate)
 		}
+		i++
 	}
-	ws.TypeRules = []agent.WorkStatusResponseWorkConfigTypeRules{enhancementRule, bugRule, featureRule, otherRule}
+	ws.TypeRules = []agent.WorkStatusResponseWorkConfigTypeRules{enhancementRule, featureRule, otherRule}
+	ws.TypeRules = append(ws.TypeRules, bugRule...)
 	return ws, nil
 }
