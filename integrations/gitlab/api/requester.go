@@ -157,7 +157,7 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 
 		e.opts.Agent.SendResumeEvent(fmt.Sprintf("gitlab resumed, time elapsed %v", time.Since(paused)))
 
-		return true, PageInfo{}, nil
+		return true, PageInfo{}, fmt.Errorf("To many requests")
 
 	}
 
