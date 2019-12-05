@@ -459,7 +459,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:9b715f8c6db9c6cddedd0c792bc75b1c3aaa1c6ef222f6b1df4b8521a67ed641"
+  digest = "1:a6d296d016b92a5729cc93f3ba01af82ca7f3558ad46ed4788f14b5804f5234a"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -471,8 +471,8 @@
     "work",
   ]
   pruneopts = "T"
-  revision = "ddfc130553d732ce209cbcd5a10974a650c9248c"
-  version = "0.0.601"
+  revision = "d341fdc99b399de420996bf25ab3c6d4815402b5"
+  version = "0.0.623"
 
 [[projects]]
   digest = "1:126c23a6c6b4fc28bb811ae6f56bf2934c151ddf5724186714653d896413c9fb"
