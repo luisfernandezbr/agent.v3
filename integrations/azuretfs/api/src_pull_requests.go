@@ -176,6 +176,7 @@ func (api *API) sendPullRequestObjects(repoRefID string, p pullRequestResponseWi
 		Title:          p.Title,
 		URL:            p.URL,
 		CommitShas:     p.commitshas,
+		Identifier:     fmt.Sprintf("#%d", p.PullRequestID), // format for displaying the PR in app
 	}
 	if p.commitshas != nil {
 		pr.BranchID = api.IDs.CodeBranch(repoRefID, p.SourceBranch, p.commitshas[0])

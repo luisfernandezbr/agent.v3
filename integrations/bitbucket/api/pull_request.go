@@ -88,6 +88,7 @@ func PullRequestPage(
 		pr.Title = rpr.Title
 		pr.Description = rpr.Description
 		pr.URL = rpr.Links.HTML.Href
+		pr.Identifier = fmt.Sprintf("#%d", rpr.ID) // in bitbucket looks like #1 is the format for PR identifiers in their UI
 		date.ConvertToModel(rpr.CreatedOn, &pr.CreatedDate)
 		date.ConvertToModel(rpr.UpdatedOn, &pr.MergedDate)
 		date.ConvertToModel(rpr.UpdatedOn, &pr.ClosedDate)

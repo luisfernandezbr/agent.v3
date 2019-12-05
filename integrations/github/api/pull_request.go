@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/date"
@@ -60,7 +61,11 @@ func PullRequestsPage(
 					nodes {
 						updatedAt
 						id
-						repository { id }
+						number
+						repository {
+							id
+							nameWithOwner
+						}
 						headRefName
 						title
 						bodyText
@@ -70,7 +75,7 @@ func PullRequestsPage(
 						closedAt
 						# OPEN, CLOSED or MERGED
 						state
-						author { login }						
+						author { login }
 						mergedBy { login }
 						mergeCommit { oid }
 						commits(last: 1) {
@@ -103,19 +108,20 @@ func PullRequestsPage(
 					Nodes      []struct {
 						ID         string `json:"id"`
 						Repository struct {
-							ID string `json:"id"`
+							ID   string `json:"id"`
+							Name string `json:"nameWithOwner"`
 						}
-						HeadRefName string `json:"headRefName"`
-						Title       string `json:"title"`
-						BodyText    string `json:"bodyText"`
-
-						URL       string    `json:"url"`
-						CreatedAt time.Time `json:"createdAt"`
-						MergedAt  time.Time `json:"mergedAt"`
-						ClosedAt  time.Time `json:"closedAt"`
-						UpdatedAt time.Time `json:"updatedAt"`
-						State     string    `json:"state"`
-						Author    struct {
+						Number      int       `json:"number"`
+						HeadRefName string    `json:"headRefName"`
+						Title       string    `json:"title"`
+						BodyText    string    `json:"bodyText"`
+						URL         string    `json:"url"`
+						CreatedAt   time.Time `json:"createdAt"`
+						MergedAt    time.Time `json:"mergedAt"`
+						ClosedAt    time.Time `json:"closedAt"`
+						UpdatedAt   time.Time `json:"updatedAt"`
+						State       string    `json:"state"`
+						Author      struct {
 							Login string `json:"login"`
 						} `json:"author"`
 						MergedBy struct {
@@ -174,6 +180,7 @@ func PullRequestsPage(
 		pr.Title = data.Title
 		pr.Description = data.BodyText
 		pr.URL = data.URL
+		pr.Identifier = fmt.Sprintf("%s#%d", data.Repository.Name, data.Number) // such as pinpt/datamodel#123 which is the display format GH uses
 		date.ConvertToModel(data.CreatedAt, &pr.CreatedDate)
 		date.ConvertToModel(data.MergedAt, &pr.MergedDate)
 		date.ConvertToModel(data.ClosedAt, &pr.ClosedDate)

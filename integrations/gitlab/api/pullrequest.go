@@ -51,6 +51,7 @@ func PullRequestPage(
 			Username string `json:"username"`
 		} `json:"merged_by"`
 		MergeCommitSHA string `json:"merge_commit_sha"`
+		Identifier     string `json:"reference"` // this looks how we display in Gitlab such as !1
 	}
 
 	pi, err = qc.Request(objectPath, params, &rprs)
@@ -71,6 +72,7 @@ func PullRequestPage(
 		pr.Title = rpr.Title
 		pr.Description = rpr.Description
 		pr.URL = rpr.WebURL
+		pr.Identifier = rpr.Identifier
 		date.ConvertToModel(rpr.CreatedAt, &pr.CreatedDate)
 		date.ConvertToModel(rpr.MergedAt, &pr.MergedDate)
 		date.ConvertToModel(rpr.ClosedAt, &pr.ClosedDate)
