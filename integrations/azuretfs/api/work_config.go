@@ -96,8 +96,8 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 	for _, r := range rawstates {
 		ws.Types = append(ws.Types, r.RefName)
 		for name, cat := range r.States {
-			if cat == workConfigCompletedStatus || cat == workConfigRemovedStatus || cat == workConfigResolvedStatus {
-				if cat != workConfigRemovedStatus {
+			if cat == workConfigCompletedStatus || cat == workConfigResolvedStatus {
+				if cat == workConfigCompletedStatus {
 					ws.Resolutions.WorkDone = appendString(ws.Resolutions.WorkDone, name)
 				} else {
 					ws.Resolutions.NoWorkDone = appendString(ws.Resolutions.NoWorkDone, name)
@@ -115,9 +115,6 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 			}
 			if cat == workConfigRemovedStatus {
 				ws.Statuses.ClosedStatus = appendString(ws.Statuses.ClosedStatus, name)
-			}
-			if cat == workConfigCompletedStatus {
-				ws.Statuses.ReleasedStatus = appendString(ws.Statuses.ReleasedStatus, name)
 			}
 		}
 
