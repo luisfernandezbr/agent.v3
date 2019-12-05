@@ -34,6 +34,13 @@ const workConfigProposedStatus = "Proposed"
 const workConfigRemovedStatus = "Removed"
 const workConfigResolvedStatus = "Resolved"
 
+const typeBug = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeBug
+const typeFeature = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeFeature
+const typeOther = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeOther
+const typeEnhancement = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeEnhancement
+const predFieldType = agent.WorkStatusResponseWorkConfigTypeRulesPredicatesFieldType
+const predEquals = agent.WorkStatusResponseWorkConfigTypeRulesPredicatesOperatorEquals
+
 func stringEquals(str string, vals ...string) bool {
 	for _, v := range vals {
 		if str == v {
@@ -85,10 +92,7 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 			Type: rawstates["Epic"].RefName,
 		}
 	}
-	var enhancementRule agent.WorkStatusResponseWorkConfigTypeRules
-	var bugRule agent.WorkStatusResponseWorkConfigTypeRules
-	var featureRule agent.WorkStatusResponseWorkConfigTypeRules
-	var otherRule agent.WorkStatusResponseWorkConfigTypeRules
+
 	for _, r := range rawstates {
 		ws.Types = append(ws.Types, r.RefName)
 		for name, cat := range r.States {
@@ -118,32 +122,39 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 		}
 
 		predicate := agent.WorkStatusResponseWorkConfigTypeRulesPredicates{
-			Field:    agent.WorkStatusResponseWorkConfigTypeRulesPredicatesFieldType,
-			Operator: agent.WorkStatusResponseWorkConfigTypeRulesPredicatesOperatorEquals,
+			Field:    predFieldType,
+			Operator: predEquals,
 			Value:    pstrings.Pointer(r.RefName),
 		}
 		if stringEquals(r.RefName,
 			"Microsoft.VSTS.WorkItemTypes.Issue",
 			"Microsoft.VSTS.WorkItemTypes.Bug",
 			"Issue", "Bug") {
-			bugRule.IssueType = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeBug
-			bugRule.Predicates = append(bugRule.Predicates, predicate)
+			ws.TypeRules = append(ws.TypeRules, agent.WorkStatusResponseWorkConfigTypeRules{
+				IssueType:  typeBug,
+				Predicates: []agent.WorkStatusResponseWorkConfigTypeRulesPredicates{predicate},
+			})
 		} else if stringEquals(r.RefName,
 			"Microsoft.VSTS.WorkItemTypes.Task",
 			"Task") {
-			enhancementRule.IssueType = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeEnhancement
-			enhancementRule.Predicates = append(enhancementRule.Predicates, predicate)
+			ws.TypeRules = append(ws.TypeRules, agent.WorkStatusResponseWorkConfigTypeRules{
+				IssueType:  typeEnhancement,
+				Predicates: []agent.WorkStatusResponseWorkConfigTypeRulesPredicates{predicate},
+			})
 		} else if stringEquals(r.RefName,
 			"Microsoft.VSTS.WorkItemTypes.FeedbackRequest",
 			"Microsoft.VSTS.WorkItemTypes.Feature",
 			"Feature", "Feedback Request") {
-			featureRule.IssueType = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeFeature
-			featureRule.Predicates = append(featureRule.Predicates, predicate)
+			ws.TypeRules = append(ws.TypeRules, agent.WorkStatusResponseWorkConfigTypeRules{
+				IssueType:  typeFeature,
+				Predicates: []agent.WorkStatusResponseWorkConfigTypeRulesPredicates{predicate},
+			})
 		} else {
-			otherRule.IssueType = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeOther
-			otherRule.Predicates = append(otherRule.Predicates, predicate)
+			ws.TypeRules = append(ws.TypeRules, agent.WorkStatusResponseWorkConfigTypeRules{
+				IssueType:  typeOther,
+				Predicates: []agent.WorkStatusResponseWorkConfigTypeRulesPredicates{predicate},
+			})
 		}
 	}
-	ws.TypeRules = []agent.WorkStatusResponseWorkConfigTypeRules{enhancementRule, bugRule, featureRule, otherRule}
 	return ws, nil
 }
