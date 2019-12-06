@@ -121,7 +121,6 @@ const maxThrottledRetries = 3
 type errorResponse struct {
 	Error            string `json:"error"`
 	ErrorDescription string `json:"error_description"`
-	Scope            string `json:"scope"`
 }
 
 func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetryable bool, pi PageInfo, rerr error) {
