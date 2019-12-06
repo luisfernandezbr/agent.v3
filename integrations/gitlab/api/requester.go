@@ -118,6 +118,12 @@ func (e *Requester) setAuthHeader(req *http.Request) {
 
 const maxThrottledRetries = 3
 
+type errorResponse struct {
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+	Scope            string `json:"scope"`
+}
+
 func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetryable bool, pi PageInfo, rerr error) {
 	u := pstrings.JoinURL(e.opts.APIURL, r.URL)
 
@@ -167,9 +173,21 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 			return rateLimited()
 		}
 
+		if resp.StatusCode == http.StatusForbidden {
+
+			var errorR *errorResponse
+
+			er := json.Unmarshal([]byte(b), &errorR)
+			if er != nil {
+				return false, pi, fmt.Errorf("unmarshal error %s", er)
+			}
+
+			return false, pi, fmt.Errorf("%s, %s, scopes required: api, read_user, read_repository", errorR.Error, errorR.ErrorDescription)
+		}
+
 		e.opts.Logger.Warn("gitlab returned invalid status code, retrying", "code", resp.StatusCode, "retry", retryThrottled)
 
-		return true, pi, err
+		return true, pi, fmt.Errorf("request with status %d", resp.StatusCode)
 	}
 	err = json.Unmarshal(b, &r.Response)
 	if err != nil {
