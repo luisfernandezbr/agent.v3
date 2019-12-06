@@ -45,6 +45,13 @@ func Run(ctx context.Context,
 	if err != nil {
 		return
 	}
+	logger.Info("zip file uploaded with no errors", "zip_path", zipPath)
+
+	if err = os.RemoveAll(zipPath); err != nil {
+		err = fmt.Errorf("error deleting zip file %s", err)
+		return
+	}
+	logger.Info("zip file deleted", "zip_path", zipPath)
 
 	return
 }
