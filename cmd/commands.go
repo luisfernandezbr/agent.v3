@@ -123,7 +123,7 @@ var cmdEnroll = &cobra.Command{
 		opts.Enroll.Code = args[0]
 		opts.Enroll.Channel = channel
 		opts.Enroll.SkipValidate = skipValidate
-		opts.Enroll.SkipConfigIfFound = skipEnroll
+		opts.Enroll.SkipEnrollIfFound = skipEnroll
 		err = cmdservicerun.Run(ctx, opts)
 		if err != nil {
 			exitWithErr(logger, err)

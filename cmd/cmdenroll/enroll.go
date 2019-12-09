@@ -49,7 +49,7 @@ type enroller struct {
 	logger            hclog.Logger
 	opts              Opts
 	fsconf            fsconf.Locs
-	skipConfigIfFound bool
+	skipEnrollIfFound bool
 
 	deviceID string
 	systemID string
@@ -68,7 +68,7 @@ func newEnroller(opts Opts) (*enroller, error) {
 	s.opts = opts
 	s.fsconf = fsconf.New(opts.PinpointRoot)
 	s.deviceID = pstrings.NewUUIDV4()
-	s.skipConfigIfFound = opts.SkipEnrollIfFound
+	s.skipEnrollIfFound = opts.SkipEnrollIfFound
 	var err error
 	s.systemID, err = sysinfo.GetID2()
 	if err != nil {
@@ -83,7 +83,7 @@ func newEnroller(opts Opts) (*enroller, error) {
 
 func (s *enroller) Run(ctx context.Context) error {
 	if fileutil.FileExists(s.fsconf.Config2) {
-		if s.skipConfigIfFound {
+		if s.skipEnrollIfFound {
 			// if --skip-enroll-if-found we can safely ignore
 			return nil
 		}
