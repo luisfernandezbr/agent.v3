@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	pjson "github.com/pinpt/go-common/json"
@@ -89,6 +90,9 @@ func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInf
 
 	err := qc.Request(query, &res)
 	if err != nil {
+		if strings.Contains(err.Error(), "You must grant your personal token access to your organization") {
+			err = fmt.Errorf(err.Error(), org.Login)
+		}
 		return pi, repos, err
 	}
 
