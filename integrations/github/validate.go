@@ -86,22 +86,20 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 
 LOOP:
 	for _, org := range orgs {
-		if org.Login == "pinpt" {
-			_, repos, err := api.ReposPageInternal(s.qc, org, "first: 1")
+		_, repos, err := api.ReposPageInternal(s.qc, org, "first: 1")
+		if err != nil {
+			rerr(err)
+			return
+		}
+		if len(repos) > 0 {
+			repoURL, err := getRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repos[0].NameWithOwner)
 			if err != nil {
 				rerr(err)
 				return
 			}
-			if len(repos) > 0 {
-				repoURL, err := getRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repos[0].NameWithOwner)
-				if err != nil {
-					rerr(err)
-					return
-				}
 
-				res.RepoURL = repoURL
-				break LOOP // only return 1 repo url
-			}
+			res.RepoURL = repoURL
+			break LOOP // only return 1 repo url
 		}
 	}
 
