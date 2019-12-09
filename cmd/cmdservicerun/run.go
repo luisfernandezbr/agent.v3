@@ -29,7 +29,7 @@ type Opts struct {
 		Channel           string
 		Code              string
 		SkipValidate      bool
-		SkipConfigIfFound bool
+		SkipEnrollIfFound bool
 	}
 }
 
@@ -92,7 +92,7 @@ func (s *runner) runEnroll() error {
 	if s.opts.Enroll.SkipValidate {
 		args = append(args, "--skip-validate")
 	}
-	if s.opts.Enroll.SkipConfigIfFound {
+	if s.opts.Enroll.SkipEnrollIfFound {
 		args = append(args, "--skip-enroll-if-found")
 	}
 	cmd := exec.Command(os.Args[0], args...)
