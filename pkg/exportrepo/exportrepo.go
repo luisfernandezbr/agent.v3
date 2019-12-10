@@ -639,7 +639,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 			Blanks:         commitBlanksCount,
 			Size:           commitSize,
 			Complexity:     commitComplexityCount,
-			GpgSigned:      commit.Signed,
+			GpgSigned:      false,
 			Excluded:       excludedFilesCount == commitFilesCount,
 			Files:          commitFiles,
 		}
