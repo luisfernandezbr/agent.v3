@@ -178,7 +178,6 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 			return rateLimited()
 		}
 
-		s.logger.Info("url", "url", req.URL.String())
 		if strings.Contains(err1.Message, "Resource protected by organization SAML enforcement") {
 			rerr = fmt.Errorf("You must grant your personal token access to your organization")
 			return
