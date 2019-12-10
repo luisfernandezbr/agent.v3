@@ -90,8 +90,8 @@ func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInf
 
 	err := qc.Request(query, &res)
 	if err != nil {
-		if strings.Contains(err.Error(), "You must grant your personal token access to your organization") {
-			err = fmt.Errorf("The organization %s has SAML authentication enabled. %s", org.Login, err)
+		if strings.Contains(err.Error(), "Resource protected by organization SAML enforcement") {
+			err = fmt.Errorf("The organization %s has SAML authentication enabled. You must grant your personal token access to your organization", org.Login)
 		}
 		return pi, repos, err
 	}

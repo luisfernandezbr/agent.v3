@@ -178,11 +178,6 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 			return rateLimited()
 		}
 
-		if strings.Contains(err1.Message, "Resource protected by organization SAML enforcement") {
-			rerr = fmt.Errorf("You must grant your personal token access to your organization")
-			return
-		}
-
 		rerr = fmt.Errorf("api request failed: type: %v message %v", err1.Type, err1.Message)
 		return
 	}
