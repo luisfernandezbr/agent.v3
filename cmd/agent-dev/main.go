@@ -224,6 +224,7 @@ var cmdBuild = &cobra.Command{
 		}
 		onlyAgent, _ := cmd.Flags().GetBool("only-agent")
 		onlyUpload, _ := cmd.Flags().GetBool("only-upload")
+		skipArchives, _ := cmd.Flags().GetBool("skip-archives")
 
 		cmdbuild.Run(cmdbuild.Opts{
 			BuildDir:     "./dist",
@@ -232,6 +233,7 @@ var cmdBuild = &cobra.Command{
 			OnlyUpload:   onlyUpload,
 			OnlyPlatform: platform,
 			OnlyAgent:    onlyAgent,
+			SkipArchives: skipArchives,
 		})
 	},
 }
@@ -243,6 +245,7 @@ func init() {
 	cmd.Flags().Bool("only-upload", false, "Set to true to skip build and upload existing files in dist dir")
 	cmd.Flags().String("platform", "all", "Limit to specific platform")
 	cmd.Flags().Bool("only-agent", false, "Only build agent and skip the rest (for developement)")
+	cmd.Flags().Bool("skip-archives", false, "Skip creating zips and gzips (faster builds)")
 	cmdRoot.AddCommand(cmd)
 }
 

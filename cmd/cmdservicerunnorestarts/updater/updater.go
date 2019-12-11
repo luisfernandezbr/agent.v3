@@ -5,6 +5,7 @@
 package updater
 
 import (
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -246,10 +247,11 @@ func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) 
 	//const s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
 	s3BinariesPrefix := api.BackendURL(api.EventService, s.channel) + "/agent/download"
 
-	url := s3BinariesPrefix + "/" + version + "/" + platform + "/" + urlPath
+	url := s3BinariesPrefix + "/" + version + "/bin-gz/" + platform + "/" + urlPath
 	if platform == "windows" {
 		url += ".exe"
 	}
+	url += ".gz"
 
 	bin := path.Base(urlPath)
 
@@ -261,7 +263,6 @@ func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) 
 		return
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != 200 {
 		rerr = fmt.Errorf("could not download binary, status code: %v url: %v", resp.StatusCode, url)
 		return
@@ -271,7 +272,14 @@ func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) 
 	if platform == "windows" {
 		loc += ".exe"
 	}
-	err = fs.WriteToTempAndRename(resp.Body, loc)
+
+	r, err := gzip.NewReader(resp.Body)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	err = fs.WriteToTempAndRename(r, loc)
 	if err != nil {
 		rerr = err
 		return

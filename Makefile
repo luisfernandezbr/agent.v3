@@ -3,9 +3,6 @@
 
 COMMITSHA ?= $(shell git rev-parse HEAD | cut -c1-8)
 
-build:
-	go run ./cmd/agent-dev build
-
 clean:
 	@rm -rf logs dist
 
@@ -19,17 +16,20 @@ dependencies:
 proto:
 	protoc -I rpcdef/proto/ rpcdef/proto/*.proto --go_out=plugins=grpc:rpcdef/proto/
 
+build:
+	go run ./cmd/agent-dev build --skip-archives
+
 macos:
-	go run ./cmd/agent-dev build --platform macos
+	go run ./cmd/agent-dev build --platform macos --skip-archives
 
 osx: macos
 darwin: macos
 
 linux:
-	go run ./cmd/agent-dev build --platform linux
+	go run ./cmd/agent-dev build --platform linux --skip-archives
 
 windows:
-	go run ./cmd/agent-dev build --platform windows
+	go run ./cmd/agent-dev build --platform windows --skip-archives
 
 .PHONY: docker
 docker:

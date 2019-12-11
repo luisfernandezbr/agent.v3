@@ -26,9 +26,9 @@ func upload(opts Opts) {
 	)
 	uploadDir(
 		awsSession,
-		fjoin(opts.BuildDir, "bin"),
+		fjoin(opts.BuildDir, "bin-gz"),
 		"pinpoint-agent",
-		"releases/"+opts.Version)
+		"releases/"+opts.Version+"/bin-gz")
 }
 
 func uploadDir(awsSession *session.Session, localPath string, bucket string, prefix string) {
