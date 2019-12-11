@@ -120,18 +120,11 @@ func (s *runner) Run(ctx context.Context) error {
 		os.Getenv("PP_AGENT_UPDATE_ENABLED") != "" {
 		version := os.Getenv("PP_AGENT_UPDATE_VERSION")
 		if version != "" {
-			err := build.ValidateVersion(version)
+			oldVersion, err := s.updateTo(version)
 			if err != nil {
-				return fmt.Errorf("Could not self-update, invalid version in PP_AGENT_UPDATE_VERSION: %v", err)
+				return fmt.Errorf("Could not self-update: %v", err)
 			}
-			if version == os.Getenv("PP_AGENT_VERSION") {
-				s.logger.Info("already at wanted version", "v", version)
-			} else {
-				upd := updater.New(s.logger, s.fsconf)
-				err = upd.Update(version)
-				if err != nil {
-					return fmt.Errorf("Could not self-update: %v", err)
-				}
+			if oldVersion != version {
 				s.logger.Info("Updated the agent, restarting...")
 				return nil
 			}
@@ -181,25 +174,35 @@ func (s *runner) Run(ctx context.Context) error {
 		s.exporter.Run()
 	}()
 
-	isub, err := s.handleIntegrationEvents(ctx)
-	if err != nil {
-		return fmt.Errorf("error handling integration requests, err: %v", err)
+	{
+		close, err := s.handleUpdateEvents(ctx)
+		if err != nil {
+			return fmt.Errorf("error handling update requests, err: %v", err)
+		}
+		defer close()
 	}
-	defer isub()
-
-	osub, err := s.handleOnboardingEvents(ctx)
-	if err != nil {
-		return fmt.Errorf("error handling onboarding requests, err: %v", err)
+	{
+		close, err := s.handleIntegrationEvents(ctx)
+		if err != nil {
+			return fmt.Errorf("error handling integration requests, err: %v", err)
+		}
+		defer close()
 	}
+	{
+		close, err := s.handleOnboardingEvents(ctx)
+		if err != nil {
+			return fmt.Errorf("error handling onboarding requests, err: %v", err)
+		}
 
-	defer osub()
-
-	esub, err := s.handleExportEvents(ctx)
-	if err != nil {
-		return fmt.Errorf("error handling export requests, err: %v", err)
+		defer close()
 	}
-
-	defer esub()
+	{
+		close, err := s.handleExportEvents(ctx)
+		if err != nil {
+			return fmt.Errorf("error handling export requests, err: %v", err)
+		}
+		defer close()
+	}
 
 	/*
 		if os.Getenv("PP_AGENT_SERVICE_TEST_MOCK") != "" {
@@ -321,7 +324,25 @@ func (s *runner) sendPing(ctx context.Context) error {
 		ev.State = agent.PingStateIdle
 		ev.Exporting = false
 	}
-	return s.sendEvent(ctx, ev, "", nil)
+	return s.sendEvent(ctx, s.getPing(), "", nil)
+}
+
+func (s *runner) getPing() *agent.Ping {
+	ev := &agent.Ping{
+		Type:    agent.PingTypePing,
+		Success: true,
+	}
+	onboardingInProgress := atomic.LoadInt64(&s.onboardingInProgress)
+	ev.Onboarding = onboardingInProgress != 0
+
+	if s.exporter.IsRunning() {
+		ev.State = agent.PingStateExporting
+		ev.Exporting = true
+	} else {
+		ev.State = agent.PingStateIdle
+		ev.Exporting = false
+	}
+	return ev
 }
 
 func (s *runner) sendEvent(ctx context.Context, agentEvent datamodel.Model, jobID string, extraHeaders map[string]string) error {
