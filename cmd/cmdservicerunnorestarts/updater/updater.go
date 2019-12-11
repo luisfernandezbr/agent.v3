@@ -15,24 +15,26 @@ import (
 	"runtime"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/build"
 	"github.com/pinpt/agent.next/pkg/fs"
 	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/go-common/api"
 )
-
-const s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
 
 // Updater handles agent and built-in integration updates
 type Updater struct {
-	logger hclog.Logger
-	fsconf fsconf.Locs
+	logger  hclog.Logger
+	fsconf  fsconf.Locs
+	channel string
 }
 
 // New creates updater
-func New(logger hclog.Logger, fsconf fsconf.Locs) *Updater {
+func New(logger hclog.Logger, fsconf fsconf.Locs, conf agentconf.Config) *Updater {
 	return &Updater{
-		logger: logger,
-		fsconf: fsconf,
+		logger:  logger,
+		fsconf:  fsconf,
+		channel: conf.Channel,
 	}
 }
 
@@ -240,6 +242,9 @@ func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) 
 		rerr = errors.New("platform not supported: " + platform)
 		return
 	}
+
+	//const s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
+	s3BinariesPrefix := api.BackendURL(api.EventService, s.channel) + "/agent/download"
 
 	url := s3BinariesPrefix + "/" + version + "/" + platform + "/" + urlPath
 	if platform == "windows" {

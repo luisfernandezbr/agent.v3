@@ -48,7 +48,8 @@
 
 [[constraint]]
   name = "github.com/pinpt/ripsrc"
-  version = "6"
+  #version = "6"
+  branch = "master"
 
 # dependency of ripsrc
 

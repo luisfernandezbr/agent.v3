@@ -56,6 +56,7 @@ func uploadDir(awsSession *session.Session, localPath string, bucket string, pre
 			Bucket: &bucket,
 			Key:    aws.String(filepath.Join(prefix, rel)),
 			Body:   file,
+			ACL:    aws.String("public-read"),
 		})
 		if err != nil {
 			fmt.Println("Upload failed")
