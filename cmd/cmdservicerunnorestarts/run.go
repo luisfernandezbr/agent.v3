@@ -129,7 +129,7 @@ func (s *runner) Run(ctx context.Context) error {
 				return nil
 			}
 		} else {
-			upd := updater.New(s.logger, s.fsconf)
+			upd := updater.New(s.logger, s.fsconf, s.conf)
 			err := upd.DownloadIntegrationsIfMissing()
 			if err != nil {
 				return fmt.Errorf("Could not download integration binaries: %v", err)

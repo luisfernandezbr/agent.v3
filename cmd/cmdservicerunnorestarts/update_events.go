@@ -137,7 +137,7 @@ func (s *runner) updateTo(version string) (oldVersion string, rerr error) {
 		}
 	}
 
-	upd := updater.New(s.logger, s.fsconf)
+	upd := updater.New(s.logger, s.fsconf, s.conf)
 	err = upd.Update(version)
 	if err != nil {
 		rerr = fmt.Errorf("Could not update: %v", err)
