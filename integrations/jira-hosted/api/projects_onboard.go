@@ -58,7 +58,7 @@ func ProjectsOnboard(qc QueryContext) (res []*agent.ProjectResponseProjects, rer
 		if err != nil {
 			if err == jiracommonapi.ErrPermissions {
 				// this is a private project, skip setting last issue
-				item.Name += " (No Permissions)"
+				item.Error = agent.ProjectResponseProjectsErrorPERMISSIONS
 			} else {
 				rerr = err
 				return
@@ -77,9 +77,6 @@ func ProjectsOnboard(qc QueryContext) (res []*agent.ProjectResponseProjects, rer
 
 			item.TotalIssues = int64(totalIssues)
 		}
-
-		// we decide if project is active on backend TODO: this flag can be removed from datamodel
-		item.Active = true
 
 		res = append(res, item)
 
