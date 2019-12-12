@@ -81,6 +81,12 @@ func New(opts Opts) (*Command, error) {
 	return s, nil
 }
 
+// KillCommand stops a running process
+func KillCommand(logger hclog.Logger, cmdname string) error {
+	logger.Debug("killing command manually")
+	return removeProcess(logger, cmdname)
+}
+
 // Run executes the command
 func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res interface{}, args ...string) error {
 
@@ -141,7 +147,21 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = io.MultiWriter(os.Stderr, logsfile)
 	}
-	if err := cmd.Run(); err != nil {
+
+	if err := cmd.Start(); err != nil {
+		return rerr(fmt.Errorf("could not start the sub command: %v", err))
+	}
+	if err := addProcess(c.logger, cmdname, cmd.Process); err != nil {
+		return rerr(fmt.Errorf("could not start the sub command, process already running: %v", cmdname))
+	}
+	defer func() {
+		// ignore error in this case since it will return an error if the process was kill manually
+		removeProcess(c.logger, cmdname)
+	}()
+	if err := cmd.Wait(); err != nil {
+		if _, o := processes[cmdname]; !o {
+			return nil
+		}
 		if err := logsfile.Close(); err != nil {
 			return rerr(fmt.Errorf("could not close stderr file: %v", err))
 		}
@@ -258,5 +278,30 @@ func (s *fsPassedParams) Clean() error {
 			return err
 		}
 	}
+	return nil
+}
+
+var processes map[string]*os.Process
+
+func init() {
+	processes = make(map[string]*os.Process)
+}
+
+func addProcess(logger hclog.Logger, name string, p *os.Process) error {
+	if _, o := processes[name]; o {
+		return errors.New("")
+	}
+	logger.Debug("adding process to map", "name", name)
+	processes[name] = p
+	return nil
+}
+func removeProcess(logger hclog.Logger, name string) error {
+	if _, o := processes[name]; !o {
+		return fmt.Errorf("process name '%s' not found in map", name)
+	}
+	logger.Debug("removing process from map", "name", name)
+	p := processes[name]
+	delete(processes, name)
+	p.Kill()
 	return nil
 }

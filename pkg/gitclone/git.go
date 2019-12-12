@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -229,11 +230,38 @@ func gitRunGCForLongClone(ctx context.Context, logger hclog.Logger, dir string) 
 	return nil
 }
 
+var processes map[int]*os.Process
+var mutex sync.Mutex
+
+func init() {
+	processes = make(map[int]*os.Process)
+}
+func RemoveAllProcesses() {
+	mutex.Lock()
+	for k := range processes {
+		processes[k].Kill()
+		delete(processes, k)
+	}
+	mutex.Unlock()
+}
 func runGitCommand(ctx context.Context, logger hclog.Logger, cmd *exec.Cmd) error {
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-	err := cmd.Run()
+	err := cmd.Start()
 	if err != nil {
+		return err
+	}
+	pro := cmd.Process
+	mutex.Lock()
+	processes[pro.Pid] = pro
+	mutex.Unlock()
+
+	defer func() {
+		mutex.Lock()
+		delete(processes, pro.Pid)
+		mutex.Unlock()
+	}()
+	if err := cmd.Wait(); err != nil {
 		c := ""
 		if len(cmd.Args) > 2 {
 			c = cmd.Args[1]
