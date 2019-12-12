@@ -151,16 +151,21 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 	if err := cmd.Start(); err != nil {
 		return rerr(fmt.Errorf("could not start the sub command: %v", err))
 	}
-	if err := addProcess(c.logger, cmdname, cmd.Process); err != nil {
-		return rerr(fmt.Errorf("could not start the sub command, process already running: %v", cmdname))
+	if cmdname == "export" { // for now, only allow this command to be cancelled
+		if err := addProcess(c.logger, cmdname, cmd.Process); err != nil {
+			return rerr(fmt.Errorf("could not start the sub command, process already running: %v", cmdname))
+		}
+		defer func() {
+			// ignore error in this case since it will return an error if the process was kill manually
+			removeProcess(c.logger, cmdname)
+		}()
 	}
-	defer func() {
-		// ignore error in this case since it will return an error if the process was kill manually
-		removeProcess(c.logger, cmdname)
-	}()
 	if err := cmd.Wait(); err != nil {
-		if _, o := processes[cmdname]; !o {
-			return nil
+		// the command wont be in the processes map if it has been canceled
+		if cmdname == "export" {
+			if _, ok := processes[cmdname]; !ok {
+				return nil
+			}
 		}
 		if err := logsfile.Close(); err != nil {
 			return rerr(fmt.Errorf("could not close stderr file: %v", err))
