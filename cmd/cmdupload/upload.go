@@ -21,6 +21,7 @@ func Run(ctx context.Context,
 	logger hclog.Logger,
 	pinpointRoot string,
 	uploadURL string,
+	jobID string,
 	apiKey string) (parts int, size int64, err error) {
 
 	fsc := fsconf.New(pinpointRoot)
@@ -31,7 +32,7 @@ func Run(ctx context.Context,
 	}
 
 	fileName := time.Now().Format(time.RFC3339)
-	fileName = strings.ReplaceAll(fileName, ":", "_")
+	fileName = strings.ReplaceAll(fileName, ":", "_") + "-" + jobID
 
 	zipPath := filepath.Join(fsc.UploadZips, fileName+".zip")
 
@@ -45,6 +46,13 @@ func Run(ctx context.Context,
 	if err != nil {
 		return
 	}
+
+	logger.Info("zip file uploaded with no errors", "zip_path", zipPath, "size", size/1024)
+	if err = os.RemoveAll(zipPath); err != nil {
+		err = fmt.Errorf("error deleting zip file %s", err)
+		return
+	}
+	logger.Info("zip file deleted", "zip_path", zipPath)
 
 	return
 }
