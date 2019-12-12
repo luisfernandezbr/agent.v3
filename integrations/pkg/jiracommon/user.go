@@ -7,6 +7,7 @@ import (
 	"github.com/pinpt/agent.next/integrations/pkg/objsender"
 	"github.com/pinpt/agent.next/pkg/ids"
 	"github.com/pinpt/agent.next/rpcdef"
+	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/work"
 )
 
@@ -15,9 +16,10 @@ type Users struct {
 	exported   map[string]bool
 	exportedMu sync.Mutex
 	customerID string
+	websiteURL string
 }
 
-func NewUsers(customerID string, agent rpcdef.Agent) (_ *Users, rerr error) {
+func NewUsers(customerID string, agent rpcdef.Agent, websiteURL string) (_ *Users, rerr error) {
 	s := &Users{}
 	s.customerID = customerID
 	var err error
@@ -27,6 +29,7 @@ func NewUsers(customerID string, agent rpcdef.Agent) (_ *Users, rerr error) {
 		return
 	}
 	s.exported = map[string]bool{}
+	s.websiteURL = websiteURL
 	return s, nil
 }
 
@@ -62,6 +65,15 @@ func (s *Users) ExportUser(user jiracommonapi.User) error {
 	if user.Name != "" {
 		v := ids.WorkUserAssociatedRefID(customerID, "jira", user.Name)
 		u.AssociatedRefID = &v
+	}
+	if user.AccountID != "" {
+		// this is cloud
+		u.URL = pstrings.Pointer(s.websiteURL + "/jira/people/" + user.AccountID)
+	} else {
+		// this is hosted
+		// TODO: not sure this actually works, that's the url that links to the user profile,
+		// but on our test hosted server it hangs forever when used in jira
+		u.URL = pstrings.Pointer(s.websiteURL + "/secure/ViewProfile.jspa?name=" + user.Key)
 	}
 	return s.sendUser(u)
 }

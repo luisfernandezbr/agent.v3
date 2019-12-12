@@ -10,7 +10,7 @@ import (
 )
 
 type QueryContext struct {
-	BaseURL    string
+	WebsiteURL string
 	Logger     hclog.Logger
 	CustomerID string
 	Request    func(objPath string, params url.Values, res interface{}) error
@@ -19,17 +19,17 @@ type QueryContext struct {
 }
 
 func (s QueryContext) Validate() {
-	if s.BaseURL == "" || s.Logger == nil || s.CustomerID == "" || s.Request == nil {
+	if s.WebsiteURL == "" || s.Logger == nil || s.CustomerID == "" || s.Request == nil {
 		panic("set all required fields")
 	}
 }
 
 func (s QueryContext) ProjectURL(projectKey string) string {
-	return pstrings.JoinURL(s.BaseURL, "browse", projectKey)
+	return pstrings.JoinURL(s.WebsiteURL, "browse", projectKey)
 }
 
 func (s QueryContext) IssueURL(issueKey string) string {
-	return pstrings.JoinURL(s.BaseURL, "browse", issueKey)
+	return pstrings.JoinURL(s.WebsiteURL, "browse", issueKey)
 }
 
 func (s QueryContext) ProjectID(refID string) string {

@@ -10,7 +10,7 @@ import (
 )
 
 type Opts struct {
-	BaseURL          string
+	WebsiteURL       string
 	Logger           hclog.Logger
 	CustomerID       string
 	Request          func(objPath string, params url.Values, res interface{}) error
@@ -28,7 +28,7 @@ type JiraCommon struct {
 
 func New(opts Opts) (*JiraCommon, error) {
 	s := &JiraCommon{}
-	if opts.BaseURL == "" || opts.CustomerID == "" || opts.Request == nil || opts.Agent == nil {
+	if opts.WebsiteURL == "" || opts.CustomerID == "" || opts.Request == nil || opts.Agent == nil {
 		panic("provide required params")
 	}
 	s.opts = opts
@@ -38,13 +38,13 @@ func New(opts Opts) (*JiraCommon, error) {
 
 func (s *JiraCommon) SetupUsers() error {
 	var err error
-	s.users, err = NewUsers(s.opts.CustomerID, s.opts.Agent)
+	s.users, err = NewUsers(s.opts.CustomerID, s.opts.Agent, s.opts.WebsiteURL)
 	return err
 }
 
 func (s *JiraCommon) CommonQC() jiracommonapi.QueryContext {
 	res := jiracommonapi.QueryContext{}
-	res.BaseURL = s.opts.BaseURL
+	res.WebsiteURL = s.opts.WebsiteURL
 	res.CustomerID = s.opts.CustomerID
 	res.Logger = s.opts.Logger
 	res.ExportUser = s.users.ExportUser

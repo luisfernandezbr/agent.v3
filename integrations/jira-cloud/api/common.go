@@ -8,7 +8,7 @@ import (
 )
 
 type QueryContext struct {
-	BaseURL    string
+	WebsiteURL string
 	Logger     hclog.Logger
 	CustomerID string
 	Request    func(objPath string, params url.Values, res interface{}) error
@@ -23,7 +23,7 @@ type PageInfo struct {
 
 func (s *QueryContext) Common() jiracommonapi.QueryContext {
 	res := jiracommonapi.QueryContext{}
-	res.BaseURL = s.BaseURL
+	res.WebsiteURL = s.WebsiteURL
 	res.CustomerID = s.CustomerID
 	res.Logger = s.Logger
 	res.ExportUser = nil

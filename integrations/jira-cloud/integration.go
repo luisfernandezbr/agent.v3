@@ -100,6 +100,9 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 
 	var oauth *oauthtoken.Manager
 
+	apiBaseURL := ""
+	s.qc.WebsiteURL = s.config.URL
+
 	if s.UseOAuth {
 		oauth, err = oauthtoken.New(s.logger, s.agent)
 		if err != nil {
@@ -117,16 +120,16 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 			return errors.New("more than 1 site accessible with oauth token, this is not supported")
 		}
 		site := sites[0]
-		s.qc.BaseURL = "https://api.atlassian.com/ex/jira/" + site.ID
+		apiBaseURL = "https://api.atlassian.com/ex/jira/" + site.ID
 
 	} else {
-		s.qc.BaseURL = s.config.URL
+		apiBaseURL = s.config.URL
 	}
 
 	{
 		opts := RequesterOpts{}
 		opts.Logger = s.logger
-		opts.APIURL = s.qc.BaseURL
+		opts.APIURL = apiBaseURL
 		opts.Clients = s.clients
 		opts.RetryRequests = retryRequests
 
@@ -145,7 +148,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 	s.qc.Logger = s.logger
 
 	s.common, err = jiracommon.New(jiracommon.Opts{
-		BaseURL:          s.config.URL,
+		WebsiteURL:       s.qc.WebsiteURL,
 		Logger:           s.logger,
 		CustomerID:       config.Pinpoint.CustomerID,
 		Request:          s.qc.Request,
