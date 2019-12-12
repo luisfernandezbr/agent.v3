@@ -43,9 +43,14 @@ func (s *runner) handleCancelEvents(ctx context.Context) (closefunc, error) {
 		resp := &agent.CancelResponse{}
 		date.ConvertToModel(time.Now(), &resp.CancelDate)
 		if cmdname == "" {
-			s.logger.Error("error in integration requests", "err", fmt.Errorf("wrong commnad %s", ev.Command.String()))
+			err := fmt.Errorf("wrong commnad %s", ev.Command.String())
+			errstr := err.Error()
+			resp.Error = &errstr
+			s.logger.Error("error in integration requests", "err", err)
 		} else {
 			if err := subcommand.KillCommand(s.logger, cmdname); err != nil {
+				errstr := err.Error()
+				resp.Error = &errstr
 				s.logger.Error("error in integration requests", "err", fmt.Errorf("error in cancel request. err %s", err.Error()))
 			}
 		}
