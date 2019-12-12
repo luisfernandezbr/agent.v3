@@ -292,6 +292,9 @@ func RedactCredsInText(text string, urlStr string) (redactedText string, _ error
 	if err != nil {
 		return "", err
 	}
+	if u.User.String() == "" {
+		return text, nil
+	}
 	res := strings.Replace(text, u.User.String(), "[redacted]", -1)
 	return res, nil
 }

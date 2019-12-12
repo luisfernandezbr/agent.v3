@@ -465,16 +465,6 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 		})
 	}
 
-	var commitAdditions int64
-	var commitDeletions int64
-	var commitCommentsCount int64
-	var commitFilesCount int64
-	var commitSlocCount int64
-	var commitLocCount int64
-	var commitBlanksCount int64
-	var commitSize int64
-	var commitComplexityCount int64
-
 	customerID := s.opts.CustomerID
 
 	repoID := s.opts.RepoID
@@ -482,14 +472,15 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 	for commit := range commits {
 		lastProcessedSHA = commit.SHA
 
-		commitAdditions = 0
-		commitDeletions = 0
-		commitCommentsCount = 0
-		commitFilesCount = 0
-		commitSlocCount = 0
-		commitLocCount = 0
-		commitBlanksCount = 0
-		commitComplexityCount = 0
+		var commitAdditions int64
+		var commitDeletions int64
+		var commitCommentsCount int64
+		var commitFilesCount int64
+		var commitSlocCount int64
+		var commitLocCount int64
+		var commitBlanksCount int64
+		var commitSize int64
+		var commitComplexityCount int64
 
 		ordinal := datetime.EpochNow()
 		commitFiles := []sourcecode.CommitFiles{}
