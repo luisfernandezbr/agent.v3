@@ -49,7 +49,7 @@ func Run(opts Opts) {
 	}
 
 	if opts.Upload || opts.OnlyUpload {
-		upload(opts)
+		upload(opts, platforms)
 	}
 
 	fmt.Println("All done!")
