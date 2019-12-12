@@ -3,9 +3,6 @@ package cmdexport
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/exportrepo"
@@ -22,15 +19,6 @@ func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 		}
 		return
 	}
-
-	// force kill git processing if this process is killed
-	sigkill := make(chan os.Signal, 1)
-	signal.Notify(sigkill, syscall.SIGKILL)
-	go func() {
-		sig := <-sigkill
-		s.Logger.Info("exporter killed manually", "sig", sig.String())
-		gitclone.RemoveAllProcesses()
-	}()
 
 	logger.Info("starting git/ripsrc repo processing")
 
