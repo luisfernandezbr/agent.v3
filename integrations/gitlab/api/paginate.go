@@ -40,7 +40,7 @@ func PaginateNewerThan(log hclog.Logger, lastProcessed time.Time, fn PaginateNew
 	for {
 		p.Add("page", nextPage)
 		if !lastProcessed.IsZero() {
-			p.Add("order_by", "last_activity_at")
+			p.Add("order_by", "updated_at")
 		}
 		pageInfo, err := fn(log, p, lastProcessed)
 		if err != nil {
