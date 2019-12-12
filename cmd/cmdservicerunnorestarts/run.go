@@ -5,15 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/signal"
 	"runtime"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/build"
-	"github.com/pinpt/agent.next/pkg/gitclone"
 
 	"github.com/pinpt/agent.next/cmd/cmdintegration"
 
@@ -154,15 +151,6 @@ func (s *runner) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not send start event, err: %v", err)
 	}
-
-	sigkill := make(chan os.Signal, 1)
-	signal.Notify(sigkill, syscall.SIGKILL)
-	go func() {
-		sig := <-sigkill
-		s.logger.Info("exporter killed manually", "sig", sig.String())
-		gitclone.RemoveAllProcesses()
-	}()
-
 	s.exporter, err = exporter.New(exporter.Opts{
 		Logger:              s.logger,
 		LogLevelSubcommands: s.opts.LogLevelSubcommands,
