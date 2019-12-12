@@ -619,14 +619,13 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 		}
 
 		c := sourcecode.Commit{
-			RefID:      commit.SHA,
-			RefType:    s.opts.RefType,
-			CustomerID: customerID,
-			RepoID:     repoID,
-			Sha:        commit.SHA,
-			Message:    commit.Message,
-			URL:        commitURL(s.opts.CommitURLTemplate, commit.SHA),
-			//Branch:         branch, // TODO: remove this from datamodel
+			RefID:          commit.SHA,
+			RefType:        s.opts.RefType,
+			CustomerID:     customerID,
+			RepoID:         repoID,
+			Sha:            commit.SHA,
+			Message:        commit.Message,
+			URL:            commitURL(s.opts.CommitURLTemplate, commit.SHA),
 			Additions:      commitAdditions,
 			Deletions:      commitDeletions,
 			FilesChanged:   commitFilesCount,
@@ -639,7 +638,6 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 			Blanks:         commitBlanksCount,
 			Size:           commitSize,
 			Complexity:     commitComplexityCount,
-			GpgSigned:      commit.Signed,
 			Excluded:       excludedFilesCount == commitFilesCount,
 			Files:          commitFiles,
 		}

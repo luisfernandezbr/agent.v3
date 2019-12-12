@@ -9,16 +9,45 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pinpt/agent.next/pkg/build"
+	"github.com/pinpt/agent.next/pkg/fs"
 )
 
-func upload(opts Opts) {
+func upload(opts Opts, platforms Platforms) {
 	err := build.ValidateVersion(opts.Version)
 	if err != nil {
 		fmt.Println("invalid version", "err", err)
 		os.Exit(1)
 	}
 
+	fmt.Println("Preparing upload, moving files")
+
+	// prepare all files for upload
+	releaseDir := fjoin(opts.BuildDir, "s3-release")
+
+	err = os.RemoveAll(releaseDir)
+	if err != nil {
+		panic(err)
+	}
+
+	err = os.MkdirAll(releaseDir, 0777)
+	if err != nil {
+		panic(err)
+	}
+
+	// include unpacked agent binary unpacked for curl installer
+	// TODO: this is temporary for testing, will be installing from github normally??
+	copyAgentUnpackedIntoDir(opts, platforms, fjoin(releaseDir, "agent"))
+
+	if !opts.OnlyAgent {
+		fmt.Println("only-agent passed skipping bin-gz folder upload, including gz agent")
+		err = fs.CopyDir(fjoin(opts.BuildDir, "bin-gz"), fjoin(releaseDir, "bin-gz"))
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	fmt.Println("Uploading to S3")
+
 	awsSession := session.New(
 		&aws.Config{
 			Region: aws.String("us-east-1"),
@@ -26,7 +55,7 @@ func upload(opts Opts) {
 	)
 	uploadDir(
 		awsSession,
-		fjoin(opts.BuildDir, "bin"),
+		releaseDir,
 		"pinpoint-agent",
 		"releases/"+opts.Version)
 }
@@ -56,6 +85,7 @@ func uploadDir(awsSession *session.Session, localPath string, bucket string, pre
 			Bucket: &bucket,
 			Key:    aws.String(filepath.Join(prefix, rel)),
 			Body:   file,
+			ACL:    aws.String("public-read"),
 		})
 		if err != nil {
 			fmt.Println("Upload failed")

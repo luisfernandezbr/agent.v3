@@ -1,0 +1,4 @@
+VERSION replace with something like v0.0.99
+
+Build and upload release to S3
+go run ./cmd/agent-dev build --upload --version="VERSION"

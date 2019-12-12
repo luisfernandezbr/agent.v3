@@ -13,6 +13,7 @@ type Opts struct {
 	OnlyUpload   bool   // set to true to skip build and upload existing files in dist dir. Also sets upload to true.
 	OnlyPlatform string // only build for this platform
 	OnlyAgent    bool   // build only agent and skip the rest
+	SkipArchives bool   // do not create zips and gzips
 }
 
 var integrationBinaries = []string{
@@ -48,7 +49,7 @@ func Run(opts Opts) {
 	}
 
 	if opts.Upload || opts.OnlyUpload {
-		upload(opts)
+		upload(opts, platforms)
 	}
 
 	fmt.Println("All done!")

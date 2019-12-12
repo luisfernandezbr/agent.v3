@@ -1,7 +1,10 @@
 package cmdbuild
 
 import (
+	"compress/gzip"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/pinpt/agent.next/pkg/archive"
+	"github.com/pinpt/agent.next/pkg/fs"
 )
 
 func doBuild(opts Opts, platforms Platforms) {
@@ -58,25 +62,146 @@ func doBuild(opts Opts, platforms Platforms) {
 		wg.Wait()
 	}
 
+	if opts.SkipArchives {
+		fmt.Println("skip archives, skipping creating zips and gzips")
+		return
+	}
+
 	{
 		// create archives
-		err := os.MkdirAll(filepath.Join(opts.BuildDir, "archives"), 0777)
+		err := os.MkdirAll(fjoin(opts.BuildDir, "archives"), 0777)
 		if err != nil {
 			panic(err)
 		}
 
+		fmt.Println("creating archives", platforms)
 		platforms.Each(func(pl Platform) {
-			fmt.Println("creating archive for", pl.Name)
-			err := archive.ZipDir(filepath.Join(opts.BuildDir, "archives", pl.Name+".zip"), filepath.Join(opts.BuildDir, "bin", pl.Name))
+			err := archive.ZipDir(fjoin(opts.BuildDir, "archives", pl.Name+".zip"), fjoin(opts.BuildDir, "bin", pl.Name))
 			if err != nil {
 				panic(err)
 			}
 		})
+	}
 
+	gzipAgentAndIntegrations(opts, platforms)
+	prepareGithubReleaseFiles(opts, platforms)
+}
+
+func gzipAgentAndIntegrations(opts Opts, platforms Platforms) {
+	fmt.Println("creating gzipped binaries for auto-updater", platforms)
+
+	platforms.Each(func(pl Platform) {
+		nameInBin := fjoin(pl.Name, "pinpoint-agent")
+		if pl.GOOS == "windows" {
+			nameInBin += ".exe"
+		}
+		gzipBin(opts, nameInBin)
+		integrationsDir := fjoin(opts.BuildDir, "bin", pl.Name, "integrations")
+		files, err := ioutil.ReadDir(integrationsDir)
+		if err != nil {
+			panic(err)
+		}
+		for _, file := range files {
+			nameInBin := fjoin(pl.Name, "integrations", file.Name())
+			gzipBin(opts, nameInBin)
+		}
+	})
+}
+
+func gzipBin(opts Opts, nameInBin string) {
+	srcLoc := fjoin(opts.BuildDir, "bin", nameInBin)
+	trgLoc := fjoin(opts.BuildDir, "bin-gz", nameInBin+".gz")
+
+	err := os.MkdirAll(filepath.Dir(trgLoc), 0777)
+	if err != nil {
+		panic(err)
+	}
+	r, err := os.Open(srcLoc)
+	if err != nil {
+		panic(err)
+	}
+	defer r.Close()
+	f, err := os.Create(trgLoc)
+	if err != nil {
+		panic(err)
+	}
+	wr, err := gzip.NewWriterLevel(f, gzip.BestCompression)
+	if err != nil {
+		panic(err)
+	}
+	_, err = io.Copy(wr, r)
+	if err != nil {
+		panic(err)
+	}
+	err = wr.Close()
+	if err != nil {
+		panic(err)
+	}
+	err = f.Close()
+	if err != nil {
+		panic(err)
 	}
 }
 
 type Platforms []Platform
+
+func (s Platforms) String() string {
+	res := []string{}
+	for _, pl := range s {
+		res = append(res, pl.String())
+	}
+	return strings.Join(res, ",")
+}
+
+func prepareGithubReleaseFiles(opts Opts, platforms Platforms) {
+	fmt.Println("copy files for github release", platforms)
+
+	releaseDir := fjoin(opts.BuildDir, "github-release")
+	err := os.MkdirAll(releaseDir, 0777)
+	if err != nil {
+		panic(err)
+	}
+
+	// include zip archives
+	dir := fjoin(opts.BuildDir, "archives")
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		panic(err)
+	}
+	for _, f := range files {
+		n := f.Name()
+		err := fs.CopyFile(fjoin(dir, n), fjoin(releaseDir, "agent-with-integrations-"+n))
+		if err != nil {
+			panic(err)
+		}
+	}
+	// include unpacked agent binary unpacked for curl installer
+	copyAgentUnpackedIntoDir(opts, platforms, releaseDir)
+}
+
+func copyAgentUnpackedIntoDir(opts Opts, platforms Platforms, targetDir string) {
+
+	err := os.MkdirAll(targetDir, 0777)
+	if err != nil {
+		panic(err)
+	}
+
+	platforms.Each(func(pl Platform) {
+		srcBin := "pinpoint-agent"
+		if pl.GOOS == "windows" {
+			srcBin += ".exe"
+		}
+		targetBin := "pinpoint-agent-" + pl.Name
+		if pl.GOOS == "windows" {
+			targetBin += ".exe"
+		}
+		dir := fjoin(opts.BuildDir, "bin", pl.Name)
+		err := fs.CopyFile(fjoin(dir, srcBin), fjoin(targetDir, targetBin))
+		if err != nil {
+			panic(err)
+		}
+	})
+}
 
 func (s Platforms) Each(cb func(pl Platform)) {
 	concurrency := runtime.NumCPU() * 2
@@ -105,7 +230,7 @@ func getCommitSHA() string {
 }
 
 func buildAgent(opts Opts, pl Platform, ldflags string) {
-	out := filepath.Join(opts.BuildDir, "bin", pl.Name, "pinpoint-agent")
+	out := fjoin(opts.BuildDir, "bin", pl.Name, "pinpoint-agent")
 	if pl.GOOS == "windows" {
 		out += ".exe"
 	}
@@ -113,7 +238,7 @@ func buildAgent(opts Opts, pl Platform, ldflags string) {
 }
 
 func buildIntegration(opts Opts, in string, pl Platform) {
-	out := filepath.Join(opts.BuildDir, "bin", pl.Name, "integrations", in)
+	out := fjoin(opts.BuildDir, "bin", pl.Name, "integrations", in)
 	if pl.GOOS == "windows" {
 		out += ".exe"
 	}

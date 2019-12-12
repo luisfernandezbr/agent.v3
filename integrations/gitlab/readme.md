@@ -75,16 +75,20 @@ This is needed so that incremental export does not have to get call for pr comme
 testing different cases
 
 - create pr
-    - createdDate  2019-09-13T15:06:10.117Z
-    - updateDate   2019-09-13T15:06:10.117Z
-- create a comment on pr
-    - createdDate  2019-09-13T15:06:10.117Z
-    - updateDate   2019-09-13T15:10:11.151Z (updated)
-- edit the comment on pr
-    - createdDate  2019-09-13T15:06:10.117Z
-    - updateDate   2019-09-13T15:10:11.151Z (does not change)
+    - created_at 2019-12-12T16:09:36.575Z
+    - updated_at 2019-12-12T16:09:36.575Z
 
-UpdateDate is not correct for comment changes. We would only fetch edited comments when new historicals are run.
+- update title
+    - created_at 2019-12-12T16:09:36.575Z,
+    - updated_at 2019-12-12T16:12:37.871Z, (change)
+
+- create a comment on pr
+    - created_at 2019-12-12T16:09:36.575Z,
+    - updated_at 2019-12-12T16:13:42.957Z, (change)
+
+- edit the comment on pr
+    - created_at 2019-12-12T16:09:36.575Z,
+    - updated_at 2019-12-12T16:16:05.575Z, (change)
 
 
 ## Notes

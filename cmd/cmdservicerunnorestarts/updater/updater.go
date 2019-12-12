@@ -5,6 +5,7 @@
 package updater
 
 import (
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -15,24 +16,26 @@ import (
 	"runtime"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/build"
 	"github.com/pinpt/agent.next/pkg/fs"
 	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/go-common/api"
 )
-
-const s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
 
 // Updater handles agent and built-in integration updates
 type Updater struct {
-	logger hclog.Logger
-	fsconf fsconf.Locs
+	logger  hclog.Logger
+	fsconf  fsconf.Locs
+	channel string
 }
 
 // New creates updater
-func New(logger hclog.Logger, fsconf fsconf.Locs) *Updater {
+func New(logger hclog.Logger, fsconf fsconf.Locs, conf agentconf.Config) *Updater {
 	return &Updater{
-		logger: logger,
-		fsconf: fsconf,
+		logger:  logger,
+		fsconf:  fsconf,
+		channel: conf.Channel,
 	}
 }
 
@@ -241,10 +244,14 @@ func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) 
 		return
 	}
 
-	url := s3BinariesPrefix + "/" + version + "/" + platform + "/" + urlPath
+	//const s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
+	s3BinariesPrefix := api.BackendURL(api.EventService, s.channel) + "/agent/download"
+
+	url := s3BinariesPrefix + "/" + version + "/bin-gz/" + platform + "/" + urlPath
 	if platform == "windows" {
 		url += ".exe"
 	}
+	url += ".gz"
 
 	bin := path.Base(urlPath)
 
@@ -256,7 +263,6 @@ func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) 
 		return
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != 200 {
 		rerr = fmt.Errorf("could not download binary, status code: %v url: %v", resp.StatusCode, url)
 		return
@@ -266,7 +272,14 @@ func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) 
 	if platform == "windows" {
 		loc += ".exe"
 	}
-	err = fs.WriteToTempAndRename(resp.Body, loc)
+
+	r, err := gzip.NewReader(resp.Body)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	err = fs.WriteToTempAndRename(r, loc)
 	if err != nil {
 		rerr = err
 		return
