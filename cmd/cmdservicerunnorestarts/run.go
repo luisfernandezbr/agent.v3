@@ -214,6 +214,13 @@ func (s *runner) Run(ctx context.Context) error {
 		}
 		defer close()
 	}
+	{
+		close, err := s.handleCancelEvents(ctx)
+		if err != nil {
+			return fmt.Errorf("error handling cancel requests, err: %v", err)
+		}
+		defer close()
+	}
 
 	/*
 		if os.Getenv("PP_AGENT_SERVICE_TEST_MOCK") != "" {
