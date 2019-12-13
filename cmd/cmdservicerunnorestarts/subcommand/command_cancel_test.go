@@ -30,7 +30,7 @@ func TestCommandCancel(t *testing.T) {
 	}()
 
 	// pick a command that will take some time to run
-	cmd := exec.Command("git", "clone", "git@github.com:pinpt/agent.git", gitclone)
+	cmd := exec.Command("git", "clone", "git@github.com:torvalds/linux.git", gitclone)
 	assert.NoError(t, cmd.Start())
 
 	// insert command as soon as it's started
