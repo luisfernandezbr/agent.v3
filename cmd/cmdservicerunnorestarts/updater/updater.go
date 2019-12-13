@@ -25,17 +25,19 @@ import (
 
 // Updater handles agent and built-in integration updates
 type Updater struct {
-	logger  hclog.Logger
-	fsconf  fsconf.Locs
-	channel string
+	logger          hclog.Logger
+	fsconf          fsconf.Locs
+	channel         string
+	integrationsDir string
 }
 
 // New creates updater
 func New(logger hclog.Logger, fsconf fsconf.Locs, conf agentconf.Config) *Updater {
 	return &Updater{
-		logger:  logger,
-		fsconf:  fsconf,
-		channel: conf.Channel,
+		logger:          logger,
+		fsconf:          fsconf,
+		channel:         conf.Channel,
+		integrationsDir: conf.IntegrationsDir,
 	}
 }
 
@@ -43,7 +45,7 @@ func New(logger hclog.Logger, fsconf fsconf.Locs, conf agentconf.Config) *Update
 // are not present in integrations dir. This would happen
 // if use only downloaded the agent binary.
 func (s *Updater) DownloadIntegrationsIfMissing() error {
-	dir := s.fsconf.Integrations
+	dir := s.integrationsDir
 	exists, err := fs.Exists(dir)
 	if err != nil {
 		return fmt.Errorf("Could not read integration dir: %v", err)
@@ -163,19 +165,19 @@ func (s *Updater) updateAgent(version, downloadDir string) error {
 
 func (s *Updater) updateIntegrations(version string, downloadDir string) error {
 	downloadedIntegrations := filepath.Join(downloadDir, "integrations")
-	ok, err := fs.Exists(s.fsconf.Integrations)
+	ok, err := fs.Exists(s.integrationsDir)
 	if err != nil {
 		return err
 	}
 	if !ok {
 		// integration dir did not exist, create an empty one, so that we can use replaceRestoringIfFailed
-		err = os.MkdirAll(s.fsconf.Integrations, 0777)
+		err = os.MkdirAll(s.integrationsDir, 0777)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = replaceRestoringIfFailed(s.fsconf.Integrations, downloadedIntegrations, s.fsconf.Temp)
+	err = replaceRestoringIfFailed(s.integrationsDir, downloadedIntegrations, s.fsconf.Temp)
 	if err != nil {
 		return fmt.Errorf("failed to replace integrations: %v", err)
 	}
@@ -246,8 +248,12 @@ func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) 
 		return
 	}
 
-	//const s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
-	s3BinariesPrefix := api.BackendURL(api.EventService, s.channel) + "/agent/download"
+	s3BinariesPrefix := ""
+	if os.Getenv("PP_AGENT_USE_DIRECT_UPDATE_URL") != "" {
+		s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
+	} else {
+		s3BinariesPrefix = api.BackendURL(api.EventService, s.channel) + "/agent/download"
+	}
 
 	url := s3BinariesPrefix + "/" + version + "/bin-gz/" + platform + "/" + urlPath
 	if platform == "windows" {
