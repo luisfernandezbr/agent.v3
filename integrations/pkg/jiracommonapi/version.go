@@ -1,6 +1,6 @@
 package jiracommonapi
 
-func ApiVersion(qc QueryContext) (apiVersion string, err error) {
+func APIVersion(qc QueryContext) (apiVersion string, err error) {
 
 	objectPath := "serverInfo"
 

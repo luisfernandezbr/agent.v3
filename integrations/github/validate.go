@@ -73,9 +73,9 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 			rerr(err)
 			return
 		}
-		res.ApiVersion = version
+		res.APIVersion = version
 	} else {
-		res.ApiVersion = "cloud"
+		res.APIVersion = "cloud"
 	}
 
 	err = s.checkTokenScopes()

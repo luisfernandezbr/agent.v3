@@ -78,7 +78,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	res.ApiVersion, err = api.ApiVersion(s.qc)
+	res.APIVersion, err = api.APIVersion(s.qc)
 	if err != nil {
 		rerr(err)
 		return

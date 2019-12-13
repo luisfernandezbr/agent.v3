@@ -90,7 +90,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 		resp.Success = true
 		resp.Type = agent.IntegrationResponseTypeIntegration
 		resp.Authorization = encrAuthData
-		resp.APIVersion = res.ApiVersion
+		resp.APIVersion = res.APIVersion
 		return sendEvent(resp)
 	}
 

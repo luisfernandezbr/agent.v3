@@ -131,12 +131,12 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	version, err := jiracommonapi.ApiVersion(s.qc.Common())
+	version, err := jiracommonapi.APIVersion(s.qc.Common())
 	if err != nil {
 		rerr(err)
 	}
 
-	res.ApiVersion = version
+	res.APIVersion = version
 
 	_, err = api.Projects(s.qc)
 	if err != nil {

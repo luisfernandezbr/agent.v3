@@ -1,6 +1,6 @@
 package api
 
-func ApiVersion(qc QueryContext) (apiVersion string, err error) {
+func APIVersion(qc QueryContext) (apiVersion string, err error) {
 	qc.Logger.Debug("groups request")
 
 	objectPath := "version"

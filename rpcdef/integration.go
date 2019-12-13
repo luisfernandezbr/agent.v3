@@ -67,7 +67,7 @@ type ExportResult struct {
 type ValidationResult struct {
 	Errors     []string `json:"errors"`
 	RepoURL    string   `json:"repo"`
-	ApiVersion string   `json:"api_version"`
+	APIVersion string   `json:"api_version"`
 }
 
 type OnboardExportType string
@@ -180,7 +180,7 @@ func (s *IntegrationClient) ValidateConfig(ctx context.Context,
 	}
 	res.Errors = resp.Errors
 	res.RepoURL = resp.RepoUrl
-	res.ApiVersion = resp.ApiVersion
+	res.APIVersion = resp.ApiVersion
 	return res, nil
 }
 
@@ -262,7 +262,7 @@ func (s *IntegrationServer) ValidateConfig(ctx context.Context, req *proto.Integ
 	}
 	res.Errors = r0.Errors
 	res.RepoUrl = r0.RepoURL
-	res.ApiVersion = r0.ApiVersion
+	res.ApiVersion = r0.APIVersion
 	return res, nil
 }
 

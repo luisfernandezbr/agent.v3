@@ -80,7 +80,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	res.ApiVersion = "cloud"
+	res.APIVersion = "cloud"
 
 	teamNames, err := api.Teams(s.qc)
 	if err != nil {

@@ -39,7 +39,7 @@ type validator struct {
 
 	integration  *iloader.Integration
 	exportConfig rpcdef.ExportConfig
-	apiVersion   string
+	APIVersion   string
 }
 
 func newValidator(opts Opts) (_ *validator, rerr error) {
@@ -88,7 +88,7 @@ type Result struct {
 	Errors []string `json:"errors"`
 	// Success is true if there are no errors. Useful when returning result as json to ensure that marshalling worked.
 	Success    bool   `json:"success"`
-	ApiVersion string `json:"api_version"`
+	APIVersion string `json:"api_version"`
 }
 
 func (s *validator) runValidateAndPrint() error {
@@ -103,7 +103,7 @@ func (s *validator) outputErr(err error) error {
 func (s *validator) output(errs []string) error {
 	res := Result{}
 	res.Errors = errs
-	res.ApiVersion = s.apiVersion
+	res.APIVersion = s.APIVersion
 
 	if len(res.Errors) == 0 {
 		res.Success = true
@@ -141,7 +141,7 @@ func (s *validator) runValidate() (errs []string) {
 		return
 	}
 
-	s.apiVersion = res0.ApiVersion
+	s.APIVersion = res0.APIVersion
 
 	if res0.RepoURL != "" { // repo url is only set for git integrations
 		err = s.cloneRepo(res0.RepoURL)
