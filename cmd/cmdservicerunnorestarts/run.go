@@ -116,24 +116,28 @@ func (s *runner) Run(ctx context.Context) error {
 	s.logger.Info("Config", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot, "integrations-dir", s.conf.IntegrationsDir)
 
 	if build.IsProduction() &&
-		(runtime.GOOS == "linux" || runtime.GOOS == "windows") &&
-		os.Getenv("PP_AGENT_UPDATE_ENABLED") != "" {
-		version := os.Getenv("PP_AGENT_UPDATE_VERSION")
-		if version != "" {
-			oldVersion, err := s.updateTo(version)
+		(runtime.GOOS == "linux" || runtime.GOOS == "windows") {
+		toVersion := os.Getenv("PP_AGENT_UPDATE_VERSION")
+		if toVersion != "" {
+			oldVersion, err := s.updateTo(toVersion)
 			if err != nil {
 				return fmt.Errorf("Could not self-update: %v", err)
 			}
-			if oldVersion != version {
+			if oldVersion != toVersion {
 				s.logger.Info("Updated the agent, restarting...")
 				return nil
 			}
 		} else {
-			upd := updater.New(s.logger, s.fsconf, s.conf)
-			err := upd.DownloadIntegrationsIfMissing()
-			if err != nil {
-				return fmt.Errorf("Could not download integration binaries: %v", err)
+			fromVersion := os.Getenv("PP_AGENT_VERSION")
+			// skip auto integration download for test builds
+			if fromVersion != "test" {
+				upd := updater.New(s.logger, s.fsconf, s.conf)
+				err := upd.DownloadIntegrationsIfMissing()
+				if err != nil {
+					return fmt.Errorf("Could not download integration binaries: %v", err)
+				}
 			}
+
 		}
 	}
 
