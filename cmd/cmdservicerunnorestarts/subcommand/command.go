@@ -83,7 +83,7 @@ func New(opts Opts) (*Command, error) {
 
 // KillCommand stops a running process
 func KillCommand(logger hclog.Logger, cmdname string) error {
-	logger.Debug("killing command manually")
+	logger.Debug("killing command manually", "cmd", cmdname)
 	return removeProcess(logger, cmdname)
 }
 

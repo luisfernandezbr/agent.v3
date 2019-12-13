@@ -147,7 +147,7 @@ func (s *runner) Run(ctx context.Context) error {
 		return fmt.Errorf("could not send enabled request, err: %v", err)
 	}
 
-	err = s.sendStart(context.Background())
+	err = s.sendStart(ctx)
 	if err != nil {
 		return fmt.Errorf("could not send start event, err: %v", err)
 	}
@@ -160,6 +160,20 @@ func (s *runner) Run(ctx context.Context) error {
 		PPEncryptionKey:     s.conf.PPEncryptionKey,
 		AgentConfig:         s.agentConfig,
 		IntegrationsDir:     s.fsconf.Integrations,
+		OnExportComplete: func() {
+			if err := s.sendEnabled(ctx); err != nil {
+				s.logger.Error("Could not send enabled event", err, "err")
+				return
+			}
+			if err := s.sendStop(ctx); err != nil {
+				s.logger.Error("Could not send stop event", err, "err")
+				return
+			}
+			if err := s.sendStart(ctx); err != nil {
+				s.logger.Error("Could not send start event", err, "err")
+				return
+			}
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("could not initialize exporter, err: %v", err)
