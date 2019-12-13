@@ -76,7 +76,7 @@ func doBuild(opts Opts, platforms Platforms) {
 
 		fmt.Println("creating archives", platforms)
 		platforms.Each(func(pl Platform) {
-			err := archive.ZipDir(fjoin(opts.BuildDir, "archives", pl.Name+".zip"), fjoin(opts.BuildDir, "bin", pl.Name))
+			err := archive.ZipDir(fjoin(opts.BuildDir, "archives", pl.UserFriedlyName+".zip"), fjoin(opts.BuildDir, "bin", pl.OSArch()))
 			if err != nil {
 				panic(err)
 			}
@@ -91,18 +91,15 @@ func gzipAgentAndIntegrations(opts Opts, platforms Platforms) {
 	fmt.Println("creating gzipped binaries for auto-updater", platforms)
 
 	platforms.Each(func(pl Platform) {
-		nameInBin := fjoin(pl.Name, "pinpoint-agent")
-		if pl.GOOS == "windows" {
-			nameInBin += ".exe"
-		}
+		nameInBin := fjoin(pl.OSArch(), "pinpoint-agent"+pl.BinSuffix)
 		gzipBin(opts, nameInBin)
-		integrationsDir := fjoin(opts.BuildDir, "bin", pl.Name, "integrations")
+		integrationsDir := fjoin(opts.BuildDir, "bin", pl.OSArch(), "integrations")
 		files, err := ioutil.ReadDir(integrationsDir)
 		if err != nil {
 			panic(err)
 		}
 		for _, file := range files {
-			nameInBin := fjoin(pl.Name, "integrations", file.Name())
+			nameInBin := fjoin(pl.OSArch(), "integrations", file.Name())
 			gzipBin(opts, nameInBin)
 		}
 	})
@@ -148,7 +145,7 @@ type Platforms []Platform
 func (s Platforms) String() string {
 	res := []string{}
 	for _, pl := range s {
-		res = append(res, pl.String())
+		res = append(res, pl.OSArch())
 	}
 	return strings.Join(res, ",")
 }
@@ -175,28 +172,25 @@ func prepareGithubReleaseFiles(opts Opts, platforms Platforms) {
 			panic(err)
 		}
 	}
+
 	// include unpacked agent binary unpacked for curl installer
-	copyAgentUnpackedIntoDir(opts, platforms, releaseDir)
+	copyAgentUnpackedIntoDir(opts, platforms, releaseDir, true)
 }
 
-func copyAgentUnpackedIntoDir(opts Opts, platforms Platforms, targetDir string) {
-
+func copyAgentUnpackedIntoDir(opts Opts, platforms Platforms, targetDir string, useUserFriendlyName bool) {
 	err := os.MkdirAll(targetDir, 0777)
 	if err != nil {
 		panic(err)
 	}
 
 	platforms.Each(func(pl Platform) {
-		srcBin := "pinpoint-agent"
-		if pl.GOOS == "windows" {
-			srcBin += ".exe"
+		srcBin := fjoin(opts.BuildDir, "bin", pl.OSArch(), "pinpoint-agent"+pl.BinSuffix)
+		targetName := "pinpoint-agent-" + pl.OSArch() + pl.BinSuffix
+		if useUserFriendlyName {
+			targetName = "pinpoint-agent-" + pl.UserFriedlyName + pl.BinSuffix
 		}
-		targetBin := "pinpoint-agent-" + pl.Name
-		if pl.GOOS == "windows" {
-			targetBin += ".exe"
-		}
-		dir := fjoin(opts.BuildDir, "bin", pl.Name)
-		err := fs.CopyFile(fjoin(dir, srcBin), fjoin(targetDir, targetBin))
+		targetBin := fjoin(targetDir, targetName)
+		err := fs.CopyFile(srcBin, targetBin)
 		if err != nil {
 			panic(err)
 		}
@@ -230,19 +224,12 @@ func getCommitSHA() string {
 }
 
 func buildAgent(opts Opts, pl Platform, ldflags string) {
-	out := fjoin(opts.BuildDir, "bin", pl.Name, "pinpoint-agent")
-	if pl.GOOS == "windows" {
-		out += ".exe"
-	}
+	out := fjoin(opts.BuildDir, "bin", pl.OSArch(), "pinpoint-agent"+pl.BinSuffix)
 	exe([]string{"GOOS=" + pl.GOOS, "CGO_ENABLED=0"}, "go", "build", "-ldflags", ldflags, "-tags", "prod", "-o", out)
 }
 
 func buildIntegration(opts Opts, in string, pl Platform) {
-	out := fjoin(opts.BuildDir, "bin", pl.Name, "integrations", in)
-	if pl.GOOS == "windows" {
-		out += ".exe"
-	}
-
+	out := fjoin(opts.BuildDir, "bin", pl.OSArch(), "integrations", in+pl.BinSuffix)
 	exe([]string{"GOOS=" + pl.GOOS, "CGO_ENABLED=0"}, "go", "build", "-o", out, "./integrations/"+in)
 }
 

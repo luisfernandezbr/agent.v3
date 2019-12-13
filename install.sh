@@ -125,9 +125,7 @@ mkdir -p "$INSTALL_DIRECTORY"
 
 echo "Will install into $INSTALL_DIRECTORY"
 
-#BINARY="pinpoint-agent-${OS}-${ARCH}"
-# TODO: add arch to name in build script
-BINARY="pinpoint-agent-${OS}"
+BINARY="pinpoint-agent-${OS}-${ARCH}"
 
 if [ "$OS" = "windows" ]; then
     BINARY="$BINARY.exe"

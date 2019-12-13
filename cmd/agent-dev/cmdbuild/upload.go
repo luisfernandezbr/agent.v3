@@ -36,10 +36,11 @@ func upload(opts Opts, platforms Platforms) {
 
 	// include unpacked agent binary unpacked for curl installer
 	// TODO: this is temporary for testing, will be installing from github normally??
-	copyAgentUnpackedIntoDir(opts, platforms, fjoin(releaseDir, "agent"))
+	copyAgentUnpackedIntoDir(opts, platforms, fjoin(releaseDir, "agent"), false)
 
-	if !opts.OnlyAgent {
+	if opts.OnlyAgent {
 		fmt.Println("only-agent passed skipping bin-gz folder upload, including gz agent")
+	} else {
 		err = fs.CopyDir(fjoin(opts.BuildDir, "bin-gz"), fjoin(releaseDir, "bin-gz"))
 		if err != nil {
 			panic(err)
