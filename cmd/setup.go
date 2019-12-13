@@ -133,7 +133,7 @@ func integrationCommandFlags(cmd *cobra.Command) {
 	cmd.Flags().String("agent-config-file", "", "Agent config json as file")
 	cmd.Flags().String("integrations-json", "", "Integrations config as json")
 	cmd.Flags().String("integrations-file", "", "Integrations config json as file")
-	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
+	cmd.Flags().String("integrations-dir", "", "Integrations dir")
 }
 
 func defaultIntegrationsDir() string {
