@@ -12,7 +12,7 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
-func (api *API) fetchChangeLog(projid, issueid string) (changelogs []work.IssueChangeLog, err error) {
+func (api *API) fetchChangeLog(itemtype, projid, issueid string) (changelogs []work.IssueChangeLog, err error) {
 	var res []changelogResponse
 	url := fmt.Sprintf(`%s/_apis/wit/workItems/%s/updates`, projid, issueid)
 	if err := api.getRequest(url, stringmap{"$top": "200"}, &res); err != nil {
@@ -28,6 +28,7 @@ func (api *API) fetchChangeLog(projid, issueid string) (changelogs []work.IssueC
 		createdDate := changeLogExtractCreatedDate(changelog)
 		for field, values := range changelog.Fields {
 			if extractor, ok := changelogFields[field]; ok {
+
 				newvals := changelogFieldWithIDGen{
 					changelogField: values,
 					gen:            api.IDs,
@@ -36,6 +37,15 @@ func (api *API) fetchChangeLog(projid, issueid string) (changelogs []work.IssueC
 				if from == "" && to == "" {
 					continue
 				}
+				// if field == "System.WorkItemType" {
+				// 	itemtype = changelogToString(values.NewValue)
+				// }
+				// edge case. status needs to match admin statuses
+				// if field == "System.State" {
+				// 	to = itemStateName(to, itemtype)
+				// 	from = itemStateName(from, itemtype)
+				// }
+
 				changelogs = append(changelogs, work.IssueChangeLog{
 					RefID:       fmt.Sprintf("%d", changelog.ID),
 					CreatedDate: createdDate,
@@ -135,7 +145,8 @@ func extractUsers(item changelogFieldWithIDGen) (from string, to string) {
 }
 
 var changelogFields = map[string]changeogFieldExtractor{
-	"System.State": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
+	// "System.State": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
+	"System.BoardColumn": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
 		return work.IssueChangeLogFieldStatus, changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	"Microsoft.VSTS.Common.ResolvedReason": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
@@ -176,13 +187,13 @@ var changelogFields = map[string]changeogFieldExtractor{
 		return work.IssueChangeLogFieldPriority, changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	"System.Id": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
-		oldvalue := item.gen.WorkProject(changelogToString(item.OldValue))
-		newvalue := item.gen.WorkProject(changelogToString(item.NewValue))
+		oldvalue := item.gen.WorkIssue(changelogToString(item.OldValue))
+		newvalue := item.gen.WorkIssue(changelogToString(item.NewValue))
 		return work.IssueChangeLogFieldProjectID, oldvalue, newvalue
 	},
 	"System.TeamProject": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
-		oldvalue := item.gen.WorkIssue(changelogToString(item.OldValue))
-		newvalue := item.gen.WorkIssue(changelogToString(item.NewValue))
+		oldvalue := item.gen.WorkProject(changelogToString(item.OldValue))
+		newvalue := item.gen.WorkProject(changelogToString(item.NewValue))
 		return work.IssueChangeLogFieldIdentifier, oldvalue, newvalue
 	},
 	"System.IterationPath": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {

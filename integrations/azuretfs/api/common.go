@@ -95,6 +95,9 @@ func (api *API) postRequest(endPoint string, params stringmap, body interface{},
 	return api.doRequest(http.MethodPost, endPoint, params, reader, out)
 }
 
+func (api *API) GetRequest(endPoint string, params stringmap, out interface{}) error {
+	return api.getRequest(endPoint, params, out)
+}
 func (api *API) getRequest(endPoint string, params stringmap, out interface{}) error {
 	if params == nil {
 		params = stringmap{}
@@ -174,5 +177,9 @@ func exists(what string, where []string) bool {
 }
 
 func stringify(i interface{}) string {
-	return pjson.Stringify(i)
+	return pjson.Stringify(i, true)
+}
+
+func itemStateName(state string, itemtype string) string {
+	return fmt.Sprintf("%s (type: %s)", state, itemtype)
 }
