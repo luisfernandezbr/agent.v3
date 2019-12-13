@@ -101,6 +101,8 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 	if args != nil {
 		flags = append(flags, args...)
 	}
+	// This shouldn't be necessary, we already pass it in --agent-config-file
+	// TODO: check why the value from --agent-config-file is not used
 	flags = append(flags, "--pinpoint-root="+c.config.PinpointRoot)
 
 	if err := os.MkdirAll(c.tmpdir, 0777); err != nil {

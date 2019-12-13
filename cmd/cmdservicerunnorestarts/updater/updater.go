@@ -234,12 +234,14 @@ func replaceRestoringIfFailed(loc string, repl string, tmpDir string) error {
 }
 
 func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) (loc string, rerr error) {
-	platform := runtime.GOOS
-	switch platform {
+	platform := runtime.GOOS + "-" + runtime.GOARCH
+	switch runtime.GOOS {
 	case "windows", "linux":
-	case "darwin":
-		platform = "macos"
 	default:
+		rerr = errors.New("platform not supported: " + platform)
+		return
+	}
+	if runtime.GOARCH != "amd64" {
 		rerr = errors.New("platform not supported: " + platform)
 		return
 	}
