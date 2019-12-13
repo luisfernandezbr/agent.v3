@@ -20,13 +20,14 @@ func TestCommandCancel(t *testing.T) {
 	// create a temp dir for testing only
 	gitclone, err := ioutil.TempDir("", "test_cancel")
 	assert.NoError(t, err)
+
+	err = os.MkdirAll(gitclone, 0755)
+	assert.NoError(t, err)
+
 	// cleanup
 	defer func() {
 		assert.NoError(t, os.RemoveAll(gitclone))
 	}()
-
-	err = os.MkdirAll(gitclone, 0755)
-	assert.NoError(t, err)
 
 	// pick a command that will take some time to run
 	cmd := exec.Command("git", "clone", "git@github.com:pinpt/agent.git", gitclone)
@@ -35,7 +36,7 @@ func TestCommandCancel(t *testing.T) {
 	// insert command as soon as it's started
 	addProcess(logger, "git clone", cmd.Process)
 	go func() {
-		// kill the command while it's processing
+		// kill the command while it's running
 		time.Sleep(killtime)
 		removeProcess(logger, "git clone")
 	}()
