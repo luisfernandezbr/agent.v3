@@ -19,7 +19,7 @@ RUN dep ensure -v -vendor-only
 ARG BUILD=
 ENV COMMITSHA=${BUILD}
 RUN make linux
-RUN mkdir /tmp/agent && cp -R dist/bin/linux/ /tmp/agent/
+RUN mkdir /tmp/agent && cp -R dist/bin/linux-amd64/ /tmp/agent/
 
 FROM alpine
 RUN apk update && apk upgrade && apk add --no-cache bash git openssh ca-certificates gnupg
