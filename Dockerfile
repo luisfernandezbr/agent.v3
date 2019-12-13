@@ -23,7 +23,7 @@ RUN mkdir /tmp/agent && cp -R dist/bin/linux-amd64/ /tmp/agent/
 
 FROM alpine
 RUN apk update && apk upgrade && apk add --no-cache bash git openssh ca-certificates gnupg
-COPY --from=0 /tmp/agent/linux /bin
+COPY --from=0 /tmp/agent/linux-amd64 /bin
 RUN mv /bin/pinpoint-agent /bin/pinpoint-agent
 WORKDIR /
 ENTRYPOINT ["pinpoint-agent"]
