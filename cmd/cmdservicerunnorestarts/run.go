@@ -330,20 +330,6 @@ func (s *runner) sendStop(ctx context.Context) error {
 }
 
 func (s *runner) sendPing(ctx context.Context) error {
-	ev := &agent.Ping{
-		Type:    agent.PingTypePing,
-		Success: true,
-	}
-	onboardingInProgress := atomic.LoadInt64(&s.onboardingInProgress)
-	ev.Onboarding = onboardingInProgress != 0
-
-	if s.exporter.IsRunning() {
-		ev.State = agent.PingStateExporting
-		ev.Exporting = true
-	} else {
-		ev.State = agent.PingStateIdle
-		ev.Exporting = false
-	}
 	return s.sendEvent(ctx, s.getPing(), "", nil)
 }
 
