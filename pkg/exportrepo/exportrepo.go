@@ -540,7 +540,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 			}
 
 			{
-				cf := sourcecode.CommitFiles{
+				file := sourcecode.CommitFiles{
 					CommitID:          s.commitID(commit.SHA),
 					RepoID:            repoID,
 					Status:            string(cf.Status),
@@ -564,8 +564,8 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 					Blanks:            blame.Blanks,
 					Complexity:        blame.Complexity,
 				}
-				date.ConvertToModel(commit.Date, &cf.CreatedDate)
-				commitFiles = append(commitFiles, cf)
+				date.ConvertToModel(commit.Date, &file.CreatedDate)
+				commitFiles = append(commitFiles, file)
 			}
 
 			commitComplexityCount += blame.Complexity
