@@ -135,6 +135,7 @@ func init() {
 	cmd := cmdEnroll
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
+	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
 	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
 	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
 	cmd.Flags().Bool("skip-service-run", false, "Set to true to skip service run. Will need to run it separately.")
