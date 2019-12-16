@@ -43,8 +43,6 @@ type Opts struct {
 
 	PPEncryptionKey string
 	AgentConfig     cmdintegration.AgentConfig
-
-	IntegrationsDir string
 }
 
 // Exporter schedules and executes exports

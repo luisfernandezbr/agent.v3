@@ -33,12 +33,15 @@ type Updater struct {
 
 // New creates updater
 func New(logger hclog.Logger, fsconf fsconf.Locs, conf agentconf.Config) *Updater {
-	return &Updater{
-		logger:          logger,
-		fsconf:          fsconf,
-		channel:         conf.Channel,
-		integrationsDir: conf.IntegrationsDir,
+	s := &Updater{}
+	s.logger = logger
+	s.fsconf = fsconf
+	s.channel = conf.Channel
+	s.integrationsDir = conf.IntegrationsDir
+	if s.integrationsDir == "" {
+		s.integrationsDir = fsconf.Integrations
 	}
+	return s
 }
 
 // DownloadIntegrationsIfMissing downloads integrations if those
@@ -115,7 +118,7 @@ func (s *Updater) Update(version string) error {
 	s.logger.Info("Replacing integration binaries")
 	err = s.updateIntegrations(version, downloadDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("updateIntegrations: %v", err)
 	}
 
 	s.logger.Info("Updated both agent and integrations")
@@ -173,7 +176,7 @@ func (s *Updater) updateIntegrations(version string, downloadDir string) error {
 		// integration dir did not exist, create an empty one, so that we can use replaceRestoringIfFailed
 		err = os.MkdirAll(s.integrationsDir, 0777)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not create integrations dir: %v", err)
 		}
 	}
 
@@ -236,15 +239,15 @@ func replaceRestoringIfFailed(loc string, repl string, tmpDir string) error {
 }
 
 func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) (loc string, rerr error) {
-	platform := runtime.GOOS + "-" + runtime.GOARCH
+	platformArch := runtime.GOOS + "-" + runtime.GOARCH
 	switch runtime.GOOS {
 	case "windows", "linux":
 	default:
-		rerr = errors.New("platform not supported: " + platform)
+		rerr = errors.New("platform not supported: " + platformArch)
 		return
 	}
 	if runtime.GOARCH != "amd64" {
-		rerr = errors.New("platform not supported: " + platform)
+		rerr = errors.New("platform not supported: " + platformArch)
 		return
 	}
 
@@ -255,8 +258,8 @@ func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) 
 		s3BinariesPrefix = api.BackendURL(api.EventService, s.channel) + "/agent/download"
 	}
 
-	url := s3BinariesPrefix + "/" + version + "/bin-gz/" + platform + "/" + urlPath
-	if platform == "windows" {
+	url := s3BinariesPrefix + "/" + version + "/bin-gz/" + platformArch + "/" + urlPath
+	if runtime.GOOS == "windows" {
 		url += ".exe"
 	}
 	url += ".gz"
@@ -277,7 +280,7 @@ func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) 
 	}
 
 	loc = filepath.Join(tmpDir, bin)
-	if platform == "windows" {
+	if runtime.GOOS == "windows" {
 		loc += ".exe"
 	}
 

@@ -164,7 +164,6 @@ func (s *runner) Run(ctx context.Context) error {
 		FSConf:              s.fsconf,
 		PPEncryptionKey:     s.conf.PPEncryptionKey,
 		AgentConfig:         s.agentConfig,
-		IntegrationsDir:     s.fsconf.Integrations,
 	})
 	if err != nil {
 		return fmt.Errorf("could not initialize exporter, err: %v", err)
