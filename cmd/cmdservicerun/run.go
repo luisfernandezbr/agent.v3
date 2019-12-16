@@ -74,7 +74,7 @@ func (s *runner) Run() error {
 
 func (s *runner) CaptureShutdown(cancel func(), done chan error) {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(c, syscall.SIGTERM)
 	<-c
 	s.logger.Info("signal received exiting")
 	cancel()
