@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent.next/pkg/agentconf"
@@ -187,14 +188,32 @@ func (s *Updater) updateIntegrations(version string, downloadDir string) error {
 	return nil
 }
 
+// on windows we will not be able to delete the current agent, because the main service process is running it. but the second backup name will work.
+// retrying RemoveAll 2 times for this
+func backupLoc(loc string) (backupLoc string, _ error) {
+	i := 0
+	var lastErr error
+	for {
+		backupLoc = loc + ".old" + strconv.Itoa(i)
+		err := os.RemoveAll(backupLoc)
+		if err == nil {
+			return
+		}
+		lastErr = err
+		i++
+		if i >= 2 {
+			return "", fmt.Errorf("could not find name for backup, old backup can not be deleted, failed after %v attempts, last err %v", i, lastErr)
+		}
+	}
+}
+
 func replaceRestoringIfFailed(loc string, repl string, tmpDir string) error {
 	repl2 := loc + ".new"
-	backup := loc + ".old"
-
-	err := os.RemoveAll(backup)
+	backup, err := backupLoc(loc)
 	if err != nil {
 		return err
 	}
+
 	// copy from loc to new to allow the files being on different drives, happens in make docker-dev
 	err = os.RemoveAll(repl2)
 	if err != nil {
