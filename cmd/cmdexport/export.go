@@ -7,16 +7,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
 	"github.com/pinpt/agent.next/pkg/fs"
-	"github.com/pinpt/agent.next/pkg/gitclone"
 	"github.com/pinpt/agent.next/pkg/integrationid"
 	"github.com/pinpt/agent.next/pkg/memorylogs"
 
@@ -39,15 +36,6 @@ func Run(opts Opts) error {
 	if err != nil {
 		return err
 	}
-	// force kill git processing if this process is killed
-	sigkill := make(chan os.Signal, 1)
-	signal.Notify(sigkill, syscall.SIGKILL)
-	go func() {
-		sig := <-sigkill
-		opts.Logger.Info("exporter killed manually", "sig", sig.String())
-		exp.Destroy()
-	}()
-
 	exp.Destroy()
 	return nil
 }
@@ -195,7 +183,6 @@ func (s *export) Destroy() {
 			panic(err)
 		}
 	}
-	gitclone.RemoveAllProcesses()
 }
 
 func (s *export) tempFilesInUploads() ([]string, error) {

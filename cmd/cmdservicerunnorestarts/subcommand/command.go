@@ -26,6 +26,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
+	"github.com/pinpt/agent.next/pkg/interrupt"
 )
 
 // Opts are options needed to create Command
@@ -307,6 +308,6 @@ func removeProcess(logger hclog.Logger, name string) error {
 	logger.Debug("removing process from map", "name", name)
 	p := processes[name]
 	delete(processes, name)
-	p.Kill()
+	interrupt.Kill(p)
 	return nil
 }
