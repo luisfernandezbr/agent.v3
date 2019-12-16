@@ -1,21 +1,41 @@
 package api
 
 import (
-	"time"
+	"crypto/tls"
+	"io/ioutil"
+	"net/http"
+
+	"github.com/pinpt/go-common/httpdefaults"
+	pstring "github.com/pinpt/go-common/strings"
 )
 
 func (a *SonarqubeAPI) APIVersion() (apiVersion string, err error) {
 
-	var serverInfo struct {
-		Version string `json:"version"`
-	}
+	c := &http.Client{}
+	transport := httpdefaults.DefaultTransport()
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: false}
+	c.Transport = transport
 
-	err = a.doRequest("GET", "/server", time.Time{}, &serverInfo)
+	url := pstring.JoinURL(a.url, "server", "version")
+
+	var req *http.Request
+	req, err = http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return
 	}
 
-	apiVersion = serverInfo.Version
+	req.SetBasicAuth(a.authToken, "")
+
+	var resp *http.Response
+	resp, err = c.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	bts, _ := ioutil.ReadAll(resp.Body)
+
+	apiVersion = string(bts)
 
 	return
 }
