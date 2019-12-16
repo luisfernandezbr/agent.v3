@@ -151,6 +151,12 @@ func (s *runner) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not send start event, err: %v", err)
 	}
+	defer func() {
+		if err := s.sendStop(ctx); err != nil {
+			s.logger.Error("Could not send stop event", err, "err")
+			return
+		}
+	}()
 	s.exporter, err = exporter.New(exporter.Opts{
 		Logger:              s.logger,
 		LogLevelSubcommands: s.opts.LogLevelSubcommands,
@@ -160,20 +166,6 @@ func (s *runner) Run(ctx context.Context) error {
 		PPEncryptionKey:     s.conf.PPEncryptionKey,
 		AgentConfig:         s.agentConfig,
 		IntegrationsDir:     s.fsconf.Integrations,
-		OnExportComplete: func() {
-			if err := s.sendEnabled(ctx); err != nil {
-				s.logger.Error("Could not send enabled event", err, "err")
-				return
-			}
-			if err := s.sendStop(ctx); err != nil {
-				s.logger.Error("Could not send stop event", err, "err")
-				return
-			}
-			if err := s.sendStart(ctx); err != nil {
-				s.logger.Error("Could not send start event", err, "err")
-				return
-			}
-		},
 	})
 	if err != nil {
 		return fmt.Errorf("could not initialize exporter, err: %v", err)

@@ -45,8 +45,6 @@ type Opts struct {
 	AgentConfig     cmdintegration.AgentConfig
 
 	IntegrationsDir string
-
-	OnExportComplete func()
 }
 
 // Exporter schedules and executes exports
@@ -111,7 +109,6 @@ func (s *Exporter) Run() {
 			s.setRunning(true)
 			s.export(req2.Data, req2.MessageID)
 			s.setRunning(false)
-			s.opts.OnExportComplete()
 			req.Done <- struct{}{}
 		}
 	}()
