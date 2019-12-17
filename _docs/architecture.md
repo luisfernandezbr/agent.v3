@@ -1,7 +1,7 @@
 ### Overview
 Agent is run continuously on the target machine. All actions are driven from a backend.
 
-User installs agent using enroll command, which ensures that service is on the the system startup.
+User installs agent using enroll command, which ensures that service is on the system startup.
 
 Service waits for commands from a backend to validate integrations, start export or get users, repos, projects for use in admin web interface. All these actions are started as a separate process. To implement this we have the following hidden commands which accept json as params.
 
@@ -54,7 +54,7 @@ At the moment, we do not need communications between processes, or complex commu
 
 Normally sourcecode systems make it possible to export the list of users. We save those users in sourcecode.User directly from integration code.
 
-For example in github, we create a user for every user in github organization. In further processing, when we process pull requests, comments and similar data, we also send newly encountered users. This would include old organization members, commits in public repor by a thirdpary and bots, which are not a present in a list of users in organization.
+For example in github, we create a user for every user in github organization. In further processing, when we process pull requests, comments and similar data, we also send newly encountered users. This would include old organization members, commits in public repos by a thirdpary and bots, which are not a present in a list of users in organization.
 
 ```
 u = &sourcecode.User{}
@@ -72,7 +72,7 @@ These objects contain integration user id as RefID. AssociatedRefID is not set f
 
 We also want to link emails used in commits and integration user accounts. These could be available in different ways.
 
-For example, in gitlab enterprise it is possible to the the email list for each user. In taht case we pass a special integration commitusers.CommitUser struct from integration into agent.
+For example, in gitlab enterprise it is possible to the email list for each user. In that case we pass a special integration commitusers.CommitUser struct from integration into agent.
 
 ```
 type CommitUser struct {
