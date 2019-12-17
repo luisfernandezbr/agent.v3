@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/cmd/agent-dev/cmdbuild"
+	"github.com/pinpt/agent/cmd/cmdexport/process"
 	"github.com/pinpt/agent/cmd/cmdupload"
 	"github.com/pinpt/agent/integrations/pkg/commiturl"
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
@@ -132,6 +133,8 @@ var cmdExportRepo = &cobra.Command{
 		}
 		reftype, _ := cmd.Flags().GetString("ref-type")
 
+		commitUsers := process.NewCommitUsers()
+
 		opts := exportrepo.Opts{
 			Logger:            logger,
 			RepoAccess:        gitclone.AccessDetails{URL: url},
@@ -143,6 +146,7 @@ var cmdExportRepo = &cobra.Command{
 			CommitURLTemplate: commiturl.CommitURLTemplate(dummyRepo, url),
 			BranchURLTemplate: commiturl.BranchURLTemplate(dummyRepo, url),
 			RefType:           reftype,
+			CommitUsers:       commitUsers,
 		}
 
 		exp := exportrepo.New(opts, locs)
