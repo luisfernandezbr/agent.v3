@@ -29,6 +29,10 @@ func (api *API) fetchChangeLog(itemtype, projid, issueid string) (changelogs []w
 		for field, values := range changelog.Fields {
 			if extractor, ok := changelogFields[field]; ok {
 
+				if i == 0 && changelogToString(values.OldValue) == "" {
+					continue
+				}
+
 				newvals := changelogFieldWithIDGen{
 					changelogField: values,
 					gen:            api.IDs,
