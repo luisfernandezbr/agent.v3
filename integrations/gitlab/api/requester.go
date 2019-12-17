@@ -22,6 +22,7 @@ type RequesterOpts struct {
 	Logger             hclog.Logger
 	APIURL             string
 	APIToken           string
+	AccessToken        string
 	InsecureSkipVerify bool
 	ServerType         ServerType
 	Concurrency        chan bool
@@ -109,8 +110,8 @@ func (e *Requester) makeRequestRetry(req *internalRequest, generalRetry int) (pa
 }
 
 func (e *Requester) setAuthHeader(req *http.Request) {
-	if e.opts.ServerType == CLOUD {
-		req.Header.Set("Authorization", "bearer "+e.opts.APIToken)
+	if e.opts.APIToken == "" {
+		req.Header.Set("Authorization", "bearer "+e.opts.AccessToken)
 	} else {
 		req.Header.Set("Private-Token", e.opts.APIToken)
 	}

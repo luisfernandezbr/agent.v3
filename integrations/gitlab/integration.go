@@ -24,6 +24,7 @@ type Config struct {
 	commonrepo.FilterConfig
 	URL                string         `json:"url"`
 	APIToken           string         `json:"apitoken"`
+	AccessToken        string         `json:"access_token"`
 	OnlyGit            bool           `json:"only_git"`
 	InsecureSkipVerify bool           `json:"insecure_skip_verify"`
 	ServerType         api.ServerType `json:"server_type"`
@@ -137,6 +138,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.Logger = s.logger
 		opts.APIURL = s.config.URL + "/api/v4"
 		opts.APIToken = s.config.APIToken
+		opts.AccessToken = s.config.AccessToken
 		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
 		opts.ServerType = s.config.ServerType
 		opts.Concurrency = make(chan bool, 10)
@@ -162,8 +164,11 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	if conf.URL == "" {
 		return rerr("url is missing")
 	}
-	if conf.APIToken == "" {
-		return rerr("api token is missing")
+	if conf.URL == "https://www.gitlab.com" {
+		conf.URL = "https://gitlab.com"
+	}
+	if conf.APIToken == "" && conf.AccessToken == "" {
+		return rerr("apitoken and access_token are missing")
 	}
 	if conf.ServerType == "" {
 		return rerr("server type is missing")
