@@ -20,13 +20,13 @@ import (
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/expsessions"
-	"github.com/pinpt/agent.next/pkg/fsconf"
-	"github.com/pinpt/agent.next/pkg/gitclone"
-	"github.com/pinpt/agent.next/pkg/ids"
-	"github.com/pinpt/agent.next/pkg/jsonstore"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/expsessions"
+	"github.com/pinpt/agent/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/gitclone"
+	"github.com/pinpt/agent/pkg/ids"
+	"github.com/pinpt/agent/pkg/jsonstore"
+	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/ripsrc/ripsrc"
 
 	"github.com/hashicorp/go-hclog"
@@ -540,7 +540,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 			}
 
 			{
-				cf := sourcecode.CommitFiles{
+				file := sourcecode.CommitFiles{
 					CommitID:          s.commitID(commit.SHA),
 					RepoID:            repoID,
 					Status:            string(cf.Status),
@@ -564,8 +564,8 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 					Blanks:            blame.Blanks,
 					Complexity:        blame.Complexity,
 				}
-				date.ConvertToModel(commit.Date, &cf.CreatedDate)
-				commitFiles = append(commitFiles, cf)
+				date.ConvertToModel(commit.Date, &file.CreatedDate)
+				commitFiles = append(commitFiles, file)
 			}
 
 			commitComplexityCount += blame.Complexity

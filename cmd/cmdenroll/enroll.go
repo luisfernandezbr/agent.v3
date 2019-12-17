@@ -9,16 +9,16 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	pstrings "github.com/pinpt/go-common/strings"
 
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/encrypt"
-	"github.com/pinpt/agent.next/pkg/sysinfo"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/encrypt"
+	"github.com/pinpt/agent/pkg/sysinfo"
 
 	"github.com/pinpt/go-common/fileutil"
 
-	"github.com/pinpt/agent.next/pkg/agentconf"
-	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/agentconf"
+	"github.com/pinpt/agent/pkg/fsconf"
 
-	"github.com/pinpt/agent.next/pkg/deviceinfo"
+	"github.com/pinpt/agent/pkg/deviceinfo"
 
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/integration-sdk/agent"

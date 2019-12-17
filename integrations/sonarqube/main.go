@@ -5,10 +5,10 @@ import (
 	"errors"
 	"net/url"
 
-	"github.com/pinpt/agent.next/integrations/pkg/ibase"
-	"github.com/pinpt/agent.next/integrations/sonarqube/api"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/integrations/pkg/ibase"
+	"github.com/pinpt/agent/integrations/sonarqube/api"
+	"github.com/pinpt/agent/pkg/structmarshal"
+	"github.com/pinpt/agent/rpcdef"
 
 	"github.com/hashicorp/go-hclog"
 )

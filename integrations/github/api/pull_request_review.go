@@ -3,7 +3,7 @@ package api
 import (
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/integration-sdk/codequality"
 )
 

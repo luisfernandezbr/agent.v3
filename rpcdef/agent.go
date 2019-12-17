@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/agent.next/rpcdef/proto"
+	"github.com/pinpt/agent/rpcdef/proto"
 )
 
 // keep in sync with readme.md

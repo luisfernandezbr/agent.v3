@@ -9,23 +9,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pinpt/agent.next/cmd/cmdintegration"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/exporter/fsqueue"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/inconfig"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/subcommand"
-	"github.com/pinpt/agent.next/cmd/cmdupload"
+	"github.com/pinpt/agent/cmd/cmdintegration"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/exporter/fsqueue"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/inconfig"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/subcommand"
+	"github.com/pinpt/agent/cmd/cmdupload"
 	"github.com/pinpt/go-common/event"
 
-	"github.com/pinpt/agent.next/pkg/agentconf"
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/deviceinfo"
-	"github.com/pinpt/agent.next/pkg/fsconf"
-	"github.com/pinpt/agent.next/pkg/jsonstore"
-	"github.com/pinpt/agent.next/pkg/logutils"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
+	"github.com/pinpt/agent/pkg/agentconf"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/deviceinfo"
+	"github.com/pinpt/agent/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/jsonstore"
+	"github.com/pinpt/agent/pkg/logutils"
+	"github.com/pinpt/agent/pkg/structmarshal"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/cmd/cmdexport"
+	"github.com/pinpt/agent/cmd/cmdexport"
 	"github.com/pinpt/integration-sdk/agent"
 )
 
@@ -43,8 +43,6 @@ type Opts struct {
 
 	PPEncryptionKey string
 	AgentConfig     cmdintegration.AgentConfig
-
-	IntegrationsDir string
 }
 
 // Exporter schedules and executes exports

@@ -8,16 +8,16 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
-	"github.com/pinpt/agent.next/pkg/ids"
-	"github.com/pinpt/agent.next/pkg/reqstats"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/pkg/ids"
+	"github.com/pinpt/agent/pkg/reqstats"
+	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/integration-sdk/sourcecode"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/agent.next/integrations/pkg/ibase"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/integrations/github/api"
+	"github.com/pinpt/agent/integrations/pkg/ibase"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 func main() {

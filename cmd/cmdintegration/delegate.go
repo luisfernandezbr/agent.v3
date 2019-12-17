@@ -3,8 +3,8 @@ package cmdintegration
 import (
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/integrationid"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/pkg/integrationid"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 type AgentDelegateMinimal interface {

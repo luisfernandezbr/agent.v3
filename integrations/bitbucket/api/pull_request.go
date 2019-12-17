@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
 
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/ids"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/ids"
 	"github.com/pinpt/go-common/hash"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"

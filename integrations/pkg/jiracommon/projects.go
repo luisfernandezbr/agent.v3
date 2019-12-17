@@ -5,7 +5,7 @@ import (
 
 	"github.com/pinpt/integration-sdk/work"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
 )
 
 func (s *JiraCommon) ProcessAllProjectsUsingExclusions(projectSender *objsender.Session, allProjectsDetailed []*work.Project) (notExcluded []Project, rerr error) {

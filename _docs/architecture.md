@@ -26,8 +26,8 @@ GRPC is used for calls between agent and integrations. Endpoints and parameters 
 Integrations are responsible for getting the data and converting it to pinpoint format. Integrations will use datamodel directly. Agent itself does not need to check the datamodel. Agent will use the metadata to correctly forward that data to backend, but does not have to touch the data itself.
 
 ### RPC interface between agent and integration
-- [Agent](https://github.com/pinpt/agent.next/blob/master/rpcdef/agent.go)
-- [Integration](https://github.com/pinpt/agent.next/blob/master/rpcdef/integration.go)
+- [Agent](https://github.com/pinpt/agent/blob/master/rpcdef/agent.go)
+- [Integration](https://github.com/pinpt/agent/blob/master/rpcdef/integration.go)
 
 ### Export code flow
 When agent export command is called, agent loads all available/configured plugins and then inits them using the Init call to allow them to call back to the agent.

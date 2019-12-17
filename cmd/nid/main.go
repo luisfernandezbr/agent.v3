@@ -8,7 +8,7 @@ func main() {
 import (
 	"fmt"
 
-	"github.com/pinpt/agent.next/pkg/ids"
+	"github.com/pinpt/agent/pkg/ids"
 )
 
 func main() {

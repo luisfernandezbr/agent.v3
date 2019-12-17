@@ -12,11 +12,11 @@ import (
 	"strings"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/cmd/cmdintegration"
-	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
+	"github.com/pinpt/agent/cmd/cmdintegration"
+	"github.com/pinpt/agent/cmd/pkg/cmdlogger"
 
-	"github.com/pinpt/agent.next/pkg/filelog"
-	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/filelog"
+	"github.com/pinpt/agent/pkg/fsconf"
 
 	"github.com/fatih/color"
 	ps "github.com/mitchellh/go-ps"
@@ -133,7 +133,7 @@ func integrationCommandFlags(cmd *cobra.Command) {
 	cmd.Flags().String("agent-config-file", "", "Agent config json as file")
 	cmd.Flags().String("integrations-json", "", "Integrations config as json")
 	cmd.Flags().String("integrations-file", "", "Integrations config json as file")
-	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
+	cmd.Flags().String("integrations-dir", "", "Integrations dir")
 }
 
 func defaultIntegrationsDir() string {

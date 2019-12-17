@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pinpt/agent.next/pkg/reqstats"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
+	"github.com/pinpt/agent/pkg/reqstats"
+	"github.com/pinpt/agent/pkg/structmarshal"
 
-	"github.com/pinpt/agent.next/integrations/pkg/jiracommon"
-	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/jiracommon"
+	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/jira-hosted/api"
-	"github.com/pinpt/agent.next/integrations/pkg/ibase"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/integrations/jira-hosted/api"
+	"github.com/pinpt/agent/integrations/pkg/ibase"
+	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/work"
 )
 

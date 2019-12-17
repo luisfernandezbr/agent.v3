@@ -3,12 +3,12 @@ package main
 import (
 	"net/url"
 
-	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
+	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/bitbucket/api"
+	"github.com/pinpt/agent/integrations/bitbucket/api"
 )
 
 func (s *Integration) exportPullRequestCommits(logger hclog.Logger, repo commonrepo.Repo, prID string) (res []*sourcecode.PullRequestCommit, _ error) {

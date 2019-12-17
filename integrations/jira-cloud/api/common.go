@@ -4,7 +4,7 @@ import (
 	"net/url"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 )
 
 type QueryContext struct {

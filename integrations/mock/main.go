@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
-	"github.com/pinpt/agent.next/integrations/pkg/ibase"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/integrations/pkg/ibase"
+	"github.com/pinpt/agent/rpcdef"
 
 	"github.com/hashicorp/go-hclog"
 )

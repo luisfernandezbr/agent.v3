@@ -7,18 +7,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/integration-sdk/sourcecode"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/bitbucket/api"
-	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
-	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
-	"github.com/pinpt/agent.next/integrations/pkg/ibase"
-	"github.com/pinpt/agent.next/pkg/commitusers"
-	"github.com/pinpt/agent.next/pkg/ids2"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/integrations/bitbucket/api"
+	"github.com/pinpt/agent/integrations/pkg/commiturl"
+	"github.com/pinpt/agent/integrations/pkg/commonrepo"
+	"github.com/pinpt/agent/integrations/pkg/ibase"
+	"github.com/pinpt/agent/pkg/commitusers"
+	"github.com/pinpt/agent/pkg/ids2"
+	"github.com/pinpt/agent/pkg/structmarshal"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 func main() {

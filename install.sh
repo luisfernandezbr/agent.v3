@@ -2,7 +2,7 @@
 #
 # This is the installer for the Pinpoint Agent.
 #
-# For more information, see: https://github.com/pinpt/agent.next
+# For more information, see: https://github.com/pinpt/agent
 #
 # Parts of install script are based on github.com/golang/dep/install.sh, which is licensed under BSD style license: https://github.com/golang/dep/blob/master/LICENSE
 
@@ -125,9 +125,7 @@ mkdir -p "$INSTALL_DIRECTORY"
 
 echo "Will install into $INSTALL_DIRECTORY"
 
-#BINARY="pinpoint-agent-${OS}-${ARCH}"
-# TODO: add arch to name in build script
-BINARY="pinpoint-agent-${OS}"
+BINARY="pinpoint-agent-${OS}-${ARCH}"
 
 if [ "$OS" = "windows" ]; then
     BINARY="$BINARY.exe"

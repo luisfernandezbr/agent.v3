@@ -8,9 +8,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/updater"
-	"github.com/pinpt/agent.next/pkg/build"
-	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/updater"
+	"github.com/pinpt/agent/pkg/build"
+	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"
 	pstrings "github.com/pinpt/go-common/strings"
@@ -59,10 +59,21 @@ func (s *runner) handleUpdateEvents(ctx context.Context) (closefunc, error) {
 			s.logger.Error("Update failed", "err", err)
 			resp := &agent.UpdateResponse{}
 			resp.Error = pstrings.Pointer(err.Error())
+			s.deviceInfo.AppendCommonInfo(resp)
 			return sendEvent(resp)
 		}
 
 		s.logger.Info("Update completed", "from_version", oldVersion, "to_version", version)
+
+		go func() {
+			if oldVersion == version {
+				s.logger.Info("Same version as before, nothing to do")
+				return
+			}
+			s.logger.Info("Restarting in 10s")
+			time.Sleep(10 * time.Second)
+			os.Exit(1)
+		}()
 
 		resp := &agent.UpdateResponse{}
 		resp.FromVersion = oldVersion

@@ -7,7 +7,7 @@ clean:
 	@rm -rf logs dist
 
 docker-dev:
-	docker run --rm -it -v $(GOPATH)/src/github.com/pinpt/agent.next:/go/src/github.com/pinpt/agent.next $(shell docker build -q . -f docker/dev/Dockerfile)
+	docker run --rm -it -v $(GOPATH)/src/github.com/pinpt/agent:/go/src/github.com/pinpt/agent $(shell docker build -q . -f docker/dev/Dockerfile)
 
 dependencies:
 	@rm -rf .vendor-new

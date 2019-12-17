@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/integrations/github/api"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 func (s *Integration) checkEnterpriseVersion() error {

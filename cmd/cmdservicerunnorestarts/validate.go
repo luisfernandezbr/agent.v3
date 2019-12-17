@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/inconfig"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/subcommand"
-	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/inconfig"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/subcommand"
+	"github.com/pinpt/agent/cmd/cmdvalidateconfig"
 )
 
 func depointer(data map[string]interface{}) (map[string]interface{}, error) {

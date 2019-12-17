@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/commitusers"
+	"github.com/pinpt/agent/pkg/commitusers"
 
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/ids"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/ids"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/agent"
 )

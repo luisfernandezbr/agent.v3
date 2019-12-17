@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/pinpt/agent.next/pkg/requests"
+	"github.com/pinpt/agent/pkg/requests"
 )
 
 // EnterpriseVersion returns the major version of enterprise install.

@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
-	"github.com/pinpt/agent.next/cmd/cmdintegration"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/inconfig"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/subcommand"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
+	"github.com/pinpt/agent/cmd/cmdexportonboarddata"
+	"github.com/pinpt/agent/cmd/cmdintegration"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/inconfig"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/subcommand"
+	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"
 	"github.com/pinpt/go-common/eventing"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/agent"
 
-	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
+	"github.com/pinpt/agent/cmd/cmdvalidateconfig"
 )
 
 func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) {
