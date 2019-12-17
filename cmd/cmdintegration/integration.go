@@ -237,7 +237,7 @@ func (s *Command) CloseOnlyIntegrationAndHandlePanic(integration *iloader.Integr
 
 func (s *Command) CaptureShutdown() {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGTERM)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
 	plugin.CleanupClients()
 	os.Exit(1)
