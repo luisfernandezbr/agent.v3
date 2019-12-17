@@ -52,6 +52,9 @@ func (api *API) fetchChangeLog(itemtype, projid, issueid string) (changelogs []w
 						from = previousState
 						previousState = ""
 					}
+					if to == from {
+						continue
+					}
 				}
 				changelogs = append(changelogs, work.IssueChangeLog{
 					RefID:       fmt.Sprintf("%d", changelog.ID),
