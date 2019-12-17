@@ -49,12 +49,12 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 		return res, err
 	}
 
-	apiVersion, err := s.api.APIVersion()
+	serverVersion, err := s.api.ServerVersion()
 	if err != nil {
 		return res, err
 	}
 
-	res.APIVersion = apiVersion
+	res.ServerVersion = serverVersion
 
 	valid, err := s.api.Validate()
 	if err != nil {

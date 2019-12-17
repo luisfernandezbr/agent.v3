@@ -9,7 +9,7 @@ import (
 	pstring "github.com/pinpt/go-common/strings"
 )
 
-func (a *SonarqubeAPI) APIVersion() (apiVersion string, err error) {
+func (a *SonarqubeAPI) ServerVersion() (serverVersion string, err error) {
 
 	c := &http.Client{}
 	transport := httpdefaults.DefaultTransport()
@@ -33,9 +33,13 @@ func (a *SonarqubeAPI) APIVersion() (apiVersion string, err error) {
 	}
 	defer resp.Body.Close()
 
-	bts, _ := ioutil.ReadAll(resp.Body)
+	var bts []byte
+	bts, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
 
-	apiVersion = string(bts)
+	serverVersion = string(bts)
 
 	return
 }

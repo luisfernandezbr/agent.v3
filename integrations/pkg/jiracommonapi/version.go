@@ -1,6 +1,6 @@
 package jiracommonapi
 
-func APIVersion(qc QueryContext) (apiVersion string, err error) {
+func ServerVersion(qc QueryContext) (serverVersion string, err error) {
 
 	objectPath := "serverInfo"
 
@@ -13,7 +13,7 @@ func APIVersion(qc QueryContext) (apiVersion string, err error) {
 		return
 	}
 
-	apiVersion = serverInfo.Version
+	serverVersion = serverInfo.Version
 
 	return
 }
