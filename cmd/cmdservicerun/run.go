@@ -15,9 +15,9 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/fs"
-	"github.com/pinpt/agent.next/pkg/fsconf"
-	"github.com/pinpt/agent.next/pkg/pservice"
+	"github.com/pinpt/agent/pkg/fs"
+	"github.com/pinpt/agent/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/pservice"
 )
 
 type Opts struct {

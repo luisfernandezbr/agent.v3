@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/pinpt/agent.next/pkg/requests"
+	"github.com/pinpt/agent/pkg/requests"
 	"github.com/pinpt/go-common/api"
 )
 

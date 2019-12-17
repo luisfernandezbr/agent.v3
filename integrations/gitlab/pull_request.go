@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/gitlab/api"
-	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/gitlab/api"
+	"github.com/pinpt/agent/integrations/pkg/commonrepo"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
 )
 
 func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, repo commonrepo.Repo, pullRequestSender *objsender.Session, pullRequests chan []api.PullRequest, lastProcessed time.Time) error {

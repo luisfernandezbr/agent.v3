@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/integration-sdk/work"
 )
 

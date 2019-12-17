@@ -6,8 +6,8 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 
-	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/github/api"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
 )
 
 func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender.Session, org api.Org, onlyInclude []api.Repo) error {

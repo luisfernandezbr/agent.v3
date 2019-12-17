@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
+	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 

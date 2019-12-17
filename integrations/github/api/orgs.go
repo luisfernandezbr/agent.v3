@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/pinpt/agent.next/pkg/requests"
+	"github.com/pinpt/agent/pkg/requests"
 	pstrings "github.com/pinpt/go-common/strings"
 )
 

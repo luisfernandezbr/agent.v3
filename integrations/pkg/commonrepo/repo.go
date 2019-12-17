@@ -2,7 +2,7 @@ package commonrepo
 
 import (
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/pkg/repoprojects"
+	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 )
 
 type Repo struct {

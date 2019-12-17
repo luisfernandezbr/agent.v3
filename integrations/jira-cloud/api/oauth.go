@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/reqstats"
-	"github.com/pinpt/agent.next/pkg/requests"
+	"github.com/pinpt/agent/pkg/reqstats"
+	"github.com/pinpt/agent/pkg/requests"
 )
 
 type Site struct {

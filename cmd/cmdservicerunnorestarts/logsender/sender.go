@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/agentconf"
+	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/go-common/api"
 )
 

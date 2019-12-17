@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 func MainFunc(construct func(logger hclog.Logger) rpcdef.Integration) {

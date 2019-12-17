@@ -17,10 +17,10 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/agentconf"
-	"github.com/pinpt/agent.next/pkg/build"
-	"github.com/pinpt/agent.next/pkg/fs"
-	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/agentconf"
+	"github.com/pinpt/agent/pkg/build"
+	"github.com/pinpt/agent/pkg/fs"
+	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/go-common/api"
 )
 

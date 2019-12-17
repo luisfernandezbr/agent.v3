@@ -1,6 +1,6 @@
 FROM golang:alpine
 RUN apk add make dep git
-WORKDIR $GOPATH/src/github.com/pinpt/agent.next
+WORKDIR $GOPATH/src/github.com/pinpt/agent
 
 # Do not require rebuilding container if dependencies are the same
 COPY Gopkg.toml .

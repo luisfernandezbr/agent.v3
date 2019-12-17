@@ -6,7 +6,7 @@ import (
 
 	"github.com/pinpt/integration-sdk/customer"
 
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/agent"
 )
 

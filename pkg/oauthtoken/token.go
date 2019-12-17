@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 type Manager struct {

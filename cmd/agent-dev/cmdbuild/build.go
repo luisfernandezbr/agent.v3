@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pinpt/agent.next/pkg/archive"
-	"github.com/pinpt/agent.next/pkg/fs"
+	"github.com/pinpt/agent/pkg/archive"
+	"github.com/pinpt/agent/pkg/fs"
 )
 
 func doBuild(opts Opts, platforms Platforms) {
@@ -28,7 +28,7 @@ func doBuild(opts Opts, platforms Platforms) {
 		// create a agent binary
 		commitSHA := getCommitSHA()
 		fmt.Println("Repo commit sha", commitSHA)
-		pkg := "github.com/pinpt/agent.next"
+		pkg := "github.com/pinpt/agent"
 		ldflags := "-X " + pkg + "/cmd.Commit=" + commitSHA
 		ldflags += " -X " + pkg + "/cmd.Version=" + opts.Version
 		ldflags += " -X " + pkg + "/cmd.IntegrationBinariesAll=" + strings.Join(integrationBinaries, ",")

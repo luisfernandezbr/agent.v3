@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 

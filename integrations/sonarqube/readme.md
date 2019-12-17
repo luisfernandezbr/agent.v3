@@ -35,5 +35,5 @@ go run . export \
 To run the tests you'll need to enable it with the _PP_TEST_SONARQUBE_ flag set to "1", you'll also need the api key and the api url
 
 ```
-PP_TEST_SONARQUBE_URL=https://api-url PP_TEST_SONARQUBE_APIKEY=1234567890 PP_TEST_SONARQUBE=1 go test github.com/pinpt/agent.next/integrations/sonarqube...
+PP_TEST_SONARQUBE_URL=https://api-url PP_TEST_SONARQUBE_APIKEY=1234567890 PP_TEST_SONARQUBE=1 go test github.com/pinpt/agent/integrations/sonarqube...
 ```

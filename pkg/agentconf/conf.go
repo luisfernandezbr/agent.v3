@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pinpt/agent.next/pkg/fs"
+	"github.com/pinpt/agent/pkg/fs"
 )
 
 type Config struct {

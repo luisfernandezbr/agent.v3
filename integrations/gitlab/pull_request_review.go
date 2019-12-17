@@ -4,9 +4,9 @@ import (
 	"net/url"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/gitlab/api"
-	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/gitlab/api"
+	"github.com/pinpt/agent/integrations/pkg/commonrepo"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 

@@ -3,7 +3,7 @@ package api
 import (
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/ids2"
+	"github.com/pinpt/agent/pkg/ids2"
 )
 
 // used in changelogResponse struct and work_changelog.go
