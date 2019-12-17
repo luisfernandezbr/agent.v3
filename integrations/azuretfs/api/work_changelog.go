@@ -18,6 +18,8 @@ func (api *API) fetchChangeLog(itemtype, projid, issueid string) (changelogs []w
 	if err := api.getRequest(url, stringmap{"$top": "200"}, &res); err != nil {
 		return nil, err
 	}
+
+	previousState := ""
 	for i, changelog := range res {
 		if changelog.Fields == nil {
 			continue
@@ -32,7 +34,6 @@ func (api *API) fetchChangeLog(itemtype, projid, issueid string) (changelogs []w
 				if i == 0 && changelogToString(values.OldValue) == "" {
 					continue
 				}
-
 				newvals := changelogFieldWithIDGen{
 					changelogField: values,
 					gen:            api.IDs,
@@ -41,15 +42,17 @@ func (api *API) fetchChangeLog(itemtype, projid, issueid string) (changelogs []w
 				if from == "" && to == "" {
 					continue
 				}
-				// if field == "System.WorkItemType" {
-				// 	itemtype = changelogToString(values.NewValue)
-				// }
-				// edge case. status needs to match admin statuses
-				// if field == "System.State" {
-				// 	to = itemStateName(to, itemtype)
-				// 	from = itemStateName(from, itemtype)
-				// }
 
+				if name == work.IssueChangeLogFieldStatus {
+					if to == "" {
+						previousState = from
+						continue
+					}
+					if from == "" && previousState != "" {
+						from = previousState
+						previousState = ""
+					}
+				}
 				changelogs = append(changelogs, work.IssueChangeLog{
 					RefID:       fmt.Sprintf("%d", changelog.ID),
 					CreatedDate: createdDate,
@@ -132,7 +135,7 @@ func changelogToString(i interface{}) string {
 	return fmt.Sprintf("%v", i)
 }
 
-type changeogFieldExtractor func(item changelogFieldWithIDGen) (name work.IssueChangeLogField, from string, to string)
+type changeLogFieldExtractor func(item changelogFieldWithIDGen) (name work.IssueChangeLogField, from string, to string)
 
 func extractUsers(item changelogFieldWithIDGen) (from string, to string) {
 	if item.OldValue != nil {
@@ -148,7 +151,7 @@ func extractUsers(item changelogFieldWithIDGen) (from string, to string) {
 	return
 }
 
-var changelogFields = map[string]changeogFieldExtractor{
+var changelogFields = map[string]changeLogFieldExtractor{
 	// "System.State": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
 	"System.BoardColumn": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
 		return work.IssueChangeLogFieldStatus, changelogToString(item.OldValue), changelogToString(item.NewValue)
