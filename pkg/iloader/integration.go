@@ -14,14 +14,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pinpt/agent.next/pkg/build"
-	"github.com/pinpt/agent.next/pkg/integrationid"
+	"github.com/pinpt/agent/pkg/build"
+	"github.com/pinpt/agent/pkg/integrationid"
 
-	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/fsconf"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 type IntegrationOpts struct {
@@ -97,13 +97,13 @@ func devIntegrationCommand(binaryName string) (*exec.Cmd, error) {
 		}
 		gop = filepath.Join(home, "go")
 	}
-	integrationsDir := filepath.Join(gop, "src", "github.com/pinpt/agent.next/integrations")
+	integrationsDir := filepath.Join(gop, "src", "github.com/pinpt/agent/integrations")
 	integrationDir := filepath.Join(integrationsDir, binaryName)
 	if !fileutil.FileExists(integrationDir) {
 		return nil, fmt.Errorf("integration package not found: %v dir: %v", binaryName, integrationDir)
 	}
 
-	packageName := "github.com/pinpt/agent.next/integrations/" + binaryName
+	packageName := "github.com/pinpt/agent/integrations/" + binaryName
 
 	// build to catch compile errors
 	// we don't need the resulting binary

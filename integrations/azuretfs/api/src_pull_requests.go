@@ -6,10 +6,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/ids"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/ids"
+	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )

@@ -20,12 +20,12 @@ import (
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/integration-sdk/agent"
 
-	"github.com/pinpt/agent.next/cmd/cmdintegration"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/logsender"
-	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
-	"github.com/pinpt/agent.next/pkg/agentconf"
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/deviceinfo"
+	"github.com/pinpt/agent/cmd/cmdintegration"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/logsender"
+	"github.com/pinpt/agent/cmd/cmdvalidateconfig"
+	"github.com/pinpt/agent/pkg/agentconf"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/deviceinfo"
 )
 
 // Opts are options needed to create Command

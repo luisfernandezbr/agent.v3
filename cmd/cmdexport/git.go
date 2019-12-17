@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/exportrepo"
-	"github.com/pinpt/agent.next/pkg/gitclone"
-	"github.com/pinpt/agent.next/pkg/integrationid"
+	"github.com/pinpt/agent/pkg/exportrepo"
+	"github.com/pinpt/agent/pkg/gitclone"
+	"github.com/pinpt/agent/pkg/integrationid"
 )
 
 func (s *export) gitProcessing() (hadErrors bool, fatalError error) {

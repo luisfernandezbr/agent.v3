@@ -10,28 +10,28 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/build"
+	"github.com/pinpt/agent/pkg/build"
 
-	"github.com/pinpt/agent.next/cmd/cmdintegration"
+	"github.com/pinpt/agent/cmd/cmdintegration"
 
 	"github.com/pinpt/go-common/hash"
 
-	"github.com/pinpt/agent.next/pkg/agentconf"
-	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/agentconf"
+	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/integration-sdk/agent"
 
-	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
-	"github.com/pinpt/agent.next/pkg/deviceinfo"
+	"github.com/pinpt/agent/cmd/pkg/cmdlogger"
+	"github.com/pinpt/agent/pkg/deviceinfo"
 
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"
 	isdk "github.com/pinpt/integration-sdk"
 
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/crashes"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/exporter"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/logsender"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/updater"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/crashes"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/exporter"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/logsender"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/updater"
 )
 
 type Opts struct {

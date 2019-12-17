@@ -8,8 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/pinpt/agent.next/pkg/build"
-	"github.com/pinpt/agent.next/pkg/fs"
+	"github.com/pinpt/agent/pkg/build"
+	"github.com/pinpt/agent/pkg/fs"
 )
 
 func upload(opts Opts, platforms Platforms) {

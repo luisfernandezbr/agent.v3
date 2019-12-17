@@ -5,10 +5,10 @@ import (
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 
-	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
+	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/gitlab/api"
+	"github.com/pinpt/agent/integrations/gitlab/api"
 )
 
 func (s *Integration) exportPullRequestCommits(logger hclog.Logger, repo commonrepo.Repo, prID string, prIID string) (res []*sourcecode.PullRequestCommit, _ error) {

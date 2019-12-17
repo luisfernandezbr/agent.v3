@@ -2,8 +2,8 @@ package api
 
 import (
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/ids"
-	"github.com/pinpt/agent.next/pkg/reqstats"
+	"github.com/pinpt/agent/pkg/ids"
+	"github.com/pinpt/agent/pkg/reqstats"
 )
 
 type PageInfo struct {

@@ -8,11 +8,11 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/gitclone"
-	"github.com/pinpt/agent.next/pkg/iloader"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/pkg/gitclone"
+	"github.com/pinpt/agent/pkg/iloader"
+	"github.com/pinpt/agent/rpcdef"
 
-	"github.com/pinpt/agent.next/cmd/cmdintegration"
+	"github.com/pinpt/agent/cmd/cmdintegration"
 )
 
 type Opts struct {

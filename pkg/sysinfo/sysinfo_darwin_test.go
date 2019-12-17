@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -3,7 +3,7 @@ package exportrepo
 import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 
-	"github.com/pinpt/agent.next/pkg/expsessions"
+	"github.com/pinpt/agent/pkg/expsessions"
 )
 
 type sessions struct {

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 type Model interface {

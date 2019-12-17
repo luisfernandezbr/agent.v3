@@ -12,15 +12,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/deviceinfo"
-	"github.com/pinpt/agent.next/pkg/fs"
-	"github.com/pinpt/agent.next/pkg/integrationid"
-	"github.com/pinpt/agent.next/pkg/memorylogs"
+	"github.com/pinpt/agent/pkg/deviceinfo"
+	"github.com/pinpt/agent/pkg/fs"
+	"github.com/pinpt/agent/pkg/integrationid"
+	"github.com/pinpt/agent/pkg/memorylogs"
 
 	plugin "github.com/hashicorp/go-plugin"
-	"github.com/pinpt/agent.next/cmd/cmdintegration"
-	"github.com/pinpt/agent.next/pkg/jsonstore"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/cmd/cmdintegration"
+	"github.com/pinpt/agent/pkg/jsonstore"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 type Opts struct {

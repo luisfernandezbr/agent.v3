@@ -11,7 +11,7 @@ import (
 	"github.com/blang/semver"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/sysinfo"
+	"github.com/pinpt/agent/pkg/sysinfo"
 	"github.com/pinpt/go-common/number"
 )
 

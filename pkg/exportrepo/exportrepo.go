@@ -20,13 +20,13 @@ import (
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/expsessions"
-	"github.com/pinpt/agent.next/pkg/fsconf"
-	"github.com/pinpt/agent.next/pkg/gitclone"
-	"github.com/pinpt/agent.next/pkg/ids"
-	"github.com/pinpt/agent.next/pkg/jsonstore"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/expsessions"
+	"github.com/pinpt/agent/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/gitclone"
+	"github.com/pinpt/agent/pkg/ids"
+	"github.com/pinpt/agent/pkg/jsonstore"
+	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/ripsrc/ripsrc"
 
 	"github.com/hashicorp/go-hclog"

@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
-	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/integrations/github/api"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.OnboardExportType, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {

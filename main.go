@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/pinpt/agent.next/cmd"
+	"github.com/pinpt/agent/cmd"
 )
 
 

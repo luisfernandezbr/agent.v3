@@ -11,8 +11,8 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/archive"
-	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/archive"
+	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/go-common/fileutil"
 	"github.com/pinpt/go-common/upload"
 )

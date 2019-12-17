@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/integration-sdk/codequality"
 )

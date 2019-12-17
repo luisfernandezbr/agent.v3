@@ -8,17 +8,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/agent.next/cmd/agent-dev/cmdbuild"
-	"github.com/pinpt/agent.next/cmd/cmdupload"
-	"github.com/pinpt/agent.next/integrations/pkg/commiturl"
-	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
+	"github.com/pinpt/agent/cmd/agent-dev/cmdbuild"
+	"github.com/pinpt/agent/cmd/cmdupload"
+	"github.com/pinpt/agent/integrations/pkg/commiturl"
+	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 
-	"github.com/pinpt/agent.next/pkg/expsessions"
-	"github.com/pinpt/agent.next/pkg/fsconf"
-	"github.com/pinpt/agent.next/pkg/jsonstore"
+	"github.com/pinpt/agent/pkg/expsessions"
+	"github.com/pinpt/agent/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/jsonstore"
 
-	"github.com/pinpt/agent.next/pkg/exportrepo"
-	"github.com/pinpt/agent.next/pkg/gitclone"
+	"github.com/pinpt/agent/pkg/exportrepo"
+	"github.com/pinpt/agent/pkg/gitclone"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/hash"

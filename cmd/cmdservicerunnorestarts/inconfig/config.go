@@ -7,12 +7,12 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/pinpt/agent.next/cmd/cmdintegration"
-	azureapi "github.com/pinpt/agent.next/integrations/azuretfs/api"
+	"github.com/pinpt/agent/cmd/cmdintegration"
+	azureapi "github.com/pinpt/agent/integrations/azuretfs/api"
 
-	"github.com/pinpt/agent.next/pkg/encrypt"
-	"github.com/pinpt/agent.next/pkg/integrationid"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
+	"github.com/pinpt/agent/pkg/encrypt"
+	"github.com/pinpt/agent/pkg/integrationid"
+	"github.com/pinpt/agent/pkg/structmarshal"
 )
 
 // ConfigFromEvent converts the config received from backend export or onboarding events and

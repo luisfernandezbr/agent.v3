@@ -3,9 +3,9 @@ package api
 import (
 	"net/url"
 
-	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent/pkg/date"
 
-	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 
 	"github.com/pinpt/integration-sdk/agent"
 

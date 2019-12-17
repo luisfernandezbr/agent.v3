@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/ids"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/ids"
+	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/agent"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )

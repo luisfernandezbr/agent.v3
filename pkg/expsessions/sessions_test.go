@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/integrationid"
+	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/stretchr/testify/assert"
 )
 
