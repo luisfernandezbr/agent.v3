@@ -16,6 +16,8 @@ import (
 	"runtime"
 	"strconv"
 
+	pstrings "github.com/pinpt/go-common/strings"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/agent/pkg/build"
@@ -274,10 +276,11 @@ func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) 
 	if os.Getenv("PP_AGENT_USE_DIRECT_UPDATE_URL") != "" {
 		s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
 	} else {
-		s3BinariesPrefix = api.BackendURL(api.EventService, s.channel) + "/agent/download"
+
+		s3BinariesPrefix = pstrings.JoinURL(api.BackendURL(api.EventService, s.channel), "agent", "download")
 	}
 
-	url := s3BinariesPrefix + "/" + version + "/bin-gz/" + platformArch + "/" + urlPath
+	url := pstrings.JoinURL(s3BinariesPrefix, version, "bin-gz", platformArch, urlPath)
 	if runtime.GOOS == "windows" {
 		url += ".exe"
 	}
