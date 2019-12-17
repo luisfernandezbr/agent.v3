@@ -59,13 +59,14 @@ func Run(opts Opts) {
 
 func getPlatforms(want string) []Platform {
 	allPlatforms := []Platform{
-		{UserFriedlyName: "macos", GOOS: "darwin", GOARCH: "amd64"},
 		{UserFriedlyName: "linux", GOOS: "linux", GOARCH: "amd64"},
 		{UserFriedlyName: "windows", GOOS: "windows", GOARCH: "amd64", BinSuffix: ".exe"},
 	}
 	if want == "" {
 		return allPlatforms
 	}
+	allPlatforms = append(allPlatforms,
+		Platform{UserFriedlyName: "macos", GOOS: "darwin", GOARCH: "amd64"})
 	for _, pl := range allPlatforms {
 		if pl.UserFriedlyName == want || pl.GOOS == want {
 			return []Platform{pl}
