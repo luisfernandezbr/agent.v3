@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/pinpt/agent/pkg/commitusers"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -465,6 +466,12 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 		})
 	}
 
+	writeCommitUser := func(obj commitusers.CommitUser) error {
+		return sessions.Write(s.sessions.CommitUser, []map[string]interface{}{
+			obj.ToMap(),
+		})
+	}
+
 	customerID := s.opts.CustomerID
 
 	repoID := s.opts.RepoID
@@ -638,6 +645,28 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 		err := writeCommit(c)
 		if err != nil {
 			return "", err
+		}
+
+		if commit.AuthorEmail != "" {
+			author := commitusers.CommitUser{}
+			author.CustomerID = customerID
+			author.Email = commit.AuthorEmail
+			author.Name = commit.AuthorName
+			err := writeCommitUser(author)
+			if err != nil {
+				return "", err
+			}
+		}
+
+		if commit.CommitterEmail != "" {
+			author := commitusers.CommitUser{}
+			author.CustomerID = customerID
+			author.Email = commit.CommitterEmail
+			author.Name = commit.CommitterName
+			err := writeCommitUser(author)
+			if err != nil {
+				return "", err
+			}
 		}
 
 	}
