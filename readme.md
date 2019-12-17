@@ -32,3 +32,7 @@ TODO
 - [GitLab](./integrations/gitlab/readme.md)
 - [Jira](./integrations/jira/readme.md)
 - [SonarQube](./integrations/sonarqube/readme.md)
+
+
+## License
+All of this code is Copyright © 2018-2019 by Pinpoint Software, Inc. Licensed under the MIT License
