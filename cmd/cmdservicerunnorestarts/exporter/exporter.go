@@ -218,7 +218,11 @@ func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
 	}
 	isIncremental, partsCount, fileSize, err := s.doExport(ctx, data, messageID)
 	if err != nil {
-		s.logger.Error("export finished with error", "err", err)
+		if _, o := err.(*subcommand.Cancelled); o {
+			s.logger.Info("export manually cancelled")
+		} else {
+			s.logger.Error("export finished with error", "err", err)
+		}
 	} else {
 		s.logger.Info("sent back export result")
 	}

@@ -29,6 +29,15 @@ import (
 	"github.com/pinpt/agent.next/pkg/interrupt"
 )
 
+// Cancelled implementation of error.
+type Cancelled struct {
+	s string
+}
+
+func (e *Cancelled) Error() string {
+	return e.s
+}
+
 // Opts are options needed to create Command
 type Opts struct {
 	Logger            hclog.Logger
@@ -161,13 +170,16 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 			removeProcess(c.logger, cmdname)
 		}()
 	}
-	if err := cmd.Wait(); err != nil {
-		// the command wont be in the processes map if it has been canceled
-		if cmdname == "export" {
-			if _, ok := processes[cmdname]; !ok {
-				return nil
-			}
+	err = cmd.Wait()
+
+	if err != nil && cmdname == "export" {
+		if _, ok := processes[cmdname]; !ok {
+			return &Cancelled{s: "manually killed"}
 		}
+	}
+
+	if err != nil {
+		// the command wont be in the processes map if it has been canceled
 		if err := logsfile.Close(); err != nil {
 			return rerr(fmt.Errorf("could not close stderr file: %v", err))
 		}
