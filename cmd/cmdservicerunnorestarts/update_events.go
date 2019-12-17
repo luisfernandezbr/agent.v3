@@ -118,11 +118,13 @@ func (s *runner) updateTo(version string) (oldVersion string, rerr error) {
 		return
 	}
 
-	err := build.ValidateVersion(version)
-	if err != nil {
-		rerr = fmt.Errorf("Can't update invalid version format provided: %v", err)
-		return
-	}
+	// Do not validate the version format, to allow changing it in the future builds.
+	// For example, added dev version recently to which update was not possible.
+	//err := build.ValidateVersion(version)
+	//if err != nil {
+	//	rerr = fmt.Errorf("Can't update invalid version format provided: %v", err)
+	//	return
+	//}
 
 	oldVersion = os.Getenv("PP_AGENT_VERSION")
 	if oldVersion == "" {

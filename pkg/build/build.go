@@ -20,7 +20,9 @@ func ValidateVersion(v string) error {
 	if v == "" {
 		return errors.New("version required")
 	}
-	if v == "test" {
+	// test is the local production builds version
+	// dev is the version that can be upload to s3 and updated to from admin
+	if v == "test" || v == "dev" {
 		return nil
 	}
 	if !strings.HasPrefix(v, "v") {
