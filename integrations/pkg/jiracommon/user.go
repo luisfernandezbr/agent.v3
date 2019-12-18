@@ -3,10 +3,10 @@ package jiracommon
 import (
 	"sync"
 
-	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
-	"github.com/pinpt/agent.next/pkg/ids"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/pkg/ids"
+	"github.com/pinpt/agent/rpcdef"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/work"
 )

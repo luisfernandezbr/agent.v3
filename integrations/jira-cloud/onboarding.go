@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/pinpt/agent.next/integrations/jira-cloud/api"
-	"github.com/pinpt/agent.next/integrations/pkg/jiracommon"
-	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/integrations/jira-cloud/api"
+	"github.com/pinpt/agent/integrations/pkg/jiracommon"
+	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/agent"
 )
 

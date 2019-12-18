@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/gitlab/api"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
-	"github.com/pinpt/agent.next/pkg/commitusers"
+	"github.com/pinpt/agent/integrations/gitlab/api"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/pkg/commitusers"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
@@ -69,7 +69,7 @@ func UsersEmails(s *Integration) error {
 
 			sourceUser := sourcecode.User{}
 			sourceUser.RefType = s.qc.RefType
-			sourceUser.Email = pstrings.Pointer(user.Email)
+			//sourceUser.Email = pstrings.Pointer(user.Email)
 			sourceUser.CustomerID = s.qc.CustomerID
 			sourceUser.RefID = strconv.FormatInt(user.ID, 10)
 			sourceUser.Name = user.Name
@@ -77,7 +77,7 @@ func UsersEmails(s *Integration) error {
 			sourceUser.Username = pstrings.Pointer(user.Username)
 			sourceUser.Member = true
 			sourceUser.Type = sourcecode.UserTypeHuman
-			sourceUser.AssociatedRefID = pstrings.Pointer(user.Username)
+			//sourceUser.AssociatedRefID = pstrings.Pointer(user.Username)
 
 			if err := userSender.Send(&sourceUser); err != nil {
 				return page, err

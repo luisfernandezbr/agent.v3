@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/pinpt/agent.next/integrations/pkg/jiracommonapi"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
-	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/integration-sdk/work"
 )
 

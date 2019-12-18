@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/go-common/httpdefaults"
 	pstrings "github.com/pinpt/go-common/strings"
 )

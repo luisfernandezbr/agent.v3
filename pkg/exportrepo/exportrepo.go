@@ -13,6 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/agent/cmd/cmdexport/process"
+	"github.com/pinpt/agent/pkg/commitusers"
+
 	"github.com/pinpt/ripsrc/ripsrc/branchmeta"
 
 	"github.com/pinpt/go-common/datetime"
@@ -20,13 +23,13 @@ import (
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/expsessions"
-	"github.com/pinpt/agent.next/pkg/fsconf"
-	"github.com/pinpt/agent.next/pkg/gitclone"
-	"github.com/pinpt/agent.next/pkg/ids"
-	"github.com/pinpt/agent.next/pkg/jsonstore"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/expsessions"
+	"github.com/pinpt/agent/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/gitclone"
+	"github.com/pinpt/agent/pkg/ids"
+	"github.com/pinpt/agent/pkg/jsonstore"
+	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/ripsrc/ripsrc"
 
 	"github.com/hashicorp/go-hclog"
@@ -60,6 +63,8 @@ type Opts struct {
 
 	// PRs to process similar to branches.
 	PRs []PR
+
+	CommitUsers *process.CommitUsers
 }
 
 type PR struct {
@@ -85,7 +90,7 @@ type Export struct {
 }
 
 func New(opts Opts, locs fsconf.Locs) *Export {
-	if opts.Logger == nil || opts.CustomerID == "" || opts.RepoID == "" || opts.RefType == "" || opts.Sessions == nil || opts.LastProcessed == nil || opts.RepoAccess.URL == "" || opts.CommitURLTemplate == "" || opts.BranchURLTemplate == "" {
+	if opts.Logger == nil || opts.CustomerID == "" || opts.RepoID == "" || opts.RefType == "" || opts.Sessions == nil || opts.LastProcessed == nil || opts.RepoAccess.URL == "" || opts.CommitURLTemplate == "" || opts.BranchURLTemplate == "" || opts.CommitUsers == nil {
 		panic("provide all params")
 	}
 	s := &Export{}
@@ -465,6 +470,21 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 		})
 	}
 
+	writeCommitUser := func(obj commitusers.CommitUser) error {
+		obj2, err := s.opts.CommitUsers.Transform(obj.ToMap())
+		if err != nil {
+			return err
+		}
+		// already written before
+		if obj2 == nil {
+			return nil
+		}
+
+		return sessions.Write(s.sessions.CommitUser, []map[string]interface{}{
+			obj2,
+		})
+	}
+
 	customerID := s.opts.CustomerID
 
 	repoID := s.opts.RepoID
@@ -540,7 +560,7 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 			}
 
 			{
-				cf := sourcecode.CommitFiles{
+				file := sourcecode.CommitFiles{
 					CommitID:          s.commitID(commit.SHA),
 					RepoID:            repoID,
 					Status:            string(cf.Status),
@@ -564,8 +584,8 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 					Blanks:            blame.Blanks,
 					Complexity:        blame.Complexity,
 				}
-				date.ConvertToModel(commit.Date, &cf.CreatedDate)
-				commitFiles = append(commitFiles, cf)
+				date.ConvertToModel(commit.Date, &file.CreatedDate)
+				commitFiles = append(commitFiles, file)
 			}
 
 			commitComplexityCount += blame.Complexity
@@ -638,6 +658,28 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 		err := writeCommit(c)
 		if err != nil {
 			return "", err
+		}
+
+		if commit.AuthorEmail != "" {
+			author := commitusers.CommitUser{}
+			author.CustomerID = customerID
+			author.Email = commit.AuthorEmail
+			author.Name = commit.AuthorName
+			err := writeCommitUser(author)
+			if err != nil {
+				return "", err
+			}
+		}
+
+		if commit.CommitterEmail != "" {
+			author := commitusers.CommitUser{}
+			author.CustomerID = customerID
+			author.Email = commit.CommitterEmail
+			author.Name = commit.CommitterName
+			err := writeCommitUser(author)
+			if err != nil {
+				return "", err
+			}
 		}
 
 	}

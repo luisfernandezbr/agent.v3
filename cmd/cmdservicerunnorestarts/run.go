@@ -10,28 +10,28 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/build"
+	"github.com/pinpt/agent/pkg/build"
 
-	"github.com/pinpt/agent.next/cmd/cmdintegration"
+	"github.com/pinpt/agent/cmd/cmdintegration"
 
 	"github.com/pinpt/go-common/hash"
 
-	"github.com/pinpt/agent.next/pkg/agentconf"
-	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/agentconf"
+	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/integration-sdk/agent"
 
-	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
-	"github.com/pinpt/agent.next/pkg/deviceinfo"
+	"github.com/pinpt/agent/cmd/pkg/cmdlogger"
+	"github.com/pinpt/agent/pkg/deviceinfo"
 
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"
 	isdk "github.com/pinpt/integration-sdk"
 
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/crashes"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/exporter"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/logsender"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/updater"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/crashes"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/exporter"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/logsender"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/updater"
 )
 
 type Opts struct {
@@ -116,24 +116,28 @@ func (s *runner) Run(ctx context.Context) error {
 	s.logger.Info("Config", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot, "integrations-dir", s.conf.IntegrationsDir)
 
 	if build.IsProduction() &&
-		(runtime.GOOS == "linux" || runtime.GOOS == "windows") &&
-		os.Getenv("PP_AGENT_UPDATE_ENABLED") != "" {
-		version := os.Getenv("PP_AGENT_UPDATE_VERSION")
-		if version != "" {
-			oldVersion, err := s.updateTo(version)
+		(runtime.GOOS == "linux" || runtime.GOOS == "windows") {
+		toVersion := os.Getenv("PP_AGENT_UPDATE_VERSION")
+		if toVersion != "" {
+			oldVersion, err := s.updateTo(toVersion)
 			if err != nil {
 				return fmt.Errorf("Could not self-update: %v", err)
 			}
-			if oldVersion != version {
+			if oldVersion != toVersion {
 				s.logger.Info("Updated the agent, restarting...")
 				return nil
 			}
 		} else {
-			upd := updater.New(s.logger, s.fsconf, s.conf)
-			err := upd.DownloadIntegrationsIfMissing()
-			if err != nil {
-				return fmt.Errorf("Could not download integration binaries: %v", err)
+			fromVersion := os.Getenv("PP_AGENT_VERSION")
+			// skip auto integration download for test builds
+			if fromVersion != "test" {
+				upd := updater.New(s.logger, s.fsconf, s.conf)
+				err := upd.DownloadIntegrationsIfMissing()
+				if err != nil {
+					return fmt.Errorf("Could not download integration binaries: %v", err)
+				}
 			}
+
 		}
 	}
 
@@ -165,7 +169,6 @@ func (s *runner) Run(ctx context.Context) error {
 		FSConf:              s.fsconf,
 		PPEncryptionKey:     s.conf.PPEncryptionKey,
 		AgentConfig:         s.agentConfig,
-		IntegrationsDir:     s.fsconf.Integrations,
 	})
 	if err != nil {
 		return fmt.Errorf("could not initialize exporter, err: %v", err)

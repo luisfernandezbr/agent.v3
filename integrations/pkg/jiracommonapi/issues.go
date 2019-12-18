@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/ids"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/ids"
+	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/integration-sdk/work"
 )

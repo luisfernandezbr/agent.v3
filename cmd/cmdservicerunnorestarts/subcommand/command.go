@@ -20,13 +20,13 @@ import (
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/integration-sdk/agent"
 
-	"github.com/pinpt/agent.next/cmd/cmdintegration"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/logsender"
-	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
-	"github.com/pinpt/agent.next/pkg/agentconf"
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/deviceinfo"
-	"github.com/pinpt/agent.next/pkg/forcekill"
+	"github.com/pinpt/agent/cmd/cmdintegration"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/logsender"
+	"github.com/pinpt/agent/cmd/cmdvalidateconfig"
+	"github.com/pinpt/agent/pkg/agentconf"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/deviceinfo"
+	"github.com/pinpt/agent/pkg/forcekill"
 )
 
 // Cancelled implementation of error.
@@ -117,6 +117,8 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 	if args != nil {
 		flags = append(flags, args...)
 	}
+	// This shouldn't be necessary, we already pass it in --agent-config-file
+	// TODO: check why the value from --agent-config-file is not used
 	flags = append(flags, "--pinpoint-root="+c.config.PinpointRoot)
 
 	if err := os.MkdirAll(c.tmpdir, 0777); err != nil {

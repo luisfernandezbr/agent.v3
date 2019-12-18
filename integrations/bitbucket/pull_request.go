@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/rpcdef"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/bitbucket/api"
-	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
+	"github.com/pinpt/agent/integrations/bitbucket/api"
+	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 

@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/cmd/cmdexport/process"
-	"github.com/pinpt/agent.next/pkg/commitusers"
-	"github.com/pinpt/agent.next/pkg/expsessions"
-	"github.com/pinpt/agent.next/pkg/integrationid"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/cmd/cmdexport/process"
+	"github.com/pinpt/agent/pkg/commitusers"
+	"github.com/pinpt/agent/pkg/expsessions"
+	"github.com/pinpt/agent/pkg/integrationid"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 type sessions struct {

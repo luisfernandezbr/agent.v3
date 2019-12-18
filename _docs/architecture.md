@@ -1,7 +1,7 @@
 ### Overview
 Agent is run continuously on the target machine. All actions are driven from a backend.
 
-User installs agent using enroll command, which ensures that service is on the the system startup.
+User installs agent using enroll command, which ensures that service is on the system startup.
 
 Service waits for commands from a backend to validate integrations, start export or get users, repos, projects for use in admin web interface. All these actions are started as a separate process. To implement this we have the following hidden commands which accept json as params.
 
@@ -26,8 +26,8 @@ GRPC is used for calls between agent and integrations. Endpoints and parameters 
 Integrations are responsible for getting the data and converting it to pinpoint format. Integrations will use datamodel directly. Agent itself does not need to check the datamodel. Agent will use the metadata to correctly forward that data to backend, but does not have to touch the data itself.
 
 ### RPC interface between agent and integration
-- [Agent](https://github.com/pinpt/agent.next/blob/master/rpcdef/agent.go)
-- [Integration](https://github.com/pinpt/agent.next/blob/master/rpcdef/integration.go)
+- [Agent](https://github.com/pinpt/agent/blob/master/rpcdef/agent.go)
+- [Integration](https://github.com/pinpt/agent/blob/master/rpcdef/integration.go)
 
 ### Export code flow
 When agent export command is called, agent loads all available/configured plugins and then inits them using the Init call to allow them to call back to the agent.
@@ -47,6 +47,77 @@ Advantages of direct calls
 - Easy passing/return of data and logs. Simple streaming data back from export-onboard-data.
 
 At the moment, we do not need communications between processes, or complex communication with service. For this reason using processes is a bit better.
+
+### Users from sourcecode integrations
+
+#### User records from integration system
+
+Normally sourcecode systems make it possible to export the list of users. We save those users in sourcecode.User directly from integration code.
+
+For example in github, we create a user for every user in github organization. In further processing, when we process pull requests, comments and similar data, we also send newly encountered users. This would include old organization members, commits in public repos by a thirdpary and bots, which are not a present in a list of users in organization.
+
+```
+u = &sourcecode.User{}
+u.ID = hash.Values("User", customerID, refType, refID)
+u.RefType = "github"
+u.RefID = githubUserID
+u.Name = githubUserName
+u.Email = ""
+u.AssociatedRefID = nil
+```
+
+These objects contain integration user id as RefID. AssociatedRefID is not set for those users. We also do not set the email field, but in case it's possible to get the emails we will create additional objects as described in the next section.
+
+#### User account emails from integration system
+
+We also want to link emails used in commits and integration user accounts. These could be available in different ways.
+
+For example, in gitlab enterprise it is possible to the email list for each user. In that case we pass a special integration commitusers.CommitUser struct from integration into agent.
+
+```
+type CommitUser struct {
+	CustomerID string
+	Email      string
+	Name       string
+	SourceID   string
+}
+```
+
+In case of github, the emails are not available for retrieval based on user, but each commit in github api has account id and email, which we could use to link those.
+
+We also send the same internal CommitUser struct to agent in this case.
+
+To pass those objects to agent from integration, we write those into a session named sourcecode.CommitUser defined in commitusers.TableName constant. 
+
+We take internal CommitUser struct and transform them into sourcecode.User written into sourcecode.CommitUser file.
+
+This is done in cmdexport/process/users.go. It also checks that only one record per key is sent. key := email + "@@@" + sourceID
+
+The resulting sourcecode.User object saved in sourcecode.CommitUser looks like this.
+
+```
+u = &sourcecode.User{}
+u.ID = hash.Values("User", obj.CustomerID, email, "git", sourceID)
+u.RefType = "git"
+u.RefID = hash.Values(customerID, email)
+u.Name = name
+u.Email = email
+u.AssociatedRefID = integrationUserID
+```
+
+#### User account emails from git
+
+In addition, we create user records based on git data in exportrepo/riprsc. This is done in repo processing. It is similar to above case, but AssociatedRefID is empty.
+
+```
+u = &sourcecode.User{}
+u.ID = hash.Values("User", obj.CustomerID, email, "git")
+u.RefType = "git"
+u.RefID = hash.Values(customerID, email)
+u.Name = name
+u.Email = email
+u.AssociatedRefID = ""
+```
 
 ### Export sessions and progress
 We use nested sessions to keep track of the progress and last processed tokens. We have 2 different session types, model sessions which allow sending the objects to the backend and tracking sessions which are used for progress notification and for keeping last processed tokens from overwriting each other.

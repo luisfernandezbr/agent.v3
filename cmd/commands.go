@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pinpt/agent.next/cmd/cmdenroll"
-	"github.com/pinpt/agent.next/cmd/cmdexport"
-	"github.com/pinpt/agent.next/cmd/cmdexportonboarddata"
-	"github.com/pinpt/agent.next/cmd/cmdservicerun"
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts"
-	"github.com/pinpt/agent.next/cmd/cmdvalidate"
-	"github.com/pinpt/agent.next/cmd/cmdvalidateconfig"
-	"github.com/pinpt/agent.next/cmd/pkg/cmdlogger"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/cmd/cmdenroll"
+	"github.com/pinpt/agent/cmd/cmdexport"
+	"github.com/pinpt/agent/cmd/cmdexportonboarddata"
+	"github.com/pinpt/agent/cmd/cmdservicerun"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts"
+	"github.com/pinpt/agent/cmd/cmdvalidate"
+	"github.com/pinpt/agent/cmd/cmdvalidateconfig"
+	"github.com/pinpt/agent/cmd/pkg/cmdlogger"
+	"github.com/pinpt/agent/rpcdef"
 	pos "github.com/pinpt/go-common/os"
 	"github.com/spf13/cobra"
 )
@@ -135,6 +135,7 @@ func init() {
 	cmd := cmdEnroll
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
+	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
 	cmd.Flags().String("channel", "edge", "Cloud channel to use.")
 	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
 	cmd.Flags().Bool("skip-service-run", false, "Set to true to skip service run. Will need to run it separately.")

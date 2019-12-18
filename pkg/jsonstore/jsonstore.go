@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pinpt/agent.next/pkg/fs"
+	"github.com/pinpt/agent/pkg/fs"
 )
 
 type Store struct {

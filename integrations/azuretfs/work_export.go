@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
 
-	azureapi "github.com/pinpt/agent.next/integrations/azuretfs/api"
+	azureapi "github.com/pinpt/agent/integrations/azuretfs/api"
 	"github.com/pinpt/integration-sdk/work"
 )
 

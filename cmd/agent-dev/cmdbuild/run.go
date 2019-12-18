@@ -28,12 +28,14 @@ var integrationBinaries = []string{
 }
 
 type Platform struct {
-	Name string
-	GOOS string
+	UserFriedlyName string
+	GOOS            string
+	GOARCH          string
+	BinSuffix       string
 }
 
-func (s Platform) String() string {
-	return s.Name
+func (s Platform) OSArch() string {
+	return s.GOOS + "-" + s.GOARCH
 }
 
 func Run(opts Opts) {
@@ -57,15 +59,16 @@ func Run(opts Opts) {
 
 func getPlatforms(want string) []Platform {
 	allPlatforms := []Platform{
-		{Name: "macos", GOOS: "darwin"},
-		{Name: "linux", GOOS: "linux"},
-		{Name: "windows", GOOS: "windows"},
+		{UserFriedlyName: "linux", GOOS: "linux", GOARCH: "amd64"},
+		{UserFriedlyName: "windows", GOOS: "windows", GOARCH: "amd64", BinSuffix: ".exe"},
 	}
 	if want == "" {
 		return allPlatforms
 	}
+	allPlatforms = append(allPlatforms,
+		Platform{UserFriedlyName: "macos", GOOS: "darwin", GOARCH: "amd64"})
 	for _, pl := range allPlatforms {
-		if pl.Name == want || pl.GOOS == want {
+		if pl.UserFriedlyName == want || pl.GOOS == want {
 			return []Platform{pl}
 		}
 	}

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/sysinfo"
+	"github.com/pinpt/agent/pkg/sysinfo"
 	"github.com/pinpt/go-common/datetime"
 )
 

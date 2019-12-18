@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pinpt/agent.next/integrations/pkg/commonrepo"
-	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent/integrations/pkg/commonrepo"
+	"github.com/pinpt/agent/pkg/date"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )

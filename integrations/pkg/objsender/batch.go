@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 type batch struct {

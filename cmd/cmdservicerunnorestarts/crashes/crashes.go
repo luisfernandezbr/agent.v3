@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/integration-sdk/agent"
 
 	"github.com/pinpt/go-common/datamodel"

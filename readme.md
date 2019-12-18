@@ -3,7 +3,7 @@
 </div>
 
 <p align="center" color="#6a737d">
-	<strong>Agent is the software that runs on customer-premise to collect and deliver performance details to the Pinpoint Cloud</strong>
+	<strong>Agent is the software that collects and deliver performance details to the Pinpoint Cloud</strong>
 </p>
 
 - [Build from source](./_docs/build.md)
@@ -14,7 +14,7 @@
 
 ## Install
 
-TODO
+If you login to the admin dashboard in the Pinpoint product, you will get environment specific instructions for installing the agent.
 
 ### Required git version
 
@@ -32,3 +32,7 @@ TODO
 - [GitLab](./integrations/gitlab/readme.md)
 - [Jira](./integrations/jira/readme.md)
 - [SonarQube](./integrations/sonarqube/readme.md)
+
+
+## License
+All of this code is Copyright © 2018-2019 by Pinpoint Software, Inc. Licensed under the MIT License

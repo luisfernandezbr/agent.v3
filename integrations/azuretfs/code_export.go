@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/rpcdef"
 	pjson "github.com/pinpt/go-common/json"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )

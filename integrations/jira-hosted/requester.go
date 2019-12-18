@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/pinpt/agent.next/pkg/reqstats"
-	"github.com/pinpt/agent.next/pkg/requests"
+	"github.com/pinpt/agent/pkg/reqstats"
+	"github.com/pinpt/agent/pkg/requests"
 	pstrings "github.com/pinpt/go-common/strings"
 
 	"github.com/hashicorp/go-hclog"

@@ -5,10 +5,10 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/commitusers"
+	"github.com/pinpt/agent/pkg/commitusers"
 
-	"github.com/pinpt/agent.next/integrations/github/api"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/github/api"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
 )
 
 func (s *Integration) exportCommitUsers(logger hclog.Logger, repoSender *objsender.Session, repos []api.Repo, concurrency int) (rerr error) {

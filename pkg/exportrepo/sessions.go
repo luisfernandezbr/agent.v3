@@ -3,14 +3,16 @@ package exportrepo
 import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 
-	"github.com/pinpt/agent.next/pkg/expsessions"
+	"github.com/pinpt/agent/pkg/commitusers"
+	"github.com/pinpt/agent/pkg/expsessions"
 )
 
 type sessions struct {
-	Branch   expsessions.ID
-	PRBranch expsessions.ID
-	Blame    expsessions.ID
-	Commit   expsessions.ID
+	Branch     expsessions.ID
+	PRBranch   expsessions.ID
+	Blame      expsessions.ID
+	Commit     expsessions.ID
+	CommitUser expsessions.ID
 
 	sessionManager         *expsessions.Manager
 	sessionRootID          expsessions.ID
@@ -43,6 +45,10 @@ func (s *sessions) Open() error {
 	if err != nil {
 		return err
 	}
+	s.CommitUser, err = s.session(commitusers.TableName)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -60,6 +66,10 @@ func (s *sessions) Close() error {
 		return err
 	}
 	err = s.sessionManager.Done(s.Commit, nil)
+	if err != nil {
+		return err
+	}
+	err = s.sessionManager.Done(s.CommitUser, nil)
 	if err != nil {
 		return err
 	}

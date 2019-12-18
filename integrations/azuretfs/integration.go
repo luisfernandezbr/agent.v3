@@ -10,11 +10,11 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/azuretfs/api"
-	"github.com/pinpt/agent.next/integrations/pkg/ibase"
-	"github.com/pinpt/agent.next/integrations/pkg/objsender"
-	"github.com/pinpt/agent.next/pkg/structmarshal"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/integrations/azuretfs/api"
+	"github.com/pinpt/agent/integrations/pkg/ibase"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/pkg/structmarshal"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 // RefType the type of integration

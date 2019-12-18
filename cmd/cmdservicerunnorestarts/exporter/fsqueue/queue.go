@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/fs"
+	"github.com/pinpt/agent/pkg/fs"
 )
 
 type Request struct {

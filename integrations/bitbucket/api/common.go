@@ -3,7 +3,7 @@ package api
 import (
 	"net/url"
 
-	"github.com/pinpt/agent.next/pkg/ids2"
+	"github.com/pinpt/agent/pkg/ids2"
 
 	"github.com/hashicorp/go-hclog"
 )

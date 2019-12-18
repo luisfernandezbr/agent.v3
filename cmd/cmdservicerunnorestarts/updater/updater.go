@@ -14,36 +14,44 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
+
+	pstrings "github.com/pinpt/go-common/strings"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/pkg/agentconf"
-	"github.com/pinpt/agent.next/pkg/build"
-	"github.com/pinpt/agent.next/pkg/fs"
-	"github.com/pinpt/agent.next/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/agentconf"
+	"github.com/pinpt/agent/pkg/build"
+	"github.com/pinpt/agent/pkg/fs"
+	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/go-common/api"
 )
 
 // Updater handles agent and built-in integration updates
 type Updater struct {
-	logger  hclog.Logger
-	fsconf  fsconf.Locs
-	channel string
+	logger          hclog.Logger
+	fsconf          fsconf.Locs
+	channel         string
+	integrationsDir string
 }
 
 // New creates updater
 func New(logger hclog.Logger, fsconf fsconf.Locs, conf agentconf.Config) *Updater {
-	return &Updater{
-		logger:  logger,
-		fsconf:  fsconf,
-		channel: conf.Channel,
+	s := &Updater{}
+	s.logger = logger
+	s.fsconf = fsconf
+	s.channel = conf.Channel
+	s.integrationsDir = conf.IntegrationsDir
+	if s.integrationsDir == "" {
+		s.integrationsDir = fsconf.Integrations
 	}
+	return s
 }
 
 // DownloadIntegrationsIfMissing downloads integrations if those
 // are not present in integrations dir. This would happen
 // if use only downloaded the agent binary.
 func (s *Updater) DownloadIntegrationsIfMissing() error {
-	dir := s.fsconf.Integrations
+	dir := s.integrationsDir
 	exists, err := fs.Exists(dir)
 	if err != nil {
 		return fmt.Errorf("Could not read integration dir: %v", err)
@@ -113,7 +121,7 @@ func (s *Updater) Update(version string) error {
 	s.logger.Info("Replacing integration binaries")
 	err = s.updateIntegrations(version, downloadDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("updateIntegrations: %v", err)
 	}
 
 	s.logger.Info("Updated both agent and integrations")
@@ -163,33 +171,51 @@ func (s *Updater) updateAgent(version, downloadDir string) error {
 
 func (s *Updater) updateIntegrations(version string, downloadDir string) error {
 	downloadedIntegrations := filepath.Join(downloadDir, "integrations")
-	ok, err := fs.Exists(s.fsconf.Integrations)
+	ok, err := fs.Exists(s.integrationsDir)
 	if err != nil {
 		return err
 	}
 	if !ok {
 		// integration dir did not exist, create an empty one, so that we can use replaceRestoringIfFailed
-		err = os.MkdirAll(s.fsconf.Integrations, 0777)
+		err = os.MkdirAll(s.integrationsDir, 0777)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not create integrations dir: %v", err)
 		}
 	}
 
-	err = replaceRestoringIfFailed(s.fsconf.Integrations, downloadedIntegrations, s.fsconf.Temp)
+	err = replaceRestoringIfFailed(s.integrationsDir, downloadedIntegrations, s.fsconf.Temp)
 	if err != nil {
 		return fmt.Errorf("failed to replace integrations: %v", err)
 	}
 	return nil
 }
 
+// on windows we will not be able to delete the current agent, because the main service process is running it. but the second backup name will work.
+// retrying RemoveAll 2 times for this
+func backupLoc(loc string) (backupLoc string, _ error) {
+	i := 0
+	var lastErr error
+	for {
+		backupLoc = loc + ".old" + strconv.Itoa(i)
+		err := os.RemoveAll(backupLoc)
+		if err == nil {
+			return
+		}
+		lastErr = err
+		i++
+		if i >= 2 {
+			return "", fmt.Errorf("could not find name for backup, old backup can not be deleted, failed after %v attempts, last err %v", i, lastErr)
+		}
+	}
+}
+
 func replaceRestoringIfFailed(loc string, repl string, tmpDir string) error {
 	repl2 := loc + ".new"
-	backup := loc + ".old"
-
-	err := os.RemoveAll(backup)
+	backup, err := backupLoc(loc)
 	if err != nil {
 		return err
 	}
+
 	// copy from loc to new to allow the files being on different drives, happens in make docker-dev
 	err = os.RemoveAll(repl2)
 	if err != nil {
@@ -234,21 +260,28 @@ func replaceRestoringIfFailed(loc string, repl string, tmpDir string) error {
 }
 
 func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) (loc string, rerr error) {
-	platform := runtime.GOOS
-	switch platform {
+	platformArch := runtime.GOOS + "-" + runtime.GOARCH
+	switch runtime.GOOS {
 	case "windows", "linux":
-	case "darwin":
-		platform = "macos"
 	default:
-		rerr = errors.New("platform not supported: " + platform)
+		rerr = errors.New("platform not supported: " + platformArch)
+		return
+	}
+	if runtime.GOARCH != "amd64" {
+		rerr = errors.New("platform not supported: " + platformArch)
 		return
 	}
 
-	//const s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
-	s3BinariesPrefix := api.BackendURL(api.EventService, s.channel) + "/agent/download"
+	s3BinariesPrefix := ""
+	if os.Getenv("PP_AGENT_USE_DIRECT_UPDATE_URL") != "" {
+		s3BinariesPrefix = "https://pinpoint-agent.s3.amazonaws.com/releases"
+	} else {
 
-	url := s3BinariesPrefix + "/" + version + "/bin-gz/" + platform + "/" + urlPath
-	if platform == "windows" {
+		s3BinariesPrefix = pstrings.JoinURL(api.BackendURL(api.EventService, s.channel), "agent", "download")
+	}
+
+	url := pstrings.JoinURL(s3BinariesPrefix, version, "bin-gz", platformArch, urlPath)
+	if runtime.GOOS == "windows" {
 		url += ".exe"
 	}
 	url += ".gz"
@@ -269,7 +302,7 @@ func (s *Updater) downloadBinary(urlPath string, version string, tmpDir string) 
 	}
 
 	loc = filepath.Join(tmpDir, bin)
-	if platform == "windows" {
+	if runtime.GOOS == "windows" {
 		loc += ".exe"
 	}
 

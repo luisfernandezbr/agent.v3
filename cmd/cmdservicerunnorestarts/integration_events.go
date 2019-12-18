@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/inconfig"
-	"github.com/pinpt/agent.next/pkg/date"
-	"github.com/pinpt/agent.next/pkg/encrypt"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/inconfig"
+	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/encrypt"
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"
 	pjson "github.com/pinpt/go-common/json"

@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	kservice "github.com/kardianos/service"
-	"github.com/pinpt/agent.next/cmd/cmdserviceinstall"
+	"github.com/pinpt/agent/cmd/cmdserviceinstall"
 )
 
 func Run(logger hclog.Logger) error {

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/pinpt/agent.next/rpcdef/proto"
+	"github.com/pinpt/agent/rpcdef/proto"
 	"google.golang.org/grpc"
 
 	"github.com/hashicorp/go-plugin"

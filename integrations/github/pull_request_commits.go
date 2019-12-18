@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent.next/integrations/github/api"
+	"github.com/pinpt/agent/integrations/github/api"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 

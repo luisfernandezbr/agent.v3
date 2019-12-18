@@ -3,9 +3,9 @@ package cmdexport
 import (
 	"time"
 
-	"github.com/pinpt/agent.next/pkg/expsessions"
-	"github.com/pinpt/agent.next/pkg/integrationid"
-	"github.com/pinpt/agent.next/rpcdef"
+	"github.com/pinpt/agent/pkg/expsessions"
+	"github.com/pinpt/agent/pkg/integrationid"
+	"github.com/pinpt/agent/rpcdef"
 )
 
 type agentDelegate struct {

@@ -3,12 +3,12 @@ package inconfig
 import (
 	"testing"
 
-	"github.com/pinpt/agent.next/cmd/cmdintegration"
+	"github.com/pinpt/agent/cmd/cmdintegration"
 	"github.com/stretchr/testify/assert"
 
 	pstrings "github.com/pinpt/go-common/strings"
 
-	"github.com/pinpt/agent.next/pkg/encrypt"
+	"github.com/pinpt/agent/pkg/encrypt"
 	"github.com/pinpt/integration-sdk/agent"
 )
 
