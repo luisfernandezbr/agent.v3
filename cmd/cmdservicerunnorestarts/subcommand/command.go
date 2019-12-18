@@ -26,7 +26,7 @@ import (
 	"github.com/pinpt/agent.next/pkg/agentconf"
 	"github.com/pinpt/agent.next/pkg/date"
 	"github.com/pinpt/agent.next/pkg/deviceinfo"
-	"github.com/pinpt/agent.next/pkg/interrupt"
+	"github.com/pinpt/agent.next/pkg/forcekill"
 )
 
 // Cancelled implementation of error.
@@ -320,6 +320,6 @@ func removeProcess(logger hclog.Logger, name string) error {
 	logger.Debug("removing process from map", "name", name)
 	p := processes[name]
 	delete(processes, name)
-	interrupt.Kill(p)
+	forcekill.Kill(p)
 	return nil
 }

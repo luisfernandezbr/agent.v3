@@ -1,6 +1,6 @@
 // +build windows
 
-package interrupt
+package forcekill
 
 import (
 	"fmt"
