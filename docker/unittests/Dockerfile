@@ -16,4 +16,4 @@ COPY . .
 RUN dep ensure -v -vendor-only
 
 # Run unit tests
-RUN CGO_ENABLED=0 go test -v ./...
+RUN CGO_ENABLED=0 go test -v ./... -timeout 1m
