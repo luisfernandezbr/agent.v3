@@ -18,20 +18,28 @@ func TestServiceRetryingCancelImmediately(t *testing.T) {
 
 	run := func(ctx context.Context) error {
 		fmt.Println("started")
-		runStart <- true
-		return <-runEnd
+		select {
+		case runStart <- true:
+			return <-runEnd
+		case <-ctx.Done():
+			return nil
+		}
 	}
 
 	service := Retrying(logger, run, func(retry int) time.Duration {
-		return time.Microsecond
+		return time.Nanosecond
 	}, time.Hour)
 
-	done, cancel := AsyncRunBg(service)
-	<-runStart
+	fmt.Println("AsyncRunBg before call")
+	done, cancel := AsyncRunBg(service) // blocked
+	fmt.Println("AsyncRunBg after call")
+	<-runStart // blocked
 	fmt.Println("cancel")
 	cancel()
 	runEnd <- nil
+	fmt.Println("waiting for done")
 	err := <-done
+	fmt.Println("done")
 	if err != nil {
 		t.Fatal("should never return error", err)
 	}
@@ -45,8 +53,12 @@ func TestServiceRetryingRetries(t *testing.T) {
 
 	run := func(ctx context.Context) error {
 		fmt.Println("started")
-		runStart <- true
-		return <-runEnd
+		select {
+		case runStart <- true:
+			return <-runEnd
+		case <-ctx.Done():
+			return nil
+		}
 	}
 
 	service := Retrying(logger, run, func(retry int) time.Duration {
@@ -78,8 +90,12 @@ func TestServiceRetryingResetAfter(t *testing.T) {
 
 	run := func(ctx context.Context) error {
 		fmt.Println("started")
-		runStart <- true
-		return <-runEnd
+		select {
+		case runStart <- true:
+			return <-runEnd
+		case <-ctx.Done():
+			return nil
+		}
 	}
 
 	service := Retrying(logger, run, func(retry int) time.Duration {
@@ -106,8 +122,13 @@ func TestServiceRetryingCancelPropagation(t *testing.T) {
 
 	runStart := make(chan bool)
 	runEnd := make(chan error)
+	firstRun := true
 
 	run := func(ctx context.Context) error {
+		if !firstRun {
+			return nil
+		}
+		firstRun = false
 		fmt.Println("started")
 		runStart <- true
 		<-ctx.Done()
