@@ -176,7 +176,7 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 
 	if err != nil && cmdname == "export" {
 		if _, ok := processes[cmdname]; !ok {
-			return &Cancelled{s: "manually killed"}
+			return &Cancelled{s: "export cancelled"}
 		}
 	}
 
