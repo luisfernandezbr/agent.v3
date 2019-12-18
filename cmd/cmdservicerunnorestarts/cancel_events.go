@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pinpt/agent.next/cmd/cmdservicerunnorestarts/subcommand"
-	"github.com/pinpt/agent.next/pkg/date"
+	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/subcommand"
+	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"
 	"github.com/pinpt/integration-sdk/agent"
