@@ -8,8 +8,6 @@ import (
 	"os/exec"
 )
 
-var listening = false
-
 func kill(process *os.Process) error {
 	// The problem with process.Kill() is that it does not bubble to it's children
 	//

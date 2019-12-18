@@ -31,6 +31,7 @@ func (s *runner) handleCancelEvents(ctx context.Context) (closefunc, error) {
 
 	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		ev := instance.Object().(*agent.CancelRequest)
+
 		var cmdname string
 		switch ev.Command {
 		case agent.CancelRequestCommandEXPORT:
@@ -42,16 +43,19 @@ func (s *runner) handleCancelEvents(ctx context.Context) (closefunc, error) {
 		}
 		resp := &agent.CancelResponse{}
 		date.ConvertToModel(time.Now(), &resp.CancelDate)
+
 		if cmdname == "" {
-			err := fmt.Errorf("wrong commnad %s", ev.Command.String())
+
+			err := fmt.Errorf("wrong command %s", ev.Command.String())
 			errstr := err.Error()
 			resp.Error = &errstr
-			s.logger.Error("error in integration requests", "err", err)
+			s.logger.Error("error in cancel request", "err", err)
+
 		} else {
 			if err := subcommand.KillCommand(s.logger, cmdname); err != nil {
 				errstr := err.Error()
 				resp.Error = &errstr
-				s.logger.Error("error in integration requests", "err", fmt.Errorf("error in cancel request. err %s", err.Error()))
+				s.logger.Error("error processing cancel request", "err", err.Error())
 			}
 		}
 		return datamodel.NewModelSendEvent(resp), nil

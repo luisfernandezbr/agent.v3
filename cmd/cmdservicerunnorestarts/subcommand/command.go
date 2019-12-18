@@ -93,6 +93,9 @@ func New(opts Opts) (*Command, error) {
 
 // KillCommand stops a running process
 func KillCommand(logger hclog.Logger, cmdname string) error {
+	if cmdname != "export" {
+		return errors.New("only supported for export command")
+	}
 	logger.Debug("killing command manually", "cmd", cmdname)
 	return removeProcess(logger, cmdname)
 }
@@ -165,7 +168,7 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 	}
 	if cmdname == "export" { // for now, only allow this command to be cancelled
 		if err := addProcess(c.logger, cmdname, cmd.Process); err != nil {
-			return rerr(fmt.Errorf("could not start the sub command, process already running: %v", cmdname))
+			return rerr(fmt.Errorf("could not start the sub command, process already running: %v %v", err, cmdname))
 		}
 		defer func() {
 			// ignore error in this case since it will return an error if the process was kill manually
@@ -307,14 +310,17 @@ func init() {
 	processes = make(map[string]*os.Process)
 }
 
+// Warning! Not safe for concurrent use.
 func addProcess(logger hclog.Logger, name string, p *os.Process) error {
 	if _, o := processes[name]; o {
-		return errors.New("")
+		return errors.New("process already exists: " + name)
 	}
 	logger.Debug("adding process to map", "name", name)
 	processes[name] = p
 	return nil
 }
+
+// Warning! Not safe for concurrent use.
 func removeProcess(logger hclog.Logger, name string) error {
 	if _, o := processes[name]; !o {
 		return fmt.Errorf("process name '%s' not found in map", name)

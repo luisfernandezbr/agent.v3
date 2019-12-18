@@ -6,5 +6,5 @@ The purpose of this is to test what's the best way to kill a subprocess and all 
 
 The `main.go` program runs `./level1/main.go` and this one runs `./level2/main.go`. In level2, there is a 50-second timer, which makes level2 and main wait. In main, we're killing level1 after one second, and level2 should be killed as well. In Mac or Linux, we can see in the logs when this happens, but on Windows, we'll have to watch the Task Manager since `taskkill` does not send a signal we can listen to.
 
-The code should be self-explanatory, you can use the Makefile to run it. When in Windows, `make windows`, and when in Mac or Linux, `make mac`
+The code should be self-explanatory, you can use the Makefile to run it. When in Windows, `make windows`, and when in Mac or Linux, `make not-windows`
 

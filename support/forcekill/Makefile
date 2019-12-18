@@ -7,7 +7,7 @@ windows:
 	@echo "Building main"
 	@$(TMPDIR)/main
 
-mac:
+not-windows:
 	@go build -o $(TMPDIR)/level1 level1/main.go
 	@go build -o $(TMPDIR)/level2 level2/main.go
 	@go build -o $(TMPDIR)/main .
