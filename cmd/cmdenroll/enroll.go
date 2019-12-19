@@ -109,10 +109,9 @@ func (s *enroller) Run(ctx context.Context) error {
 	// wait for our subscriber to be registered
 	<-ready
 
-	s.logger.Debug("sub done, waiting 60s")
-	// DEBUGGING POSSIBLE ISSUE
-	time.Sleep(60 * time.Second)
-	s.logger.Debug("waiting done")
+	// TODO: without this hardcoded delay enroll fails for cloud agent (not all the time thought)
+	s.logger.Debug("Registered subscription, waiting for 5s")
+	time.Sleep(5 * time.Second)
 
 	err := s.SendEvent(ctx)
 	if err != nil {
