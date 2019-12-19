@@ -134,6 +134,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 	version, err := jiracommonapi.ServerVersion(s.qc.Common())
 	if err != nil {
 		rerr(err)
+		return
 	}
 
 	res.ServerVersion = version

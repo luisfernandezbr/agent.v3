@@ -37,9 +37,9 @@ type validator struct {
 
 	Opts Opts
 
-	integration   *iloader.Integration
-	exportConfig  rpcdef.ExportConfig
-	ServerVersion string
+	integration  *iloader.Integration
+	exportConfig rpcdef.ExportConfig
+	// ServerVersion string
 }
 
 func newValidator(opts Opts) (_ *validator, rerr error) {
@@ -88,22 +88,22 @@ type Result struct {
 	Errors []string `json:"errors"`
 	// Success is true if there are no errors. Useful when returning result as json to ensure that marshalling worked.
 	Success       bool   `json:"success"`
-	ServerVersion string `json:"api_version"`
+	ServerVersion string `json:"server_version"`
 }
 
 func (s *validator) runValidateAndPrint() error {
-	errs := s.runValidate()
-	return s.output(errs)
+	serverVersion, errs := s.runValidate()
+	return s.output(serverVersion, errs)
 }
 
 func (s *validator) outputErr(err error) error {
-	return s.output([]string{err.Error()})
+	return s.output("", []string{err.Error()})
 }
 
-func (s *validator) output(errs []string) error {
+func (s *validator) output(serverVersion string, errs []string) error {
 	res := Result{}
 	res.Errors = errs
-	res.ServerVersion = s.ServerVersion
+	res.ServerVersion = serverVersion
 
 	if len(res.Errors) == 0 {
 		res.Success = true
@@ -126,7 +126,7 @@ func (s *validator) output(errs []string) error {
 	return nil
 }
 
-func (s *validator) runValidate() (errs []string) {
+func (s *validator) runValidate() (serverVersion string, errs []string) {
 	ctx := context.Background()
 	client := s.integration.RPCClient()
 
@@ -141,7 +141,7 @@ func (s *validator) runValidate() (errs []string) {
 		return
 	}
 
-	s.ServerVersion = res0.ServerVersion
+	// s.ServerVersion = res0.ServerVersion
 
 	if res0.RepoURL != "" { // repo url is only set for git integrations
 		err = s.cloneRepo(res0.RepoURL)
@@ -157,7 +157,7 @@ func (s *validator) runValidate() (errs []string) {
 		return
 	}
 
-	return res0.Errors
+	return res0.ServerVersion, res0.Errors
 }
 
 func (s *validator) cloneRepo(url string) error {
