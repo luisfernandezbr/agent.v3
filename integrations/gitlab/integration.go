@@ -79,6 +79,12 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
+	res.ServerVersion, err = api.ServerVersion(s.qc)
+	if err != nil {
+		rerr(err)
+		return
+	}
+
 	groups, err := api.GroupsAll(s.qc)
 	if err != nil {
 		rerr(err)
