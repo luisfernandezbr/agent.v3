@@ -109,8 +109,10 @@ func (s *enroller) Run(ctx context.Context) error {
 	// wait for our subscriber to be registered
 	<-ready
 
+	s.logger.Debug("sub done, waiting 60s")
 	// DEBUGGING POSSIBLE ISSUE
 	time.Sleep(60 * time.Second)
+	s.logger.Debug("waiting done")
 
 	err := s.SendEvent(ctx)
 	if err != nil {
