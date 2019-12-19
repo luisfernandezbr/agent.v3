@@ -39,7 +39,6 @@ type validator struct {
 
 	integration  *iloader.Integration
 	exportConfig rpcdef.ExportConfig
-	// ServerVersion string
 }
 
 func newValidator(opts Opts) (_ *validator, rerr error) {
@@ -140,8 +139,6 @@ func (s *validator) runValidate() (serverVersion string, errs []string) {
 		rerr(err)
 		return
 	}
-
-	// s.ServerVersion = res0.ServerVersion
 
 	if res0.RepoURL != "" { // repo url is only set for git integrations
 		err = s.cloneRepo(res0.RepoURL)
