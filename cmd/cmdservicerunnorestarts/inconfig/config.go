@@ -188,7 +188,7 @@ func convertConfigGitlab(integrationNameBackend string, systemTypeBackend Integr
 
 	if accessToken != "" {
 		// this is gitlab.com cloud auth
-		config.APIToken = accessToken
+		config.AccessToken = accessToken
 		config.URL = "https://gitlab.com"
 		config.ServerType = "cloud"
 	} else {

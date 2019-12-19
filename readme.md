@@ -14,7 +14,7 @@
 
 ## Install
 
-TODO
+If you login to the admin dashboard in the Pinpoint product, you will get environment specific instructions for installing the agent.
 
 ### Required git version
 

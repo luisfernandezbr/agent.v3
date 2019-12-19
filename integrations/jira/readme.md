@@ -20,6 +20,14 @@ Supports basic auth and OAuth 2
 - [Jira cloud basic auth](https://developer.atlassian.com/cloud/jira/platform/jira-rest-api-basic-authentication/)
 - [Jira cloud OAuth 2](https://developer.atlassian.com/cloud/jira/platform/oauth-2-authorization-code-grants-3lo-for-apps/)
 
+### Required permissions
+
+In general jira token does not have separate levels of permissions. But the users that this token belongs to can have different visibility and security settings. The user used for export should be able to see all issues and related data that we want to texport.
+
+Permission is Browse Project for each. If the project has issues with different Security levels, the user should have the valid permission to see those.
+
+[General jira cloud docs on managing permissions](https://confluence.atlassian.com/adminjiracloud/managing-project-permissions-776636362.html)
+
 ### Example request
 
 ```

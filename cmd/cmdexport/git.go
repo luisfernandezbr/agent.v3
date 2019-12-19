@@ -62,6 +62,8 @@ func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 
 			Sessions:      s.sessions.expsession,
 			SessionRootID: sessionRoot,
+
+			CommitUsers: s.sessions.commitUsers,
 		}
 		for _, pr1 := range fetch.PRs {
 			pr2 := exportrepo.PR{}
