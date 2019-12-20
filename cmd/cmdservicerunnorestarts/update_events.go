@@ -54,7 +54,8 @@ func (s *runner) handleUpdateEvents(ctx context.Context) (closefunc, error) {
 			return datamodel.NewModelSendEvent(resp), nil
 		}
 
-		oldVersion, err := s.updateTo(version)
+		oldVersion, updated, err := s.updateTo(version)
+
 		if err != nil {
 			s.logger.Error("Update failed", "err", err)
 			resp := &agent.UpdateResponse{}
@@ -66,11 +67,11 @@ func (s *runner) handleUpdateEvents(ctx context.Context) (closefunc, error) {
 		s.logger.Info("Update completed", "from_version", oldVersion, "to_version", version)
 
 		go func() {
-			if oldVersion == version {
-				s.logger.Info("Same version as before, nothing to do")
+			if !updated { // not updated since old version same as current
 				return
 			}
-			s.logger.Info("Restarting in 10s")
+
+			s.logger.Info("Restarting in 10s") // waiting for update response to be sent
 			time.Sleep(10 * time.Second)
 			os.Exit(1)
 		}()
@@ -97,7 +98,7 @@ func (s *runner) handleUpdateEvents(ctx context.Context) (closefunc, error) {
 	return func() { sub.Close() }, nil
 }
 
-func (s *runner) updateTo(version string) (oldVersion string, rerr error) {
+func (s *runner) updateTo(version string) (oldVersion string, updated bool, rerr error) {
 	if !build.IsProduction() {
 		rerr = errors.New("Automatic update is only supported for production builds")
 		return
@@ -132,9 +133,12 @@ func (s *runner) updateTo(version string) (oldVersion string, rerr error) {
 		return
 	}
 
-	if version == oldVersion {
-		s.logger.Info("Skipping requested update, already at the target version", "v", version)
-		return
+	if version != "dev" {
+		// allow updating to dev version multiple times, since it may point to new version after update
+		if version == oldVersion {
+			s.logger.Info("Skipping requested update, already at the target version", "v", version)
+			return
+		}
 	}
 
 	// when updating using PP_AGENT_UPDATE_VERSION exporter is not set yet and no onboarding or exporting is happening
@@ -156,6 +160,8 @@ func (s *runner) updateTo(version string) (oldVersion string, rerr error) {
 		rerr = fmt.Errorf("Could not update: %v", err)
 		return
 	}
+
+	updated = true
 
 	return
 }
