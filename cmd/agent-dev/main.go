@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/pinpt/agent/cmd/agent-dev/cmddownloadlogs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -250,6 +251,39 @@ func init() {
 	cmd.Flags().String("platform", "all", "Limit to specific platform")
 	cmd.Flags().Bool("only-agent", false, "Only build agent and skip the rest (for developement)")
 	cmd.Flags().Bool("skip-archives", false, "Skip creating zips and gzips (faster builds)")
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdDownloadLogs = &cobra.Command{
+	Use:   "download-logs",
+	Short: "Downloads logs from elastic search",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		user, _ := cmd.Flags().GetString("user")
+		password, _ := cmd.Flags().GetString("password")
+		url, _ := cmd.Flags().GetString("url")
+		agentUUID, _ := cmd.Flags().GetString("agent-uuid")
+		customerID, _ := cmd.Flags().GetString("customer-id")
+		noFormat, _ := cmd.Flags().GetBool("no-format")
+		cmddownloadlogs.Run(cmddownloadlogs.Opts{
+			User:       user,
+			Password:   password,
+			URL:        url,
+			AgentUUID:  agentUUID,
+			CustomerID: customerID,
+			NoFormat:   noFormat,
+		})
+	},
+}
+
+func init() {
+	cmd := cmdDownloadLogs
+	cmd.Flags().String("user", "", "User")
+	cmd.Flags().String("password", "", "Password")
+	cmd.Flags().String("url", "", "Elastic search URL")
+	cmd.Flags().String("agent-uuid", "", "Agent UUID")
+	cmd.Flags().String("customer-id", "", "Customer ID")
+	cmd.Flags().String("no-format", "", "Do not format resulting json (useful to see the exact data returned)")
 	cmdRoot.AddCommand(cmd)
 }
 
