@@ -38,6 +38,8 @@ type Config struct {
 	URL                string `json:"url"`
 	Username           string `json:"username"`
 	Password           string `json:"password"`
+	AccessToken        string `json:"access_token"`
+	RefreshToken       string `json:"refresh_token"`
 	OnlyGit            bool   `json:"only_git"`
 	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
 }
@@ -144,6 +146,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.APIURL = s.config.URL + "/2.0"
 		opts.Username = s.config.Username
 		opts.Password = s.config.Password
+		opts.AccessToken = s.config.AccessToken
 		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
 		requester := api.NewRequester(opts)
 
@@ -163,14 +166,16 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-	if def.URL == "" {
-		return rerr("url is missing")
-	}
-	if def.Username == "" {
-		return rerr("username is missing")
-	}
-	if def.Password == "" {
-		return rerr("password is missing")
+	if def.AccessToken == "" {
+		if def.URL == "" {
+			return rerr("url is missing")
+		}
+		if def.Username == "" {
+			return rerr("username is missing")
+		}
+		if def.Password == "" {
+			return rerr("password is missing")
+		}
 	}
 
 	s.config = def
