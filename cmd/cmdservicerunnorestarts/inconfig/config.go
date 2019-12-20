@@ -237,6 +237,8 @@ func convertConfigBitbucket(integrationNameBackend string, systemTypeBackend Int
 		Username      string   `json:"username"`
 		Password      string   `json:"password"`
 		ExcludedRepos []string `json:"excluded_repos"`
+		AccessToken   string   `json:"access_token"`
+		RefreshToken  string   `json:"refresh_token"`
 	}
 
 	err := structmarshal.MapToStruct(cb, &config)
@@ -245,31 +247,39 @@ func convertConfigBitbucket(integrationNameBackend string, systemTypeBackend Int
 		return
 	}
 
-	{
-		v, ok := cb["username"].(string)
-		if !ok {
-			errStr("missing username")
-			return
-		}
-		config.Username = v
-	}
+	accessToken, _ := cb["access_token"].(string)
 
-	{
-		v, ok := cb["password"].(string)
-		if !ok {
-			errStr("missing password")
-			return
+	if accessToken != "" {
+		// this is bitbucket.org cloud auth
+		config.URL = "https://api.bitbucket.org"
+		config.AccessToken = accessToken
+	} else {
+		{
+			v, ok := cb["username"].(string)
+			if !ok {
+				errStr("missing username")
+				return
+			}
+			config.Username = v
 		}
-		config.Password = v
-	}
 
-	{
-		v, ok := cb["url"].(string)
-		if !ok {
-			errStr("missing url")
-			return
+		{
+			v, ok := cb["password"].(string)
+			if !ok {
+				errStr("missing password")
+				return
+			}
+			config.Password = v
 		}
-		config.URL = v
+
+		{
+			v, ok := cb["url"].(string)
+			if !ok {
+				errStr("missing url")
+				return
+			}
+			config.URL = v
+		}
 	}
 
 	config.ExcludedRepos = exclusions

@@ -19,6 +19,7 @@ type RequesterOpts struct {
 	APIURL             string
 	Username           string
 	Password           string
+	AccessToken        string
 	InsecureSkipVerify bool
 }
 
@@ -44,6 +45,14 @@ type Requester struct {
 	httpClient *http.Client
 }
 
+func (s *Requester) setAuth(req *http.Request) {
+	if s.opts.AccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+s.opts.AccessToken)
+	} else {
+		req.SetBasicAuth(s.opts.Username, s.opts.Password)
+	}
+}
+
 func (s *Requester) Request(objPath string, params url.Values, paginable bool, res interface{}) (page PageInfo, err error) {
 
 	u := pstrings.JoinURL(s.opts.APIURL, objPath)
@@ -63,7 +72,7 @@ func (s *Requester) Request(objPath string, params url.Values, paginable bool, r
 	if err != nil {
 		return
 	}
-	req.SetBasicAuth(s.opts.Username, s.opts.Password)
+	s.setAuth(req)
 
 	s.logger.Debug("request", "url", req.URL.String())
 
