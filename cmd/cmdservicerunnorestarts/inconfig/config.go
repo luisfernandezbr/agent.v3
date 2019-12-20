@@ -42,7 +42,7 @@ func ConfigFromEvent(data map[string]interface{},
 
 	auth, err := encrypt.DecryptString(authEncr, encryptionKey)
 	if err != nil {
-		rerr = err
+		rerr = fmt.Errorf("could not decrypt Authorization field in event for %v integration: %v", obj.Name, err)
 		return
 	}
 
