@@ -174,7 +174,6 @@ func convertConfigGitlab(integrationNameBackend string, systemTypeBackend Integr
 		URL           string   `json:"url"`
 		APIToken      string   `json:"apitoken"`
 		ExcludedRepos []string `json:"excluded_repos"`
-		ServerType    string   `json:"server_type"`
 		AccessToken   string   `json:"access_token"`
 	}
 
@@ -190,7 +189,6 @@ func convertConfigGitlab(integrationNameBackend string, systemTypeBackend Integr
 		// this is gitlab.com cloud auth
 		config.AccessToken = accessToken
 		config.URL = "https://gitlab.com"
-		config.ServerType = "cloud"
 	} else {
 		{
 			v, ok := cb["api_token"].(string)
@@ -208,8 +206,6 @@ func convertConfigGitlab(integrationNameBackend string, systemTypeBackend Integr
 			}
 			config.URL = v
 		}
-
-		config.ServerType = "on-premise"
 	}
 
 	config.ExcludedRepos = exclusions
