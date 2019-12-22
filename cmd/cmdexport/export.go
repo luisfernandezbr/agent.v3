@@ -12,6 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/otiai10/copy"
+	"github.com/pinpt/go-common/fileutil"
+
 	"github.com/pinpt/agent/pkg/deviceinfo"
 	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/integrationid"
@@ -87,11 +90,36 @@ func newExport(opts Opts) (*export, error) {
 		s.Logger.Info("Starting export. ReprocessHistorical is false, will use incremental checkpoints if available.")
 	}
 
-	err = os.MkdirAll(s.Locs.State, 0777)
-	if err != nil {
-		return nil, fmt.Errorf("could not create dir to save state, err: %v", err)
-	}
+	if fileutil.FileExists(s.Locs.State) {
 
+		// if there is a tmp processed file and checkpoint dir, it means that the
+		// export was killed. If so, delete the current processed file and checkpoint
+		// dir and copy the those temps.
+		// if there are no temps, create them and defer delete
+
+		if fileutil.FileExists(s.Locs.LastProcessedFileTmp) {
+			os.RemoveAll(s.Locs.LastProcessedFile)
+			copy.Copy(s.Locs.LastProcessedFileTmp, s.Locs.LastProcessedFile)
+		} else {
+			copy.Copy(s.Locs.LastProcessedFile, s.Locs.LastProcessedFileTmp)
+		}
+
+		if fileutil.FileExists(s.Locs.RipsrcCheckpointsTmp) {
+			os.RemoveAll(s.Locs.RipsrcCheckpoints)
+			copy.Copy(s.Locs.RipsrcCheckpointsTmp, s.Locs.RipsrcCheckpoints)
+		} else {
+			copy.Copy(s.Locs.RipsrcCheckpoints, s.Locs.RipsrcCheckpointsTmp)
+		}
+
+		defer os.RemoveAll(s.Locs.LastProcessedFileTmp)
+		defer os.RemoveAll(s.Locs.RipsrcCheckpointsTmp)
+
+	} else {
+		err = os.MkdirAll(s.Locs.State, 0755)
+		if err != nil {
+			return nil, fmt.Errorf("could not create dir to save state, err: %v", err)
+		}
+	}
 	s.lastProcessed, err = jsonstore.New(s.Locs.LastProcessedFile)
 	if err != nil {
 		return nil, err
