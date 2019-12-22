@@ -42,11 +42,11 @@ func (s *runner) handleCancelEvents(ctx context.Context) (closefunc, error) {
 			cmdname = "validate-config"
 		}
 		resp := &agent.CancelResponse{}
+		resp.Success = true
 		s.deviceInfo.AppendCommonInfo(resp)
 		date.ConvertToModel(time.Now(), &resp.CancelDate)
 
 		if cmdname == "" {
-
 			err := fmt.Errorf("wrong command %s", ev.Command.String())
 			errstr := err.Error()
 			resp.Error = &errstr

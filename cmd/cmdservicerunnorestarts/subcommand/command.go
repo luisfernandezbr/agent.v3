@@ -325,8 +325,8 @@ func removeProcess(logger hclog.Logger, name string) error {
 	if _, o := processes[name]; !o {
 		return fmt.Errorf("process name '%s' not found in map", name)
 	}
-	logger.Debug("removing process from map", "name", name)
 	p := processes[name]
+	logger.Debug("removing process from map", "name", name, "pid", fmt.Sprint(p.Pid))
 	delete(processes, name)
 	forcekill.Kill(p)
 	return nil
