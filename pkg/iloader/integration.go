@@ -82,6 +82,14 @@ func prodIntegrationCommand(integrationsDir string, integrationName string) (*ex
 	if runtime.GOOS == "windows" {
 		binName += ".exe"
 	}
+	binSubDir := filepath.Join(integrationsDir, "bin")
+
+	// updater downloads integrations into bin subdir, to allow renaming old to new dir
+	// if bin dir does not exist this is a manual install and integrations are provided directly in root
+	if fileutil.FileExists(binSubDir) {
+		integrationsDir = filepath.Join(integrationsDir, "bin")
+	}
+
 	bin := filepath.Join(integrationsDir, binName)
 	if !fileutil.FileExists(bin) {
 		return nil, fmt.Errorf("integration binary not found: %v path: %v", integrationName, bin)
