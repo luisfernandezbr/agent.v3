@@ -88,6 +88,10 @@ type WorkItemResponse struct {
 		WorkItemType   string        `json:"System.WorkItemType"`
 		ChangedDate    time.Time     `json:"System.ChangedDate"`
 	} `json:"fields"`
+	Relations []struct {
+		Rel string `json:"rel"`
+		URL string `json:"url"`
+	} `json:"relations"`
 	ID  int    `json:"id"`
 	URL string `json:"url"`
 }

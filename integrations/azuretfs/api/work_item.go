@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -38,12 +39,14 @@ func (api *API) fetchItemIDs(projid string, fromdate time.Time) ([]string, error
 	return all, nil
 }
 
+var pullRequestFromIssue = regexp.MustCompile(`PullRequestId\/(.*?)%2F(.*?)%2F(.*?)$`)
+
 // FetchWorkItemsByIDs used by onboard and export
 func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResponse, []*work.Issue, error) {
 	url := fmt.Sprintf(`%s/_apis/wit/workitems?ids=%s`, projid, strings.Join(ids, ","))
 	var err error
 	var res []WorkItemResponse
-	if err = api.getRequest(url, stringmap{"pagingoff": "true"}, &res); err != nil {
+	if err = api.getRequest(url, stringmap{"pagingoff": "true", "$expand": "relations"}, &res); err != nil {
 		return nil, nil, err
 	}
 	var res2 []*work.Issue
@@ -66,6 +69,19 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 			Type:          fields.WorkItemType,
 			URL:           each.URL,
 		}
+		for _, rel := range each.Relations {
+			if rel.Rel == "ArtifactLink" {
+				matches := pullRequestFromIssue.FindAllStringSubmatch(rel.URL, 1)
+				if len(matches) > 0 {
+					// proj := matches[0][1]
+					repo := matches[0][2]
+					refid := matches[0][3]
+					prid := api.IDs.CodePullRequest(repo, refid)
+					issue.PullRequestIds = append(issue.PullRequestIds, prid)
+				}
+			}
+		}
+
 		if issue.ChangeLog, err = api.fetchChangeLog(fields.WorkItemType, projid, issue.RefID); err != nil {
 			return nil, nil, err
 		}
