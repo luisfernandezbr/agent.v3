@@ -14,7 +14,6 @@ type Locs struct {
 	Cache            string
 	Logs             string
 	LogsIntegrations string
-	Integrations     string
 
 	RepoCache               string
 	State                   string
@@ -24,6 +23,8 @@ type Locs struct {
 	RipsrcCheckpointsBackup string
 
 	ServiceRunCrashes string
+
+	IntegrationsDefaultDir string
 
 	// Special files
 	Config2 string // new config that is populated from enroll, not for manual editing
@@ -63,7 +64,6 @@ func New(pinpointRoot string) Locs {
 	s.Cache = j(s.Root, "cache")
 	s.Logs = j(s.Root, "logs")
 	s.LogsIntegrations = j(s.Root, "logs/integrations")
-	s.Integrations = j(s.Root, "integrations")
 
 	s.RepoCache = j(s.Cache, "repos")
 	s.State = j(s.Root, "state")
@@ -73,6 +73,8 @@ func New(pinpointRoot string) Locs {
 	s.RipsrcCheckpointsBackup = j(s.State, "tmp", "ripsrc_checkpoints")
 
 	s.ServiceRunCrashes = j(s.Logs, "service-run-crashes")
+
+	s.IntegrationsDefaultDir = j(s.Root, "integrations")
 
 	s.Config2 = j(s.Root, "config.json")
 	s.LastProcessedFile = j(s.State, "last_processed.json")

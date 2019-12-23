@@ -37,7 +37,7 @@ func RepoNameUsedInCacheDir(repoName, repoID string) string {
 
 // CloneWithCache mirrors a provided repo into dirs.CacheRoot/name-repoID. And then checkout a copy into dirs.Checkout
 // Automatically retries on errors.
-func CloneWithCache(ctx context.Context, logger hclog.Logger, access AccessDetails, dirs Dirs, repoID string, name string) (res CloneResults, rerr error) {
+func CloneWithCache(ctx context.Context, logger hclog.Logger, access AccessDetails, dirs Dirs, repoID string, name string) (_ CloneResults, rerr error) {
 	logger = logger.Named("git")
 
 	dirName := RepoNameUsedInCacheDir(name, repoID)
@@ -63,6 +63,10 @@ func CloneWithCache(ctx context.Context, logger hclog.Logger, access AccessDetai
 		res, err := cloneWithCacheNoRetries(ctx, logger, access, dirs, dirName)
 		if err == nil {
 			return res, nil
+		}
+		if strings.Contains(err.Error(), "Access denied") {
+			rerr = fmt.Errorf("CloneWithCache failed with Access denied, not retrying: %v", err)
+			return
 		}
 		lastErr = err
 		logger.Warn("CloneWithCache failed attempt", "n", i, "err", err)

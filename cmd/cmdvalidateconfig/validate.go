@@ -85,21 +85,23 @@ func newValidator(opts Opts) (_ *validator, rerr error) {
 type Result struct {
 	Errors []string `json:"errors"`
 	// Success is true if there are no errors. Useful when returning result as json to ensure that marshalling worked.
-	Success bool `json:"success"`
+	Success       bool   `json:"success"`
+	ServerVersion string `json:"server_version"`
 }
 
 func (s *validator) runValidateAndPrint() error {
-	errs := s.runValidate()
-	return s.output(errs)
+	serverVersion, errs := s.runValidate()
+	return s.output(serverVersion, errs)
 }
 
 func (s *validator) outputErr(err error) error {
-	return s.output([]string{err.Error()})
+	return s.output("", []string{err.Error()})
 }
 
-func (s *validator) output(errs []string) error {
+func (s *validator) output(serverVersion string, errs []string) error {
 	res := Result{}
 	res.Errors = errs
+	res.ServerVersion = serverVersion
 
 	if len(res.Errors) == 0 {
 		res.Success = true
@@ -109,19 +111,20 @@ func (s *validator) output(errs []string) error {
 	if err != nil {
 		return err
 	}
+
+	s.Logger.Info("validate-config completed", "errors", res.Errors)
+
 	_, err = s.Opts.Output.Write(b)
 	if err != nil {
 		return err
 	}
-
-	s.Logger.Info("validate-config completed", "errors", res.Errors)
 
 	// BUG: last log message is missing without this
 	time.Sleep(100 * time.Millisecond)
 	return nil
 }
 
-func (s *validator) runValidate() (errs []string) {
+func (s *validator) runValidate() (serverVersion string, errs []string) {
 	ctx := context.Background()
 	client := s.integration.RPCClient()
 
@@ -150,7 +153,7 @@ func (s *validator) runValidate() (errs []string) {
 		return
 	}
 
-	return res0.Errors
+	return res0.ServerVersion, res0.Errors
 }
 
 func (s *validator) cloneRepo(url string) error {

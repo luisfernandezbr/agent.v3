@@ -55,7 +55,7 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 			CustomerID:    api.customerid,
 			Identifier:    fmt.Sprintf("%s-%d", fields.TeamProject, each.ID),
 			Priority:      fmt.Sprintf("%d", fields.Priority),
-			ProjectID:     projid,
+			ProjectID:     api.IDs.WorkProject(projid),
 			RefID:         fmt.Sprintf("%d", each.ID),
 			RefType:       api.reftype,
 			ReporterRefID: fields.CreatedBy.ID,
@@ -66,7 +66,7 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 			Type:          fields.WorkItemType,
 			URL:           each.URL,
 		}
-		if issue.ChangeLog, err = api.fetchChangeLog(projid, issue.RefID); err != nil {
+		if issue.ChangeLog, err = api.fetchChangeLog(fields.WorkItemType, projid, issue.RefID); err != nil {
 			return nil, nil, err
 		}
 		date.ConvertToModel(fields.CreatedDate, &issue.CreatedDate)

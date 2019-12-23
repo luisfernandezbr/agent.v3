@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"sync"
@@ -22,11 +23,11 @@ import (
 
 type Config struct {
 	commonrepo.FilterConfig
-	URL                string         `json:"url"`
-	APIToken           string         `json:"apitoken"`
-	OnlyGit            bool           `json:"only_git"`
-	InsecureSkipVerify bool           `json:"insecure_skip_verify"`
-	ServerType         api.ServerType `json:"server_type"`
+	URL                string `json:"url"`
+	APIToken           string `json:"apitoken"`
+	AccessToken        string `json:"access_token"`
+	OnlyGit            bool   `json:"only_git"`
+	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
 }
 
 type Integration struct {
@@ -41,6 +42,8 @@ type Integration struct {
 	requestConcurrencyChan chan bool
 
 	refType string
+
+	isGitlabCom bool
 }
 
 func main() {
@@ -73,6 +76,12 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 	}
 
 	err := s.initWithConfig(exportConfig)
+	if err != nil {
+		rerr(err)
+		return
+	}
+
+	res.ServerVersion, err = api.ServerVersion(s.qc)
 	if err != nil {
 		rerr(err)
 		return
@@ -137,8 +146,8 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.Logger = s.logger
 		opts.APIURL = s.config.URL + "/api/v4"
 		opts.APIToken = s.config.APIToken
+		opts.AccessToken = s.config.AccessToken
 		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
-		opts.ServerType = s.config.ServerType
 		opts.Concurrency = make(chan bool, 10)
 		opts.Agent = s.agent
 		requester := api.NewRequester(opts)
@@ -162,23 +171,24 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	if conf.URL == "" {
 		return rerr("url is missing")
 	}
-	if conf.APIToken == "" {
-		return rerr("api token is missing")
+	if conf.URL == "https://www.gitlab.com" {
+		conf.URL = "https://gitlab.com"
 	}
-	if conf.ServerType == "" {
-		return rerr("server type is missing")
+	if conf.APIToken == "" && conf.AccessToken == "" {
+		return rerr("apitoken and access_token are missing")
 	}
-	if conf.ServerType != api.CLOUD && conf.ServerType != api.ON_PREMISE {
-		return rerr("server type invalid: type %s", conf.ServerType)
+	u, err := url.Parse(conf.URL)
+	if err != nil {
+		return rerr(fmt.Sprintf("url is not valid: %v", err))
 	}
-
+	s.isGitlabCom = u.Hostname() == "gitlab.com"
 	s.config = conf
 	return nil
 }
 
 func (s *Integration) export(ctx context.Context) (err error) {
 
-	if s.config.ServerType == api.ON_PREMISE {
+	if !s.isGitlabCom {
 		if err = UsersEmails(s); err != nil {
 			return err
 		}
@@ -267,7 +277,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 		return err
 	}
 
-	if s.config.ServerType == api.CLOUD {
+	if s.isGitlabCom {
 		userSender, err := objsender.Root(s.agent, sourcecode.UserModelName.String())
 		if err != nil {
 			return err
@@ -492,13 +502,13 @@ func (s *Integration) getRepoURL(nameWithOwner string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var prefix string
-	if s.config.ServerType == api.CLOUD {
-		prefix = "oauth2"
+	if s.config.AccessToken != "" {
+		u.User = url.UserPassword("oauth2", s.config.AccessToken)
+	} else if s.config.APIToken != "" {
+		u.User = url.UserPassword("token", s.config.APIToken)
 	} else {
-		prefix = "token"
+		return "", errors.New("no APIToken or AccessToken passed to getRepoURL")
 	}
-	u.User = url.UserPassword(prefix, s.config.APIToken)
 	u.Path = nameWithOwner
 	return u.String(), nil
 }

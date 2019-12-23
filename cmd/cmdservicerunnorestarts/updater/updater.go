@@ -35,15 +35,19 @@ type Updater struct {
 }
 
 // New creates updater
-func New(logger hclog.Logger, fsconf fsconf.Locs, conf agentconf.Config) *Updater {
+func New(logger hclog.Logger, fslocs fsconf.Locs, conf agentconf.Config) *Updater {
 	s := &Updater{}
 	s.logger = logger
-	s.fsconf = fsconf
+	s.fsconf = fslocs
 	s.channel = conf.Channel
 	s.integrationsDir = conf.IntegrationsDir
 	if s.integrationsDir == "" {
-		s.integrationsDir = fsconf.Integrations
+		s.integrationsDir = fslocs.IntegrationsDefaultDir
 	}
+	// store downloaded integrations in bin subfolder, to allow updates using folder rename
+	// fixes error in docker when using /bin/integrations as integrationsDir
+	// Could not update: updateIntegrations: failed to replace integrations: could not rename curr to backup, err: rename /bin/integrations /bin/integrations.old0: invalid cross-device link
+	s.integrationsDir = filepath.Join(s.integrationsDir, "bin")
 	return s
 }
 

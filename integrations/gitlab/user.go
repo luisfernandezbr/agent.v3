@@ -42,7 +42,6 @@ func UsersEmails(s *Integration) error {
 			if err = cUser.Validate(); err != nil {
 				return page, err
 			}
-
 			if err := commituserSender.Send(cUser); err != nil {
 				return page, err
 			}

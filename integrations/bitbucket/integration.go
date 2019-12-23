@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -38,6 +39,8 @@ type Config struct {
 	URL                string `json:"url"`
 	Username           string `json:"username"`
 	Password           string `json:"password"`
+	AccessToken        string `json:"access_token"`
+	RefreshToken       string `json:"refresh_token"`
 	OnlyGit            bool   `json:"only_git"`
 	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
 }
@@ -80,6 +83,8 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
+	res.ServerVersion = "cloud"
+
 	teamNames, err := api.Teams(s.qc)
 	if err != nil {
 		rerr(err)
@@ -97,7 +102,7 @@ LOOP:
 			return
 		}
 		if len(repos) > 0 {
-			repoURL, err := getRepoURL(s.config.URL, url.UserPassword(s.config.Username, s.config.Password), repos[0].NameWithOwner)
+			repoURL, err := s.getRepoURL(repos[0].NameWithOwner)
 			if err != nil {
 				rerr(err)
 				return
@@ -142,6 +147,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.APIURL = s.config.URL + "/2.0"
 		opts.Username = s.config.Username
 		opts.Password = s.config.Password
+		opts.AccessToken = s.config.AccessToken
 		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
 		requester := api.NewRequester(opts)
 
@@ -161,14 +167,16 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-	if def.URL == "" {
-		return rerr("url is missing")
-	}
-	if def.Username == "" {
-		return rerr("username is missing")
-	}
-	if def.Password == "" {
-		return rerr("password is missing")
+	if def.AccessToken == "" {
+		if def.URL == "" {
+			return rerr("url is missing")
+		}
+		if def.Username == "" {
+			return rerr("username is missing")
+		}
+		if def.Password == "" {
+			return rerr("password is missing")
+		}
 	}
 
 	s.config = def
@@ -379,24 +387,30 @@ func (s *Integration) exportCommitUsers(ctx context.Context, logger hclog.Logger
 	return
 }
 
-func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {
+func (s *Integration) getRepoURL(nameWithOwner string) (string, error) {
 
-	if strings.Contains(repoURLPrefix, "api.bitbucket.org") {
-		repoURLPrefix = strings.Replace(repoURLPrefix, "api.", "", -1)
+	var bbURL string
+	if strings.Contains(s.config.URL, "api.bitbucket.org") {
+		bbURL = strings.Replace(s.config.URL, "api.", "", -1)
 	}
 
-	u, err := url.Parse(repoURLPrefix)
+	u, err := url.Parse(bbURL)
 	if err != nil {
 		return "", err
 	}
-	u.User = user
+	if s.config.AccessToken != "" {
+		u.User = url.UserPassword("x-token-auth", s.config.AccessToken)
+	} else if s.config.Username != "" {
+		u.User = url.UserPassword(s.config.Username, s.config.Password)
+	} else {
+		return "", errors.New("no Username/Password or AccessToken passed to getRepoURL")
+	}
 	u.Path = nameWithOwner
 	return u.String(), nil
 }
 
 func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchPR) error {
-	urlUser := url.UserPassword(s.config.Username, s.config.Password)
-	repoURL, err := getRepoURL(s.config.URL, urlUser, repo.NameWithOwner)
+	repoURL, err := s.getRepoURL(repo.NameWithOwner)
 	if err != nil {
 		return err
 	}
