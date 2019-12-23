@@ -105,9 +105,10 @@ func devIntegrationCommand(binaryName string) (*exec.Cmd, error) {
 
 	packageName := "github.com/pinpt/agent/integrations/" + binaryName
 
-	out := filepath.Join(os.TempDir(), "out")
+	// build to catch compile errors
+	// we don't need the resulting binary
+	cmd := exec.Command("go", "build", "-o", filepath.Join(os.TempDir(), "out"), packageName)
 
-	cmd := exec.Command("go", "build", "-o", out, packageName)
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
@@ -116,7 +117,7 @@ func devIntegrationCommand(binaryName string) (*exec.Cmd, error) {
 		os.Exit(1)
 	}
 
-	return exec.Command(out), nil
+	return exec.Command("go", "run", packageName), nil
 }
 
 func (s *Integration) Close() error {
