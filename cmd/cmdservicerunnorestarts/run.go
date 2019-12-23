@@ -118,12 +118,12 @@ func (s *runner) Run(ctx context.Context) error {
 	if build.IsProduction() &&
 		(runtime.GOOS == "linux" || runtime.GOOS == "windows") {
 		toVersion := os.Getenv("PP_AGENT_UPDATE_VERSION")
-		if toVersion != "" {
-			oldVersion, err := s.updateTo(toVersion)
+		if toVersion != "" && toVersion != "dev" {
+			_, updated, err := s.updateTo(toVersion)
 			if err != nil {
 				return fmt.Errorf("Could not self-update: %v", err)
 			}
-			if oldVersion != toVersion {
+			if updated {
 				s.logger.Info("Updated the agent, restarting...")
 				return nil
 			}

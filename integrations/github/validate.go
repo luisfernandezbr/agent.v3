@@ -67,6 +67,17 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
+	if s.config.Enterprise {
+		version, err := api.EnterpriseVersion(s.qc, s.config.APIURL)
+		if err != nil {
+			rerr(err)
+			return
+		}
+		res.ServerVersion = version
+	} else {
+		res.ServerVersion = "cloud"
+	}
+
 	err = s.checkTokenScopes()
 	if err != nil {
 		rerr(fmt.Errorf("Token scope err: %v", err))

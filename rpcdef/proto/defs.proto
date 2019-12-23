@@ -38,6 +38,7 @@ message IntegrationValidateConfigReq {
 message IntegrationValidateConfigResp {
     repeated string errors = 1;
     string repo_url = 2;
+    string server_version = 3;
 }
 
 message IntegrationOnboardExportReq {

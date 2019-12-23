@@ -122,6 +122,31 @@ func (a *SonarqubeAPI) doRequest(method string, endPoint string, fromDate time.T
 	}
 	b, _ := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+
+		var err struct {
+			Errors []struct {
+				Msg string `json:"msg"`
+			}
+		}
+
+		er := json.Unmarshal(b, &err)
+		if er != nil {
+			return er
+		}
+
+		var errorsArr []string
+		for _, er := range err.Errors {
+			errorsArr = append(errorsArr, er.Msg)
+		}
+
+		a.logger.Error("request failed", "status", res.Status, "url", req.URL.String())
+
+		return fmt.Errorf("request failed, errors: %s", strings.Join(errorsArr, ", "))
+
+	}
+
 	// weird bug where the end of the json might have a comma
 	if len(b) == 0 {
 		return nil

@@ -48,6 +48,14 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 	if err := s.initConfig(ctx, config); err != nil {
 		return res, err
 	}
+
+	serverVersion, err := s.api.ServerVersion()
+	if err != nil {
+		return res, err
+	}
+
+	res.ServerVersion = serverVersion
+
 	valid, err := s.api.Validate()
 	if err != nil {
 		res.Errors = append(res.Errors, "Sonarqube validation failed. Error: "+err.Error())

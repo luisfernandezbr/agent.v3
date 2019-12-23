@@ -8,6 +8,7 @@ import (
 	"github.com/pinpt/agent/pkg/structmarshal"
 
 	"github.com/pinpt/agent/integrations/pkg/jiracommon"
+	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 
 	"github.com/hashicorp/go-hclog"
@@ -129,6 +130,14 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		rerr(err)
 		return
 	}
+
+	version, err := jiracommonapi.ServerVersion(s.qc.Common())
+	if err != nil {
+		rerr(err)
+		return
+	}
+
+	res.ServerVersion = version
 
 	_, err = api.Projects(s.qc)
 	if err != nil {

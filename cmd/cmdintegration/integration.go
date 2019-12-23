@@ -97,6 +97,9 @@ type Command struct {
 
 	EnrollConf agentconf.Config
 	Deviceinfo deviceinfo.CommonInfo
+
+	integrationsDir            string
+	devUseCompiledIntegrations bool
 }
 
 func NewCommand(opts Opts) (*Command, error) {
@@ -104,16 +107,25 @@ func NewCommand(opts Opts) (*Command, error) {
 
 	s.Opts = opts
 	s.Logger = opts.Logger
+	s.StartTime = time.Now()
 
 	s.Logger.Debug("starting command", "pinpoint-root", opts.AgentConfig.PinpointRoot, "integrations-dir", opts.AgentConfig.IntegrationsDir)
-
-	s.StartTime = time.Now()
 
 	var err error
 	s.Locs, err = opts.AgentConfig.Locs()
 	if err != nil {
 		return nil, err
 	}
+
+	s.integrationsDir = opts.AgentConfig.IntegrationsDir
+	s.devUseCompiledIntegrations = opts.AgentConfig.DevUseCompiledIntegrations
+	if s.integrationsDir == "" {
+		s.integrationsDir = s.Locs.IntegrationsDefaultDir
+	} else {
+		s.devUseCompiledIntegrations = true // force the use of compiled integrations if integrations dir is provided
+	}
+
+	s.Logger.Debug("resolved config", "PinpointRoot", s.Locs.Root, "IntegrationsDir", s.integrationsDir)
 
 	err = os.MkdirAll(s.Locs.Temp, 0777)
 	if err != nil {
@@ -195,8 +207,8 @@ func (s *Command) SetupIntegrations(
 	opts.Logger = s.Logger
 	opts.Locs = s.Locs
 	opts.AgentDelegates = agentDelegates
-	opts.IntegrationsDir = s.Opts.AgentConfig.IntegrationsDir
-	opts.DevUseCompiledIntegrations = s.Opts.AgentConfig.DevUseCompiledIntegrations
+	opts.IntegrationsDir = s.integrationsDir
+	opts.DevUseCompiledIntegrations = s.devUseCompiledIntegrations
 	loader := iloader.New(opts)
 	res, err := loader.Load(ins)
 	if err != nil {
