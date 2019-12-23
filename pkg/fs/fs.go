@@ -1,12 +1,10 @@
 package fs
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func ChmodFilesInDir(dir string, mode os.FileMode) error {
