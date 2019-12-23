@@ -73,7 +73,8 @@ func (s *runner) handleUpdateEvents(ctx context.Context) (closefunc, error) {
 
 			s.logger.Info("Restarting in 10s") // waiting for update response to be sent
 			time.Sleep(10 * time.Second)
-			os.Exit(1)
+			// it doesn't matter which status code we return here, as service-run restarts in any case
+			os.Exit(0)
 		}()
 
 		resp := &agent.UpdateResponse{}

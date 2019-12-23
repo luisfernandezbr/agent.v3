@@ -44,6 +44,10 @@ func New(logger hclog.Logger, fslocs fsconf.Locs, conf agentconf.Config) *Update
 	if s.integrationsDir == "" {
 		s.integrationsDir = fslocs.IntegrationsDefaultDir
 	}
+	// store downloaded integrations in bin subfolder, to allow updates using folder rename
+	// fixes error in docker when using /bin/integrations as integrationsDir
+	// Could not update: updateIntegrations: failed to replace integrations: could not rename curr to backup, err: rename /bin/integrations /bin/integrations.old0: invalid cross-device link
+	s.integrationsDir = filepath.Join(s.integrationsDir, "bin")
 	return s
 }
 
