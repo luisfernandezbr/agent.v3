@@ -407,14 +407,6 @@
   version = "v6.2.23"
 
 [[projects]]
-  digest = "1:f1cee82f95de6121768c23b5076741f1ae946a4cb81418c834fd83aebc880c8f"
-  name = "github.com/otiai10/copy"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "f98458f9df5788f53462a1bf427b728f113ab481"
-  version = "v1.0.2"
-
-[[projects]]
   branch = "master"
   digest = "1:5f81e80915d9312397c603b6da6f751a4ae36ae2b4d4f0474a34241d95738686"
   name = "github.com/pbnjay/memory"
@@ -987,7 +979,6 @@
     "github.com/kardianos/service",
     "github.com/mitchellh/go-homedir",
     "github.com/mitchellh/go-ps",
-    "github.com/otiai10/copy",
     "github.com/pbnjay/memory",
     "github.com/pinpt/go-common/api",
     "github.com/pinpt/go-common/auth",
