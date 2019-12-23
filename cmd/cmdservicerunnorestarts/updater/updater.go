@@ -35,14 +35,14 @@ type Updater struct {
 }
 
 // New creates updater
-func New(logger hclog.Logger, fsconf fsconf.Locs, conf agentconf.Config) *Updater {
+func New(logger hclog.Logger, fslocs fsconf.Locs, conf agentconf.Config) *Updater {
 	s := &Updater{}
 	s.logger = logger
-	s.fsconf = fsconf
+	s.fsconf = fslocs
 	s.channel = conf.Channel
 	s.integrationsDir = conf.IntegrationsDir
 	if s.integrationsDir == "" {
-		s.integrationsDir = fsconf.Integrations
+		s.integrationsDir = fslocs.IntegrationsDefaultDir
 	}
 	return s
 }

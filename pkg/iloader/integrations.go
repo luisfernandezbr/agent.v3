@@ -28,17 +28,13 @@ type Loader struct {
 }
 
 func New(opts Opts) *Loader {
-	if opts.Logger == nil || opts.Locs.Root == "" || opts.AgentDelegates == nil {
+	if opts.Logger == nil || opts.Locs.Root == "" || opts.AgentDelegates == nil || opts.IntegrationsDir == "" {
 		panic("provide all opts")
 	}
 	s := &Loader{}
 	s.opts = opts
 	s.logger = opts.Logger
 	s.locs = opts.Locs
-	if opts.IntegrationsDir != "" {
-		s.locs.Integrations = opts.IntegrationsDir
-		s.opts.DevUseCompiledIntegrations = true // force the use of compiled integrations if integrations dir is provided
-	}
 	return s
 }
 
@@ -83,6 +79,7 @@ func (s *Loader) load(id integrationid.ID) (*Integration, error) {
 	opts.Agent = s.opts.AgentDelegates(id)
 	opts.ID = id
 	opts.Locs = s.locs
+	opts.IntegrationsDir = s.opts.IntegrationsDir
 	opts.DevUseCompiledIntegrations = s.opts.DevUseCompiledIntegrations
 	return NewIntegration(opts)
 }

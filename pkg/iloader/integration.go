@@ -29,6 +29,7 @@ type IntegrationOpts struct {
 	Agent                      rpcdef.Agent
 	ID                         integrationid.ID
 	Locs                       fsconf.Locs
+	IntegrationsDir            string
 	DevUseCompiledIntegrations bool
 }
 
@@ -49,7 +50,7 @@ type Integration struct {
 }
 
 func NewIntegration(opts IntegrationOpts) (*Integration, error) {
-	if opts.Logger == nil || opts.Agent == nil || opts.ID.Empty() || opts.Locs.Root == "" {
+	if opts.Logger == nil || opts.Agent == nil || opts.ID.Empty() || opts.Locs.Root == "" || opts.IntegrationsDir == "" {
 		panic("provide all opts")
 	}
 	s := &Integration{}
@@ -76,12 +77,12 @@ func (s *Integration) RPCClient() rpcdef.Integration {
 	return s.rpcClient
 }
 
-func prodIntegrationCommand(fslocs fsconf.Locs, integrationName string) (*exec.Cmd, error) {
+func prodIntegrationCommand(integrationsDir string, integrationName string) (*exec.Cmd, error) {
 	binName := integrationName
 	if runtime.GOOS == "windows" {
 		binName += ".exe"
 	}
-	bin := filepath.Join(fslocs.Integrations, binName)
+	bin := filepath.Join(integrationsDir, binName)
 	if !fileutil.FileExists(bin) {
 		return nil, fmt.Errorf("integration binary not found: %v path: %v", integrationName, bin)
 	}
@@ -156,7 +157,7 @@ func (s *Integration) setupRPC() error {
 	var cmd *exec.Cmd
 	if build.IsProduction() || s.opts.DevUseCompiledIntegrations {
 		var err error
-		cmd, err = prodIntegrationCommand(s.opts.Locs, s.ID.Name)
+		cmd, err = prodIntegrationCommand(s.opts.IntegrationsDir, s.ID.Name)
 		if err != nil {
 			return err
 		}
