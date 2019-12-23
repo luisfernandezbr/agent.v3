@@ -28,8 +28,7 @@ func Run(opts Opts) error {
 	if err != nil {
 		return err
 	}
-	defer exp.Destroy()
-	return nil
+	return exp.Destroy()
 }
 
 type validator struct {
@@ -180,5 +179,6 @@ func urlWithoutCreds(urlStr string) (string, error) {
 	return u.String(), nil
 }
 
-func (s *validator) Destroy() {
+func (s *validator) Destroy() error {
+	return nil
 }

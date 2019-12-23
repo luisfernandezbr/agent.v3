@@ -6,43 +6,49 @@ import (
 	"os/exec"
 	"runtime"
 
+	hclog "github.com/hashicorp/go-hclog"
 	pps "github.com/mitchellh/go-ps"
 )
 
-func Kill(process *os.Process) error {
+func Kill(logger hclog.Logger, process *os.Process) error {
 	prs, _ := pps.Processes()
 	pid := process.Pid
 	array := []int{pid}
 
+	this, _ := pps.FindProcess(pid)
+	if this == nil {
+		return nil
+	}
 	// uncomment for debug
-	// this, _ := pps.FindProcess(pid)
 	// var names []string
 	// if this != nil {
 	// 	names = []string{this.Executable()}
 	// }
-
-	for {
-		var found bool
-		for _, p := range prs {
-			if p.PPid() == pid {
-				array = append([]int{p.Pid()}, array...)
-				// names = append([]string{p.Executable()}, names...)
-				pid = p.Pid()
-				found = true
-				break
+	var find func(int)
+	find = func(pid int) {
+		for _, process := range prs {
+			if process.PPid() == pid {
+				array = append([]int{process.Pid()}, array...)
+				// names = append([]string{process.Executable()}, names...)
+				// fmt.Println("------> ", process.Executable())
+				find(process.Pid())
 			}
 		}
-		if found == false {
-			break
-		}
 	}
-	// fmt.Println("KILLING IN THIS ORDER", names)
+	find(pid)
+	// fmt.Println("------> KILLING IN THIS ORDER", names)
+
+	// handle errors
 	for _, p := range array {
 		pr, _ := os.FindProcess(p)
 		if runtime.GOOS == "windows" {
-			exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprintf("%d", p)).Run()
+			if err := exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprintf("%d", p)).Run(); err != nil {
+				logger.Debug("error calling taskkill", "err", err)
+			}
 		} else {
-			pr.Signal(os.Interrupt)
+			if err := pr.Signal(os.Interrupt); err != nil {
+				logger.Debug("error calling Signal(os.Interrupt)", "err", err)
+			}
 		}
 	}
 	return nil

@@ -12,9 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/otiai10/copy"
-	"github.com/pinpt/go-common/fileutil"
-
 	"github.com/pinpt/agent/pkg/deviceinfo"
 	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/integrationid"
@@ -39,8 +36,7 @@ func Run(opts Opts) error {
 	if err != nil {
 		return err
 	}
-	exp.Destroy()
-	return nil
+	return exp.Destroy()
 }
 
 type export struct {
@@ -90,36 +86,10 @@ func newExport(opts Opts) (*export, error) {
 		s.Logger.Info("Starting export. ReprocessHistorical is false, will use incremental checkpoints if available.")
 	}
 
-	if fileutil.FileExists(s.Locs.State) {
-
-		// if there is a tmp processed file and checkpoint dir, it means that the
-		// export was killed. If so, delete the current processed file and checkpoint
-		// dir and copy the those temps.
-		// if there are no temps, create them and defer delete
-
-		if fileutil.FileExists(s.Locs.LastProcessedFileTmp) {
-			os.RemoveAll(s.Locs.LastProcessedFile)
-			copy.Copy(s.Locs.LastProcessedFileTmp, s.Locs.LastProcessedFile)
-		} else {
-			copy.Copy(s.Locs.LastProcessedFile, s.Locs.LastProcessedFileTmp)
-		}
-
-		if fileutil.FileExists(s.Locs.RipsrcCheckpointsTmp) {
-			os.RemoveAll(s.Locs.RipsrcCheckpoints)
-			copy.Copy(s.Locs.RipsrcCheckpointsTmp, s.Locs.RipsrcCheckpoints)
-		} else {
-			copy.Copy(s.Locs.RipsrcCheckpoints, s.Locs.RipsrcCheckpointsTmp)
-		}
-
-		defer os.RemoveAll(s.Locs.LastProcessedFileTmp)
-		defer os.RemoveAll(s.Locs.RipsrcCheckpointsTmp)
-
-	} else {
-		err = os.MkdirAll(s.Locs.State, 0755)
-		if err != nil {
-			return nil, fmt.Errorf("could not create dir to save state, err: %v", err)
-		}
+	if err := s.createStateDir(); err != nil {
+		return nil, err
 	}
+
 	s.lastProcessed, err = jsonstore.New(s.Locs.LastProcessedFile)
 	if err != nil {
 		return nil, err
@@ -204,13 +174,72 @@ func newExport(opts Opts) (*export, error) {
 	return s, nil
 }
 
-func (s *export) Destroy() {
+func (s *export) createStateDir() error {
+	if stateExists, err := fs.Exists(s.Locs.State); stateExists {
+
+		// if there is a tmp processed file and checkpoint dir, it means that the
+		// export was killed. If so, delete the current processed file and checkpoint
+		// dir and copy the those temps.
+		// if there are no temps, create them and defer delete
+
+		if exits, err := fs.Exists(s.Locs.LastProcessedFileBackup); exits {
+			if err := os.RemoveAll(s.Locs.LastProcessedFile); err != nil {
+				return err
+			}
+			if err := fs.CopyFile(s.Locs.LastProcessedFileBackup, s.Locs.LastProcessedFile); err != nil {
+				return err
+			}
+
+			if err := os.RemoveAll(s.Locs.RipsrcCheckpoints); err != nil {
+				return err
+			}
+			if err := fs.CopyDir(s.Locs.RipsrcCheckpointsBackup, s.Locs.RipsrcCheckpoints); err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		} else {
+			if err := fs.CopyFile(s.Locs.LastProcessedFile, s.Locs.LastProcessedFileBackup); err != nil {
+				if !os.IsNotExist(err) {
+					return err
+				}
+			}
+			if err := fs.CopyDir(s.Locs.RipsrcCheckpoints, s.Locs.RipsrcCheckpointsBackup); err != nil {
+				if !os.IsNotExist(err) {
+					return err
+				}
+			}
+		}
+
+	} else if err != nil {
+		return err
+	} else {
+		err = os.MkdirAll(s.Locs.State, 0755)
+		if err != nil {
+			return fmt.Errorf("could not create dir to save state, err: %v", err)
+		}
+	}
+	return nil
+}
+
+func (s *export) Destroy() error {
 	for _, integration := range s.Integrations {
 		err := integration.Close()
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
+	var err1, err2 error
+	if err := os.RemoveAll(s.Locs.LastProcessedFileBackup); err != nil {
+		err1 = fmt.Errorf("error deleting last processed backup file. err %v", err)
+	}
+	if err := os.RemoveAll(s.Locs.RipsrcCheckpointsBackup); err != nil {
+		err2 = fmt.Errorf("error deleting last checkpoints backup dir. err %v", err)
+	}
+	if err1 != nil || err2 != nil {
+		return fmt.Errorf("err1: %v. err2:%v", err1, err2)
+	}
+	return nil
 }
 
 func (s *export) tempFilesInUploads() ([]string, error) {

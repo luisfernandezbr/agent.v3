@@ -328,6 +328,6 @@ func removeProcess(logger hclog.Logger, name string) error {
 	p := processes[name]
 	logger.Debug("removing process from map", "name", name, "pid", fmt.Sprint(p.Pid))
 	delete(processes, name)
-	forcekill.Kill(p)
+	forcekill.Kill(logger, p)
 	return nil
 }

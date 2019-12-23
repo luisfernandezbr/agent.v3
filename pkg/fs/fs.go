@@ -1,10 +1,12 @@
 package fs
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func ChmodFilesInDir(dir string, mode os.FileMode) error {
@@ -41,7 +43,7 @@ func Copy(src, dst string) error {
 }
 
 func CopyDir(src, dst string) error {
-	err := os.Mkdir(dst, 0777)
+	err := os.MkdirAll(dst, 0755)
 	if err != nil {
 		return err
 	}
@@ -69,11 +71,17 @@ func CopyDir(src, dst string) error {
 }
 
 func CopyFile(src, dst string) error {
+
 	srcf, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer srcf.Close()
+
+	err = os.MkdirAll(filepath.Dir(dst), 0755)
+	if err != nil {
+		return err
+	}
 	dstf, err := os.Create(dst)
 	if err != nil {
 		return err
