@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -101,7 +102,7 @@ LOOP:
 			return
 		}
 		if len(repos) > 0 {
-			repoURL, err := getRepoURL(s.config.URL, url.UserPassword(s.config.Username, s.config.Password), repos[0].NameWithOwner)
+			repoURL, err := s.getRepoURL(repos[0].NameWithOwner)
 			if err != nil {
 				rerr(err)
 				return
@@ -386,24 +387,30 @@ func (s *Integration) exportCommitUsers(ctx context.Context, logger hclog.Logger
 	return
 }
 
-func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {
+func (s *Integration) getRepoURL(nameWithOwner string) (string, error) {
 
-	if strings.Contains(repoURLPrefix, "api.bitbucket.org") {
-		repoURLPrefix = strings.Replace(repoURLPrefix, "api.", "", -1)
+	var bbURL string
+	if strings.Contains(s.config.URL, "api.bitbucket.org") {
+		bbURL = strings.Replace(s.config.URL, "api.", "", -1)
 	}
 
-	u, err := url.Parse(repoURLPrefix)
+	u, err := url.Parse(bbURL)
 	if err != nil {
 		return "", err
 	}
-	u.User = user
+	if s.config.AccessToken != "" {
+		u.User = url.UserPassword("x-token-auth", s.config.AccessToken)
+	} else if s.config.Username != "" {
+		u.User = url.UserPassword(s.config.Username, s.config.Password)
+	} else {
+		return "", errors.New("no Username/Password or AccessToken passed to getRepoURL")
+	}
 	u.Path = nameWithOwner
 	return u.String(), nil
 }
 
 func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchPR) error {
-	urlUser := url.UserPassword(s.config.Username, s.config.Password)
-	repoURL, err := getRepoURL(s.config.URL, urlUser, repo.NameWithOwner)
+	repoURL, err := s.getRepoURL(repo.NameWithOwner)
 	if err != nil {
 		return err
 	}
