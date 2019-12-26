@@ -106,7 +106,12 @@ func cloneWithCacheNoRetries(ctx context.Context, logger hclog.Logger, access Ac
 			return
 		}
 	} else {
-		err := updateClonedRepo(ctx, logger, access, dirs, cacheDirName)
+		err := updateCredentials(ctx, logger, access, dirs, cacheDirName)
+		if err != nil {
+			rerr = err
+			return
+		}
+		err = updateClonedRepo(ctx, logger, access, dirs, cacheDirName)
 		if err != nil {
 			rerr = err
 			return
@@ -119,6 +124,18 @@ func cloneWithCacheNoRetries(ctx context.Context, logger hclog.Logger, access Ac
 		return
 	}
 	return
+}
+
+func updateCredentials(ctx context.Context, logger hclog.Logger, access AccessDetails, dirs Dirs, cacheDirName string) error {
+	logger.Debug("updateCredentials")
+	cacheDir := filepath.Join(dirs.CacheRoot, cacheDirName)
+	cmd := exec.CommandContext(ctx, "git", "remote", "set-url", "origin", access.URL)
+	cmd.Dir = cacheDir
+	err := runGitCommand(ctx, logger, cmd)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func cloneFreshIntoCache(ctx context.Context, logger hclog.Logger, access AccessDetails, dirs Dirs, cacheDirName string) error {
