@@ -175,49 +175,64 @@ func newExport(opts Opts) (*export, error) {
 }
 
 func (s *export) createStateDir() error {
-	if stateExists, err := fs.Exists(s.Locs.State); err != nil {
+	stateExists, err := fs.Exists(s.Locs.State)
+	if err != nil {
 		return err
-	} else if stateExists {
-
-		// if there is a backup processed file and checkpoint dir, it means that the
-		// export was killed. If so, delete the current processed file and checkpoint
-		// dir and copy the those temps.
-		// if there are no temps, create them and defer delete
-
-		if exits, err := fs.Exists(s.Locs.LastProcessedFileBackup); exits {
-			if err := os.RemoveAll(s.Locs.LastProcessedFile); err != nil {
-				return err
-			}
-			if err := fs.CopyFile(s.Locs.LastProcessedFileBackup, s.Locs.LastProcessedFile); err != nil {
-				return err
-			}
-
-			if err := os.RemoveAll(s.Locs.RipsrcCheckpoints); err != nil {
-				return err
-			}
-			if err := fs.CopyDir(s.Locs.RipsrcCheckpointsBackup, s.Locs.RipsrcCheckpoints); err != nil {
-				return err
-			}
-		} else if err != nil {
-			return err
-		} else {
-			if err := fs.CopyFile(s.Locs.LastProcessedFile, s.Locs.LastProcessedFileBackup); err != nil {
-				if !os.IsNotExist(err) {
-					return err
-				}
-			}
-			if err := fs.CopyDir(s.Locs.RipsrcCheckpoints, s.Locs.RipsrcCheckpointsBackup); err != nil {
-				if !os.IsNotExist(err) {
-					return err
-				}
-			}
-		}
-	} else {
+	}
+	if !stateExists {
 		err = os.MkdirAll(s.Locs.State, 0755)
 		if err != nil {
 			return fmt.Errorf("could not create dir to save state, err: %v", err)
 		}
+		return nil
 	}
+
+	// if there is a backup processed file and checkpoint dir, it means that the
+	// export was killed. If so, delete the current processed file and checkpoint
+	// dir and copy the those temps.
+	// if there are no backups, create them and defer delete
+
+	backupExists, err := fs.Exists(s.Locs.LastProcessedFileBackup)
+	if err != nil {
+		return err
+	}
+
+	if backupExists {
+
+		if err := os.RemoveAll(s.Locs.LastProcessedFile); err != nil {
+			return err
+		}
+
+		if err := fs.CopyFile(s.Locs.LastProcessedFileBackup, s.Locs.LastProcessedFile); err != nil {
+			return err
+		}
+
+		if err := os.RemoveAll(s.Locs.RipsrcCheckpoints); err != nil {
+			return err
+		}
+
+		if err := fs.CopyDir(s.Locs.RipsrcCheckpointsBackup, s.Locs.RipsrcCheckpoints); err != nil {
+			return err
+
+		}
+
+		return nil
+	}
+
+	if err := fs.CopyFile(s.Locs.LastProcessedFile, s.Locs.LastProcessedFileBackup); err != nil {
+		// ignore not exists error, since if there was no processed file, we do not need backup
+		if !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	if err := fs.CopyDir(s.Locs.RipsrcCheckpoints, s.Locs.RipsrcCheckpointsBackup); err != nil {
+		// ignore not exists error, since if there was no processed file, we do not need backup
+		if !os.IsNotExist(err) {
+			return err
+		}
+	}
+
 	return nil
 }
 
