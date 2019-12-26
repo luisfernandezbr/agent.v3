@@ -16,12 +16,11 @@ import (
 )
 
 type RequesterOpts struct {
-	Logger   hclog.Logger
-	APIURL   string
-	Username string
-	Password string
-	UseOAuth bool
-	// AccessToken        string
+	Logger             hclog.Logger
+	APIURL             string
+	Username           string
+	Password           string
+	UseOAuth           bool
 	OAuth              *oauthtoken.Manager
 	InsecureSkipVerify bool
 }
@@ -64,7 +63,7 @@ func (s *Requester) setAuth(req *http.Request) {
 	}
 }
 
-// MakeRequest make request
+// Request make request
 func (e *Requester) Request(url string, params url.Values, pageable bool, response interface{}) (pi PageInfo, err error) {
 
 	ir := &internalRequest{
