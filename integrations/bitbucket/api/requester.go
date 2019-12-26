@@ -16,12 +16,13 @@ import (
 )
 
 type RequesterOpts struct {
-	Logger             hclog.Logger
-	APIURL             string
-	Username           string
-	Password           string
-	AccessToken        string
-	OAuthToken         *oauthtoken.Manager
+	Logger   hclog.Logger
+	APIURL   string
+	Username string
+	Password string
+	UseOAuth bool
+	// AccessToken        string
+	OAuth              *oauthtoken.Manager
 	InsecureSkipVerify bool
 }
 
@@ -56,8 +57,8 @@ type Requester struct {
 }
 
 func (s *Requester) setAuth(req *http.Request) {
-	if s.opts.AccessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+s.opts.AccessToken)
+	if s.opts.UseOAuth {
+		req.Header.Set("Authorization", "Bearer "+s.opts.OAuth.Get())
 	} else {
 		req.SetBasicAuth(s.opts.Username, s.opts.Password)
 	}
@@ -115,8 +116,6 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 	}
 	e.setAuth(req)
 
-	e.logger.Debug("request", "url", req.URL.String())
-
 	resp, err := e.httpClient.Do(req)
 	if err != nil {
 		return
@@ -126,11 +125,13 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 	if resp.StatusCode != http.StatusOK {
 
 		if resp.StatusCode == http.StatusUnauthorized {
-			// TODO: update access_token
+			if err := e.opts.OAuth.Refresh(); err != nil {
+				return false, pi, err
+			}
 			return true, pi, fmt.Errorf("request not authorized")
 		}
 
-		e.logger.Info("api request failed", "url", u)
+		e.logger.Debug("api request failed", "url", u)
 		return true, pi, fmt.Errorf(`bitbucket returned invalid status code: %v`, resp.StatusCode)
 	}
 

@@ -41,7 +41,6 @@ type Config struct {
 	Username           string `json:"username"`
 	Password           string `json:"password"`
 	AccessToken        string `json:"access_token"`
-	RefreshToken       string `json:"refresh_token"`
 	OnlyGit            bool   `json:"only_git"`
 	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
 }
@@ -57,7 +56,9 @@ type Integration struct {
 
 	requestConcurrencyChan chan bool
 
-	refType string
+	refType  string
+	UseOAuth bool
+	oauth    *oauthtoken.Manager
 }
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
@@ -135,6 +136,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	if err != nil {
 		return err
 	}
+	s.UseOAuth = config.UseOAuth
 
 	var oauth *oauthtoken.Manager
 
@@ -148,7 +150,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		return err
 	}
 
-	s.config.AccessToken = oauth.Get()
+	s.oauth = oauth
 
 	{
 		opts := api.RequesterOpts{}
@@ -156,8 +158,8 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.APIURL = s.config.URL + "/2.0"
 		opts.Username = s.config.Username
 		opts.Password = s.config.Password
-		opts.AccessToken = s.config.AccessToken
-		opts.OAuthToken = oauth
+		opts.UseOAuth = config.UseOAuth
+		opts.OAuth = oauth
 		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
 		requester := api.NewRequester(opts)
 
@@ -408,8 +410,8 @@ func (s *Integration) getRepoURL(nameWithOwner string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if s.config.AccessToken != "" {
-		u.User = url.UserPassword("x-token-auth", s.config.AccessToken)
+	if s.UseOAuth {
+		u.User = url.UserPassword("x-token-auth", s.oauth.Get())
 	} else if s.config.Username != "" {
 		u.User = url.UserPassword(s.config.Username, s.config.Password)
 	} else {
