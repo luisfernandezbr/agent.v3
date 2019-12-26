@@ -111,12 +111,14 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
+		rerr = err
 		return
 	}
 	e.setAuth(req)
 
 	resp, err := e.httpClient.Do(req)
 	if err != nil {
+		rerr = err
 		return
 	}
 	defer resp.Body.Close()
@@ -124,8 +126,8 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 	if resp.StatusCode != http.StatusOK {
 
 		if resp.StatusCode == http.StatusUnauthorized {
-			if err := e.opts.OAuth.Refresh(); err != nil {
-				return false, pi, err
+			if rerr = e.opts.OAuth.Refresh(); rerr != nil {
+				return false, pi, rerr
 			}
 			return true, pi, fmt.Errorf("request not authorized")
 		}

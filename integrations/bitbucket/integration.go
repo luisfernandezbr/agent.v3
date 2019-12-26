@@ -40,7 +40,7 @@ type Config struct {
 	URL                string `json:"url"`
 	Username           string `json:"username"`
 	Password           string `json:"password"`
-	AccessToken        string `json:"access_token"`
+	RefreshToken       string `json:"refresh_token"`
 	OnlyGit            bool   `json:"only_git"`
 	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
 }
@@ -132,10 +132,11 @@ func (s *Integration) Export(ctx context.Context,
 }
 
 func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
-	err := s.setIntegrationConfig(config.Integration)
+	err := s.setConfig(config)
 	if err != nil {
 		return err
 	}
+
 	s.UseOAuth = config.UseOAuth
 
 	var oauth *oauthtoken.Manager
@@ -170,19 +171,19 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	return nil
 }
 
-func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
+func (s *Integration) setConfig(config rpcdef.ExportConfig) error {
 	rerr := func(msg string, args ...interface{}) error {
 		return fmt.Errorf("config validation error: "+msg, args...)
 	}
 	var def Config
-	err := structmarshal.MapToStruct(data, &def)
+	err := structmarshal.MapToStruct(config.Integration, &def)
 	if err != nil {
 		return err
 	}
-	if def.AccessToken == "" {
-		if def.URL == "" {
-			return rerr("url is missing")
-		}
+	if def.URL == "" {
+		return rerr("url is missing")
+	}
+	if !config.UseOAuth {
 		if def.Username == "" {
 			return rerr("username is missing")
 		}
