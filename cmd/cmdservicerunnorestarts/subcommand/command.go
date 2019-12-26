@@ -26,7 +26,17 @@ import (
 	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/deviceinfo"
+	"github.com/pinpt/agent/pkg/forcekill"
 )
+
+// Cancelled implementation of error.
+type Cancelled struct {
+	s string
+}
+
+func (e *Cancelled) Error() string {
+	return e.s
+}
 
 // Opts are options needed to create Command
 type Opts struct {
@@ -79,6 +89,15 @@ func New(opts Opts) (*Command, error) {
 	s.integrations = opts.Integrations
 	s.deviceInfo = opts.DeviceInfo
 	return s, nil
+}
+
+// KillCommand stops a running process
+func KillCommand(logger hclog.Logger, cmdname string) error {
+	if cmdname != "export" {
+		return errors.New("only supported for export command")
+	}
+	logger.Debug("killing command manually", "cmd", cmdname)
+	return removeProcess(logger, cmdname)
 }
 
 // Run executes the command
@@ -143,7 +162,29 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = io.MultiWriter(os.Stderr, logsfile)
 	}
-	if err := cmd.Run(); err != nil {
+
+	if err := cmd.Start(); err != nil {
+		return rerr(fmt.Errorf("could not start the sub command: %v", err))
+	}
+	if cmdname == "export" { // for now, only allow this command to be cancelled
+		if err := addProcess(c.logger, cmdname, cmd.Process); err != nil {
+			return rerr(fmt.Errorf("could not start the sub command, process already running: %v %v", err, cmdname))
+		}
+		defer func() {
+			// ignore error in this case since it will return an error if the process was kill manually
+			removeProcess(c.logger, cmdname)
+		}()
+	}
+	err = cmd.Wait()
+
+	if err != nil && cmdname == "export" {
+		if _, ok := processes[cmdname]; !ok {
+			return &Cancelled{s: "export cancelled"}
+		}
+	}
+
+	if err != nil {
+		// the command wont be in the processes map if it has been canceled
 		if err := logsfile.Close(); err != nil {
 			return rerr(fmt.Errorf("could not close stderr file: %v", err))
 		}
@@ -260,5 +301,33 @@ func (s *fsPassedParams) Clean() error {
 			return err
 		}
 	}
+	return nil
+}
+
+var processes map[string]*os.Process
+
+func init() {
+	processes = make(map[string]*os.Process)
+}
+
+// Warning! Not safe for concurrent use.
+func addProcess(logger hclog.Logger, name string, p *os.Process) error {
+	if _, o := processes[name]; o {
+		return errors.New("process already exists: " + name)
+	}
+	logger.Debug("adding process to map", "name", name)
+	processes[name] = p
+	return nil
+}
+
+// Warning! Not safe for concurrent use.
+func removeProcess(logger hclog.Logger, name string) error {
+	if _, o := processes[name]; !o {
+		return fmt.Errorf("process name '%s' not found in map", name)
+	}
+	p := processes[name]
+	logger.Debug("removing process from map", "name", name, "pid", fmt.Sprint(p.Pid))
+	delete(processes, name)
+	forcekill.Kill(logger, p)
 	return nil
 }

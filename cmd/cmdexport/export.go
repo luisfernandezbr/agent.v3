@@ -36,8 +36,7 @@ func Run(opts Opts) error {
 	if err != nil {
 		return err
 	}
-	exp.Destroy()
-	return nil
+	return exp.Destroy()
 }
 
 type export struct {
@@ -87,9 +86,8 @@ func newExport(opts Opts) (*export, error) {
 		s.Logger.Info("Starting export. ReprocessHistorical is false, will use incremental checkpoints if available.")
 	}
 
-	err = os.MkdirAll(s.Locs.State, 0777)
-	if err != nil {
-		return nil, fmt.Errorf("could not create dir to save state, err: %v", err)
+	if err := s.createStateDir(); err != nil {
+		return nil, err
 	}
 
 	s.lastProcessed, err = jsonstore.New(s.Locs.LastProcessedFile)
@@ -176,13 +174,82 @@ func newExport(opts Opts) (*export, error) {
 	return s, nil
 }
 
-func (s *export) Destroy() {
+func (s *export) createStateDir() error {
+	stateExists, err := fs.Exists(s.Locs.State)
+	if err != nil {
+		return err
+	}
+	if !stateExists {
+		err = os.MkdirAll(s.Locs.State, 0755)
+		if err != nil {
+			return fmt.Errorf("could not create dir to save state, err: %v", err)
+		}
+		return nil
+	}
+
+	// if there is a backup processed file and checkpoint dir, it means that the
+	// export was killed. If so, delete the current processed file and checkpoint
+	// dir and copy the those temps.
+	// if there are no backups, create them and defer delete
+
+	backupExists, err := fs.Exists(s.Locs.LastProcessedFileBackup)
+	if err != nil {
+		return err
+	}
+
+	if backupExists {
+
+		if err := os.RemoveAll(s.Locs.LastProcessedFile); err != nil {
+			return err
+		}
+
+		if err := fs.CopyFile(s.Locs.LastProcessedFileBackup, s.Locs.LastProcessedFile); err != nil {
+			return err
+		}
+
+		if err := os.RemoveAll(s.Locs.RipsrcCheckpoints); err != nil {
+			return err
+		}
+
+		if err := fs.CopyDir(s.Locs.RipsrcCheckpointsBackup, s.Locs.RipsrcCheckpoints); err != nil {
+			return err
+
+		}
+
+		return nil
+	}
+
+	if err := fs.CopyFile(s.Locs.LastProcessedFile, s.Locs.LastProcessedFileBackup); err != nil {
+		// ignore not exists error, since if there was no processed file, we do not need backup
+		if !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	if err := fs.CopyDir(s.Locs.RipsrcCheckpoints, s.Locs.RipsrcCheckpointsBackup); err != nil {
+		// ignore not exists error, since if there was no processed file, we do not need backup
+		if !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *export) Destroy() error {
 	for _, integration := range s.Integrations {
 		err := integration.Close()
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
+	if err := os.RemoveAll(s.Locs.LastProcessedFileBackup); err != nil {
+		return fmt.Errorf("error deleting last processed backup file. err %v", err)
+	}
+	if err := os.RemoveAll(s.Locs.RipsrcCheckpointsBackup); err != nil {
+		return fmt.Errorf("error deleting checkpoints backup dir. err %v", err)
+	}
+	return nil
 }
 
 func (s *export) tempFilesInUploads() ([]string, error) {

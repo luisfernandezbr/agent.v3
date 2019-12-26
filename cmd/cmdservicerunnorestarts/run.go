@@ -151,11 +151,16 @@ func (s *runner) Run(ctx context.Context) error {
 		return fmt.Errorf("could not send enabled request, err: %v", err)
 	}
 
-	err = s.sendStart(context.Background())
+	err = s.sendStart(ctx)
 	if err != nil {
 		return fmt.Errorf("could not send start event, err: %v", err)
 	}
-
+	defer func() {
+		if err := s.sendStop(ctx); err != nil {
+			s.logger.Error("Could not send stop event", err, "err")
+			return
+		}
+	}()
 	s.exporter, err = exporter.New(exporter.Opts{
 		Logger:              s.logger,
 		LogLevelSubcommands: s.opts.LogLevelSubcommands,
@@ -203,6 +208,13 @@ func (s *runner) Run(ctx context.Context) error {
 		close, err := s.handleExportEvents(ctx)
 		if err != nil {
 			return fmt.Errorf("error handling export requests, err: %v", err)
+		}
+		defer close()
+	}
+	{
+		close, err := s.handleCancelEvents(ctx)
+		if err != nil {
+			return fmt.Errorf("error handling cancel requests, err: %v", err)
 		}
 		defer close()
 	}
@@ -313,20 +325,6 @@ func (s *runner) sendStop(ctx context.Context) error {
 }
 
 func (s *runner) sendPing(ctx context.Context) error {
-	ev := &agent.Ping{
-		Type:    agent.PingTypePing,
-		Success: true,
-	}
-	onboardingInProgress := atomic.LoadInt64(&s.onboardingInProgress)
-	ev.Onboarding = onboardingInProgress != 0
-
-	if s.exporter.IsRunning() {
-		ev.State = agent.PingStateExporting
-		ev.Exporting = true
-	} else {
-		ev.State = agent.PingStateIdle
-		ev.Exporting = false
-	}
 	return s.sendEvent(ctx, s.getPing(), "", nil)
 }
 

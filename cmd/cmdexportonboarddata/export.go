@@ -27,8 +27,7 @@ func Run(opts Opts) error {
 	if err != nil {
 		return err
 	}
-	defer exp.Destroy()
-	return nil
+	return exp.Destroy()
 }
 
 type export struct {
@@ -136,5 +135,6 @@ type DataUsers struct {
 	Teams []map[string]interface{} `json:"teams"`
 }
 
-func (s *export) Destroy() {
+func (s *export) Destroy() error {
+	return nil
 }

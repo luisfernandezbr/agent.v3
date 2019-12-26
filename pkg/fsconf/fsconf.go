@@ -15,11 +15,12 @@ type Locs struct {
 	Logs             string
 	LogsIntegrations string
 
-	RepoCache         string
-	State             string
-	Uploads           string
-	UploadZips        string
-	RipsrcCheckpoints string
+	RepoCache               string
+	State                   string
+	Uploads                 string
+	UploadZips              string
+	RipsrcCheckpoints       string
+	RipsrcCheckpointsBackup string
 
 	ServiceRunCrashes string
 
@@ -29,7 +30,8 @@ type Locs struct {
 	Config2 string // new config that is populated from enroll, not for manual editing
 
 	// LastProcessedFile stores timestamps or other data to mark last processed objects
-	LastProcessedFile string
+	LastProcessedFile       string
+	LastProcessedFileBackup string
 
 	// ExportQueueFile stores exports requests
 	ExportQueueFile string
@@ -68,6 +70,7 @@ func New(pinpointRoot string) Locs {
 	s.Uploads = j(s.State, "uploads")
 	s.UploadZips = j(s.State, "upload-zips")
 	s.RipsrcCheckpoints = j(s.State, "ripsrc_checkpoints")
+	s.RipsrcCheckpointsBackup = j(s.State, "tmp", "ripsrc_checkpoints")
 
 	s.ServiceRunCrashes = j(s.Logs, "service-run-crashes")
 
@@ -75,6 +78,7 @@ func New(pinpointRoot string) Locs {
 
 	s.Config2 = j(s.Root, "config.json")
 	s.LastProcessedFile = j(s.State, "last_processed.json")
+	s.LastProcessedFileBackup = j(s.State, "tmp", "last_processed.json")
 	s.ExportQueueFile = j(s.State, "export_queue.json")
 	s.DedupFile = j(s.State, "dedup.json")
 

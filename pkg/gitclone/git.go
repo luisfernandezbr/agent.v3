@@ -253,8 +253,7 @@ func gitRunGCForLongClone(ctx context.Context, logger hclog.Logger, dir string) 
 func runGitCommand(ctx context.Context, logger hclog.Logger, cmd *exec.Cmd) error {
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-	err := cmd.Run()
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		c := ""
 		if len(cmd.Args) > 2 {
 			c = cmd.Args[1]
