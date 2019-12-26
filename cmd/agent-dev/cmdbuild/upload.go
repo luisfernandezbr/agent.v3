@@ -54,48 +54,73 @@ func upload(opts Opts, platforms Platforms) {
 			Region: aws.String("us-east-1"),
 		},
 	)
+
+	uploader := s3manager.NewUploader(awsSession)
+
+	// if doing a new release that is not dev,
+	// update the windows binary in root that is
+	// used for installing latest version
+	// do not update if OnlyPlatform is specified,
+	// because it's not a full release in that case
+	if opts.Version != "dev" && opts.OnlyPlatform == "" {
+		src := fjoin(opts.BuildDir, "bin", "windows-amd64", "pinpoint-agent.exe")
+
+		uploadFile(uploader,
+			bucket,
+			src,
+			"pinpoint-agent.exe",
+		)
+	}
+
+	// upload s3-release dir
 	uploadDir(
-		awsSession,
+		uploader,
 		releaseDir,
-		"pinpoint-agent",
+		bucket,
 		"releases/"+opts.Version)
+
 }
 
-func uploadDir(awsSession *session.Session, localPath string, bucket string, prefix string) {
+const bucket = "pinpoint-agent"
+
+func uploadDir(uploader *s3manager.Uploader, dir string, bucket string, prefix string) {
 	walker := make(fileWalk)
 	go func() {
-		err := filepath.Walk(localPath, walker.Walk)
+		err := filepath.Walk(dir, walker.Walk)
 		if err != nil {
 			panic(err)
 		}
 		close(walker)
 	}()
-	uploader := s3manager.NewUploader(awsSession)
 	for path := range walker {
-		rel, err := filepath.Rel(localPath, path)
+		rel, err := filepath.Rel(dir, path)
 		if err != nil {
 			panic(err)
 		}
-		file, err := os.Open(path)
-		if err != nil {
-			panic(err)
-		}
-		defer file.Close()
-		fmt.Println("Uploading", path)
-		result, err := uploader.Upload(&s3manager.UploadInput{
-			Bucket: &bucket,
-			Key:    aws.String(filepath.Join(prefix, rel)),
-			Body:   file,
-			ACL:    aws.String("public-read"),
-		})
-		if err != nil {
-			fmt.Println("Upload failed")
-			fmt.Println(err)
-			os.Exit(1)
-			//if strings.Contains(err.Error(), "expired") {
-		}
-		fmt.Println("Uploaded", path, result.Location)
+		uploadFile(uploader, bucket, path, filepath.Join(prefix, rel))
 	}
+}
+
+func uploadFile(uploader *s3manager.Uploader, bucket string, localPath string, remoteKey string) {
+	fmt.Println("Uploading", localPath)
+	file, err := os.Open(localPath)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	result, err := uploader.Upload(&s3manager.UploadInput{
+		Bucket: &bucket,
+		Key:    aws.String(remoteKey),
+		Body:   file,
+		ACL:    aws.String("public-read"),
+	})
+	if err != nil {
+		fmt.Println("Upload failed")
+		fmt.Println(err)
+		os.Exit(1)
+		//if strings.Contains(err.Error(), "expired") {
+	}
+	fmt.Println("Uploaded", localPath, result.Location)
 }
 
 type fileWalk chan string

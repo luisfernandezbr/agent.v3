@@ -16,6 +16,23 @@
 
 If you login to the admin dashboard in the Pinpoint product, you will get environment specific instructions for installing the agent.
 
+#### Windows
+
+To install latest release, run the following in powershell.
+
+```
+Set-ExecutionPolicy Bypass -Scope Process -Force
+iex ((New-Object System.Net.WebClient).DownloadString('https://install.pinpt.io/install.ps1'))
+```
+
+#### Linux
+
+To install latest release, run the following in your shell.
+
+```
+bash -c "$(curl -sSL https://install.pinpt.io/install.sh)"
+```
+
 ### Required git version
 
 | Version                             | Notes  
