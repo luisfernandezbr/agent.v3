@@ -19,6 +19,7 @@ import (
 	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/deviceinfo"
+	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/agent/pkg/jsonstore"
 	"github.com/pinpt/agent/pkg/logutils"
@@ -232,6 +233,12 @@ func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
 func (s *Exporter) doExport(ctx context.Context, data *agent.ExportRequest, messageID string) (isIncremental []bool, partsCount int, fileSize int64, rerr error) {
 	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
 
+	err := s.backupRestoreStateDir()
+	if err != nil {
+		rerr = fmt.Errorf("could not manage backup dir for export: %v", err)
+		return
+	}
+
 	var integrations []cmdexport.Integration
 	// add in additional integrations defined in config
 	for _, in := range s.conf.ExtraIntegrations {
@@ -289,7 +296,97 @@ func (s *Exporter) doExport(ctx context.Context, data *agent.ExportRequest, mess
 			return
 		}
 	}
+
+	err = s.deleteBackupStateDir()
+	if err != nil {
+		rerr = err
+		return
+	}
+
 	return
+}
+
+func (s *Exporter) backupRestoreStateDir() error {
+	locs := s.opts.FSConf
+
+	stateExists, err := fs.Exists(locs.State)
+	if err != nil {
+		return err
+	}
+	if !stateExists {
+		err = os.MkdirAll(locs.State, 0755)
+		if err != nil {
+			return fmt.Errorf("could not create dir to save state, err: %v", err)
+		}
+		return nil
+	}
+
+	backupExists, err := fs.Exists(locs.Backup)
+	if err != nil {
+		return err
+	}
+
+	if backupExists {
+
+		s.logger.Info("previous export/upload did not finish since we found a backup dir, restoring previous state and trying again")
+
+		// restore the backup, but also keep backup, so we could restore to it again
+
+		if err := os.RemoveAll(locs.LastProcessedFile); err != nil {
+			return err
+		}
+
+		if err := fs.CopyFile(locs.LastProcessedFileBackup, locs.LastProcessedFile); err != nil {
+			// would happen when running first historical because backup does not have any state yet, but we should be able to recover to that in case of error
+			if !os.IsNotExist(err) {
+				return err
+			}
+		}
+
+		if err := os.RemoveAll(locs.RipsrcCheckpoints); err != nil {
+			return err
+		}
+
+		if err := fs.CopyDir(locs.RipsrcCheckpointsBackup, locs.RipsrcCheckpoints); err != nil {
+			// would happen when running first historical because backup does not have any state yet, but we should be able to recover to that in case of error
+			if !os.IsNotExist(err) {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	// save backup
+
+	err = os.MkdirAll(locs.Backup, 0755)
+	if err != nil {
+		return err
+	}
+
+	if err := fs.CopyFile(locs.LastProcessedFile, locs.LastProcessedFileBackup); err != nil {
+		// would happen if export did not create last processed file, which is very unlikely
+		if !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	if err := fs.CopyDir(locs.RipsrcCheckpoints, locs.RipsrcCheckpointsBackup); err != nil {
+		// would happen if export did not have any ripsrc data
+		if !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Exporter) deleteBackupStateDir() error {
+	locs := s.opts.FSConf
+	if err := os.RemoveAll(locs.Backup); err != nil {
+		return fmt.Errorf("error deleting export backup file: %v", err)
+	}
+	return nil
 }
 
 func (s *Exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport.Integration) (string, error) {

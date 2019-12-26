@@ -15,11 +15,13 @@ type Locs struct {
 	Logs             string
 	LogsIntegrations string
 
-	RepoCache               string
-	State                   string
-	Uploads                 string
-	UploadZips              string
-	RipsrcCheckpoints       string
+	RepoCache         string
+	State             string
+	Uploads           string
+	UploadZips        string
+	RipsrcCheckpoints string
+
+	Backup                  string
 	RipsrcCheckpointsBackup string
 
 	ServiceRunCrashes string
@@ -69,8 +71,9 @@ func New(pinpointRoot string) Locs {
 	s.State = j(s.Root, "state")
 	s.Uploads = j(s.State, "uploads")
 	s.UploadZips = j(s.State, "upload-zips")
+	s.Backup = j(s.State, "backup")
 	s.RipsrcCheckpoints = j(s.State, "ripsrc_checkpoints")
-	s.RipsrcCheckpointsBackup = j(s.State, "tmp", "ripsrc_checkpoints")
+	s.RipsrcCheckpointsBackup = j(s.Backup, "ripsrc_checkpoints")
 
 	s.ServiceRunCrashes = j(s.Logs, "service-run-crashes")
 
@@ -78,7 +81,7 @@ func New(pinpointRoot string) Locs {
 
 	s.Config2 = j(s.Root, "config.json")
 	s.LastProcessedFile = j(s.State, "last_processed.json")
-	s.LastProcessedFileBackup = j(s.State, "tmp", "last_processed.json")
+	s.LastProcessedFileBackup = j(s.Backup, "last_processed.json")
 	s.ExportQueueFile = j(s.State, "export_queue.json")
 	s.DedupFile = j(s.State, "dedup.json")
 
