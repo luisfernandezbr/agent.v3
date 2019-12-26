@@ -164,8 +164,8 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 	var istfs bool
 	if s.RefType == RefTypeTFS {
 		istfs = true
-		if s.Creds.Collection == nil {
-			s.Creds.Collection = pstrings.Pointer("DefaultCollection")
+		if s.Creds.CollectionName == nil {
+			s.Creds.CollectionName = pstrings.Pointer("DefaultCollection")
 		}
 		if s.Creds.Username == "" {
 			return errors.New("missing username")

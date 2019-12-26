@@ -47,7 +47,7 @@ func (s *Integration) processRepos() (projectids []string, err error) {
 	if s.Creds.Organization != nil {
 		orgname = *s.Creds.Organization
 	} else {
-		orgname = *s.Creds.Collection
+		orgname = *s.Creds.CollectionName
 	}
 	sender, err := s.orgSession.Session(sourcecode.RepoModelName.String(), orgname, orgname)
 	if err != nil {
@@ -128,7 +128,7 @@ func (s *Integration) processUsers(projectids []string) error {
 	if s.Creds.Organization != nil {
 		orgname = *s.Creds.Organization
 	} else {
-		orgname = *s.Creds.Collection
+		orgname = *s.Creds.CollectionName
 	}
 	sender, err := s.orgSession.Session(sourcecode.UserModelName.String(), orgname, orgname)
 	if err != nil {

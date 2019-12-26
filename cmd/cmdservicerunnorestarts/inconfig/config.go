@@ -432,7 +432,7 @@ func convertConfigAzureTFS(integrationNameBackend string, systemTypeBackend Inte
 			return
 		}
 	} else {
-		if conf.Credentials.Collection == nil {
+		if conf.Credentials.CollectionName == nil {
 			errStr("missing collection")
 			return
 		}
