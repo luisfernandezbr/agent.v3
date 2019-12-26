@@ -163,6 +163,7 @@ func (s *Command) setupConfig() error {
 		ec.Integration = obj.Config
 
 		refreshToken, _ := obj.Config["oauth_refresh_token"].(string)
+
 		if refreshToken != "" {
 			// TODO: switch to using ID instead of name as key, so we could have azure issues and azure work to use different refresh tokens
 			s.OAuthRefreshTokens[id.Name] = refreshToken

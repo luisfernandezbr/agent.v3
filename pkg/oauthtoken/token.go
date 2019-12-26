@@ -44,7 +44,7 @@ func (s *Manager) Refresh() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if time.Since(s.lastUpdate) < time.Minute {
-		s.logger.Debug("was requested to refresh token, but last update was <1m ago, not refreshing, normal occurence if multiple threads are waiting for lock in token refresh")
+		s.logger.Debug("was requested to refresh token, but last update was <1m ago, not refreshing, normal occurrence if multiple threads are waiting for lock in token refresh")
 		return nil
 	}
 	token, err := s.agent.OAuthNewAccessToken()

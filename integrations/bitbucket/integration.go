@@ -18,6 +18,7 @@ import (
 	"github.com/pinpt/agent/integrations/pkg/ibase"
 	"github.com/pinpt/agent/pkg/commitusers"
 	"github.com/pinpt/agent/pkg/ids2"
+	"github.com/pinpt/agent/pkg/oauthtoken"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/agent/rpcdef"
 )
@@ -39,7 +40,6 @@ type Config struct {
 	URL                string `json:"url"`
 	Username           string `json:"username"`
 	Password           string `json:"password"`
-	AccessToken        string `json:"access_token"`
 	RefreshToken       string `json:"refresh_token"`
 	OnlyGit            bool   `json:"only_git"`
 	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
@@ -56,7 +56,9 @@ type Integration struct {
 
 	requestConcurrencyChan chan bool
 
-	refType string
+	refType  string
+	UseOAuth bool
+	oauth    *oauthtoken.Manager
 }
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
@@ -130,16 +132,26 @@ func (s *Integration) Export(ctx context.Context,
 }
 
 func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
-	err := s.setIntegrationConfig(config.Integration)
+	err := s.setConfig(config)
 	if err != nil {
 		return err
 	}
+
+	s.UseOAuth = config.UseOAuth
+
+	var oauth *oauthtoken.Manager
 
 	s.qc.BaseURL = s.config.URL
 	s.qc.CustomerID = config.Pinpoint.CustomerID
 	s.qc.Logger = s.logger
 	s.qc.RefType = s.refType
 	s.customerID = config.Pinpoint.CustomerID
+	oauth, err = oauthtoken.New(s.logger, s.agent)
+	if err != nil {
+		return err
+	}
+
+	s.oauth = oauth
 
 	{
 		opts := api.RequesterOpts{}
@@ -147,7 +159,8 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.APIURL = s.config.URL + "/2.0"
 		opts.Username = s.config.Username
 		opts.Password = s.config.Password
-		opts.AccessToken = s.config.AccessToken
+		opts.UseOAuth = config.UseOAuth
+		opts.OAuth = oauth
 		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
 		requester := api.NewRequester(opts)
 
@@ -158,19 +171,19 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	return nil
 }
 
-func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
+func (s *Integration) setConfig(config rpcdef.ExportConfig) error {
 	rerr := func(msg string, args ...interface{}) error {
 		return fmt.Errorf("config validation error: "+msg, args...)
 	}
 	var def Config
-	err := structmarshal.MapToStruct(data, &def)
+	err := structmarshal.MapToStruct(config.Integration, &def)
 	if err != nil {
 		return err
 	}
-	if def.AccessToken == "" {
-		if def.URL == "" {
-			return rerr("url is missing")
-		}
+	if def.URL == "" {
+		return rerr("url is missing")
+	}
+	if !config.UseOAuth {
 		if def.Username == "" {
 			return rerr("username is missing")
 		}
@@ -398,8 +411,8 @@ func (s *Integration) getRepoURL(nameWithOwner string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if s.config.AccessToken != "" {
-		u.User = url.UserPassword("x-token-auth", s.config.AccessToken)
+	if s.UseOAuth {
+		u.User = url.UserPassword("x-token-auth", s.oauth.Get())
 	} else if s.config.Username != "" {
 		u.User = url.UserPassword(s.config.Username, s.config.Password)
 	} else {
