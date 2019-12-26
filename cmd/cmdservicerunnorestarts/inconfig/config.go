@@ -234,7 +234,7 @@ func convertConfigBitbucket(integrationNameBackend string, systemTypeBackend Int
 		Password      string   `json:"password"`
 		ExcludedRepos []string `json:"excluded_repos"`
 		AccessToken   string   `json:"access_token"`
-		RefreshToken  string   `json:"refresh_token"`
+		RefreshToken  string   `json:"oauth_refresh_token"`
 	}
 
 	err := structmarshal.MapToStruct(cb, &config)
