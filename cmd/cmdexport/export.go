@@ -175,9 +175,11 @@ func newExport(opts Opts) (*export, error) {
 }
 
 func (s *export) createStateDir() error {
-	if stateExists, err := fs.Exists(s.Locs.State); stateExists {
+	if stateExists, err := fs.Exists(s.Locs.State); err != nil {
+		return err
+	} else if stateExists {
 
-		// if there is a tmp processed file and checkpoint dir, it means that the
+		// if there is a backup processed file and checkpoint dir, it means that the
 		// export was killed. If so, delete the current processed file and checkpoint
 		// dir and copy the those temps.
 		// if there are no temps, create them and defer delete
@@ -210,9 +212,6 @@ func (s *export) createStateDir() error {
 				}
 			}
 		}
-
-	} else if err != nil {
-		return err
 	} else {
 		err = os.MkdirAll(s.Locs.State, 0755)
 		if err != nil {
@@ -229,15 +228,11 @@ func (s *export) Destroy() error {
 			return err
 		}
 	}
-	var err1, err2 error
 	if err := os.RemoveAll(s.Locs.LastProcessedFileBackup); err != nil {
-		err1 = fmt.Errorf("error deleting last processed backup file. err %v", err)
+		return fmt.Errorf("error deleting last processed backup file. err %v", err)
 	}
 	if err := os.RemoveAll(s.Locs.RipsrcCheckpointsBackup); err != nil {
-		err2 = fmt.Errorf("error deleting last checkpoints backup dir. err %v", err)
-	}
-	if err1 != nil || err2 != nil {
-		return fmt.Errorf("err1: %v. err2:%v", err1, err2)
+		return fmt.Errorf("error deleting checkpoints backup dir. err %v", err)
 	}
 	return nil
 }
