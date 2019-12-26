@@ -25,6 +25,14 @@ type RequesterOpts struct {
 	InsecureSkipVerify bool
 }
 
+type internalRequest struct {
+	URL      string
+	Params   url.Values
+	Pageable bool
+	Response interface{}
+	PageInfo PageInfo
+}
+
 func NewRequester(opts RequesterOpts) *Requester {
 	s := &Requester{}
 	s.opts = opts
@@ -55,61 +63,98 @@ func (s *Requester) setAuth(req *http.Request) {
 	}
 }
 
-func (s *Requester) Request(objPath string, params url.Values, paginable bool, res interface{}) (page PageInfo, err error) {
+// MakeRequest make request
+func (e *Requester) Request(url string, params url.Values, pageable bool, response interface{}) (pi PageInfo, err error) {
 
-	u := pstrings.JoinURL(s.opts.APIURL, objPath)
-
-	if paginable && params.Get("fields") == "" {
-		tags := getJsonTags(res)
-		// This parameters will help us get only the fields we need
-		// This reduce the time from ~27s to ~12s
-		params.Set("fields", tags)
+	ir := &internalRequest{
+		URL:      url,
+		Params:   params,
+		Pageable: pageable,
+		Response: response,
 	}
 
-	if len(params) != 0 {
-		u += "?" + params.Encode()
+	return e.makeRequestRetry(ir, 0)
+
+}
+
+const maxGeneralRetries = 2
+
+func (e *Requester) makeRequestRetry(req *internalRequest, generalRetry int) (pageInfo PageInfo, err error) {
+	var isRetryable bool
+	isRetryable, pageInfo, err = e.request(req, generalRetry+1)
+	if err != nil {
+		if !isRetryable {
+			return pageInfo, err
+		}
+		if generalRetry >= maxGeneralRetries {
+			return pageInfo, fmt.Errorf(`can't retry request, too many retries, err: %v`, err)
+		}
+		return e.makeRequestRetry(req, generalRetry+1)
+	}
+	return
+}
+
+func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetryable bool, pi PageInfo, rerr error) {
+
+	u := pstrings.JoinURL(e.opts.APIURL, r.URL)
+
+	if r.Pageable && r.Params.Get("fields") == "" {
+		tags := getJsonTags(r.Response)
+		// This parameters will help us get only the fields we need
+		// This reduce the time from ~27s to ~12s
+		r.Params.Set("fields", tags)
+	}
+
+	if len(r.Params) != 0 {
+		u += "?" + r.Params.Encode()
 	}
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return
 	}
-	s.setAuth(req)
+	e.setAuth(req)
 
-	s.logger.Debug("request", "url", req.URL.String())
+	e.logger.Debug("request", "url", req.URL.String())
 
-	resp, err := s.httpClient.Do(req)
+	resp, err := e.httpClient.Do(req)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		s.logger.Info("api request failed", "url", u)
-		return page, fmt.Errorf(`bitbucket returned invalid status code: %v`, resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+
+		if resp.StatusCode == http.StatusUnauthorized {
+			// TODO: update access_token
+			return true, pi, fmt.Errorf("request not authorized")
+		}
+
+		e.logger.Info("api request failed", "url", u)
+		return true, pi, fmt.Errorf(`bitbucket returned invalid status code: %v`, resp.StatusCode)
 	}
 
-	if paginable {
+	if r.Pageable {
 		var response Response
 
 		if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
 			return
 		}
 
-		if err = json.Unmarshal(response.Values, &res); err != nil {
+		if err = json.Unmarshal(response.Values, &r.Response); err != nil {
 			return
 		}
 
 		u, _ := url.Parse(response.Next)
 
-		page.PageSize = response.PageLen
-		page.Page = response.Page
-		page.NextPage = u.Query().Get("page")
-		page.Total = response.TotalValues
+		pi.PageSize = response.PageLen
+		pi.Page = response.Page
+		pi.NextPage = u.Query().Get("page")
+		pi.Total = response.TotalValues
 
 	} else {
-		if err = json.NewDecoder(resp.Body).Decode(&res); err != nil {
-			return page, err
+		if err = json.NewDecoder(resp.Body).Decode(&r.Response); err != nil {
+			return false, pi, err
 		}
 	}
 
