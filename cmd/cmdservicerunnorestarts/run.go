@@ -303,6 +303,8 @@ func (s *runner) sendPings() {
 			err := s.sendPing(ctx)
 			if err != nil {
 				s.logger.Error("could not send ping", "err", err.Error())
+			} else {
+				s.logger.Debug("sent ping")
 			}
 		}
 	}
