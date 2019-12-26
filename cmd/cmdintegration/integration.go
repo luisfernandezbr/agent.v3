@@ -163,14 +163,25 @@ func (s *Command) setupConfig() error {
 		ec.Integration = obj.Config
 
 		refreshToken, _ := obj.Config["oauth_refresh_token"].(string)
-		if refreshToken != "" {
+		refresh_token, _ := obj.Config["refresh_token"].(string)
+
+		if refreshToken != "" || refresh_token != "" {
 			// TODO: switch to using ID instead of name as key, so we could have azure issues and azure work to use different refresh tokens
-			s.OAuthRefreshTokens[id.Name] = refreshToken
-			ec.UseOAuth = true
-			// do not pass oauth_refresh_token to integration
-			// integrations should use
-			// NewAccessToken() to get access token instead
-			delete(ec.Integration, "oauth_refresh_token")
+			if id.Name == "bitbucket" {
+				s.OAuthRefreshTokens[id.Name] = refresh_token
+				ec.UseOAuth = true
+				// do not pass oauth_refresh_token to integration
+				// integrations should use
+				// NewAccessToken() to get access token instead
+				delete(ec.Integration, "refresh_token")
+			} else {
+				s.OAuthRefreshTokens[id.Name] = refreshToken
+				ec.UseOAuth = true
+				// do not pass oauth_refresh_token to integration
+				// integrations should use
+				// NewAccessToken() to get access token instead
+				delete(ec.Integration, "oauth_refresh_token")
+			}
 		}
 
 		s.ExportConfigs[id] = ec

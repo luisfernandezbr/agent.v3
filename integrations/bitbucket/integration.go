@@ -18,6 +18,7 @@ import (
 	"github.com/pinpt/agent/integrations/pkg/ibase"
 	"github.com/pinpt/agent/pkg/commitusers"
 	"github.com/pinpt/agent/pkg/ids2"
+	"github.com/pinpt/agent/pkg/oauthtoken"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/agent/rpcdef"
 )
@@ -135,11 +136,19 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		return err
 	}
 
+	var oauth *oauthtoken.Manager
+
 	s.qc.BaseURL = s.config.URL
 	s.qc.CustomerID = config.Pinpoint.CustomerID
 	s.qc.Logger = s.logger
 	s.qc.RefType = s.refType
 	s.customerID = config.Pinpoint.CustomerID
+	oauth, err = oauthtoken.New(s.logger, s.agent)
+	if err != nil {
+		return err
+	}
+
+	s.config.AccessToken = oauth.Get()
 
 	{
 		opts := api.RequesterOpts{}
@@ -148,6 +157,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.Username = s.config.Username
 		opts.Password = s.config.Password
 		opts.AccessToken = s.config.AccessToken
+		opts.OAuthToken = oauth
 		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
 		requester := api.NewRequester(opts)
 

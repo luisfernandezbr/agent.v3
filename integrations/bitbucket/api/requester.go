@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent/pkg/oauthtoken"
 	"github.com/pinpt/go-common/httpdefaults"
 	pstrings "github.com/pinpt/go-common/strings"
 )
@@ -20,6 +21,7 @@ type RequesterOpts struct {
 	Username           string
 	Password           string
 	AccessToken        string
+	OAuthToken         *oauthtoken.Manager
 	InsecureSkipVerify bool
 }
 
