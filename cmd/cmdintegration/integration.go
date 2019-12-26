@@ -148,6 +148,11 @@ func NewCommand(opts Opts) (*Command, error) {
 	return s, nil
 }
 
+var refreshTokenFieldsByIntegration = map[string]string{
+	"jira":      "oauth_refresh_token",
+	"bitbucket": "refresh_token",
+}
+
 func (s *Command) setupConfig() error {
 	s.ExportConfigs = map[integrationid.ID]rpcdef.ExportConfig{}
 	s.OAuthRefreshTokens = map[string]string{}
@@ -162,26 +167,16 @@ func (s *Command) setupConfig() error {
 		ec.Pinpoint.CustomerID = s.Opts.AgentConfig.CustomerID
 		ec.Integration = obj.Config
 
-		refreshToken, _ := obj.Config["oauth_refresh_token"].(string)
-		refresh_token, _ := obj.Config["refresh_token"].(string)
+		refreshToken, _ := obj.Config[refreshTokenFieldsByIntegration[id.Name]].(string)
 
-		if refreshToken != "" || refresh_token != "" {
+		if refreshToken != "" {
 			// TODO: switch to using ID instead of name as key, so we could have azure issues and azure work to use different refresh tokens
-			if id.Name == "bitbucket" {
-				s.OAuthRefreshTokens[id.Name] = refresh_token
-				ec.UseOAuth = true
-				// do not pass oauth_refresh_token to integration
-				// integrations should use
-				// NewAccessToken() to get access token instead
-				delete(ec.Integration, "refresh_token")
-			} else {
-				s.OAuthRefreshTokens[id.Name] = refreshToken
-				ec.UseOAuth = true
-				// do not pass oauth_refresh_token to integration
-				// integrations should use
-				// NewAccessToken() to get access token instead
-				delete(ec.Integration, "oauth_refresh_token")
-			}
+			s.OAuthRefreshTokens[id.Name] = refreshToken
+			ec.UseOAuth = true
+			// do not pass oauth_refresh_token to integration
+			// integrations should use
+			// NewAccessToken() to get access token instead
+			delete(ec.Integration, refreshTokenFieldsByIntegration[id.Name])
 		}
 
 		s.ExportConfigs[id] = ec
