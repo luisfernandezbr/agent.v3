@@ -13,6 +13,8 @@ func oauthIntegrationNameToBackend(name string) string {
 	switch name {
 	case "jira-cloud":
 		return "jira"
+	case "bitbucket":
+		return name
 	default:
 		panic(fmt.Errorf("oauth is not supported for integration: %v", name))
 	}

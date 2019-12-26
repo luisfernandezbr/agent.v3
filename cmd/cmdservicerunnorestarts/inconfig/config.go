@@ -229,12 +229,11 @@ func convertConfigBitbucket(integrationNameBackend string, systemTypeBackend Int
 	res = map[string]interface{}{}
 
 	var config struct {
-		URL           string   `json:"url"`
-		Username      string   `json:"username"`
-		Password      string   `json:"password"`
-		ExcludedRepos []string `json:"excluded_repos"`
-		AccessToken   string   `json:"access_token"`
-		RefreshToken  string   `json:"refresh_token"`
+		URL               string   `json:"url"`
+		Username          string   `json:"username"`
+		Password          string   `json:"password"`
+		ExcludedRepos     []string `json:"excluded_repos"`
+		OauthRefreshToken string   `json:"oauth_refresh_token"`
 	}
 
 	err := structmarshal.MapToStruct(cb, &config)
@@ -243,12 +242,12 @@ func convertConfigBitbucket(integrationNameBackend string, systemTypeBackend Int
 		return
 	}
 
-	accessToken, _ := cb["access_token"].(string)
-
-	if accessToken != "" {
+	refreshToken, _ := cb["refresh_token"].(string)
+	if refreshToken != "" {
+		config.OauthRefreshToken = refreshToken
 		// this is bitbucket.org cloud auth
 		config.URL = "https://api.bitbucket.org"
-		config.AccessToken = accessToken
+		config.OauthRefreshToken = refreshToken
 	} else {
 		{
 			v, ok := cb["username"].(string)

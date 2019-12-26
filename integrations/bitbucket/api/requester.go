@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent/pkg/oauthtoken"
 	"github.com/pinpt/go-common/httpdefaults"
 	pstrings "github.com/pinpt/go-common/strings"
 )
@@ -19,7 +20,8 @@ type RequesterOpts struct {
 	APIURL             string
 	Username           string
 	Password           string
-	AccessToken        string
+	UseOAuth           bool
+	OAuth              *oauthtoken.Manager
 	InsecureSkipVerify bool
 }
 
@@ -54,14 +56,14 @@ type Requester struct {
 }
 
 func (s *Requester) setAuth(req *http.Request) {
-	if s.opts.AccessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+s.opts.AccessToken)
+	if s.opts.UseOAuth {
+		req.Header.Set("Authorization", "Bearer "+s.opts.OAuth.Get())
 	} else {
 		req.SetBasicAuth(s.opts.Username, s.opts.Password)
 	}
 }
 
-// MakeRequest make request
+// Request make request
 func (e *Requester) Request(url string, params url.Values, pageable bool, response interface{}) (pi PageInfo, err error) {
 
 	ir := &internalRequest{
@@ -109,14 +111,14 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
+		rerr = err
 		return
 	}
 	e.setAuth(req)
 
-	e.logger.Debug("request", "url", req.URL.String())
-
 	resp, err := e.httpClient.Do(req)
 	if err != nil {
+		rerr = err
 		return
 	}
 	defer resp.Body.Close()
@@ -124,11 +126,13 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 	if resp.StatusCode != http.StatusOK {
 
 		if resp.StatusCode == http.StatusUnauthorized {
-			// TODO: update access_token
+			if rerr = e.opts.OAuth.Refresh(); rerr != nil {
+				return false, pi, rerr
+			}
 			return true, pi, fmt.Errorf("request not authorized")
 		}
 
-		e.logger.Info("api request failed", "url", u)
+		e.logger.Debug("api request failed", "url", u)
 		return true, pi, fmt.Errorf(`bitbucket returned invalid status code: %v`, resp.StatusCode)
 	}
 
