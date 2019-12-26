@@ -119,7 +119,7 @@ initOS
 
 # determine install directory if required
 if [ -z "$INSTALL_DIRECTORY" ]; then
-    INSTALL_DIRECTORY="$HOME/.pinpoint-agent"
+    INSTALL_DIRECTORY="$HOME/.pinpoint/agent-bin"
 fi
 mkdir -p "$INSTALL_DIRECTORY"
 
@@ -165,3 +165,21 @@ fi
 
 echo "Moving executable to $INSTALL_DIRECTORY/$INSTALL_NAME"
 mv "$DOWNLOAD_FILE" "$INSTALL_DIRECTORY/$INSTALL_NAME"
+
+addPath(){
+    FILE=$1
+    PATHADD=$2
+    if [ -f "$FILE" ]; then # if file exists
+        if ! grep -q -F "$PATHADD" "$FILE"; then # path string is not in file
+            echo "export PATH=\$PATH:$PATHADD" >> $FILE
+            echo "Added install dir to PATH in $FILE."
+        else
+            echo "Not adding install dir to PATH, it is already defined in $FILE."
+        fi  
+    fi
+}
+
+addPath "$HOME/.profile" "$INSTALL_DIRECTORY"
+addPath "$HOME/.bash_profile" "$INSTALL_DIRECTORY"
+
+echo "Installation completed."
