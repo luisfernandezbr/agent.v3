@@ -33,6 +33,13 @@ To install latest release, run the following in your shell.
 bash -c "$(curl -sSL https://install.pinpt.io/install.sh)"
 ```
 
+#### Docker
+
+```
+docker pull pinpt/agent
+docker run -it --rm --name pinpoint_agent -v `pwd`/pinpoint:/pinpoint pinpt/agent enroll --skip-enroll-if-found --pinpoint-root /pinpoint <ENROLL_CODE>
+```
+
 ### Required git version
 
 | Version                             | Notes  

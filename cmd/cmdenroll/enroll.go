@@ -84,6 +84,7 @@ func newEnroller(opts Opts) (*enroller, error) {
 func (s *enroller) Run(ctx context.Context) error {
 	if fileutil.FileExists(s.fsconf.Config2) {
 		if s.skipEnrollIfFound {
+			s.logger.Info("skipping enroll, enroll config already exists")
 			// if --skip-enroll-if-found we can safely ignore
 			return nil
 		}

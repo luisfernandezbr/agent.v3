@@ -74,7 +74,7 @@ var cmdEnrollNoServiceRun = &cobra.Command{
 			exitWithErr(logger, err)
 		}
 
-		logger.Info("enroll completed successfully")
+		logger.Info("enroll command completed")
 	},
 }
 
@@ -346,7 +346,8 @@ var cmdVersion = &cobra.Command{
 	Short: "Display the build version",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(Version)
+		fmt.Println("Version:", Version)
+		fmt.Println("Commit:", Commit)
 	},
 }
 
