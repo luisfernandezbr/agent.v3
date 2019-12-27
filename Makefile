@@ -1,7 +1,6 @@
 # would be good to set this by default for all commands, but other names are uncommon and will not be present on fs in practise
 .PHONY: protobuf
 
-
 COMMITSHA ?= $(shell git rev-parse HEAD | cut -c1-8)
 
 clean:
