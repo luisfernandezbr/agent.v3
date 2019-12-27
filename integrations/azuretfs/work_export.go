@@ -15,7 +15,7 @@ func (s *Integration) exportWork() error {
 	if s.Creds.Organization != nil {
 		orgname = *s.Creds.Organization
 	} else {
-		orgname = *s.Creds.Collection
+		orgname = *s.Creds.CollectionName
 	}
 	sender, err := s.orgSession.Session(work.ProjectModelName.String(), orgname, orgname)
 	if err != nil {
