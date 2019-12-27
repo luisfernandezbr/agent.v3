@@ -18,7 +18,7 @@ steps:
     type: "build"
     image_name: "pinpt/agent"
     tag: "${{CF_BRANCH_TAG_NORMALIZED}}" 
-    dockerfile: "Dockerfile"
+    dockerfile: "docker/cloudbuild/Dockerfile"
     stage: "build"
     #build_arguments:
     #- "BUILD=${{CF_SHORT_REVISION}}"
@@ -50,20 +50,6 @@ steps:
         tags:
           - "${{CF_BRANCH_TAG_NORMALIZED}}"
           - "${{CF_REVISION}}"
-      # On every github release we create a docker image tagged with that release and also update the latest tag
-#      dockerhub_release:
-#        title: "Pushing release image to Dockerhub"
-#        type: "push"
-#        image_name: "pinpt/agent"
-#        registry: "dockerhub"
-#        candidate: "${{build}}"
-#        tags:
-#          - "${{CF_RELEASE_TAG}}"
-#          - "latest"
-#        when:
-#            condition:
-#              all:
-#                hasReleaseTag: 'substring("${{CF_RELEASE_TAG}}", 0, 1) == "v"'
       dockerhub_all:
         title: "Pushing image tagged with commit to Dockerhub"
         type: "push"
