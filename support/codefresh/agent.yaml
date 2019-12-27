@@ -1,0 +1,114 @@
+# Codefresh triggers:
+# Push commits, Release
+version: "1.0"
+stages:
+  - "clone"
+  - "build"
+  - "integration"
+  - "push"
+steps:
+  main_clone:
+    type: "git-clone"
+    description: "Cloning main repository..."
+    repo: "pinpt/agent"
+    revision: "${{CF_BRANCH}}"
+    stage: "clone"
+  build:
+    title: "Building docker image"
+    type: "build"
+    image_name: "pinpt/agent"
+    tag: "${{CF_BRANCH_TAG_NORMALIZED}}" 
+    dockerfile: "Dockerfile"
+    stage: "build"
+    #build_arguments:
+    #- "BUILD=${{CF_SHORT_REVISION}}"
+  parallel_push:
+    type: "parallel"
+    steps:
+      annotate_build:
+        title: "Annotating Build"
+        image: "${{build}}"
+        working_directory: "IMAGE_WORK_DIR"
+        commands:
+          - "echo Annotating Build..."
+        on_success:
+          metadata:
+            set:
+              - ${{build.imageId}}:
+                  - CF_QUALITY: true
+        on_error:
+          metadata:
+            set:
+              - ${{build.imageId}}:
+                  - CF_QUALITY: false
+      push:
+        title: "Pushing image to cfcr"
+        type: "push"
+        image_name: "pinpt/agent"
+        registry: "cfcr"
+        candidate: "${{build}}"
+        tags:
+          - "${{CF_BRANCH_TAG_NORMALIZED}}"
+          - "${{CF_REVISION}}"
+      # On every github release we create a docker image tagged with that release and also update the latest tag
+      dockerhub_release:
+        title: "Pushing release image to Dockerhub"
+        type: "push"
+        image_name: "pinpt/agent"
+        registry: "dockerhub"
+        candidate: "${{build}}"
+        tags:
+          - "${{CF_RELEASE_TAG}}"
+          - "latest"
+        when:
+            condition:
+              all:
+                hasReleaseTag: 'substring("${{CF_RELEASE_TAG}}", 0, 1) == "v"'
+      dockerhub_all:
+        title: "Pushing image tagged with commit to Dockerhub"
+        type: "push"
+        image_name: "pinpt/agent"
+        registry: "dockerhub"
+        candidate: "${{build}}"
+        tags:
+          - "${{CF_BRANCH_TAG_NORMALIZED}}"
+          - "${{CF_REVISION}}"
+      dockerhub_master:
+        title: "Pushing edge image to Dockerhub"
+        type: "push"
+        image_name: "pinpt/agent"
+        registry: "dockerhub"
+        candidate: "${{build}}"
+        tags:
+          - edge
+          - master
+        when:
+          branch:
+            only:
+              - master
+      dockerhub_beta:
+        title: "Pushing beta image to Dockerhub"
+        type: "push"
+        image_name: "pinpt/agent"
+        registry: "dockerhub"
+        candidate: "${{build}}"
+        tags:
+          - beta
+        when:
+          branch:
+            only:
+              - beta
+      dockerhub_stable:
+        title: "Pushing stable image to Dockerhub"
+        type: "push"
+        image_name: "pinpt/agent"
+        registry: "dockerhub"
+        candidate: "${{build}}"
+        tags:
+          - stable
+          - latest
+        when:
+          branch:
+            only:
+              - stable
+    stage: "push"

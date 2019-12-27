@@ -1,0 +1,20 @@
+# Codefresh triggers:
+# Push commits
+version: "1.0"
+stages:
+  - "clone"
+  - "build"
+steps:
+  main_clone:
+    type: "git-clone"
+    description: "Cloning main repository..."
+    repo: "pinpt/agent"
+    revision: "${{CF_BRANCH}}"
+    stage: "clone"
+  build:
+    title: "Building Docker Image"
+    type: "build"
+    image_name: "pinpt/agent"
+    tag: "${{CF_BRANCH_TAG_NORMALIZED}}"
+    dockerfile: "docker/unittests/Dockerfile"
+    stage: "build"
