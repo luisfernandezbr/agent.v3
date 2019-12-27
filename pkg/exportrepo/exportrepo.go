@@ -165,21 +165,23 @@ func (s *Export) run(ctx context.Context) (duration ExportDuration, rerr error) 
 	}
 	s.logger.Debug("git clone started", "repo", s.opts.UniqueName)
 	clonestarted := time.Now()
-	checkoutDir, _, err := s.clone(ctx)
+	tempCheckoutDir, _, err := s.clone(ctx)
 	if err != nil {
 		rerr = err
 		return
 	}
+	defer os.RemoveAll(tempCheckoutDir)
+
 	duration.Clone = time.Since(clonestarted)
 	s.logger.Debug("git clone finished", "duration", duration.Clone, "repo", s.opts.UniqueName)
-	if !hasHeadCommit(ctx, checkoutDir) {
+	if !hasHeadCommit(ctx, tempCheckoutDir) {
 		rerr = ErrRevParseFailed
 		return
 	}
 
-	s.ripsrcSetup(checkoutDir)
+	s.ripsrcSetup(tempCheckoutDir)
 
-	skipsrc, remotebranches, err := s.skipRipsrc(ctx, checkoutDir)
+	skipsrc, remotebranches, err := s.skipRipsrc(ctx, tempCheckoutDir)
 	if err != nil {
 		rerr = err
 		return
@@ -222,13 +224,13 @@ func hasHeadCommit(ctx context.Context, repoDir string) bool {
 }
 
 func (s *Export) clone(ctx context.Context) (
-	checkoutDir string,
+	tempCheckoutDir string,
 	cacheDir string,
 	_ error) {
 
 	uniqueName := s.opts.RefType + "-" + s.opts.UniqueName
 
-	tempDir, err := ioutil.TempDir(s.locs.Temp, "")
+	tempDir, err := ioutil.TempDir(s.locs.Temp, "exportrepo")
 	if err != nil {
 		return "", "", err
 	}
