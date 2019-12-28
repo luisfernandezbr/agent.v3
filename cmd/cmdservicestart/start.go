@@ -1,4 +1,4 @@
-package cmdservicerun
+package cmdservicestart
 
 import (
 	"context"
@@ -8,5 +8,5 @@ import (
 )
 
 func Run(ctx context.Context, opts cmdrun.Opts) error {
-	return service.Run(service.RunS, nil, opts)
+	return service.Run(service.Start, ctx, opts)
 }

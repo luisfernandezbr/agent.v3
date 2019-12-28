@@ -10,15 +10,15 @@ Service waits for commands from a backend to validate integrations, start export
 - export-onboard-data - Exports users, repos or projects based on param for a specified integration. Saves that data into provided file.
 
 ### Logging
-This section describes how logging works starting with lower lovel, which are integrations and how it is passed up to export command and then to service-run.
+This section describes how logging works starting with lower level, which are integrations and how it is passed up to export command and then to command run.
 
 Integrations log the output using provided hclog.Logger, log output is passed up to export, which outputs the logs to stdout and at the same time saves log file per integrations into --pinpoint-root/logs folder. In these files only output from the last run is saved. Panics in integrations are written both into logs file and repeated in stdout output.
 
 When export is run the log output is shown in stdout and the copy is saved into logs/export file. For export-onboard-data and validate-config the file names match the command.
 
-When service-run command is run it outputs all logs to stdout and saves a copy into logs/service-run file. When it runs the subcommands their behavior doesn't change and logs are saved the same way as described above.
+When run command starts it outputs all logs to stdout and saves a copy into logs/run file. When it runs the subcommands their behavior doesn't change and logs are saved the same way as described above.
 
-There is a special handing for export sub-command in service-run, in addition to usual log handing, the logs are sent to backend api in batches.
+There is a special handing for export sub-command in run command, in addition to usual log handing, the logs are sent to backend api in batches.
 
 ### Data format
 GRPC is used for calls between agent and integrations. Endpoints and parameters are defined using .proto files.

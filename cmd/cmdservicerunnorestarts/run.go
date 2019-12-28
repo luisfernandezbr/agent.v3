@@ -97,7 +97,7 @@ func newRunner(opts Opts) (*runner, error) {
 	s.agentConfig = s.getAgentConfig()
 	s.deviceInfo = s.getDeviceInfoOpts()
 
-	s.logSender = logsender.New(s.opts.Logger, s.conf, "service-run", hash.Values(time.Now()))
+	s.logSender = logsender.New(s.opts.Logger, s.conf, "run", hash.Values(time.Now()))
 	s.logger = s.opts.Logger.AddWriter(s.logSender)
 
 	return s, nil

@@ -9,8 +9,15 @@ import (
 	"github.com/pinpt/agent/cmd/cmdenroll"
 	"github.com/pinpt/agent/cmd/cmdexport"
 	"github.com/pinpt/agent/cmd/cmdexportonboarddata"
+	"github.com/pinpt/agent/cmd/cmdrun"
+	"github.com/pinpt/agent/cmd/cmdserviceinstall"
+	"github.com/pinpt/agent/cmd/cmdservicerestart"
 	"github.com/pinpt/agent/cmd/cmdservicerun"
 	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts"
+	"github.com/pinpt/agent/cmd/cmdservicestart"
+	"github.com/pinpt/agent/cmd/cmdservicestatus"
+	"github.com/pinpt/agent/cmd/cmdservicestop"
+	"github.com/pinpt/agent/cmd/cmdserviceuninstall"
 	"github.com/pinpt/agent/cmd/cmdvalidate"
 	"github.com/pinpt/agent/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent/cmd/pkg/cmdlogger"
@@ -28,7 +35,7 @@ var cmdEnrollNoServiceRun = &cobra.Command{
 	Short: "Enroll the agent with the Pinpoint Cloud",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		// only json is supported as log format for enroll and service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
+		// only json is supported as log format for enroll and run command, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
 		cmd.Flags().Set("log-format", "json")
 
 		code := args[0]
@@ -94,42 +101,59 @@ var cmdEnroll = &cobra.Command{
 	Short: "Enroll the agent with the Pinpoint Cloud",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		skipServiceRun, _ := cmd.Flags().GetBool("skip-service-run")
-		if skipServiceRun {
+
+		skipRun, _ := cmd.Flags().GetBool("skip-run")
+		if skipRun {
 			cmdEnrollNoServiceRun.Run(cmd, args)
 			return
 		}
 
-		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
+		// only json is supported as log format for run command, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
 		cmd.Flags().Set("log-format", "json")
 
-		logger := cmdlogger.NewLogger(cmd)
-		pinpointRoot, err := getPinpointRoot(cmd)
+		opts, err := getCmdRunOpts(cmd)
 		if err != nil {
-			exitWithErr(logger, err)
+			exitWithErr(opts.Logger, err)
 		}
 
 		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
 		skipEnroll, _ := cmd.Flags().GetBool("skip-enroll-if-found")
 		channel, _ := cmd.Flags().GetString("channel")
 		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
+		runType, _ := cmd.Flags().GetString("run-type")
 
 		ctx := context.Background()
-		opts := cmdservicerun.Opts{}
-		opts.Logger = logger
-		opts.PinpointRoot = pinpointRoot
+
 		opts.IntegrationsDir = integrationsDir
 		opts.Enroll.Run = true
 		opts.Enroll.Code = args[0]
 		opts.Enroll.Channel = channel
 		opts.Enroll.SkipValidate = skipValidate
 		opts.Enroll.SkipEnrollIfFound = skipEnroll
-		err = cmdservicerun.Run(ctx, opts)
-		if err != nil {
-			exitWithErr(logger, err)
+
+		switch RunType(runType) {
+		case interactive:
+			err = cmdrun.Run(ctx, opts, nil)
+			if err != nil {
+				exitWithErr(opts.Logger, err)
+			}
+		case service:
+			cmdEnrollNoServiceRun.Run(cmd, args)
+			err = cmdserviceinstall.Run(ctx, opts, true)
+			if err != nil {
+				exitWithErr(opts.Logger, err)
+			}
 		}
+
 	},
 }
+
+type RunType string
+
+const (
+	interactive RunType = "interactive"
+	service     RunType = "service"
+)
 
 func init() {
 	cmd := cmdEnroll
@@ -138,8 +162,9 @@ func init() {
 	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
 	cmd.Flags().String("channel", "stable", "Cloud channel to use.")
 	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
-	cmd.Flags().Bool("skip-service-run", false, "Set to true to skip service run. Will need to run it separately.")
+	cmd.Flags().Bool("skip-run", false, "Set to true to skip service run. Will need to run it separately.")
 	cmd.Flags().Bool("skip-enroll-if-found", false, "skip enroll if the config is already found")
+	cmd.Flags().String("run-type", "service", "run the agent either interactive or as a service")
 	cmdRoot.AddCommand(cmd)
 }
 
@@ -242,14 +267,90 @@ func init() {
 	cmdRoot.AddCommand(cmd)
 }
 
-/*
+func getCmdRunOpts(cmd *cobra.Command) (cmdrun.Opts, error) {
+	logger := cmdlogger.NewLogger(cmd)
+
+	pinpointRoot, err := getPinpointRoot(cmd)
+	if err != nil {
+		return cmdrun.Opts{}, err
+	}
+
+	opts := cmdrun.Opts{}
+	opts.Logger = logger
+	opts.PinpointRoot = pinpointRoot
+
+	return opts, nil
+}
+
 var cmdServiceInstall = &cobra.Command{
 	Use:   "service-install",
 	Short: "Install OS service of agent",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		cmd.Flags().Set("log-format", "json")
+
+		opts, err := getCmdRunOpts(cmd)
+		if err != nil {
+			exitWithErr(opts.Logger, err)
+		}
+
+		ctx := context.Background()
+
+		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
+		start, _ := cmd.Flags().GetBool("start")
+
+		opts.IntegrationsDir = integrationsDir
+
+		err = cmdserviceinstall.Run(ctx, opts, start)
+		if err != nil {
+			exitWithErr(opts.Logger, err)
+		}
+	},
+}
+
+func init() {
+	cmd := cmdServiceInstall
+	flagPinpointRoot(cmd)
+	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
+	cmd.Flags().Bool("start", false, "start the service after install")
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdServiceStart = &cobra.Command{
+	Use:   "service-start",
+	Short: "Start agent service",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		cmd.Flags().Set("log-format", "json")
+
+		opts, err := getCmdRunOpts(cmd)
+		if err != nil {
+			exitWithErr(opts.Logger, err)
+		}
+
+		ctx := context.Background()
+
+		err = cmdservicestart.Run(ctx, opts)
+		if err != nil {
+			exitWithErr(opts.Logger, err)
+		}
+	},
+}
+
+func init() {
+	cmd := cmdServiceStart
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdServiceStop = &cobra.Command{
+	Use:   "service-stop",
+	Short: "Stop agent service",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
 		logger := cmdlogger.NewLogger(cmd)
-		err := cmdserviceinstall.Run(logger)
+		err := cmdservicestop.Run(logger)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
@@ -257,7 +358,76 @@ var cmdServiceInstall = &cobra.Command{
 }
 
 func init() {
-	cmdRoot.AddCommand(cmdServiceInstall)
+	cmd := cmdServiceStop
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdServiceStatus = &cobra.Command{
+	Use:   "service-status",
+	Short: "Status agent service",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		logger := cmdlogger.NewLogger(cmd)
+		err := cmdservicestatus.Run(logger)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+	},
+}
+
+func init() {
+	cmd := cmdServiceStatus
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdServiceRestart = &cobra.Command{
+	Use:   "service-restart",
+	Short: "Restart agent service",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		logger := cmdlogger.NewLogger(cmd)
+		err := cmdservicerestart.Run(logger)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+	},
+}
+
+func init() {
+	cmdRoot.AddCommand(cmdServiceRestart)
+}
+
+var cmdServiceRun = &cobra.Command{
+	Use:   "service-run",
+	Short: "Run agent service",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		cmd.Flags().Set("log-format", "json")
+
+		opts, err := getCmdRunOpts(cmd)
+		if err != nil {
+			exitWithErr(opts.Logger, err)
+		}
+
+		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
+		opts.IntegrationsDir = integrationsDir
+
+		ctx := context.Background()
+
+		err = cmdservicerun.Run(ctx, opts)
+		if err != nil {
+			exitWithErr(opts.Logger, err)
+		}
+	},
+}
+
+func init() {
+	cmd := cmdServiceRun
+	flagsLogger(cmd)
+	flagPinpointRoot(cmd)
+	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
+	cmdRoot.AddCommand(cmd)
 }
 
 var cmdServiceUninstall = &cobra.Command{
@@ -275,7 +445,7 @@ var cmdServiceUninstall = &cobra.Command{
 
 func init() {
 	cmdRoot.AddCommand(cmdServiceUninstall)
-}*/
+}
 
 var cmdServiceRunNoRestarts = &cobra.Command{
 	Use:   "service-run-no-restarts",
@@ -283,7 +453,7 @@ var cmdServiceRunNoRestarts = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
+		// only json is supported as log format for run command, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
 		cmd.Flags().Set("log-format", "json")
 		logger := cmdlogger.NewLogger(cmd)
 		pinpointRoot, err := getPinpointRoot(cmd)
@@ -315,12 +485,12 @@ func init() {
 	cmdRoot.AddCommand(cmd)
 }
 
-var cmdServiceRun = &cobra.Command{
-	Use:   "service-run",
+var cmdRun = &cobra.Command{
+	Use:   "run",
 	Short: "This command is called by OS service to run the service.",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		// only json is supported as log format for service-run, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
+		// only json is supported as log format for run command, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
 		cmd.Flags().Set("log-format", "json")
 
 		logger := cmdlogger.NewLogger(cmd)
@@ -330,10 +500,10 @@ var cmdServiceRun = &cobra.Command{
 		}
 
 		ctx := context.Background()
-		opts := cmdservicerun.Opts{}
+		opts := cmdrun.Opts{}
 		opts.Logger = logger
 		opts.PinpointRoot = pinpointRoot
-		err = cmdservicerun.Run(ctx, opts)
+		err = cmdrun.Run(ctx, opts, nil)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
@@ -341,7 +511,7 @@ var cmdServiceRun = &cobra.Command{
 }
 
 func init() {
-	cmd := cmdServiceRun
+	cmd := cmdRun
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
 	cmdRoot.AddCommand(cmd)

@@ -12,7 +12,7 @@ func MainFunc(construct func(logger hclog.Logger) rpcdef.Integration) {
 
 	logger := hclog.New(&hclog.LoggerOptions{
 		Level:      hclog.Debug,
-		Output:     os.Stderr,
+		Output:     os.Stdout,
 		JSONFormat: true,
 	})
 	impl := construct(logger)

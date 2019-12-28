@@ -1,4 +1,4 @@
-// Package exporter for scheduling and executing exports as part of service-run
+// Package exporter for scheduling and executing exports as part of run command
 package exporter
 
 import (

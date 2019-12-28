@@ -279,11 +279,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:71ec2cca7c956e5ece209c169b64faa2e9fcd70d06fbe0884423390331c3b7d3"
+  digest = "1:3c00e65f6338649c86854cbf371bb1c30270bcce47deb246ae07a84c9e855bbb"
   name = "github.com/kardianos/service"
   packages = ["."]
   pruneopts = "T"
-  revision = "fffe6c52ed0fd8653543bbe72432dbf6ea02f300"
+  revision = "3c356ae54c8afa8b1010fc2d10eab6c22591c7c6"
 
 [[projects]]
   digest = "1:1610b1dc428b776a63bf5b93cfb1319a830df8357a9c4687768c2cf1bd1f25b4"
@@ -459,7 +459,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:e94032b9caf7e9fb6c59280188df1058e9c66b6c15a90f4f5eb149daf5270904"
+  digest = "1:9b8ad6825390c31dea99144052abc9eb02380580d1770748128b050e1e528b66"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -471,8 +471,8 @@
     "work",
   ]
   pruneopts = "T"
-  revision = "a627a7795ecd507b93c0fdf2205c29f96c8ecc15"
-  version = "v0.0.673"
+  revision = "7a526ef98e63fc54c4330d565fd7e8165cdfb607"
+  version = "v0.0.670"
 
 [[projects]]
   branch = "master"

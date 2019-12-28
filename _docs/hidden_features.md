@@ -2,7 +2,7 @@
 
 #### Running additional integrations in export
 
-You can add an extra configration line to config after running enroll. They will be run when export is requested in service-run. See example below.
+You can add an extra configration line to config after running enroll. They will be run when export is requested in run command. See example below.
 
 ```
 {

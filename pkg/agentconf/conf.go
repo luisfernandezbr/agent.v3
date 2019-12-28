@@ -20,7 +20,7 @@ type Config struct {
 	PPEncryptionKey string `json:"pp_encryption_key"`
 	IntegrationsDir string `json:"integrations-dir"`
 
-	// ExtraIntegrations defines additional integrations that will run on every export trigger in service-run. This is needed to run a custom integration for one of our customers. You need to add these custom integrations to config manually after enroll.
+	// ExtraIntegrations defines additional integrations that will run on every export trigger in run command. This is needed to run a custom integration for one of our customers. You need to add these custom integrations to config manually after enroll.
 	ExtraIntegrations []struct {
 		Name   string                 `json:"name"`
 		Config map[string]interface{} `json:"config"`
