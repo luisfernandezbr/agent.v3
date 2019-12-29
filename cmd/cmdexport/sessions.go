@@ -56,7 +56,7 @@ func newSessions(logger hclog.Logger, export *export, reprocessHistorical bool, 
 		newWriterPrev := newWriter
 		newWriter = func(modelName string, id expsessions.ID) expsessions.Writer {
 			wr := newWriterPrev(modelName, id)
-			return expsessions.NewWriterDedup(wr, s.dedupStore)
+			return expsessions.NewWriterDedup(wr, s.dedupStore, modelName)
 		}
 	}
 

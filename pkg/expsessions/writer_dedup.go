@@ -8,26 +8,28 @@ import (
 	"os"
 	"sync"
 
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/fs"
 )
 
 type WriterDedup struct {
-	wr Writer
-	ds DedupStore
+	wr        Writer
+	ds        DedupStore
+	modelName string
 }
 
-func NewWriterDedup(wr Writer, ds DedupStore) *WriterDedup {
+func NewWriterDedup(wr Writer, ds DedupStore, modelName string) *WriterDedup {
 	s := &WriterDedup{}
 	s.wr = wr
 	s.ds = ds
+	s.modelName = modelName
 	return s
 }
 
 func (s *WriterDedup) Write(logger hclog.Logger, objs []map[string]interface{}) error {
 	var filtered []map[string]interface{}
 	for _, obj := range objs {
-		wasAlreadySent, err := s.ds.MarkAsSent(obj)
+		wasAlreadySent, err := s.ds.MarkAsSent(obj, s.modelName)
 		if err != nil {
 			return err
 		}
@@ -49,7 +51,7 @@ type DedupStore interface {
 	// MarkAsSent marks the object as sent, if it wasn't already.
 	// And returns the bool if it was already sent before.
 	// Safe for concurrent use.
-	MarkAsSent(obj map[string]interface{}) (wasAlreadySent bool, _ error)
+	MarkAsSent(obj map[string]interface{}, modelName string) (wasAlreadySent bool, _ error)
 
 	Save() error
 
@@ -60,8 +62,8 @@ type dedupStore struct {
 	loc string
 
 	mu sync.Mutex
-	// map[ref_type][id][data_hashcode]
-	data map[string]map[string]string
+	// map[ref_type][model_name][id][data_hashcode]
+	data map[string]map[string]map[string]string
 
 	dups int
 	new  int
@@ -71,7 +73,7 @@ func NewDedupStore(loc string) (DedupStore, error) {
 
 	s := &dedupStore{}
 	s.loc = loc
-	s.data = map[string]map[string]string{}
+	s.data = map[string]map[string]map[string]string{}
 
 	b, err := ioutil.ReadFile(loc)
 	if err != nil {
@@ -84,7 +86,7 @@ func NewDedupStore(loc string) (DedupStore, error) {
 	return s, json.Unmarshal(b, &s.data)
 }
 
-func (s *dedupStore) MarkAsSent(obj map[string]interface{}) (wasAlreadySent bool, rerr error) {
+func (s *dedupStore) MarkAsSent(obj map[string]interface{}, modelName string) (wasAlreadySent bool, rerr error) {
 
 	refType, ok := obj["ref_type"].(string)
 	if !ok || refType == "" {
@@ -103,11 +105,15 @@ func (s *dedupStore) MarkAsSent(obj map[string]interface{}) (wasAlreadySent bool
 	}
 	s.mu.Lock()
 	if _, ok := s.data[refType]; !ok {
-		s.data[refType] = map[string]string{}
+		s.data[refType] = map[string]map[string]string{}
 	}
-	prev := s.data[refType][id]
-	s.data[refType][id] = hashcode
+	if _, ok := s.data[refType][modelName]; !ok {
+		s.data[refType][modelName] = map[string]string{}
+	}
+	prev := s.data[refType][modelName][id]
+	s.data[refType][modelName][id] = hashcode
 	dup := prev == hashcode
+
 	if dup {
 		s.dups++
 	} else {
@@ -126,6 +132,5 @@ func (s *dedupStore) Save() error {
 	if err != nil {
 		return err
 	}
-
 	return fs.WriteToTempAndRename(bytes.NewReader(b), s.loc)
 }
