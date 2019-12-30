@@ -56,6 +56,7 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 			AssigneeRefID: fields.AssignedTo.ID,
 			CreatorRefID:  fields.CreatedBy.ID,
 			CustomerID:    api.customerid,
+			Description:   fields.Description,
 			Identifier:    fmt.Sprintf("%s-%d", fields.TeamProject, each.ID),
 			Priority:      fmt.Sprintf("%d", fields.Priority),
 			ProjectID:     api.IDs.WorkProject(projid),

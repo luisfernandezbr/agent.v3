@@ -77,6 +77,7 @@ type WorkItemResponse struct {
 		AssignedTo     usersResponse `json:"System.AssignedTo"`
 		CreatedDate    time.Time     `json:"System.CreatedDate"`
 		CreatedBy      usersResponse `json:"System.CreatedBy"`
+		Description    string        `json:"System.Description"`
 		DueDate        time.Time     `json:"Microsoft.VSTS.Scheduling.DueDate"` // ??
 		TeamProject    string        `json:"System.TeamProject"`
 		Priority       int           `json:"Microsoft.VSTS.Common.Priority"`
