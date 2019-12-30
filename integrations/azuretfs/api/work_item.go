@@ -81,13 +81,19 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 				}
 			}
 		}
-
-		if issue.ChangeLog, err = api.fetchChangeLog(fields.WorkItemType, projid, issue.RefID); err != nil {
+		var updatedDate time.Time
+		if issue.ChangeLog, updatedDate, err = api.fetchChangeLog(fields.WorkItemType, projid, issue.RefID); err != nil {
 			return nil, nil, err
 		}
+		// this should only happen if the changelog is empty, which should never happen anyway,
+		// but just in case...
+		if updatedDate.IsZero() {
+			updatedDate = fields.ChangedDate
+		}
+
 		date.ConvertToModel(fields.CreatedDate, &issue.CreatedDate)
 		date.ConvertToModel(fields.DueDate, &issue.DueDate)
-		date.ConvertToModel(fields.ChangedDate, &issue.UpdatedDate)
+		date.ConvertToModel(updatedDate, &issue.UpdatedDate)
 
 		res2 = append(res2, &issue)
 	}
