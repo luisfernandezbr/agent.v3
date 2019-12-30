@@ -83,7 +83,7 @@ func New(pinpointRoot string) Locs {
 	s.LastProcessedFile = j(s.State, "last_processed.json")
 	s.LastProcessedFileBackup = j(s.Backup, "last_processed.json")
 	s.ExportQueueFile = j(s.State, "export_queue.json")
-	s.DedupFile = j(s.State, "dedup.json")
+	s.DedupFile = j(s.State, "dedup_v2.json")
 
 	return s
 }
