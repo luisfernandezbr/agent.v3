@@ -124,7 +124,6 @@ func (s *runner) runService(ctx context.Context) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = stderr
 	runErr := cmd.Run()
-
 	err = errFile.Sync()
 	if err != nil {
 		return fmt.Errorf("could not sync file for err output: %v", err)
@@ -142,7 +141,7 @@ func (s *runner) runService(ctx context.Context) error {
 		// only keep files with actual crashes
 		err := os.Remove(errFileLoc)
 		if err != nil {
-			s.logger.Error("could not remove empty file for err output", "err", err)
+			return fmt.Errorf("could not remove empty file for err output: %v", err)
 		}
 	} else {
 		// if there was a crash create a metadata file
@@ -168,6 +167,7 @@ func fileSize(loc string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer f.Close()
 	fi, err := f.Stat()
 	if err != nil {
 		return 0, err
