@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/date"
+	pnumbers "github.com/pinpt/go-common/number"
 	"github.com/pinpt/integration-sdk/work"
 )
 
@@ -64,6 +65,7 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 			ReporterRefID: fields.CreatedBy.ID,
 			Resolution:    fields.ResolvedReason,
 			Status:        fields.State,
+			StoryPoints:   pnumbers.Float64Pointer(fields.StoryPoints),
 			Tags:          strings.Split(fields.Tags, "; "),
 			Title:         fields.Title,
 			Type:          fields.WorkItemType,
