@@ -110,8 +110,6 @@ func IssuesAndChangelogsPage(
 		return
 	}
 
-	var imgRegexp = regexp.MustCompile(`(?s)<span class="image-wrap"[^\>]*>(.*?src\=(?:\"|\')(.+?)(?:\"|\').*?)<\/span>`)
-
 	type Fields struct {
 		Summary  string `json:"summary"`
 		DueDate  string `json:"duedate"`
@@ -159,6 +157,8 @@ func IssuesAndChangelogsPage(
 	//
 	// Using current timestamp here instead of int, so the number is also an increasing one when running incrementals compared to previous values in the historical.
 	ordinal := datetime.EpochNow()
+
+	var imgRegexp = regexp.MustCompile(`(?s)<span class="image-wrap"[^\>]*>(.*?src\=(?:\"|\')(.+?)(?:\"|\').*?)<\/span>`)
 
 	for i, data := range rr.Issues {
 
