@@ -82,6 +82,7 @@ type WorkItemResponse struct {
 		Priority       int           `json:"Microsoft.VSTS.Common.Priority"`
 		ResolvedReason string        `json:"Microsoft.VSTS.Common.ResolvedReason"`
 		ResolvedDate   time.Time     `json:"Microsoft.VSTS.Common.ResolvedDate"`
+		StoryPoints    float64       `json:"Microsoft.VSTS.Scheduling.StoryPoints"`
 		State          string        `json:"System.BoardColumn"` //`json:"System.State"`
 		Tags           string        `json:"System.Tags"`
 		Title          string        `json:"System.Title"`
