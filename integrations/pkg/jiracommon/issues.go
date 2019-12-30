@@ -131,6 +131,15 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 
 	s.opts.Logger.Info("processing issues and changelogs for project", "project", project.Key)
 
+	// find the custom_id field id for Story Points
+	var storyPointCustomFieldID *string
+	for key, val := range fieldByID {
+		if val.Name == "Story Points" {
+			storyPointCustomFieldID = &key
+			break
+		}
+	}
+
 	err := jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
 		pi, resIssues, err := jiracommonapi.IssuesAndChangelogsPage(s.CommonQC(), project, fieldByID, senderIssues.LastProcessedTime(), paginationParams)
 		if err != nil {
@@ -139,18 +148,31 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 		}
 		for _, issue := range resIssues {
 			for _, f := range issue.CustomFields {
-
 				if f.Name == "Sprint" {
 					if f.Value == "" {
 						continue
 					}
 					err := sprints.processIssueSprint(issue.RefID, f.Value)
 					if err != nil {
-						s.opts.Logger.Error("could not process Sprint field value", "v", f.Value, "err", err)
+						s.opts.Logger.Error("could not process Sprint field value", "v", f.Value, "err", err, "key", issue.Identifier)
 					}
-					break
+					continue
 				}
-
+				// check and see if this custom field is a story point custom field and if so, extract
+				// the current story point value.
+				if storyPointCustomFieldID != nil && f.ID == *storyPointCustomFieldID {
+					// story point value can be NULL indicating we didn't set it which is different
+					// than a 0 value
+					if f.Value != "" {
+						// story points can be expressed as fractions or whole numbers so convert it to a float
+						sp, err := strconv.ParseFloat(f.Value, 32)
+						if err != nil {
+							s.opts.Logger.Error("error parsing Story Point value", "v", f.Value, "err", err, "key", issue.Identifier)
+						} else {
+							issue.StoryPoints = &sp
+						}
+					}
+				}
 			}
 		}
 

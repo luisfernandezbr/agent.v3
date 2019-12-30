@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/pinpt/agent/pkg/ids"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/go-common/datetime"
+	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/work"
 )
 
@@ -69,7 +71,8 @@ func IssuesAndChangelogsPage(
 	jql += " ORDER BY created ASC"
 
 	params.Set("jql", jql)
-	params.Add("expand", "changelog")
+	// we need both fields and renderedFields so that we can get the unprocessed (fields) and processed (html for renderedFields)
+	params.Add("expand", "changelog,fields,renderedFields")
 
 	qc.Logger.Debug("issues request", "project", project.Key, "params", params)
 
@@ -77,9 +80,12 @@ func IssuesAndChangelogsPage(
 		Total      int `json:"total"`
 		MaxResults int `json:"maxResults"`
 		Issues     []struct {
-			ID        string                 `json:"id"`
-			Key       string                 `json:"key"`
-			Fields    map[string]interface{} `json:"fields"`
+			ID             string                 `json:"id"`
+			Key            string                 `json:"key"`
+			Fields         map[string]interface{} `json:"fields"`
+			RenderedFields struct {
+				Description string `json:"description"`
+			} `json:"renderedFields"`
 			Changelog struct {
 				Histories []struct {
 					ID      string `json:"id"`
@@ -103,6 +109,8 @@ func IssuesAndChangelogsPage(
 		rerr = err
 		return
 	}
+
+	var imgRegexp = regexp.MustCompile(`(?s)<span class="image-wrap"[^\>]*>(.*?src\=(?:\"|\')(.+?)(?:\"|\').*?)<\/span>`)
 
 	type Fields struct {
 		Summary  string `json:"summary"`
@@ -175,6 +183,28 @@ func IssuesAndChangelogsPage(
 		}
 
 		item.Title = fields.Summary
+		if data.RenderedFields.Description != "" {
+			// we need to pull out the HTML and parse it so we can properly display it in the application. the HTML will
+			// have a bunch of stuff we need to cleanup for rendering in our application such as relative urls, etc. we
+			// clean this up here and fix any urls and weird html issues
+			item.Description = data.RenderedFields.Description
+			for _, m := range imgRegexp.FindAllStringSubmatch(item.Description, -1) {
+				url := m[2] // this is the image group
+				// if a relative url but not a // meaning protocol to the page, then make an absolute url to the server
+				if strings.HasPrefix(url, "/") && !strings.HasPrefix(url, "//") {
+					// replace the relative url with an absolute url. the app will handle the case where the app
+					// image is unreachable because the server is behind a corporate firewall and the user isn't on
+					// the network when viewing it
+					url = pstrings.JoinURL(qc.WebsiteURL, url)
+				}
+				// replace the <span> wrapped thumbnail junk with just a simple image tag
+				newval := strings.Replace(m[0], m[1], `<img src="`+url+`" />`, 1)
+				item.Description = strings.ReplaceAll(item.Description, m[0], newval)
+			}
+			// we apply a special tag here to allow the front-end to handle integration specific data for the integration in
+			// case we need to do integration specific image handling
+			item.Description = `<div class="source-jira">` + strings.TrimSpace(item.Description) + `</div>`
+		}
 
 		created, err := ParseTime(fields.Created)
 		if err != nil {
