@@ -141,7 +141,7 @@ func (s *runner) runService(ctx context.Context) error {
 		// only keep files with actual crashes
 		err := os.Remove(errFileLoc)
 		if err != nil {
-			return fmt.Errorf("could not remove empty file for err output: %v", err)
+			s.logger.Error("could not remove empty file for err output", "err", err)
 		}
 	} else {
 		// if there was a crash create a metadata file
