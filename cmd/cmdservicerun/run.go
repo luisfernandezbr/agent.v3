@@ -124,7 +124,6 @@ func (s *runner) runService(ctx context.Context) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = stderr
 	runErr := cmd.Run()
-
 	err = errFile.Sync()
 	if err != nil {
 		return fmt.Errorf("could not sync file for err output: %v", err)
@@ -168,6 +167,7 @@ func fileSize(loc string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer f.Close()
 	fi, err := f.Stat()
 	if err != nil {
 		return 0, err

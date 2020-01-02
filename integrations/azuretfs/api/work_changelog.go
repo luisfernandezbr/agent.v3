@@ -7,18 +7,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/go-common/datetime"
+
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/integration-sdk/work"
 )
 
-func (api *API) fetchChangeLog(itemtype, projid, issueid string) (changelogs []work.IssueChangeLog, err error) {
+func (api *API) fetchChangeLog(itemtype, projid, issueid string) (changelogs []work.IssueChangeLog, latestChange time.Time, err error) {
 	var res []changelogResponse
 	url := fmt.Sprintf(`%s/_apis/wit/workItems/%s/updates`, projid, issueid)
 	if err := api.getRequest(url, stringmap{"$top": "200"}, &res); err != nil {
-		return nil, err
+		return nil, time.Time{}, err
 	}
-
+	if len(res) == 0 {
+		return
+	}
 	previousState := ""
 	for i, changelog := range res {
 		if changelog.Fields == nil {
@@ -74,6 +78,8 @@ func (api *API) fetchChangeLog(itemtype, projid, issueid string) (changelogs []w
 		return changelogs[i].CreatedDate.Epoch < changelogs[j].CreatedDate.Epoch
 	})
 
+	last := changelogs[len(changelogs)-1]
+	latestChange = datetime.DateFromEpoch(last.CreatedDate.Epoch)
 	return
 }
 
