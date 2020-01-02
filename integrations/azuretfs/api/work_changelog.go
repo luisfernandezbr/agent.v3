@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/go-common/datetime"
+
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/integration-sdk/work"
@@ -75,8 +77,9 @@ func (api *API) fetchChangeLog(itemtype, projid, issueid string) (changelogs []w
 	sort.Slice(changelogs, func(i int, j int) bool {
 		return changelogs[i].CreatedDate.Epoch < changelogs[j].CreatedDate.Epoch
 	})
+
 	last := changelogs[len(changelogs)-1]
-	latestChange, err = time.Parse(time.RFC3339, fmt.Sprint(last.CreatedDate.Epoch))
+	latestChange = datetime.DateFromEpoch(last.CreatedDate.Epoch)
 	return
 }
 
