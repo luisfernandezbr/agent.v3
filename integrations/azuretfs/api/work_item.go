@@ -71,6 +71,7 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 			Title:         fields.Title,
 			Type:          fields.WorkItemType,
 			URL:           each.URL,
+			SprintIds:     []string{api.IDs.WorkSprintID(fields.IterationPath)},
 		}
 		for _, rel := range each.Relations {
 			if rel.Rel == "ArtifactLink" {
