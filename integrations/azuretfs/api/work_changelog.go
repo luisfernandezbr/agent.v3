@@ -77,9 +77,10 @@ func (api *API) fetchChangeLog(itemtype, projid, issueid string) (changelogs []w
 	sort.Slice(changelogs, func(i int, j int) bool {
 		return changelogs[i].CreatedDate.Epoch < changelogs[j].CreatedDate.Epoch
 	})
-
-	last := changelogs[len(changelogs)-1]
-	latestChange = datetime.DateFromEpoch(last.CreatedDate.Epoch)
+	if len(changelogs) > 0 {
+		last := changelogs[len(changelogs)-1]
+		latestChange = datetime.DateFromEpoch(last.CreatedDate.Epoch)
+	}
 	return
 }
 
