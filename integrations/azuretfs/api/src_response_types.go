@@ -139,7 +139,7 @@ type CommitResponse struct {
 }
 
 // used in src_pull_request_comments.go - fetchPullRequestComments
-type commentsReponse struct {
+type threadsReponse struct {
 	Comments []struct {
 		Author                 usersResponse `json:"author"`
 		CommentType            string        `json:"commentType"`

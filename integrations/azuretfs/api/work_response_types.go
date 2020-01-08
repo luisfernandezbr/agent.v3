@@ -73,6 +73,12 @@ type workItemsResponse struct {
 
 // used in work_item.go - FetchWorkItems
 type WorkItemResponse struct {
+	Links struct {
+		HTML struct {
+			HREF string `json:"href"`
+		} `json:"html"`
+		// there are more here, fields, self, workItemComments, workItemRevisions, workItemType, and workItemUpdates
+	} `json:"_links"`
 	Fields struct {
 		AssignedTo     usersResponse `json:"System.AssignedTo"`
 		ChangedDate    time.Time     `json:"System.ChangedDate"`

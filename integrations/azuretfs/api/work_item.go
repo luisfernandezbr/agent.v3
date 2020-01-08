@@ -47,7 +47,7 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 	url := fmt.Sprintf(`%s/_apis/wit/workitems?ids=%s`, projid, strings.Join(ids, ","))
 	var err error
 	var res []WorkItemResponse
-	if err = api.getRequest(url, stringmap{"pagingoff": "true", "$expand": "relations"}, &res); err != nil {
+	if err = api.getRequest(url, stringmap{"pagingoff": "true", "$expand": "all"}, &res); err != nil {
 		return nil, nil, err
 	}
 	var res2 []*work.Issue
@@ -70,7 +70,7 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 			Tags:          strings.Split(fields.Tags, "; "),
 			Title:         fields.Title,
 			Type:          fields.WorkItemType,
-			URL:           each.URL,
+			URL:           each.Links.HTML.HREF,
 			SprintIds:     []string{api.IDs.WorkSprintID(fields.IterationPath)},
 		}
 		for _, rel := range each.Relations {
