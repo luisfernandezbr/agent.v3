@@ -42,6 +42,8 @@ func relativeDuration(d time.Duration) string {
 	return fmt.Sprintf("-%dm", m)
 }
 
+var sprintRegexp = regexp.MustCompile(`(.+?sprint\.Sprint@.+?\[id=)(\d+)(,.+?state=ACTIVE.*)`)
+
 // IssuesAndChangelogsPage returns issues and related changelogs. Calls qc.ExportUser for each user. Current difference from jira-cloud version is that user.Key is used instead of user.AccountID everywhere.
 func IssuesAndChangelogsPage(
 	qc QueryContext,
@@ -136,8 +138,6 @@ func IssuesAndChangelogsPage(
 	}
 
 	var issuesTypedFields []Fields
-	// `(.+?sprint\.Sprint@.+?\[id=)(\d+)(,.+?state=ACTIVE.*)`
-	var sprintRegexp = regexp.MustCompile(`(.+?sprint\.Sprint@.+?\[id=)(\d+)(,.*)`)
 
 	for _, issue := range rr.Issues {
 		var f2 Fields
