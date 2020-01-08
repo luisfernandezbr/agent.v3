@@ -81,10 +81,12 @@ type WorkItemResponse struct {
 	} `json:"_links"`
 	Fields struct {
 		AssignedTo     usersResponse `json:"System.AssignedTo"`
+		ChangedDate    time.Time     `json:"System.ChangedDate"`
 		CreatedDate    time.Time     `json:"System.CreatedDate"`
 		CreatedBy      usersResponse `json:"System.CreatedBy"`
 		Description    string        `json:"System.Description"`
 		DueDate        time.Time     `json:"Microsoft.VSTS.Scheduling.DueDate"` // ??
+		IterationPath  string        `json:"System.IterationPath"`
 		TeamProject    string        `json:"System.TeamProject"`
 		Priority       int           `json:"Microsoft.VSTS.Common.Priority"`
 		ResolvedReason string        `json:"Microsoft.VSTS.Common.ResolvedReason"`
@@ -94,7 +96,6 @@ type WorkItemResponse struct {
 		Tags           string        `json:"System.Tags"`
 		Title          string        `json:"System.Title"`
 		WorkItemType   string        `json:"System.WorkItemType"`
-		ChangedDate    time.Time     `json:"System.ChangedDate"`
 	} `json:"fields"`
 	Relations []struct {
 		Rel string `json:"rel"`

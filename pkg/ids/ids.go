@@ -42,6 +42,10 @@ func WorkProject(customerID string, refType string, refID string) string {
 	return work.NewProjectID(customerID, refType, refID)
 }
 
+func WorkSprint(customerID string, refType string, refID string) string {
+	return work.NewSprintID(customerID, refID, refType)
+}
+
 func WorkIssue(customerID string, refType string, refID string) string {
 	return work.NewIssueID(customerID, refType, refID)
 }

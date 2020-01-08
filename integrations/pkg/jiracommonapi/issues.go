@@ -42,6 +42,8 @@ func relativeDuration(d time.Duration) string {
 	return fmt.Sprintf("-%dm", m)
 }
 
+var sprintRegexp = regexp.MustCompile(`(.+?sprint\.Sprint@.+?\[id=)(\d+)(,.+?state=ACTIVE.*)`)
+
 // IssuesAndChangelogsPage returns issues and related changelogs. Calls qc.ExportUser for each user. Current difference from jira-cloud version is that user.Key is used instead of user.AccountID everywhere.
 func IssuesAndChangelogsPage(
 	qc QueryContext,
@@ -131,6 +133,8 @@ func IssuesAndChangelogsPage(
 		Reporter User
 		Assignee User
 		Labels   []string `json:"labels"`
+
+		SprintIDs []string
 	}
 
 	var issuesTypedFields []Fields
@@ -142,6 +146,20 @@ func IssuesAndChangelogsPage(
 			rerr = err
 			return
 		}
+
+		for k, v := range issue.Fields {
+			if strings.HasPrefix(k, "customfield_") && v != nil {
+				if arr, ok := v.([]interface{}); ok {
+					for _, each := range arr {
+						if sprints := sprintRegexp.FindAllStringSubmatch(fmt.Sprint(each), -1); len(sprints) > 0 {
+							id := sprints[0][2]
+							f2.SprintIDs = append(f2.SprintIDs, qc.SprintID(id))
+						}
+					}
+				}
+			}
+		}
+
 		issuesTypedFields = append(issuesTypedFields, f2)
 	}
 
@@ -171,7 +189,7 @@ func IssuesAndChangelogsPage(
 		item.RefType = "jira"
 		item.Identifier = data.Key
 		item.ProjectID = qc.ProjectID(project.JiraID)
-
+		item.SprintIds = fields.SprintIDs
 		if fields.DueDate != "" {
 			orig := fields.DueDate
 			d, err := time.ParseInLocation("2006-01-02", orig, time.UTC)

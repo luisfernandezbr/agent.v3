@@ -35,6 +35,9 @@ func (s QueryContext) IssueURL(issueKey string) string {
 func (s QueryContext) ProjectID(refID string) string {
 	return ids.WorkProject(s.CustomerID, "jira", refID)
 }
+func (s QueryContext) SprintID(refID string) string {
+	return ids.WorkSprint(s.CustomerID, "jira", refID)
+}
 
 func (s QueryContext) IssueID(refID string) string {
 	return ids.WorkIssue(s.CustomerID, "jira", refID)
