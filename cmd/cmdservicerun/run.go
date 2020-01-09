@@ -15,7 +15,6 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/agent/pkg/pservice"
@@ -53,11 +52,6 @@ func newRunner(opts Opts) (*runner, error) {
 	s.opts = opts
 	s.logger = opts.Logger
 	s.fsconf = fsconf.New(opts.PinpointRoot)
-	conf, err := agentconf.Load(s.fsconf.Config2)
-	if err != nil {
-		return nil, err
-	}
-	s.opts.IntegrationsDir = conf.IntegrationsDir
 	return s, nil
 }
 
