@@ -146,12 +146,15 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	s.qc.Logger = s.logger
 	s.qc.RefType = s.refType
 	s.customerID = config.Pinpoint.CustomerID
-	oauth, err = oauthtoken.New(s.logger, s.agent)
-	if err != nil {
-		return err
-	}
 
-	s.oauth = oauth
+	if s.UseOAuth {
+		oauth, err = oauthtoken.New(s.logger, s.agent)
+		if err != nil {
+			return err
+		}
+
+		s.oauth = oauth
+	}
 
 	{
 		opts := api.RequesterOpts{}
@@ -183,6 +186,7 @@ func (s *Integration) setConfig(config rpcdef.ExportConfig) error {
 	if def.URL == "" {
 		return rerr("url is missing")
 	}
+	s.logger.Info("JCOC", "oauth", config.UseOAuth)
 	if !config.UseOAuth {
 		if def.Username == "" {
 			return rerr("username is missing")
