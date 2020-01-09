@@ -125,7 +125,7 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 
 	if resp.StatusCode != http.StatusOK {
 
-		if resp.StatusCode == http.StatusUnauthorized {
+		if resp.StatusCode == http.StatusUnauthorized && e.opts.UseOAuth {
 			if rerr = e.opts.OAuth.Refresh(); rerr != nil {
 				return false, pi, rerr
 			}
