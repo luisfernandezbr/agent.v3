@@ -25,8 +25,7 @@ import (
 )
 
 type Opts struct {
-	Logger hclog.Logger
-
+	Logger       hclog.Logger
 	AgentConfig  AgentConfig
 	Integrations []Integration
 }

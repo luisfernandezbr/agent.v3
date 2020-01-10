@@ -29,6 +29,14 @@ message IntegrationAgentConfig {
 }
 
 message IntegrationExportResp {
+    repeated IntegrationExportRespProject projects = 3;
+}
+
+message IntegrationExportRespProject {
+    string id = 1;
+    string ref_id = 2;
+    string readable_id = 3;
+    string error = 4;
 }
 
 message IntegrationValidateConfigReq {
@@ -64,6 +72,7 @@ message IntegrationOnboardExportResp {
 service Agent {
     rpc ExportStarted(ExportStartedReq) returns (ExportStartedResp);
 
+    // rename to SessionCommit
     rpc ExportDone(ExportDoneReq) returns (Empty);
 
     rpc SendExported(SendExportedReq) returns (Empty);
@@ -73,6 +82,8 @@ service Agent {
     rpc SessionStart(SessionStartReq) returns (SessionStartResp);
 
     rpc SessionProgress(SessionProgressReq) returns (Empty);
+
+    rpc SessionRollback(SessionRollbackReq) returns (Empty);
 
     rpc OAuthNewAccessToken(Empty) returns (OAuthNewAccessTokenResp);
 
@@ -96,7 +107,7 @@ message ExportStartedResp {
 
 message ExportDoneReq {
     string session_id = 1;
-    LastProcessed last_processed = 2;
+    LastProcessed last_processed = 2;    
 }
 
 message SendExportedReq {
@@ -147,6 +158,10 @@ message SessionProgressReq {
     int64 id = 1;    
     int64 current = 2;
     int64 total = 3;
+}
+
+message SessionRollbackReq {
+    int64 id = 1;
 }
 
 message OAuthNewAccessTokenResp {

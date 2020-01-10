@@ -189,11 +189,6 @@ func (s *Session) Done() error {
 	return nil
 }
 
-func (s *Session) DoneWithoutUpdatingLastProcessed() error {
-	err := s.batch.Flush()
-	if err != nil {
-		return err
-	}
-	s.agent.ExportDone(strconv.Itoa(s.sessionID), s.lastProcessed)
-	return nil
+func (s *Session) Rollback() error {
+	return s.agent.SessionRollback(s.sessionID)
 }

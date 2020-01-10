@@ -5,10 +5,53 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/exportrepo"
+	"github.com/pinpt/agent/pkg/expsessions"
 	"github.com/pinpt/agent/pkg/gitclone"
 	"github.com/pinpt/agent/pkg/integrationid"
 )
+
+func (s *export) gitSession(logger hclog.Logger, integrationID integrationid.ID) (_ expsessions.ID, rerr error) {
+	if s.gitSessions == nil {
+		s.gitSessions = map[integrationid.ID]expsessions.ID{}
+	}
+
+	if sessID, ok := s.gitSessions[integrationID]; ok {
+		return sessID, nil
+	}
+
+	sessID, _, err := s.sessions.expsession.SessionRootTracking(integrationID, "git")
+	if err != nil {
+		logger.Error("could not create session for git export", "integration", integrationID.String(), "err", err.Error())
+		rerr = err
+		return
+	}
+
+	s.gitSessions[integrationID] = sessID
+	return sessID, nil
+}
+
+func (s *export) gitSessionsClose(logger hclog.Logger) error {
+	for inID, sessID := range s.gitSessions {
+		err := s.sessions.expsession.Done(sessID, nil)
+		if err != nil {
+			logger.Error("could not close session for git export", "integration", inID.String(), "err", err.Error())
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *export) gitSetResult(inID integrationid.ID, repoID string, err error) {
+	if s.gitResults == nil {
+		s.gitResults = map[integrationid.ID]map[string]error{}
+	}
+	if _, ok := s.gitResults[inID]; !ok {
+		s.gitResults[inID] = map[string]error{}
+	}
+	s.gitResults[inID][repoID] = err
+}
 
 func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 	logger := s.Logger.Named("git")
@@ -27,14 +70,6 @@ func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 	var start time.Time
 
 	ctx := context.Background()
-	sessionRoot, _, err := s.sessions.expsession.SessionRootTracking(integrationid.ID{
-		Name: "git",
-	}, "git")
-	if err != nil {
-		logger.Error("could not create session for git export", "err", err.Error())
-		fatalError = err
-		return
-	}
 
 	resErrors := map[string]error{}
 	var ripsrcDuration time.Duration
@@ -46,6 +81,12 @@ func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 		i++
 		access := gitclone.AccessDetails{}
 		access.URL = fetch.URL
+
+		sessionID, err := s.gitSession(logger, fetch.integrationID)
+		if err != nil {
+			fatalError = err
+			return
+		}
 
 		opts := exportrepo.Opts{
 			Logger:     s.Logger.With("c", i),
@@ -61,7 +102,7 @@ func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 			BranchURLTemplate: fetch.BranchURLTemplate,
 
 			Sessions:      s.sessions.expsession,
-			SessionRootID: sessionRoot,
+			SessionRootID: sessionID,
 
 			CommitUsers: s.sessions.commitUsers,
 		}
@@ -81,8 +122,9 @@ func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 			return
 		}
 		repoDirName := runResult.RepoNameUsedInCacheDir
-		err := runResult.OtherErr
-		s.sessions.expsession.Progress(sessionRoot, i, 0)
+		err = runResult.OtherErr
+		s.gitSetResult(fetch.integrationID, fetch.RepoID, err)
+		s.sessions.expsession.Progress(sessionID, i, 0)
 		if err == exportrepo.ErrRevParseFailed {
 			reposFailedRevParse++
 			continue
@@ -122,9 +164,8 @@ func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 		return
 	}
 
-	err = s.sessions.expsession.Done(sessionRoot, nil)
+	err := s.gitSessionsClose(logger)
 	if err != nil {
-		logger.Error("could not close session for git export", "err", err.Error())
 		fatalError = err
 		return
 	}

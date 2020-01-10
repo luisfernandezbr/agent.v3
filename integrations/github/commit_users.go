@@ -2,50 +2,25 @@ package main
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/commitusers"
 
 	"github.com/pinpt/agent/integrations/github/api"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 )
 
-func (s *Integration) exportCommitUsers(logger hclog.Logger, repoSender *objsender.Session, repos []api.Repo, concurrency int) (rerr error) {
-
-	wg := sync.WaitGroup{}
-
-	var errMu sync.Mutex
-	setErr := func(err error) {
-		errMu.Lock()
-		defer errMu.Unlock()
-		rerr = err
+func (s *Integration) exportCommitUsersForRepo(ctx *repoprojects.ProjectCtx, repo Repo) error {
+	logger := ctx.Logger
+	usersSender, err := ctx.Session(commitusers.TableName)
+	if err != nil {
+		return err
 	}
-	for i := 0; i < concurrency; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for repo := range reposToChan(repos, 0) {
-				usersSender, err := repoSender.Session(commitusers.TableName, repo.ID, repo.NameWithOwner)
-				if err != nil {
-					setErr(err)
-					return
-				}
-				err = s.exportCommitsForRepoDefaultBranch(logger, usersSender, repo)
-				if err != nil {
-					setErr(err)
-					return
-				}
-				err = usersSender.Done()
-				if err != nil {
-					setErr(err)
-					return
-				}
-			}
-		}()
+	err = s.exportCommitsForRepoDefaultBranch(logger, usersSender, repo.Repo)
+	if err != nil {
+		return err
 	}
-	wg.Wait()
-
 	return nil
 }
 

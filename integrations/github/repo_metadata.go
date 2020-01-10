@@ -1,16 +1,25 @@
 package main
 
 import (
-	"context"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-
 	"github.com/pinpt/agent/integrations/github/api"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 )
 
-func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender.Session, org api.Org, onlyInclude []api.Repo) error {
+func (s *Integration) exportRepoMetadata(sender *objsender.Session, orgs []api.Org, onlyInclude []Repo) error {
+	for _, org := range orgs {
+		logger := s.logger.With("org", org.Login)
+		err := s.exportRepoMetadataOrg(logger, sender, org, onlyInclude)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Integration) exportRepoMetadataOrg(logger hclog.Logger, sender *objsender.Session, org api.Org, onlyInclude []Repo) error {
 
 	// map[nameWithOwner]shouldInclude
 	shouldInclude := map[string]bool{}

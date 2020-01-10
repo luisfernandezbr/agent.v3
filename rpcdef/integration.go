@@ -62,6 +62,14 @@ func (s ExportConfigPinpoint) proto() *proto.IntegrationAgentConfig {
 }
 
 type ExportResult struct {
+	Projects []ExportProject
+}
+
+type ExportProject struct {
+	ID         string `json:"id"`
+	RefID      string `json:"ref_id"`
+	ReadableID string `json:"name"`
+	Error      string `json:"error"`
 }
 
 type ValidationResult struct {
@@ -162,9 +170,17 @@ func (s *IntegrationClient) Export(
 	if err != nil {
 		return res, err
 	}
-	_, err = s.client.Export(ctx, args)
+	res0, err := s.client.Export(ctx, args)
 	if err != nil {
 		return res, err
+	}
+	for _, project0 := range res0.Projects {
+		project := ExportProject{}
+		project.ID = project0.Id
+		project.RefID = project0.RefId
+		project.ReadableID = project0.ReadableId
+		project.Error = project0.Error
+		res.Projects = append(res.Projects, project)
 	}
 	return res, nil
 }
@@ -242,9 +258,17 @@ func (s *IntegrationServer) Export(ctx context.Context, req *proto.IntegrationEx
 	if err != nil {
 		return res, err
 	}
-	_, err = s.Impl.Export(ctx, config)
+	res0, err := s.Impl.Export(ctx, config)
 	if err != nil {
 		return res, err
+	}
+	for _, project0 := range res0.Projects {
+		project := &proto.IntegrationExportRespProject{}
+		project.Id = project0.ID
+		project.RefId = project0.RefID
+		project.ReadableId = project0.ReadableID
+		project.Error = project0.Error
+		res.Projects = append(res.Projects, project)
 	}
 	return res, nil
 }

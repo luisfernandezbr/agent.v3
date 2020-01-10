@@ -5,6 +5,7 @@ import "github.com/hashicorp/go-hclog"
 
 type RepoProject interface {
 	// ID returns an internal database id. Not necessary readable.
+	// TODO: rename to RefID
 	GetID() string
 	// ReadableID returns human readable id or name. In case of repos it would be "org/repo_name" or in case of jira project "EXAM".
 	GetReadableID() string
