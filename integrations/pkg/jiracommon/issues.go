@@ -4,15 +4,27 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
-	"sync"
 
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/integrationid"
+	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/work"
 )
 
-type Project = jiracommonapi.Project
+type Project struct {
+	jiracommonapi.Project
+}
+
+func (s Project) GetID() string {
+	return s.Project.JiraID
+}
+
+func (s Project) GetReadableID() string {
+	return s.Project.Key
+}
 
 const issuesAndChangelogsProjectConcurrency = 10
 
@@ -30,64 +42,43 @@ func projectsToChan(projects []Project) chan Project {
 func (s *JiraCommon) IssuesAndChangelogs(
 	projectSender *objsender.Session,
 	projects []Project,
-	fieldByID map[string]*work.CustomField) error {
+	fieldByID map[string]*work.CustomField) (_ []rpcdef.ExportProject, rerr error) {
+
+	projectSender.SetNoAutoProgress(true)
+	projectSender.SetTotal(len(projects))
 
 	sprints := NewSprints()
 
-	projectsChan := projectsToChan(projects)
-	wg := sync.WaitGroup{}
-	var pErr error
-	var errMu sync.Mutex
-
-	rerr := func(err error) {
-		errMu.Lock()
-		pErr = err
-		errMu.Unlock()
+	processOpts := repoprojects.ProcessOpts{}
+	processOpts.Logger = s.opts.Logger
+	processOpts.ProjectFn = func(ctx *repoprojects.ProjectCtx) error {
+		project := ctx.Project.(Project)
+		return s.issuesAndChangelogsForProject(ctx, project, fieldByID, sprints)
 	}
 
-	for i := 0; i < issuesAndChangelogsProjectConcurrency; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for p := range projectsChan {
-				errMu.Lock()
-				err := pErr
-				errMu.Unlock()
-				if err != nil {
-					return
-				}
-				senderIssues, err := projectSender.Session(work.IssueModelName.String(), p.JiraID, p.Key)
-				if err != nil {
-					rerr(err)
-					return
-				}
-
-				// p is defined above
-				// fieldByID is read-only
-				// senderIssues and senderChangelogs are sender which support concurrency
-				// sprints support concurrency for processIssueSprint
-				err = s.issuesAndChangelogsForProject(p, fieldByID, senderIssues, sprints)
-				if err != nil {
-					rerr(err)
-					return
-				}
-
-				err = senderIssues.Done()
-				if err != nil {
-					rerr(err)
-					return
-				}
-			}
-		}()
+	processOpts.Concurrency = issuesAndChangelogsProjectConcurrency
+	var projectsIface []repoprojects.RepoProject
+	for _, p := range projects {
+		projectsIface = append(projectsIface, p)
 	}
-	wg.Wait()
-	if pErr != nil {
-		return pErr
+	processOpts.Projects = projectsIface
+
+	processOpts.IntegrationType = integrationid.TypeSourcecode
+	processOpts.CustomerID = s.opts.CustomerID
+	processOpts.RefType = "jira"
+	processOpts.Sender = projectSender
+
+	processor := repoprojects.NewProcess(processOpts)
+	exportResult, err := processor.Run()
+	if err != nil {
+		rerr = err
+		return
 	}
 
 	senderSprints, err := objsender.Root(s.agent, work.SprintModelName.String())
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	for _, data := range sprints.SprintsWithIssues() {
@@ -111,25 +102,39 @@ func (s *JiraCommon) IssuesAndChangelogs(
 		case "FUTURE":
 			item.Status = work.SprintStatusFuture
 		default:
-			return fmt.Errorf("invalid status for sprint: %v", data.State)
+			rerr = fmt.Errorf("invalid status for sprint: %v", data.State)
+			return
 		}
 
 		err = senderSprints.Send(item)
 		if err != nil {
-			return err
+			rerr = err
+			return
 		}
 	}
 
-	return senderSprints.Done()
+	err = senderSprints.Done()
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	return exportResult, nil
+
 }
 
 func (s *JiraCommon) issuesAndChangelogsForProject(
+	ctx *repoprojects.ProjectCtx,
 	project Project,
 	fieldByID map[string]*work.CustomField,
-	senderIssues *objsender.Session,
 	sprints *Sprints) error {
 
 	s.opts.Logger.Info("processing issues and changelogs for project", "project", project.Key)
+
+	senderIssues, err := ctx.Session(work.IssueModelName)
+	if err != nil {
+		return err
+	}
 
 	// find the custom_id field id for Story Points
 	var storyPointCustomFieldID *string
@@ -140,8 +145,8 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 		}
 	}
 
-	err := jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
-		pi, resIssues, err := jiracommonapi.IssuesAndChangelogsPage(s.CommonQC(), project, fieldByID, senderIssues.LastProcessedTime(), paginationParams)
+	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
+		pi, resIssues, err := jiracommonapi.IssuesAndChangelogsPage(s.CommonQC(), project.Project, fieldByID, senderIssues.LastProcessedTime(), paginationParams)
 		if err != nil {
 			rerr = err
 			return
