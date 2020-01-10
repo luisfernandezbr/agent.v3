@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/deviceinfo"
+	"github.com/pinpt/agent/pkg/exportrepo"
 	"github.com/pinpt/agent/pkg/expsessions"
 	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/integrationid"
@@ -270,7 +271,11 @@ func (s *export) formatResults(runResult map[integrationid.ID]runResult) Result 
 			if ok {
 				project.HasGitRepo = true
 				if gitErr != nil {
-					project.GitError = gitErr.Error()
+					if gitErr == exportrepo.ErrRevParseFailed {
+						project.GitError = "empty_repo"
+					} else {
+						project.GitError = gitErr.Error()
+					}
 				}
 			}
 			res.Projects = append(res.Projects, project)
