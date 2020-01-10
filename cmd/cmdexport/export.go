@@ -266,7 +266,7 @@ func (s *export) formatResults(runResult map[integrationid.ID]runResult) Result 
 		for _, project0 := range res0.Res.Projects {
 			project := ResultProject{}
 			project.ExportProject = project0
-			gitErr, ok := gitResults[id][project.RefID]
+			gitErr, ok := gitResults[id][project.ID]
 			if ok {
 				project.HasGitRepo = true
 				if gitErr != nil {
