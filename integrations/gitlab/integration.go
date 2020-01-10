@@ -14,8 +14,10 @@ import (
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent/integrations/pkg/ibase"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 	"github.com/pinpt/agent/pkg/ids"
 	"github.com/pinpt/agent/pkg/ids2"
+	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -118,14 +120,20 @@ LOOP:
 }
 
 func (s *Integration) Export(ctx context.Context,
-	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, err error) {
-	err = s.initWithConfig(exportConfig)
+	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, rerr error) {
+	err := s.initWithConfig(exportConfig)
 	if err != nil {
+		rerr = err
 		return
 	}
 
-	err = s.export(ctx)
+	projects, err := s.export(ctx)
+	if err != nil {
+		rerr = err
+		return
+	}
 
+	res.Projects = projects
 	return
 }
 
@@ -186,37 +194,51 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	return nil
 }
 
-func (s *Integration) export(ctx context.Context) (err error) {
+func (s *Integration) export(ctx context.Context) (repoResults []rpcdef.ExportProject, rerr error) {
 
 	if !s.isGitlabCom {
-		if err = UsersEmails(s); err != nil {
-			return err
+		if err := UsersEmails(s); err != nil {
+			rerr = err
+			return
 		}
 	}
 
 	groupNames, err := api.GroupsAll(s.qc)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	groupSession, err := objsender.RootTracking(s.agent, "group")
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 	if err = groupSession.SetTotal(len(groupNames)); err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	for _, groupName := range groupNames {
-		if err := s.exportGroup(ctx, groupSession, groupName); err != nil {
-			return err
+		groupResults, err := s.exportGroup(ctx, groupSession, groupName)
+		if err != nil {
+			rerr = err
+			return
 		}
 		if err := groupSession.IncProgress(); err != nil {
-			return err
+			rerr = err
+			return
 		}
+		repoResults = append(repoResults, groupResults...)
 	}
 
-	return groupSession.Done()
+	err = groupSession.Done()
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	return
 }
 
 func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchPR) error {
@@ -239,7 +261,8 @@ func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchP
 	return nil
 }
 
-func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.Session, groupName string) error {
+func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.Session, groupName string) (_ []rpcdef.ExportProject, rerr error) {
+
 	s.logger.Info("exporting group", "name", groupName)
 	logger := s.logger.With("org", groupName)
 
@@ -247,7 +270,8 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 		return api.ReposAll(s.qc, groupName, res)
 	})
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	repos = commonrepo.Filter(logger, repos, s.config.FilterConfig)
@@ -257,74 +281,81 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 		for _, repo := range repos {
 			err := s.exportGit(repo, nil)
 			if err != nil {
-				return err
+				rerr = err
+				return
 			}
 		}
-		return nil
+		return
 	}
 
 	repoSender, err := groupSession.Session(sourcecode.RepoModelName.String(), groupName, groupName)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
+
+	repoSender.SetNoAutoProgress(true)
 
 	if err = repoSender.SetTotal(len(repos)); err != nil {
-		return err
+		rerr = err
+		return
 	}
 
-	// export repos
 	if err = s.exportRepos(ctx, logger, repoSender, groupName, repos); err != nil {
-		return err
+		rerr = err
+		return
 	}
+
+	var reposIface []repoprojects.RepoProject
+	for _, r := range repos {
+		reposIface = append(reposIface, r)
+	}
+
+	processOpts := repoprojects.ProcessOpts{}
+	processOpts.Logger = s.logger
+	processOpts.ProjectFn = func(ctx *repoprojects.ProjectCtx) error {
+		repo := ctx.Project.(commonrepo.Repo)
+		return s.exportRepoChildren(ctx, repo)
+	}
+	processOpts.Concurrency = 1
+	processOpts.Projects = reposIface
+
+	processOpts.IntegrationType = integrationid.TypeSourcecode
+	processOpts.CustomerID = s.customerID
+	processOpts.RefType = s.refType
+	processOpts.Sender = repoSender
+
+	processor := repoprojects.NewProcess(processOpts)
+	exportResult, err := processor.Run()
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	err = repoSender.Done()
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	return exportResult, nil
+}
+
+func (s *Integration) exportRepoChildren(ctx *repoprojects.ProjectCtx, repo commonrepo.Repo) error {
 
 	if s.isGitlabCom {
-		userSender, err := objsender.Root(s.agent, sourcecode.UserModelName.String())
+		err := s.exportUsersFromRepo(ctx, repo)
 		if err != nil {
-			return err
-		}
-		for _, repo := range repos {
-			err = s.exportUsersFromRepos(ctx, logger, userSender, repo)
-			if err != nil {
-				return err
-			}
-		}
-
-		if err := userSender.Done(); err != nil {
 			return err
 		}
 	}
 
-	for _, repo := range repos {
-
-		prSender, err := repoSender.Session(sourcecode.PullRequestModelName.String(), repo.ID, repo.NameWithOwner)
-		if err != nil {
-			return err
-		}
-
-		prCommitsSender, err := repoSender.Session(sourcecode.PullRequestCommitModelName.String(), repo.ID, repo.NameWithOwner)
-		if err != nil {
-			return err
-		}
-
-		prs, err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
-		if err != nil {
-			return err
-		}
-
-		if err = s.exportGit(repo, prs); err != nil {
-			return err
-		}
-
-		if err = prSender.Done(); err != nil {
-			return err
-		}
-
-		if err = prCommitsSender.Done(); err != nil {
-			return err
-		}
+	prs, err := s.exportPullRequestsForRepo(ctx, repo)
+	if err != nil {
+		return err
 	}
 
-	return repoSender.Done()
+	return s.exportGit(repo, prs)
 }
 
 func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender.Session, groupName string, onlyInclude []commonrepo.Repo) error {
@@ -358,7 +389,12 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 	return nil
 }
 
-func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Logger, sender *objsender.Session, repo commonrepo.Repo) error {
+func (s *Integration) exportUsersFromRepo(ctx *repoprojects.ProjectCtx, repo commonrepo.Repo) error {
+	sender, err := ctx.Session(sourcecode.UserModelName)
+	if err != nil {
+		return err
+	}
+
 	return api.PaginateStartAt(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
 		pi, users, err := api.RepoUsersPageREST(s.qc, repo, parameters)
 		if err != nil {
@@ -374,11 +410,21 @@ func (s *Integration) exportUsersFromRepos(ctx context.Context, logger hclog.Log
 	})
 }
 
-func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
-	pullRequestSender *objsender.Session,
-	commitsSender *objsender.Session) (res []rpcdef.GitRepoFetchPR, rerr error) {
+func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, repo commonrepo.Repo) (res []rpcdef.GitRepoFetchPR, rerr error) {
 
-	logger = logger.With("repo", repo.NameWithOwner)
+	pullRequestSender, err := ctx.Session(sourcecode.PullRequestModelName)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	commitsSender, err := ctx.Session(sourcecode.PullRequestCommitModelName)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	logger := ctx.Logger.With("repo", repo.NameWithOwner)
 	logger.Info("exporting")
 
 	// export changed pull requests
