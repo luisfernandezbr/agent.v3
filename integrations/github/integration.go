@@ -44,9 +44,6 @@ type Integration struct {
 
 	clientManager *reqstats.ClientManager
 	clients       reqstats.Clients
-
-	exportPullRequestsForRepoFailed   []RepoError
-	exportPullRequestsForRepoFailedMu sync.Mutex
 }
 
 func NewIntegration(logger hclog.Logger) *Integration {
@@ -218,10 +215,12 @@ func (s *Integration) Export(ctx context.Context,
 		return res, err
 	}
 
-	err = s.export(ctx)
+	projects, err := s.export(ctx)
 	if err != nil {
 		return res, err
 	}
+
+	res.Projects = projects
 
 	return res, nil
 }
@@ -255,17 +254,19 @@ func (s *Integration) getOrgs() (res []api.Org, _ error) {
 	return res, nil
 }
 
-func (s *Integration) export(ctx context.Context) error {
+func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rerr error) {
 
 	orgs, err := s.getOrgs()
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	// export all users in all organization, and when later encountering new users continue export
 	s.users, err = NewUsers(s, orgs)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	s.qc.UserLoginToRefID = s.users.LoginToRefID
@@ -273,7 +274,8 @@ func (s *Integration) export(ctx context.Context) error {
 
 	unfilteredRepos, err := s.getAllRepos(orgs)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 	var unfilteredReposIface []repoprojects.RepoProject
 	for _, r := range unfilteredRepos {
@@ -293,7 +295,8 @@ func (s *Integration) export(ctx context.Context) error {
 
 	repoSender, err := objsender.Root(s.agent, sourcecode.RepoModelName.String())
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 	// we do not want to mark repo as exported until we export all pull request related data for it
 	repoSender.SetNoAutoProgress(true)
@@ -301,14 +304,15 @@ func (s *Integration) export(ctx context.Context) error {
 
 	err = s.exportRepoMetadata(repoSender, orgs, filteredRepos)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	processOpts := repoprojects.ProcessOpts{}
 	processOpts.Logger = s.logger
 	processOpts.ProjectFn = func(ctx *repoprojects.ProjectCtx) error {
 		repo := ctx.Project.(Repo)
-		return s.exportRepo(ctx.Logger, repoSender, repo)
+		return s.exportRepo(ctx, repo)
 	}
 
 	// we use s.config.Concurrency for request concurrency, set it here as well, since we don't have additional concurrency inside of repo, so process multiple repos concurrently
@@ -325,33 +329,27 @@ func (s *Integration) export(ctx context.Context) error {
 	processOpts.Sender = repoSender
 
 	processor := repoprojects.NewProcess(processOpts)
-	_, err = processor.Run()
+	exportResult, err := processor.Run()
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	err = repoSender.Done()
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	err = s.users.Done()
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	s.logger.Debug(s.clientManager.PrintStats())
 
-	if len(s.exportPullRequestsForRepoFailed) == 0 {
-		s.logger.Info("Completed github export without errors")
-	} else {
-		s.logger.Error("Github export failed when getting prs and other data for the following repos")
-		for _, re := range s.exportPullRequestsForRepoFailed {
-			s.logger.Error("Failed getting repo data", "repo", re.Repo.NameWithOwner, "err", re.Err)
-		}
-	}
-
-	return nil
+	return exportResult, nil
 }
 
 type Repo struct {
@@ -392,7 +390,8 @@ func branchURLTemplate(repo api.Repo, repoURLPrefix string) string {
 	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/tree/@@@branch@@@"
 }
 
-func (s *Integration) exportRepo(logger hclog.Logger, repoSender *objsender.Session, repo Repo) error {
+func (s *Integration) exportRepo(ctx *repoprojects.ProjectCtx, repo Repo) error {
+	logger := ctx.Logger
 	if s.config.OnlyGit {
 		logger.Warn("only_ripsrc flag passed, skipping export of data from github api, will not be exporting prs")
 
@@ -406,12 +405,12 @@ func (s *Integration) exportRepo(logger hclog.Logger, repoSender *objsender.Sess
 	}
 
 	// export a link between commit and github user
-	err := s.exportCommitUsersForRepo(logger, repo, repoSender)
+	err := s.exportCommitUsersForRepo(ctx, repo)
 	if err != nil {
 		return err
 	}
 
-	err = s.exportPullRequestsAndRelated(logger, repo, repoSender)
+	err = s.exportPullRequestsAndRelated(ctx, repo)
 	if err != nil {
 		return err
 	}
@@ -454,13 +453,14 @@ type RepoError struct {
 	Err  error
 }
 
-func (s *Integration) exportPullRequestsAndRelated(logger hclog.Logger, repo Repo, repoSender *objsender.Session) error {
+func (s *Integration) exportPullRequestsAndRelated(ctx *repoprojects.ProjectCtx, repo Repo) error {
+	logger := ctx.Logger
 
-	prSender, err := repoSender.Session(sourcecode.PullRequestModelName.String(), repo.ID, repo.NameWithOwner)
+	prSender, err := ctx.Session(sourcecode.PullRequestModelName)
 	if err != nil {
 		return err
 	}
-	prCommitsSender, err := repoSender.Session(sourcecode.PullRequestCommitModelName.String(), repo.ID, repo.NameWithOwner)
+	prCommitsSender, err := ctx.Session(sourcecode.PullRequestCommitModelName)
 	if err != nil {
 		return err
 	}
@@ -468,27 +468,13 @@ func (s *Integration) exportPullRequestsAndRelated(logger hclog.Logger, repo Rep
 	prs, err := s.exportPullRequestsForRepo(logger, repo.Repo, prSender, prCommitsSender)
 	if err != nil {
 		return err
-	} else {
-		err = s.exportGit(repo.Repo, prs)
-		if err != nil {
-			return err
-		}
-
-		err = prSender.Done()
-		if err != nil {
-			return err
-		}
-		err = prCommitsSender.Done()
-		if err != nil {
-			return err
-		}
-
 	}
 
-	err = repoSender.IncProgress()
+	err = s.exportGit(repo.Repo, prs)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 

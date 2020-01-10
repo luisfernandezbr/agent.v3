@@ -47,6 +47,10 @@ func (s *WriterDedup) Close() error {
 	return s.wr.Close()
 }
 
+func (s *WriterDedup) Rollback() error {
+	return s.wr.Rollback()
+}
+
 type DedupStore interface {
 	// MarkAsSent marks the object as sent, if it wasn't already.
 	// And returns the bool if it was already sent before.

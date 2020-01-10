@@ -16,6 +16,8 @@ type Writer interface {
 	Write(logger hclog.Logger, objs []map[string]interface{}) error
 	// Close closes writer.
 	Close() error
+
+	Rollback() error
 }
 
 type MockWriter struct {
@@ -35,6 +37,10 @@ func (s *MockWriter) Write(logger hclog.Logger, objs []map[string]interface{}) e
 
 func (s *MockWriter) Close() error {
 	s.Closed = true
+	return nil
+}
+
+func (s *MockWriter) Rollback() error {
 	return nil
 }
 
@@ -70,6 +76,18 @@ func (s *FileWriter) Close() error {
 	}
 
 	return os.Rename(s.loc+".temp.gz", s.loc)
+}
+
+func (s *FileWriter) Rollback() error {
+	if s.stream == nil {
+		// there was no stream, since no objects were sent
+		return nil
+	}
+	err := s.stream.Close()
+	if err != nil {
+		return err
+	}
+	return os.Remove(s.loc + ".temp.gz")
 }
 
 func (s *FileWriter) createStreamIfNeeded() error {

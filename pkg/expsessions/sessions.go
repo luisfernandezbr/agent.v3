@@ -169,3 +169,26 @@ func (s *Manager) Done(id ID, lastProcessed interface{}) error {
 	//s.logger.Info("session done", "type", modelType, "last_processed_new", lastProcessed)
 	return nil
 }
+
+// Rollback deletes temp file, and does not update last processed
+func (s *Manager) Rollback(id ID) error {
+	s.sessionsMu.Lock()
+	defer s.sessionsMu.Unlock()
+
+	sess, err := s.get(id)
+	if err != nil {
+		return err
+	}
+
+	if s.opts.SendProgressDone != nil {
+		s.opts.SendProgressDone(sess.ProgressPath)
+	}
+
+	err = sess.Rollback()
+	delete(s.sessions, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

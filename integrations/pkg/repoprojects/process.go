@@ -9,6 +9,7 @@ import (
 	"github.com/pinpt/agent/pkg/ids2"
 	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/rpcdef"
+	"github.com/pinpt/go-common/datamodel"
 )
 
 type ProcessOpts struct {
@@ -64,14 +65,13 @@ func (s *Process) Run() (allRes []rpcdef.ExportProject, rerr error) {
 	projectsChan := projectsToChan(s.opts.Projects)
 
 	for i := 0; i < s.opts.Concurrency; i++ {
-		/*
-			rerr := func(err error) {
-				mu.Lock()
-				if fatalErr == nil {
-					fatalErr = err
-				}
-				mu.Unlock()
-			}*/
+		rerr := func(err error) {
+			mu.Lock()
+			if fatalErr == nil {
+				fatalErr = err
+			}
+			mu.Unlock()
+		}
 
 		wg.Add(1)
 		go func() {
@@ -85,37 +85,43 @@ func (s *Process) Run() (allRes []rpcdef.ExportProject, rerr error) {
 				}
 
 				ctx := newProjectCtx(s.opts.Logger, p, s.opts.Sender)
-				err := s.opts.ProjectFn(ctx)
+				projectErr := s.opts.ProjectFn(ctx)
 
 				p2 := rpcdef.ExportProject{}
 				p2.ID = s.projectID(p)
 				p2.RefID = p.GetID()
 				p2.ReadableID = p.GetReadableID()
+				if projectErr != nil {
+					p2.Error = projectErr.Error()
+				}
+
+				err := s.opts.Sender.IncProgress()
 				if err != nil {
-					p2.Error = err.Error()
+					rerr(err)
+					return
 				}
 
 				mu.Lock()
 				allRes = append(allRes, p2)
-				if err != nil {
+				if projectErr != nil {
 					failedCount++
 				}
 				mu.Unlock()
 
-				if err != nil {
-					panic("TODO: this is not implemented, needs changes in last processed handling")
-					//err := ctx.DoneWithoutUpdatingLastProcessed()
-					//if err != nil {
-					//	rerr(err)
-					//	return
-					//}
+				if projectErr != nil {
+					err := ctx.rollback()
+					if err != nil {
+						rerr(err)
+						return
+					}
+					return
 				}
 
-				//err = ctx.Done()
-				//if err != nil {
-				//	rerr(err)
-				//	return
-				//}
+				err = ctx.done()
+				if err != nil {
+					rerr(err)
+					return
+				}
 			}
 		}()
 	}
@@ -124,6 +130,12 @@ func (s *Process) Run() (allRes []rpcdef.ExportProject, rerr error) {
 	if fatalErr != nil {
 		rerr = fatalErr
 		return
+	}
+
+	if failedCount > 0 {
+		s.opts.Logger.Error("Export failed on one or more repos/projects", "failed_count", failedCount)
+	} else {
+		s.opts.Logger.Info("Repo/project export completed without errors")
 	}
 
 	return
@@ -158,12 +170,11 @@ func newProjectCtx(logger hclog.Logger, project RepoProject, sender *objsender.S
 	return s
 }
 
-/*
-func (s *ProjectCtx) Session(modelName datamodel.ModelNameType, id string, name string) (_ *objsender.Session, rerr error) {
+func (s *ProjectCtx) Session(modelName datamodel.ModelNameType) (_ *objsender.Session, rerr error) {
 	s.sendersMu.Lock()
 	defer s.sendersMu.Unlock()
 
-	sender, err := s.sender.Session(modelName.String(), id, name)
+	sender, err := s.sender.Session(modelName.String(), s.Project.GetID(), s.Project.GetReadableID())
 	if err != nil {
 		rerr = err
 		return
@@ -172,7 +183,7 @@ func (s *ProjectCtx) Session(modelName datamodel.ModelNameType, id string, name 
 	return sender, nil
 }
 
-func (s *ProjectCtx) Done() error {
+func (s *ProjectCtx) done() error {
 	for _, sender := range s.senders {
 		err := sender.Done()
 		if err != nil {
@@ -182,13 +193,12 @@ func (s *ProjectCtx) Done() error {
 	return nil
 }
 
-func (s *ProjectCtx) DoneWithoutUpdatingLastProcessed() error {
+func (s *ProjectCtx) rollback() error {
 	for _, sender := range s.senders {
-		err := sender.DoneWithoutUpdatingLastProcessed()
+		err := sender.Rollback()
 		if err != nil {
 			return err
 		}
 	}
 	return nil
 }
-*/

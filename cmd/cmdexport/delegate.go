@@ -65,6 +65,10 @@ func (s agentDelegate) SessionProgress(id int, current, total int) error {
 	return nil
 }
 
+func (s agentDelegate) SessionRollback(id int) error {
+	return s.export.sessions.Rollback(expsessions.ID(id))
+}
+
 func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
 	return s.export.OAuthNewAccessToken(s.in.Name)
 }

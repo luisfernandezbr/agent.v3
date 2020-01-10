@@ -157,6 +157,10 @@ func (s *sessions) ExportDone(sessionID string, lastProcessed interface{}) error
 	return s.expsession.Done(id, lastProcessed)
 }
 
+func (s *sessions) Rollback(id expsessions.ID) error {
+	return s.expsession.Rollback(id)
+}
+
 func idToString(id expsessions.ID) string {
 	return strconv.Itoa(int(id))
 }

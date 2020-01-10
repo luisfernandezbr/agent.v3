@@ -38,6 +38,9 @@ type Agent interface {
 	// SessionProgress updates progress for a session
 	SessionProgress(id int, current, total int) error
 
+	// SessionRollback does not update lastProcessed, and deletes temp session file
+	SessionRollback(id int) error
+
 	// Integration can ask agent to download and process git repo using ripsrc.
 	ExportGitRepo(fetch GitRepoFetch) error
 
@@ -228,6 +231,12 @@ func (s *AgentServer) SessionProgress(ctx context.Context, req *proto.SessionPro
 	return resp, err
 }
 
+func (s *AgentServer) SessionRollback(ctx context.Context, req *proto.SessionRollbackReq) (resp *proto.Empty, _ error) {
+	resp = &proto.Empty{}
+	err := s.Impl.SessionRollback(int(req.Id))
+	return resp, err
+}
+
 func (s *AgentServer) OAuthNewAccessToken(ctx context.Context, req *proto.Empty) (*proto.OAuthNewAccessTokenResp, error) {
 
 	token, err := s.Impl.OAuthNewAccessToken()
@@ -347,6 +356,16 @@ func (s *AgentClient) SessionProgress(id int, current, total int) error {
 	args.Current = int64(current)
 	args.Total = int64(total)
 	_, err := s.client.SessionProgress(context.Background(), args)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *AgentClient) SessionRollback(id int) error {
+	args := &proto.SessionRollbackReq{}
+	args.Id = int64(id)
+	_, err := s.client.SessionRollback(context.Background(), args)
 	if err != nil {
 		return err
 	}

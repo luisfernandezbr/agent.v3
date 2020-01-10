@@ -46,6 +46,10 @@ func (s agentDelegate) SessionProgress(id int, current, total int) error {
 	panic("not implemented")
 }
 
+func (s agentDelegate) SessionRollback(id int) error {
+	panic("not implemented")
+}
+
 func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
 	return s.min.OAuthNewAccessToken(s.in.Name)
 }

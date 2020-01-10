@@ -87,6 +87,18 @@ func (s *session) Close() error {
 	return s.writer.Close()
 }
 
+func (s *session) Rollback() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.writer == nil {
+		// there was no stream, since no objects were sent
+		return nil
+	}
+
+	return s.writer.Rollback()
+}
+
 func (s *session) Write(logger hclog.Logger, objs []map[string]interface{}) error {
 	if s.isTracking {
 		return errors.New("tracking sessions do not support write method")

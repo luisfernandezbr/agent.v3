@@ -8,11 +8,12 @@ import (
 
 	"github.com/pinpt/agent/integrations/github/api"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 )
 
-func (s *Integration) exportCommitUsersForRepo(logger hclog.Logger, repo Repo, repoSender *objsender.Session) error {
-
-	usersSender, err := repoSender.Session(commitusers.TableName, repo.ID, repo.NameWithOwner)
+func (s *Integration) exportCommitUsersForRepo(ctx *repoprojects.ProjectCtx, repo Repo) error {
+	logger := ctx.Logger
+	usersSender, err := ctx.Session(commitusers.TableName)
 	if err != nil {
 		return err
 	}
@@ -20,11 +21,6 @@ func (s *Integration) exportCommitUsersForRepo(logger hclog.Logger, repo Repo, r
 	if err != nil {
 		return err
 	}
-	err = usersSender.Done()
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
