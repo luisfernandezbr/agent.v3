@@ -45,7 +45,10 @@ func (s agentDelegate) SendExported(sessionID string, objs []rpcdef.ExportObj) {
 }
 
 func (s agentDelegate) ExportGitRepo(fetch rpcdef.GitRepoFetch) error {
-	s.export.gitProcessingRepos <- fetch
+	fetch2 := gitRepoFetch{}
+	fetch2.GitRepoFetch = fetch
+	fetch2.integrationID = s.in
+	s.export.gitProcessingRepos <- fetch2
 	return nil
 }
 

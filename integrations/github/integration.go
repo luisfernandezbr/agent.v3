@@ -9,7 +9,9 @@ import (
 	"sync"
 
 	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 	"github.com/pinpt/agent/pkg/ids"
+	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/pkg/reqstats"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -254,6 +256,7 @@ func (s *Integration) getOrgs() (res []api.Org, _ error) {
 }
 
 func (s *Integration) export(ctx context.Context) error {
+
 	orgs, err := s.getOrgs()
 	if err != nil {
 		return err
@@ -268,28 +271,66 @@ func (s *Integration) export(ctx context.Context) error {
 	s.qc.UserLoginToRefID = s.users.LoginToRefID
 	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
 
-	orgSession, err := objsender.RootTracking(s.agent, "organization")
+	unfilteredRepos, err := s.getAllRepos(orgs)
 	if err != nil {
 		return err
 	}
-	err = orgSession.SetTotal(len(orgs))
+	var unfilteredReposIface []repoprojects.RepoProject
+	for _, r := range unfilteredRepos {
+		unfilteredReposIface = append(unfilteredReposIface, r)
+	}
+
+	filteredReposIface := repoprojects.Filter(s.logger, unfilteredReposIface, repoprojects.FilterConfig{
+		OnlyIncludeReadableIDs: s.config.Repos,
+		ExcludedIDs:            s.config.ExcludedRepos,
+		StopAfterN:             s.config.StopAfterN,
+	})
+
+	var filteredRepos []Repo
+	for _, r := range filteredReposIface {
+		filteredRepos = append(filteredRepos, r.(Repo))
+	}
+
+	repoSender, err := objsender.Root(s.agent, sourcecode.RepoModelName.String())
 	if err != nil {
 		return err
 	}
-	for _, org := range orgs {
-		err := s.exportOrganization(ctx, orgSession, org)
-		s.logger.Info("finished export for org", "org", org.Login, "err", nil)
-		if err != nil {
-			return err
-		}
+	// we do not want to mark repo as exported until we export all pull request related data for it
+	repoSender.SetNoAutoProgress(true)
+	repoSender.SetTotal(len(filteredRepos))
 
-		err = orgSession.IncProgress()
-		if err != nil {
-			return err
-		}
+	err = s.exportRepoMetadata(repoSender, orgs, filteredRepos)
+	if err != nil {
+		return err
 	}
 
-	err = orgSession.Done()
+	processOpts := repoprojects.ProcessOpts{}
+	processOpts.Logger = s.logger
+	processOpts.ProjectFn = func(ctx *repoprojects.ProjectCtx) error {
+		repo := ctx.Project.(Repo)
+		return s.exportRepo(ctx.Logger, repoSender, repo)
+	}
+
+	// we use s.config.Concurrency for request concurrency, set it here as well, since we don't have additional concurrency inside of repo, so process multiple repos concurrently
+	// request concurrency is an additional safeguard in requests.go
+	processOpts.Concurrency = s.config.Concurrency
+	if processOpts.Concurrency < 1 {
+		processOpts.Concurrency = 1
+	}
+	processOpts.Projects = filteredReposIface
+
+	processOpts.IntegrationType = integrationid.TypeSourcecode
+	processOpts.CustomerID = s.customerID
+	processOpts.RefType = s.refType
+	processOpts.Sender = repoSender
+
+	processor := repoprojects.NewProcess(processOpts)
+	_, err = processor.Run()
+	if err != nil {
+		return err
+	}
+
+	err = repoSender.Done()
 	if err != nil {
 		return err
 	}
@@ -313,6 +354,36 @@ func (s *Integration) export(ctx context.Context) error {
 	return nil
 }
 
+type Repo struct {
+	api.Repo
+}
+
+func (s Repo) GetID() string {
+	return s.Repo.ID
+}
+
+func (s Repo) GetReadableID() string {
+	return s.Repo.NameWithOwner
+}
+
+func (s *Integration) getAllRepos(orgs []api.Org) (res []Repo, rerr error) {
+	s.logger.Info("getting a list of all repos")
+	for _, org := range orgs {
+		logger := s.logger.With("org", org.Login)
+		s.logger.Info("getting repos for org")
+		orgRepos, err := api.ReposAllSlice(s.qc.WithLogger(logger), org)
+		if err != nil {
+			rerr = err
+			return
+		}
+		for _, r := range orgRepos {
+			res = append(res, Repo{r})
+		}
+	}
+	s.logger.Info("completed getting list of repos, total unfiltered", "c", len(res))
+	return
+}
+
 func commitURLTemplate(repo api.Repo, repoURLPrefix string) string {
 	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/commit/@@@sha@@@"
 }
@@ -321,169 +392,26 @@ func branchURLTemplate(repo api.Repo, repoURLPrefix string) string {
 	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/tree/@@@branch@@@"
 }
 
-func (s *Integration) filterRepos(logger hclog.Logger, repos []api.Repo) (res []api.Repo) {
-	if len(s.config.Repos) != 0 {
-		ok := map[string]bool{}
-		for _, nameWithOwner := range s.config.Repos {
-			ok[nameWithOwner] = true
-		}
-		for _, repo := range repos {
-			if !ok[repo.NameWithOwner] {
-				continue
-			}
-			res = append(res, repo)
-		}
-		logger.Info("repos", "found", len(repos), "repos_specified", len(s.config.Repos), "result", len(res))
-		return
-	}
-
-	//all := map[string]bool{}
-	//for _, repo := range repos {
-	//	all[repo.ID] = true
-	//}
-	excluded := map[string]bool{}
-	for _, id := range s.config.ExcludedRepos {
-		// This does not work because we pass excluded repos for all orgs. But filterRepos is called separately per org.
-		//if !all[id] {
-		//	return fmt.Errorf("wanted to exclude non existing repo: %v", id)
-		//}
-		excluded[id] = true
-	}
-
-	filtered := map[string]api.Repo{}
-	// filter excluded repos
-	for _, repo := range repos {
-		if excluded[repo.ID] {
-			continue
-		}
-		filtered[repo.ID] = repo
-	}
-
-	logger.Info("repos", "found", len(repos), "excluded_definition", len(s.config.ExcludedRepos), "result", len(filtered))
-	for _, repo := range filtered {
-		res = append(res, repo)
-	}
-	return
-}
-
-func (s *Integration) exportOrganization(ctx context.Context, orgSession *objsender.Session, org api.Org) error {
-
-	s.logger.Info("exporting organization", "login", org.Login)
-	logger := s.logger.With("org", org.Login)
-
-	repos, err := api.ReposAllSlice(s.qc.WithLogger(logger), org)
-	if err != nil {
-		return err
-	}
-
-	repos = s.filterRepos(logger, repos)
-
-	if s.config.StopAfterN != 0 {
-		// only leave 1 repo for export
-		stopAfter := s.config.StopAfterN
-		l := len(repos)
-		if len(repos) > stopAfter {
-			repos = repos[0:stopAfter]
-		}
-		logger.Info("stop_after_n passed", "v", stopAfter, "repos", l, "after", len(repos))
-	}
-
+func (s *Integration) exportRepo(logger hclog.Logger, repoSender *objsender.Session, repo Repo) error {
 	if s.config.OnlyGit {
 		logger.Warn("only_ripsrc flag passed, skipping export of data from github api, will not be exporting prs")
 
 		// if only git do it here, otherwise wait till we export all prs per repo
-		for _, repo := range repos {
-			err := s.exportGit(repo, nil)
-			if err != nil {
-				return err
-			}
+		err := s.exportGit(repo.Repo, nil)
+		if err != nil {
+			return err
 		}
 
 		return nil
 	}
 
-	repoSender, err := orgSession.Session(sourcecode.RepoModelName.String(), org.Login, org.Login)
+	// export a link between commit and github user
+	err := s.exportCommitUsersForRepo(logger, repo, repoSender)
 	if err != nil {
 		return err
 	}
 
-	// export repos
-	{
-		// we do not want to mark repo as exported until we export all pull request related data for it
-		repoSender.SetNoAutoProgress(true)
-		err := s.exportRepos(ctx, logger, repoSender, org, repos)
-		if err != nil {
-			return err
-		}
-		err = repoSender.SetTotal(len(repos))
-		if err != nil {
-			return err
-		}
-	}
-
-	// export a link between commit and github user
-	// This is much slower than the rest
-	// for pinpoint takes 3.5m for initial, 47s for incremental
-	{
-		commitConcurrency := s.config.Concurrency
-
-		err = s.exportCommitUsers(logger, repoSender, repos, commitConcurrency)
-		if err != nil {
-			return err
-		}
-	}
-
-	{
-		wg := sync.WaitGroup{}
-		var wgErr error
-		var wgErrMu sync.Mutex
-
-		reposChan := reposToChan(repos, 0)
-
-		for i := 0; i < s.config.Concurrency; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for repo := range reposChan {
-					logger := logger.With("repo", repo.NameWithOwner).Named("prl")
-
-					rerr := func(err error) {
-						wgErrMu.Lock()
-						logger.Error("could not process pr for repo", "err", err)
-						// only keep the first err
-						if wgErr == nil {
-							wgErr = err
-						}
-						wgErrMu.Unlock()
-					}
-
-					logger.Debug("got repo from channel for processing")
-
-					wgErrMu.Lock()
-					hasErr := wgErr != nil
-					wgErrMu.Unlock()
-					if hasErr {
-						logger.Info("returning from repo processing due to err")
-						return
-					}
-
-					err := s.exportPullRequestsAndRelated(logger, repo, repoSender)
-					if err != nil {
-						rerr(err)
-						return
-					}
-
-				}
-			}()
-		}
-		wg.Wait()
-
-		if wgErr != nil {
-			return wgErr
-		}
-	}
-
-	err = repoSender.Done()
+	err = s.exportPullRequestsAndRelated(logger, repo, repoSender)
 	if err != nil {
 		return err
 	}
@@ -526,7 +454,7 @@ type RepoError struct {
 	Err  error
 }
 
-func (s *Integration) exportPullRequestsAndRelated(logger hclog.Logger, repo api.Repo, repoSender *objsender.Session) error {
+func (s *Integration) exportPullRequestsAndRelated(logger hclog.Logger, repo Repo, repoSender *objsender.Session) error {
 
 	prSender, err := repoSender.Session(sourcecode.PullRequestModelName.String(), repo.ID, repo.NameWithOwner)
 	if err != nil {
@@ -537,38 +465,11 @@ func (s *Integration) exportPullRequestsAndRelated(logger hclog.Logger, repo api
 		return err
 	}
 
-	prs, err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
+	prs, err := s.exportPullRequestsForRepo(logger, repo.Repo, prSender, prCommitsSender)
 	if err != nil {
-
-		re := RepoError{}
-		re.Repo = repo
-		re.Err = err
-		s.exportPullRequestsForRepoFailedMu.Lock()
-
-		s.exportPullRequestsForRepoFailed = append(s.exportPullRequestsForRepoFailed, re)
-		failedCount := len(s.exportPullRequestsForRepoFailed)
-		s.exportPullRequestsForRepoFailedMu.Unlock()
-
-		logger.Error("Failed getting exportPullRequestsForRepo", "err", err, "repo", repo.NameWithOwner)
-
-		prErr := err
-
-		err = prSender.DoneWithoutUpdatingLastProcessed()
-		if err != nil {
-			return err
-		}
-		err = prCommitsSender.DoneWithoutUpdatingLastProcessed()
-		if err != nil {
-			return err
-		}
-
-		if failedCount > 5 {
-			return fmt.Errorf("Failed getting exportPullRequestsForRepo for more than 5 repos, failing immediately. last: repo: %v err: %v", repo.NameWithOwner, prErr)
-		}
-
+		return err
 	} else {
-
-		err = s.exportGit(repo, prs)
+		err = s.exportGit(repo.Repo, prs)
 		if err != nil {
 			return err
 		}

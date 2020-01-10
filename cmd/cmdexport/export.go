@@ -3,8 +3,10 @@ package cmdexport
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -13,6 +15,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/deviceinfo"
+	"github.com/pinpt/agent/pkg/expsessions"
 	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/pkg/memorylogs"
@@ -25,6 +28,7 @@ import (
 
 type Opts struct {
 	cmdintegration.Opts
+	Output              io.Writer
 	ReprocessHistorical bool
 }
 
@@ -36,7 +40,28 @@ func Run(opts Opts) error {
 	if err != nil {
 		return err
 	}
-	return exp.Destroy()
+
+	exportResults, err := exp.Run()
+	if err != nil {
+		return err
+	}
+
+	err = exp.Destroy()
+	if err != nil {
+		return err
+	}
+
+	b, err := json.Marshal(exportResults)
+	if err != nil {
+		return err
+	}
+
+	_, err = opts.Output.Write(b)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type export struct {
@@ -49,23 +74,51 @@ type export struct {
 
 	lastProcessed *jsonstore.Store
 
-	gitProcessingRepos chan rpcdef.GitRepoFetch
+	gitProcessingRepos chan gitRepoFetch
 	deviceInfo         deviceinfo.CommonInfo
+
+	opts Opts
+
+	gitSessions map[integrationid.ID]expsessions.ID
+	// map[integration.ID]map[repoID]error
+	gitResults map[integrationid.ID]map[string]error
+}
+
+type gitRepoFetch struct {
+	integrationID integrationid.ID
+	rpcdef.GitRepoFetch
 }
 
 func newExport(opts Opts) (*export, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	s := &export{}
-
-	startTime := time.Now()
+	s.opts = opts
 
 	var err error
 	s.Command, err = cmdintegration.NewCommand(opts.Opts)
 	if err != nil {
 		return nil, err
 	}
+
+	return s, nil
+}
+
+func (s *export) Destroy() error {
+	for _, integration := range s.Integrations {
+		err := integration.Close()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *export) Run() (_ Result, rerr error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	opts := s.opts
+
+	startTime := time.Now()
 
 	s.deviceInfo = deviceinfo.CommonInfo{
 		CustomerID: opts.AgentConfig.CustomerID,
@@ -80,29 +133,34 @@ func newExport(opts Opts) (*export, error) {
 		s.Logger.Info("Starting export. ReprocessHistorical is true, discarding incremental checkpoints")
 		err := s.discardIncrementalData()
 		if err != nil {
-			return nil, err
+			rerr = err
+			return
 		}
 	} else {
 		s.Logger.Info("Starting export. ReprocessHistorical is false, will use incremental checkpoints if available.")
 	}
 
+	var err error
 	s.lastProcessed, err = jsonstore.New(s.Locs.LastProcessedFile)
 	if err != nil {
-		return nil, err
+		rerr = err
+		return
 	}
 
 	err = s.logLastProcessedTimestamps()
 	if err != nil {
-		return nil, err
+		rerr = err
+		return
 	}
 
 	trackProgress := os.Getenv("PP_AGENT_NO_TRACK_PROGRESS") == ""
 	s.sessions, err = newSessions(s.Logger, s, opts.ReprocessHistorical, trackProgress)
 	if err != nil {
-		return nil, err
+		rerr = err
+		return
 	}
 
-	s.gitProcessingRepos = make(chan rpcdef.GitRepoFetch, 100000)
+	s.gitProcessingRepos = make(chan gitRepoFetch, 100000)
 
 	gitProcessingDone := make(chan bool)
 
@@ -118,12 +176,13 @@ func newExport(opts Opts) (*export, error) {
 		return newAgentDelegate(s, s.sessions.expsession, in)
 	})
 	if err != nil {
-		return nil, err
+		rerr = err
+		return
 	}
 
 	memorylogs.Start(ctx, s.Logger, 5*time.Second)
 
-	exportRes := s.runExports()
+	runResult := s.runExports()
 	close(s.gitProcessingRepos)
 
 	hadGitErrors := false
@@ -137,47 +196,89 @@ func newExport(opts Opts) (*export, error) {
 
 	err = s.updateLastProcessedTimestamps(startTime)
 	if err != nil {
-		return nil, err
+		rerr = err
+		return
 	}
 
 	err = s.lastProcessed.Save()
 	if err != nil {
 		s.Logger.Error("could not save updated last_processed file", "err", err)
-		return nil, err
+		rerr = err
+		return
 	}
 
 	err = s.sessions.Close()
 	if err != nil {
 		s.Logger.Error("could not close sessions", "err", err)
-		return nil, err
+		rerr = err
+		return
 	}
 
-	err = s.printExportRes(exportRes, hadGitErrors)
+	err = s.printExportRes(runResult, hadGitErrors)
 	if err != nil {
-		return nil, err
+		rerr = err
+		return
 	}
 
 	tempFiles, err := s.tempFilesInUploads()
 	if err != nil {
 		s.Logger.Error("could not check uploads dir for errors", "err", err)
-		return nil, err
+		rerr = err
+		return
 	}
 	if len(tempFiles) != 0 {
-		return nil, fmt.Errorf("found temp sessions files in upload dir, files: %v", tempFiles)
+		rerr = fmt.Errorf("found temp sessions files in upload dir, files: %v", tempFiles)
+		return
+
 	}
+
 	s.Logger.Info("No temp files found in upload dir, all sessions closed successfully.")
 
-	return s, nil
+	return s.formatResults(runResult), nil
 }
 
-func (s *export) Destroy() error {
-	for _, integration := range s.Integrations {
-		err := integration.Close()
-		if err != nil {
-			return err
+type Result struct {
+	Integrations []ResultIntegration `json:"integrations"`
+}
+
+type ResultIntegration struct {
+	ID       string          `json:"id"`
+	Error    string          `json:"error"`
+	Projects []ResultProject `json:"projects"`
+}
+
+type ResultProject struct {
+	rpcdef.ExportProject
+	HasGitRepo bool   `json:"has_git_repo"`
+	GitError   string `json:"git_error"`
+}
+
+func (s *export) formatResults(runResult map[integrationid.ID]runResult) Result {
+	gitResults := s.gitResults
+
+	resAll := Result{}
+	for id, res0 := range runResult {
+		res := ResultIntegration{}
+		res.ID = id.String()
+		if res0.Err != nil {
+			res.Error = res0.Err.Error()
 		}
+		for _, project0 := range res0.Res.Projects {
+			project := ResultProject{}
+			project.ExportProject = project0
+			gitErr, ok := gitResults[id][project.RefID]
+			if ok {
+				project.HasGitRepo = true
+				if gitErr != nil {
+					project.GitError = gitErr.Error()
+				}
+			}
+			res.Projects = append(res.Projects, project)
+		}
+		resAll.Integrations = append(resAll.Integrations, res)
 	}
-	return nil
+
+	return resAll
 }
 
 func (s *export) tempFilesInUploads() ([]string, error) {
@@ -270,6 +371,7 @@ func (s *export) updateLastProcessedTimestamps(startTime time.Time) error {
 type runResult struct {
 	Err      error
 	Duration time.Duration
+	Res      rpcdef.ExportResult
 }
 
 func (s *export) runExports() map[integrationid.ID]runResult {
@@ -286,9 +388,13 @@ func (s *export) runExports() map[integrationid.ID]runResult {
 			defer wg.Done()
 			start := time.Now()
 			id := integration.ID
-			ret := func(err error) {
+			ret := func(err error, exportRes rpcdef.ExportResult) {
 				resMu.Lock()
-				res[id] = runResult{Err: err, Duration: time.Since(start)}
+				res[id] = runResult{
+					Duration: time.Since(start),
+					Err:      err,
+					Res:      exportRes,
+				}
 				resMu.Unlock()
 				if err != nil {
 					s.Logger.Error("Export failed", "integration", id, "dur", time.Since(start).String(), "err", err)
@@ -304,13 +410,8 @@ func (s *export) runExports() map[integrationid.ID]runResult {
 				panic("no config for integration")
 			}
 
-			_, err := integration.RPCClient().Export(ctx, exportConfig)
-			if err != nil {
-				ret(err)
-				return
-			}
-
-			ret(nil)
+			exportRes, err := integration.RPCClient().Export(ctx, exportConfig)
+			ret(err, exportRes)
 		}()
 	}
 	wg.Wait()

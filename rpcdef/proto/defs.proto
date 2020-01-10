@@ -29,6 +29,14 @@ message IntegrationAgentConfig {
 }
 
 message IntegrationExportResp {
+    repeated IntegrationExportRespProject projects = 3;
+}
+
+message IntegrationExportRespProject {
+    string id = 1;
+    string ref_id = 2;
+    string readable_id = 3;
+    string error = 4;
 }
 
 message IntegrationValidateConfigReq {
@@ -96,7 +104,7 @@ message ExportStartedResp {
 
 message ExportDoneReq {
     string session_id = 1;
-    LastProcessed last_processed = 2;
+    LastProcessed last_processed = 2;    
 }
 
 message SendExportedReq {

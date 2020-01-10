@@ -8,11 +8,7 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportAll() {
-	s.exportRepos()
-}
-
-func (s *Integration) exportRepos() {
+func (s *Integration) exportRepoObjects() (repos []rpcdef.ExportProject) {
 
 	sessionID, lastProcessed := s.agent.ExportStarted(sourcecode.RepoModelName.String())
 	defer s.agent.ExportDone(sessionID, time.Now().Format(time.RFC3339))
@@ -20,16 +16,23 @@ func (s *Integration) exportRepos() {
 	s.logger.Info("exporting repos", "lastProcessed", lastProcessed)
 	c := 0
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 2; i++ {
 		rows := []map[string]interface{}{}
-		for j := 0; j < 10; j++ {
+		for j := 0; j < 2; j++ {
 			c++
 			n := strconv.Itoa(c)
 			row := sourcecode.Repo{}
 			row.RefType = "mock"
-			row.RefID = n
+			row.RefID = "r" + n
 			row.Name = "Repo: " + n
 			rows = append(rows, row.ToMap())
+
+			repo := rpcdef.ExportProject{}
+			repo.ID = row.GetID()
+			repo.RefID = row.RefID
+			repo.ReadableID = row.RefID
+			repo.Error = ""
+			repos = append(repos, repo)
 		}
 		var objs []rpcdef.ExportObj
 		for _, row := range rows {
@@ -40,5 +43,8 @@ func (s *Integration) exportRepos() {
 		s.agent.SendExported(
 			sessionID,
 			objs)
+
 	}
+
+	return
 }

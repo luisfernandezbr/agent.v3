@@ -153,6 +153,11 @@ var cmdExport = &cobra.Command{
 		logger, opts2 := integrationCommandOpts(cmd)
 		opts.Opts = opts2
 		opts.ReprocessHistorical, _ = cmd.Flags().GetBool("reprocess-historical")
+
+		outputFile := newOutputFile(logger, cmd)
+		defer outputFile.Close()
+		opts.Output = outputFile.Writer
+
 		err := cmdexport.Run(opts)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -163,6 +168,7 @@ var cmdExport = &cobra.Command{
 func init() {
 	cmd := cmdExport
 	integrationCommandFlags(cmd)
+	flagOutputFile(cmd)
 	cmd.Flags().Bool("reprocess-historical", false, "Set to true to discard incremental checkpoint and reprocess historical instead.")
 	cmdRoot.AddCommand(cmd)
 }
@@ -191,7 +197,7 @@ var cmdValidateConfig = &cobra.Command{
 func init() {
 	cmd := cmdValidateConfig
 	integrationCommandFlags(cmd)
-	flagOutputFile(cmd, "validate")
+	flagOutputFile(cmd)
 	cmdRoot.AddCommand(cmd)
 }
 
@@ -231,7 +237,7 @@ var cmdExportOnboardData = &cobra.Command{
 func init() {
 	cmd := cmdExportOnboardData
 	integrationCommandFlags(cmd)
-	flagOutputFile(cmd, "export onboard")
+	flagOutputFile(cmd)
 	cmd.Flags().String("object-type", "", "Object type to export, one of: users, repos, projects.")
 	cmdRoot.AddCommand(cmd)
 }
