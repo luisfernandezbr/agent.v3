@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/ids"
 	"github.com/pinpt/agent/rpcdef"
@@ -17,19 +17,19 @@ import (
 
 // FetchPullRequests calls the pull request api and processes the reponse sending each object to the corresponding channel async
 // sourcecode.PullRequest, sourcecode.PullRequestReview, sourcecode.PullRequestComment, and sourcecode.PullRequestCommit
-func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsender.Session) ([]rpcdef.GitRepoFetchPR, error) {
+func (api *API) FetchPullRequests(ctx *repoprojects.ProjectCtx, repoid string, reponame string, repoSender *objsender.Session) (_ []rpcdef.GitRepoFetchPR, rerr error) {
 	res, err := api.fetchPullRequests(repoid)
 	if err != nil {
-		return nil, err
+		rerr = err
+		return
 	}
-	fromdate := sender.LastProcessedTime()
+	fromdate := repoSender.LastProcessedTime()
 	incremental := !fromdate.IsZero()
 	repoRefID := api.IDs.CodeRepo(repoid)
 
 	var pullrequests []pullRequestResponse
 	var pullrequestcomments []pullRequestResponse
 	var fetchprs []rpcdef.GitRepoFetchPR
-	var fetchprsMutex sync.Mutex
 	for _, p := range res {
 		// modify the url to show the ui instead of api call
 		p.URL = strings.ToLower(p.URL)
@@ -46,85 +46,86 @@ func (api *API) FetchPullRequests(repoid string, reponame string, sender *objsen
 		}
 	}
 
-	prsender, err := sender.Session(sourcecode.PullRequestModelName.String(), repoid, reponame)
+	prsender, err := ctx.Session(sourcecode.PullRequestModelName)
 	if err != nil {
-		api.logger.Error("error creating sender session for pull request", "err", err, "repo_id", repoid, "repo_name", reponame)
-		return nil, err
+		rerr = err
+		return
 	}
 	if err := prsender.SetTotal(len(pullrequests)); err != nil {
-		api.logger.Error("error setting total pullrequests on FetchPullRequests", "err", err)
+		rerr = err
+		return
 	}
-	async := NewAsync(api.concurrency)
+
 	for _, p := range pullrequests {
 		pr := pullRequestResponseWithShas{}
 		pr.pullRequestResponse = p
 		pr.SourceBranch = strings.TrimPrefix(p.SourceBranch, "refs/heads/")
 		pr.TargetBranch = strings.TrimPrefix(p.TargetBranch, "refs/heads/")
-		async.Do(func() {
-			commits, err := api.fetchPullRequestCommits(pr.Repository.ID, pr.PullRequestID)
-			if err != nil {
-				api.logger.Error("error fetching commits for PR, skipping", "pr_id", pr.PullRequestID, "repo_id", pr.Repository.ID, "err", err)
-				return
-			}
-			if len(commits) == 0 {
-				return
-			}
-			pridstring := fmt.Sprintf("%d", pr.PullRequestID)
-			prcsender, err := prsender.Session(sourcecode.PullRequestCommitModelName.String(), pridstring, pridstring)
-			if err != nil {
-				api.logger.Error("error creating sender session for pull request commits", "pr_id", pr.PullRequestID, "repo_id", pr.Repository.ID, "err", err)
-				return
-			}
-			if err := prcsender.SetTotal(len(commits)); err != nil {
-				api.logger.Error("error setting total pull request commits on FetchPullRequests", "err", err)
-			}
-			for _, commit := range commits {
-				pr.commitshas = append(pr.commitshas, commit.CommitID)
-				pr := pr
-				api.sendPullRequestCommitObjects(repoRefID, pr, prcsender)
-			}
-			if err := prcsender.Done(); err != nil {
-				api.logger.Error("error with sender done in pull request commits", "err", err)
-			}
-			fetchprsMutex.Lock()
-			fetchprs = append(fetchprs, rpcdef.GitRepoFetchPR{
-				ID:            api.IDs.CodePullRequest(repoRefID, pridstring),
-				RefID:         pridstring,
-				URL:           pr.URL,
-				BranchName:    pr.SourceBranch,
-				LastCommitSHA: pr.commitshas[len(pr.commitshas)-1],
-			})
-			fetchprsMutex.Unlock()
-			api.sendPullRequestObjects(repoRefID, pr, prsender)
+
+		commits, err := api.fetchPullRequestCommits(pr.Repository.ID, pr.PullRequestID)
+		if err != nil {
+			rerr = fmt.Errorf("error fetching commits for PR, skipping pr_id:%v repo_id:%v err:%v", pr.PullRequestID, pr.Repository.ID, err)
+			return
+		}
+		if len(commits) == 0 {
+			return
+		}
+
+		pridstring := fmt.Sprintf("%d", pr.PullRequestID)
+		prcsender, err := prsender.Session(sourcecode.PullRequestCommitModelName.String(), pridstring, pridstring)
+		if err != nil {
+			rerr = fmt.Errorf("error creating sender session for pull request commits pr_id:%v repo_id:%v err: %v", pr.PullRequestID, pr.Repository.ID, err)
+			return
+		}
+		if err := prcsender.SetTotal(len(commits)); err != nil {
+			rerr = err
+			return
+		}
+		for _, commit := range commits {
+			pr.commitshas = append(pr.commitshas, commit.CommitID)
+			pr := pr
+			api.sendPullRequestCommitObjects(repoRefID, pr, prcsender)
+		}
+		if err := prcsender.Done(); err != nil {
+			rerr = err
+			return
+		}
+		fetchprs = append(fetchprs, rpcdef.GitRepoFetchPR{
+			ID:            api.IDs.CodePullRequest(repoRefID, pridstring),
+			RefID:         pridstring,
+			URL:           pr.URL,
+			BranchName:    pr.SourceBranch,
+			LastCommitSHA: pr.commitshas[len(pr.commitshas)-1],
 		})
+		api.sendPullRequestObjects(repoRefID, pr, prsender)
 	}
 
 	for _, pr := range pullrequestcomments {
-		pr := pr
-		async.Do(func() {
-			pridstring := fmt.Sprintf("%d", pr.PullRequestID)
-			prcsender, err := prsender.Session(sourcecode.PullRequestCommentModelName.String(), pridstring, pr.Title)
-			if err != nil {
-				api.logger.Error("error creating sender session for pull request comments", "pr_id", pr.PullRequestID, "repo_id", repoid, "err", err)
-				return
-			}
-			prrsender, err := prsender.Session(sourcecode.PullRequestReviewModelName.String(), pridstring, pridstring)
-			if err != nil {
-				api.logger.Error("error creating sender session for pull request reviews", "pr_id", pr.PullRequestID, "repo_id", pr.Repository.ID, "err", err)
-				return
-			}
-			api.sendPullRequestCommentObject(repoRefID, pr, prcsender, prrsender)
-			if err := prcsender.Done(); err != nil {
-				api.logger.Error("error with sender done in pull request comments", "err", err)
-			}
-			if err := prrsender.Done(); err != nil {
-				api.logger.Error("error with sender done in pull request reviews", "err", err)
-			}
-		})
-	}
-	async.Wait()
+		pridstring := fmt.Sprintf("%d", pr.PullRequestID)
+		prcsender, err := prsender.Session(sourcecode.PullRequestCommentModelName.String(), pridstring, pr.Title)
+		if err != nil {
+			rerr = err
+			return
+		}
 
-	return fetchprs, prsender.Done()
+		prrsender, err := prsender.Session(sourcecode.PullRequestReviewModelName.String(), pridstring, pridstring)
+		if err != nil {
+			rerr = err
+			return
+		}
+		api.sendPullRequestCommentObject(repoRefID, pr, prcsender, prrsender)
+		if err := prcsender.Done(); err != nil {
+			rerr = err
+			return
+		}
+		if err := prrsender.Done(); err != nil {
+			rerr = err
+			return
+
+		}
+	}
+
+	return fetchprs, nil
 }
 
 var pullRequestCommentVotedReg = regexp.MustCompile(`(.+?)( voted )(-10|-5|0|5|10.*)`)
