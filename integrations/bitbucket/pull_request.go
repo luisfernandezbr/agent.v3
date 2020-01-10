@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 	"github.com/pinpt/agent/rpcdef"
 
 	"github.com/hashicorp/go-hclog"
@@ -15,11 +16,20 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportPullRequestsForRepo(logger hclog.Logger, repo commonrepo.Repo,
-	pullRequestSender *objsender.Session,
-	commitsSender *objsender.Session) (res []rpcdef.GitRepoFetchPR, rerr error) {
+func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, repo commonrepo.Repo) (res []rpcdef.GitRepoFetchPR, rerr error) {
 
-	logger = logger.With("repo", repo.NameWithOwner)
+	pullRequestSender, err := ctx.Session(sourcecode.PullRequestModelName)
+	if err != nil {
+		rerr = err
+		return
+	}
+	commitsSender, err := ctx.Session(sourcecode.PullRequestCommitModelName)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	logger := ctx.Logger.With("repo", repo.NameWithOwner)
 	logger.Info("exporting")
 
 	// export changed pull requests
