@@ -3,7 +3,6 @@ package cmdexport
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -15,7 +14,6 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/deviceinfo"
-	"github.com/pinpt/agent/pkg/exportrepo"
 	"github.com/pinpt/agent/pkg/expsessions"
 	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/integrationid"
@@ -52,15 +50,24 @@ func Run(opts Opts) error {
 		return err
 	}
 
-	b, err := json.Marshal(exportResults)
-	if err != nil {
-		return err
+	exportResults.Log(opts.Logger)
+
+	exportErr := exportResults.FailInCaseOfIntegrationErrors()
+	if exportErr != nil {
+		return exportErr
 	}
 
-	_, err = opts.Output.Write(b)
-	if err != nil {
-		return err
-	}
+	/*
+		b, err := json.Marshal(exportResults)
+		if err != nil {
+			return err
+		}
+
+		_, err = opts.Output.Write(b)
+		if err != nil {
+			return err
+		}
+	*/
 
 	return nil
 }
@@ -186,13 +193,12 @@ func (s *export) Run() (_ Result, rerr error) {
 	runResult := s.runExports()
 	close(s.gitProcessingRepos)
 
-	hadGitErrors := false
 	select {
-	case hadGitErrors = <-gitProcessingDone:
+	case <-gitProcessingDone:
 	case <-time.After(1 * time.Second):
 		// only log this if there is actual work needed for git repos
 		s.Logger.Info("Waiting for git repo processing to complete")
-		hadGitErrors = <-gitProcessingDone
+		<-gitProcessingDone
 	}
 
 	err = s.updateLastProcessedTimestamps(startTime)
@@ -215,11 +221,7 @@ func (s *export) Run() (_ Result, rerr error) {
 		return
 	}
 
-	err = s.printExportRes(runResult, hadGitErrors)
-	if err != nil {
-		rerr = err
-		return
-	}
+	s.handleIntegrationPanics(runResult)
 
 	tempFiles, err := s.tempFilesInUploads()
 	if err != nil {
@@ -236,54 +238,6 @@ func (s *export) Run() (_ Result, rerr error) {
 	s.Logger.Info("No temp files found in upload dir, all sessions closed successfully.")
 
 	return s.formatResults(runResult), nil
-}
-
-type Result struct {
-	Integrations []ResultIntegration `json:"integrations"`
-}
-
-type ResultIntegration struct {
-	ID       string          `json:"id"`
-	Error    string          `json:"error"`
-	Projects []ResultProject `json:"projects"`
-}
-
-type ResultProject struct {
-	rpcdef.ExportProject
-	HasGitRepo bool   `json:"has_git_repo"`
-	GitError   string `json:"git_error"`
-}
-
-func (s *export) formatResults(runResult map[integrationid.ID]runResult) Result {
-	gitResults := s.gitResults
-
-	resAll := Result{}
-	for id, res0 := range runResult {
-		res := ResultIntegration{}
-		res.ID = id.String()
-		if res0.Err != nil {
-			res.Error = res0.Err.Error()
-		}
-		for _, project0 := range res0.Res.Projects {
-			project := ResultProject{}
-			project.ExportProject = project0
-			gitErr, ok := gitResults[id][project.ID]
-			if ok {
-				project.HasGitRepo = true
-				if gitErr != nil {
-					if gitErr == exportrepo.ErrRevParseFailed {
-						project.GitError = "empty_repo"
-					} else {
-						project.GitError = gitErr.Error()
-					}
-				}
-			}
-			res.Projects = append(res.Projects, project)
-		}
-		resAll.Integrations = append(resAll.Integrations, res)
-	}
-
-	return resAll
 }
 
 func (s *export) tempFilesInUploads() ([]string, error) {
@@ -422,51 +376,4 @@ func (s *export) runExports() map[integrationid.ID]runResult {
 	wg.Wait()
 
 	return res
-}
-
-// printExportRes show info on which exports works and which failed.
-func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors bool) error {
-	s.Logger.Info("Printing export results for all integrations")
-
-	var successNoGit, failedNoGit []integrationid.ID
-
-	for id, integration := range s.Integrations {
-		ires := res[id]
-		if ires.Err != nil {
-			s.Logger.Error("Export failed", "integration", id, "dur", ires.Duration.String(), "err", ires.Err)
-			if err := s.Command.CloseOnlyIntegrationAndHandlePanic(integration); err != nil {
-				s.Logger.Error("Could not close integration", "err", err)
-			}
-			failedNoGit = append(failedNoGit, id)
-			continue
-		}
-
-		s.Logger.Info("Export success", "integration", id, "dur", ires.Duration.String())
-		successNoGit = append(successNoGit, id)
-	}
-
-	dur := time.Since(s.StartTime)
-
-	successAll := successNoGit
-	failedAll := failedNoGit
-
-	if gitHadErrors {
-		failedAll = append(failedAll, integrationid.ID{Name: "git"})
-	} else {
-		successAll = append(failedAll, integrationid.ID{Name: "git"})
-	}
-
-	if len(failedAll) > 0 {
-		s.Logger.Error("Some exports failed", "failed", failedAll, "succeeded", successAll, "dur", dur.String())
-		// Only mark complete run as failed when integrations fail, git repo errors should not fail those, we only log and retry in incrementals
-		if len(failedNoGit) > 0 {
-			return errors.New("One or more integrations failed, failing export")
-		} else {
-			s.Logger.Error("Git processing failed on one or more repos. We are not marking whole export failed in this case. See the logs for details.")
-		}
-		return nil
-	}
-
-	s.Logger.Info("Exports completed", "succeeded", successAll, "dur", dur.String())
-	return nil
 }

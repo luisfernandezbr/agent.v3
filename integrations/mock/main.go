@@ -26,7 +26,6 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 }
 
 func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
-
 	// queue one real repo for fetching
 	gitFetch := rpcdef.GitRepoFetch{}
 	gitFetch.RepoID = "r1"
