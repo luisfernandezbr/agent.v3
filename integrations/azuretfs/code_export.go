@@ -1,25 +1,29 @@
 package main
 
 import (
-	"fmt"
 	"net/url"
 	"strings"
 
+	"github.com/pinpt/agent/integrations/pkg/repoprojects"
+	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/rpcdef"
 	pjson "github.com/pinpt/go-common/json"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportCode() (err error) {
+func (s *Integration) exportCode() (exportResults []rpcdef.ExportProject, rerr error) {
 
-	projectids, err := s.processRepos()
+	projectids, exportResults, err := s.processRepos()
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 	if err = s.processUsers(projectids); err != nil {
-		return err
+		rerr = err
+		return
 	}
-	return nil
+
+	return exportResults, nil
 }
 
 func urlAppend(p1, p2 string) string {
@@ -38,45 +42,95 @@ func stringify(i interface{}) string {
 	return pjson.Stringify(i)
 }
 
-func (s *Integration) processRepos() (projectids []string, err error) {
-	var repos []*sourcecode.Repo
-	if projectids, repos, err = s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs); err != nil {
+func (s *Integration) processRepos() (
+	projectIDs []string,
+	exportResults []rpcdef.ExportProject,
+	rerr error) {
+
+	ids, reposDetails, err := s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs)
+	if err != nil {
+		rerr = err
 		return
 	}
+	projectIDs = ids
+
 	var orgname string
 	if s.Creds.Organization != nil {
 		orgname = *s.Creds.Organization
 	} else {
 		orgname = *s.Creds.CollectionName
 	}
+
 	sender, err := s.orgSession.Session(sourcecode.RepoModelName.String(), orgname, orgname)
 	if err != nil {
+		rerr = err
 		return
 	}
-	if err = sender.SetTotal(len(repos)); err != nil {
-		s.logger.Error("error setting total repos on processRepos", "err", err)
+
+	if err := sender.SetTotal(len(reposDetails)); err != nil {
+		rerr = err
+		return
 	}
-	var errors []string
-	for _, repo := range repos {
+
+	sender.SetNoAutoProgress(true)
+
+	for _, repo := range reposDetails {
 		if err = sender.Send(repo); err != nil {
-			s.logger.Error("error sending repo", "repo_id", repo.RefID, "err", err)
+			rerr = err
 			return
 		}
-		var fetchprs []rpcdef.GitRepoFetchPR
-		if fetchprs, err = s.api.FetchPullRequests(repo.RefID, repo.Name, sender); err != nil {
-			errors = append(errors, err.Error())
+	}
+
+	var repos []Repo
+	for _, repo := range reposDetails {
+		repos = append(repos, Repo{repo})
+	}
+	var reposIface []repoprojects.RepoProject
+	for _, repo := range repos {
+		reposIface = append(reposIface, repo)
+	}
+	processOpts := repoprojects.ProcessOpts{}
+	processOpts.Logger = s.logger
+	processOpts.ProjectFn = func(ctx *repoprojects.ProjectCtx) error {
+		repo := ctx.Project.(Repo)
+		fetchprs, err := s.api.FetchPullRequests(ctx, repo.RefID, repo.Name, sender)
+		if err != nil {
+			return err
 		}
-		if err := s.ripSource(repo, fetchprs); err != nil {
-			s.logger.Error("error with ripsrc in repo", "data", repo.Stringify())
-		}
+		return s.ripSource(repo.Repo, fetchprs)
+	}
+
+	processOpts.Concurrency = s.Concurrency
+	processOpts.Projects = reposIface
+	processOpts.IntegrationType = integrationid.TypeSourcecode
+	processOpts.CustomerID = s.customerid
+	processOpts.RefType = s.RefType.String()
+	processOpts.Sender = sender
+
+	processor := repoprojects.NewProcess(processOpts)
+	exportResults, err = processor.Run()
+	if err != nil {
+		rerr = err
+		return
 	}
 	if err = sender.Done(); err != nil {
-		errors = append(errors, err.Error())
+		rerr = err
+		return
 	}
-	if len(errors) > 0 {
-		err = fmt.Errorf("errors: %v", strings.Join(errors, ", "))
-	}
+
 	return
+}
+
+type Repo struct {
+	*sourcecode.Repo
+}
+
+func (s Repo) GetID() string {
+	return s.RefID
+}
+
+func (s Repo) GetReadableID() string {
+	return s.Name
 }
 
 func (s *Integration) appendCredentials(repoURL string) (string, error) {
