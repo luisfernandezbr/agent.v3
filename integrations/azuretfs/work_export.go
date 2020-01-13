@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 
-	"github.com/pinpt/agent/integrations/pkg/objsender"
+	"github.com/pinpt/agent/integrations/pkg/repoprojects"
+	"github.com/pinpt/agent/pkg/integrationid"
+	"github.com/pinpt/agent/rpcdef"
 
-	azureapi "github.com/pinpt/agent/integrations/azuretfs/api"
 	"github.com/pinpt/integration-sdk/work"
 )
 
-func (s *Integration) exportWork() error {
+func (s *Integration) exportWork() (exportResults []rpcdef.ExportProject, rerr error) {
 
 	var orgname string
 	if s.Creds.Organization != nil {
@@ -19,126 +20,170 @@ func (s *Integration) exportWork() error {
 	}
 	sender, err := s.orgSession.Session(work.ProjectModelName.String(), orgname, orgname)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
-	projects, err := s.api.FetchProjects(s.ExcludedProjectIDs)
+	projectsDetails, err := s.api.FetchProjects(s.ExcludedProjectIDs)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
-	if err := sender.SetTotal(len(projects)); err != nil {
-		s.logger.Error("error setting total projects on exportWork", "err", err)
+	if err := sender.SetTotal(len(projectsDetails)); err != nil {
+		rerr = err
+		return
 	}
-	for _, proj := range projects {
+
+	sender.SetNoAutoProgress(true)
+
+	for _, proj := range projectsDetails {
 		if err := sender.Send(proj); err != nil {
-			s.logger.Error("error sending project", "id", proj.RefID, "err", err)
-			return err
+			rerr = err
+			return
 		}
+	}
+
+	var projects []Project
+	for _, project := range projectsDetails {
+		projects = append(projects, Project{RefID: project.RefID, Name: project.Name})
+	}
+	var projectsIface []repoprojects.RepoProject
+	for _, project := range projects {
+		projectsIface = append(projectsIface, project)
+	}
+
+	processOpts := repoprojects.ProcessOpts{}
+	processOpts.Logger = s.logger
+	processOpts.ProjectFn = func(ctx *repoprojects.ProjectCtx) error {
+		proj := ctx.Project.(Project)
 		teamids, err := s.api.FetchTeamIDs(proj.RefID)
 		if err != nil {
 			return err
 		}
-		if err = s.processWorkUsers(proj.RefID, proj.Name, teamids, sender); err != nil {
+		if err = s.processWorkUsers(ctx, proj, teamids); err != nil {
 			return err
 		}
-		if err = s.processWorkItems(proj.RefID, proj.Name, sender); err != nil {
+		if err = s.processWorkItems(ctx, proj); err != nil {
 			return err
 		}
-		if err = s.processSprints(proj.RefID, proj.Name, teamids, sender); err != nil {
+		if err = s.processSprints(ctx, proj, teamids); err != nil {
 			return err
 		}
+		return nil
 	}
-	return sender.Done()
+
+	processOpts.Concurrency = s.Concurrency
+	processOpts.Projects = projectsIface
+	processOpts.IntegrationType = integrationid.TypeSourcecode
+	processOpts.CustomerID = s.customerid
+	processOpts.RefType = s.RefType.String()
+	processOpts.Sender = sender
+
+	processor := repoprojects.NewProcess(processOpts)
+	exportResults, err = processor.Run()
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	err = sender.Done()
+	if err != nil {
+		rerr = err
+	}
+	return
 }
 
-func (s *Integration) processWorkUsers(projid, projname string, teamids []string, sender *objsender.Session) error {
-	sender, err := sender.Session(work.UserModelName.String(), projid, projname)
+type Project struct {
+	RefID string
+	Name  string
+}
+
+func (s Project) GetID() string {
+	return s.RefID
+}
+
+func (s Project) GetReadableID() string {
+	return s.Name
+}
+
+func (s *Integration) processWorkUsers(ctx *repoprojects.ProjectCtx, proj Project, teamids []string) error {
+	sender, err := ctx.Session(work.UserModelName)
 	if err != nil {
-		s.logger.Error("error creating sender session for work user")
 		return err
 	}
-	users, err := s.api.FetchWorkUsers(projid, teamids)
+	users, err := s.api.FetchWorkUsers(proj.RefID, teamids)
 	if err != nil {
-		return fmt.Errorf("error fetching users. err %s", err.Error())
+		return err
 	}
 	if err := sender.SetTotal(len(users)); err != nil {
-		s.logger.Error("error setting total users on processWorkUsers", "err", err)
+		return err
 	}
 	for _, user := range users {
 		if err := sender.Send(user); err != nil {
-			s.logger.Error("error sending users", "err", err, "id", user.RefID)
+			return err
 		}
 	}
-	return sender.Done()
+	return nil
 }
 
-func (s *Integration) processWorkItems(projid, projname string, sender *objsender.Session) error {
-	sender, err := sender.Session(work.IssueModelName.String(), projid, projname)
+func (s *Integration) processWorkItems(ctx *repoprojects.ProjectCtx, proj Project) error {
+	sender, err := ctx.Session(work.IssueModelName)
 	if err != nil {
-		s.logger.Error("error creating sender session for work user")
 		return err
 	}
-
-	// gets the work items (issues) and sends them to the items channel
-	// The first step is to get the IDs of all items that changed after the fromdate
-	// Then we need to get the items 200 at a time, this is done async
-	async := azureapi.NewAsync(s.Concurrency)
-	allids, err := s.api.FetchItemIDs(projid, sender.LastProcessedTime())
+	allids, err := s.api.FetchItemIDs(proj.RefID, sender.LastProcessedTime())
 	if err != nil {
 		return err
 	}
 	if err := sender.SetTotal(len(allids)); err != nil {
 		s.logger.Error("error setting total ids on processWorkItems", "err", err)
 	}
-	fetchitems := func(ids []string) {
-		async.Do(func() {
-			_, items, err := s.api.FetchWorkItemsByIDs(projid, ids)
-			if err != nil {
-				s.logger.Error("error with fetchWorkItemsByIDs", "err", err)
-				return
+	fetchitems := func(ids []string) error {
+		_, items, err := s.api.FetchWorkItemsByIDs(proj.RefID, ids)
+		if err != nil {
+			return fmt.Errorf("error with fetchWorkItemsByIDs, err: %v", err)
+		}
+		for _, i := range items {
+			if err := sender.Send(i); err != nil {
+				return err
 			}
-			for _, i := range items {
-				if err := sender.Send(i); err != nil {
-					s.logger.Error("error sending work item", "err", err, "id", i.RefID)
-				}
-			}
-		})
+		}
+		return nil
 	}
 	var ids []string
 	for _, id := range allids {
 		ids = append(ids, id)
 		if len(ids) == 200 {
-			fetchitems(ids)
+			err := fetchitems(ids)
+			if err != nil {
+				return err
+			}
 			ids = []string{}
 		}
 	}
 	if len(ids) > 0 {
-		fetchitems(ids)
+		err := fetchitems(ids)
+		if err != nil {
+			return err
+		}
 	}
-	async.Wait()
-	return sender.Done()
+	return nil
 }
 
-func (s *Integration) processSprints(projid, projname string, teamids []string, sender *objsender.Session) error {
-	sender, err := sender.Session(work.SprintModelName.String(), projid, projname)
+func (s *Integration) processSprints(ctx *repoprojects.ProjectCtx, proj Project, teamids []string) error {
+	sender, err := ctx.Session(work.SprintModelName)
 	if err != nil {
-		s.logger.Error("error creating sender session for work sprint")
 		return err
 	}
-	async := azureapi.NewAsync(s.Concurrency)
 	for _, teamid := range teamids {
-		teamid := teamid
-		async.Do(func() {
-			sprints, err := s.api.FetchSprint(projid, teamid)
-			if err != nil {
-				return
+		sprints, err := s.api.FetchSprint(proj.RefID, teamid)
+		if err != nil {
+			return err
+		}
+		for _, sp := range sprints {
+			if err := sender.Send(sp); err != nil {
+				return err
 			}
-			for _, sp := range sprints {
-				if err := sender.Send(sp); err != nil {
-					s.logger.Error("error sending sprint", "err", err, "id", sp.RefID)
-				}
-			}
-		})
+		}
 	}
-	async.Wait()
-	return sender.Done()
+	return nil
 }

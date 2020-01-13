@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -41,8 +40,6 @@ var IntegrationTypeCode = IntegrationType("SOURCECODE")
 
 var IntegrationTypeIssues = IntegrationType("WORK")
 
-var IntegrationTypeBoth = IntegrationType("")
-
 // Integration the main integration object
 type Integration struct {
 	logger     hclog.Logger
@@ -71,8 +68,10 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	return nil
 }
 
-func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, err error) {
-	if err = s.initConfig(ctx, config); err != nil {
+func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, rerr error) {
+	err := s.initConfig(ctx, config)
+	if err != nil {
+		rerr = err
 		return
 	}
 	var orgtype string
@@ -82,32 +81,30 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		orgtype = "organization"
 	}
 	if s.orgSession, err = objsender.RootTracking(s.agent, orgtype); err != nil {
+		rerr = err
 		return
 	}
 
 	if s.IntegrationType == IntegrationTypeCode {
-		err = s.exportCode()
-	} else if s.IntegrationType == IntegrationTypeIssues {
-		err = s.exportWork()
-	} else {
-		async := api.NewAsync(2)
-		var errors []string
-		async.Do(func() {
-			if err = s.exportCode(); err != nil {
-				errors = append(errors, err.Error())
-			}
-		})
-		async.Do(func() {
-			if err = s.exportWork(); err != nil {
-				errors = append(errors, err.Error())
-			}
-		})
-		async.Wait()
-		if errors != nil {
-			err = fmt.Errorf("%v", strings.Join(errors, ", "))
+		repoResults, err := s.exportCode()
+		if err != nil {
+			rerr = err
+			return
 		}
+		res.Projects = repoResults
+		return
+	} else if s.IntegrationType == IntegrationTypeIssues {
+		projectResults, err := s.exportWork()
+		if err != nil {
+			rerr = err
+			return
+		}
+		res.Projects = projectResults
+		return
 	}
-	return
+
+	panic("IntegrationType is required")
+
 }
 
 func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ValidationResult, err error) {
@@ -189,8 +186,8 @@ func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig
 	if s.Concurrency == 0 {
 		s.Concurrency = 10
 	}
-	if s.IntegrationType != IntegrationTypeBoth && s.IntegrationType != IntegrationTypeCode && s.IntegrationType != IntegrationTypeIssues {
-		return errors.New(`"type" must be "` + IntegrationTypeIssues.String() + `", "` + IntegrationTypeCode.String() + `", or empty for both`)
+	if s.IntegrationType != IntegrationTypeCode && s.IntegrationType != IntegrationTypeIssues {
+		return errors.New(`"type" must be "` + IntegrationTypeIssues.String() + `", "` + IntegrationTypeCode.String() + `"`)
 	}
 	if s.Creds.URL == "" {
 		return errors.New("missing url")
