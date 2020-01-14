@@ -32,10 +32,9 @@ type Process struct {
 }
 
 func NewProcess(opts ProcessOpts) *Process {
-	if opts.Logger == nil || opts.ProjectFn == nil || opts.Concurrency == 0 || len(opts.Projects) == 0 || opts.IntegrationType == "" || opts.CustomerID == "" || opts.RefType == "" || opts.Sender == nil {
+	if opts.Logger == nil || opts.ProjectFn == nil || opts.Concurrency == 0 || opts.IntegrationType == "" || opts.CustomerID == "" || opts.RefType == "" || opts.Sender == nil {
 		panic("provide all args")
 	}
-
 	s := &Process{}
 	s.opts = opts
 	return s
@@ -56,6 +55,11 @@ func (s *Process) projectID(project RepoProject) string {
 const returnEarlyAfterNFailedProjects = 10
 
 func (s *Process) Run() (allRes []rpcdef.ExportProject, rerr error) {
+	if len(s.opts.Projects) == 0 {
+		s.opts.Logger.Warn("no repos/projects found")
+		return
+	}
+
 	wg := sync.WaitGroup{}
 
 	var fatalErr error
