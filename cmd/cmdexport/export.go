@@ -3,21 +3,18 @@ package cmdexport
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/pinpt/agent/pkg/deviceinfo"
 	"github.com/pinpt/agent/pkg/expin"
-	"github.com/pinpt/agent/pkg/exportrepo"
 	"github.com/pinpt/agent/pkg/expsessions"
 	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/integrationid"
@@ -54,15 +51,24 @@ func Run(opts Opts) error {
 		return err
 	}
 
-	b, err := json.Marshal(exportResults)
-	if err != nil {
-		return err
+	exportResults.Log(opts.Logger)
+
+	exportErr := exportResults.FailInCaseOfIntegrationErrors()
+	if exportErr != nil {
+		return exportErr
 	}
 
-	_, err = opts.Output.Write(b)
-	if err != nil {
-		return err
-	}
+	/*
+		b, err := json.Marshal(exportResults)
+		if err != nil {
+			return err
+		}
+
+		_, err = opts.Output.Write(b)
+		if err != nil {
+			return err
+		}
+	*/
 
 	return nil
 }
@@ -188,13 +194,12 @@ func (s *export) Run() (_ Result, rerr error) {
 	runResult := s.runExports()
 	close(s.gitProcessingRepos)
 
-	hadGitErrors := false
 	select {
-	case hadGitErrors = <-gitProcessingDone:
+	case <-gitProcessingDone:
 	case <-time.After(1 * time.Second):
 		// only log this if there is actual work needed for git repos
 		s.Logger.Info("Waiting for git repo processing to complete")
-		hadGitErrors = <-gitProcessingDone
+		<-gitProcessingDone
 	}
 
 	err = s.updateLastProcessedTimestamps(startTime)
@@ -217,11 +222,7 @@ func (s *export) Run() (_ Result, rerr error) {
 		return
 	}
 
-	err = s.printExportRes(runResult, hadGitErrors)
-	if err != nil {
-		rerr = err
-		return
-	}
+	s.handleIntegrationPanics(runResult)
 
 	tempFiles, err := s.tempFilesInUploads()
 	if err != nil {
@@ -238,60 +239,6 @@ func (s *export) Run() (_ Result, rerr error) {
 	s.Logger.Info("No temp files found in upload dir, all sessions closed successfully.")
 
 	return s.formatResults(runResult), nil
-}
-
-type Result struct {
-	Integrations []ResultIntegration `json:"integrations"`
-}
-
-type ResultIntegration struct {
-	index       int
-	Integration string          `json:"integration"`
-	Error       string          `json:"error"`
-	Projects    []ResultProject `json:"projects"`
-}
-
-type ResultProject struct {
-	rpcdef.ExportProject
-	HasGitRepo bool   `json:"has_git_repo"`
-	GitError   string `json:"git_error"`
-}
-
-func (s *export) formatResults(runResult map[expin.Index]runResult) Result {
-	gitResults := s.gitResults
-
-	resAll := Result{}
-	for ind, res0 := range runResult {
-		res := ResultIntegration{}
-		res.index = int(ind)
-		res.Integration = s.ExpIn(ind).String()
-		if res0.Err != nil {
-			res.Error = res0.Err.Error()
-		}
-		for _, project0 := range res0.Res.Projects {
-			project := ResultProject{}
-			project.ExportProject = project0
-			gitErr, ok := gitResults[ind][project.ID]
-			if ok {
-				project.HasGitRepo = true
-				if gitErr != nil {
-					if gitErr == exportrepo.ErrRevParseFailed {
-						project.GitError = "empty_repo"
-					} else {
-						project.GitError = gitErr.Error()
-					}
-				}
-			}
-			res.Projects = append(res.Projects, project)
-		}
-		resAll.Integrations = append(resAll.Integrations, res)
-	}
-	sort.Slice(resAll.Integrations, func(i, j int) bool {
-		a := resAll.Integrations[i]
-		b := resAll.Integrations[j]
-		return a.index < b.index
-	})
-	return resAll
 }
 
 func (s *export) tempFilesInUploads() ([]string, error) {
