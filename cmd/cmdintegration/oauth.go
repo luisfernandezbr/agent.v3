@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/pinpt/agent/pkg/expin"
 	"github.com/pinpt/agent/pkg/requests"
 	"github.com/pinpt/go-common/api"
 )
@@ -20,12 +21,13 @@ func oauthIntegrationNameToBackend(name string) string {
 	}
 }
 
-func (s *Command) OAuthNewAccessToken(integrationName string) (accessToken string, _ error) {
+func (s *Command) OAuthNewAccessToken(ii expin.Index) (accessToken string, _ error) {
+	integrationName := s.IntegrationIDs[ii].Name
 
 	if !s.Opts.AgentConfig.Backend.Enable {
 		return "", errors.New("requested oauth access token, but Backend.Enable is false")
 	}
-	refresh := s.OAuthRefreshTokens[integrationName]
+	refresh := s.OAuthRefreshTokens[ii]
 	if refresh == "" {
 		return "", fmt.Errorf("requested oauth access token for integration %v, but we don't have refresh token for it", integrationName)
 	}

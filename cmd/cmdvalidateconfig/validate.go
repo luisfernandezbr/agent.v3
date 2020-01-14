@@ -64,14 +64,8 @@ func newValidator(opts Opts) (_ *validator, rerr error) {
 		return
 	}
 
-	integration := opts.Integrations[0]
-	id, err := integration.ID()
-	if err != nil {
-		return nil, err
-	}
-
-	s.integration = s.Integrations[id]
-	s.exportConfig = s.ExportConfigs[id]
+	s.integration = s.Integrations[0]
+	s.exportConfig = s.ExportConfigs[0]
 
 	err = s.runValidateAndPrint()
 	if err != nil {

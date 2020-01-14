@@ -10,11 +10,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/pinpt/agent/pkg/deviceinfo"
+	"github.com/pinpt/agent/pkg/expin"
 	"github.com/pinpt/agent/pkg/exportrepo"
 	"github.com/pinpt/agent/pkg/expsessions"
 	"github.com/pinpt/agent/pkg/fs"
@@ -80,13 +82,13 @@ type export struct {
 
 	opts Opts
 
-	gitSessions map[integrationid.ID]expsessions.ID
+	gitSessions map[expin.Index]expsessions.ID
 	// map[integration.ID]map[repoID]error
-	gitResults map[integrationid.ID]map[string]error
+	gitResults map[expin.Index]map[string]error
 }
 
 type gitRepoFetch struct {
-	integrationID integrationid.ID
+	ind expin.Index
 	rpcdef.GitRepoFetch
 }
 
@@ -173,8 +175,8 @@ func (s *export) Run() (_ Result, rerr error) {
 		gitProcessingDone <- hadErrors
 	}()
 
-	err = s.SetupIntegrations(func(in integrationid.ID) rpcdef.Agent {
-		return newAgentDelegate(s, s.sessions.expsession, in)
+	err = s.SetupIntegrations(func(ind expin.Index) rpcdef.Agent {
+		return newAgentDelegate(s, s.sessions.expsession, s.ExpIn(ind))
 	})
 	if err != nil {
 		rerr = err
@@ -243,9 +245,10 @@ type Result struct {
 }
 
 type ResultIntegration struct {
-	ID       string          `json:"id"`
-	Error    string          `json:"error"`
-	Projects []ResultProject `json:"projects"`
+	index       int
+	Integration string          `json:"integration"`
+	Error       string          `json:"error"`
+	Projects    []ResultProject `json:"projects"`
 }
 
 type ResultProject struct {
@@ -254,20 +257,21 @@ type ResultProject struct {
 	GitError   string `json:"git_error"`
 }
 
-func (s *export) formatResults(runResult map[integrationid.ID]runResult) Result {
+func (s *export) formatResults(runResult map[expin.Index]runResult) Result {
 	gitResults := s.gitResults
 
 	resAll := Result{}
-	for id, res0 := range runResult {
+	for ind, res0 := range runResult {
 		res := ResultIntegration{}
-		res.ID = id.String()
+		res.index = int(ind)
+		res.Integration = s.ExpIn(ind).String()
 		if res0.Err != nil {
 			res.Error = res0.Err.Error()
 		}
 		for _, project0 := range res0.Res.Projects {
 			project := ResultProject{}
 			project.ExportProject = project0
-			gitErr, ok := gitResults[id][project.ID]
+			gitErr, ok := gitResults[ind][project.ID]
 			if ok {
 				project.HasGitRepo = true
 				if gitErr != nil {
@@ -282,7 +286,11 @@ func (s *export) formatResults(runResult map[integrationid.ID]runResult) Result 
 		}
 		resAll.Integrations = append(resAll.Integrations, res)
 	}
-
+	sort.Slice(resAll.Integrations, func(i, j int) bool {
+		a := resAll.Integrations[i]
+		b := resAll.Integrations[j]
+		return a.index < b.index
+	})
 	return resAll
 }
 
@@ -379,38 +387,39 @@ type runResult struct {
 	Res      rpcdef.ExportResult
 }
 
-func (s *export) runExports() map[integrationid.ID]runResult {
+func (s *export) runExports() map[expin.Index]runResult {
 	ctx := context.Background()
 	wg := sync.WaitGroup{}
 
-	res := map[integrationid.ID]runResult{}
+	res := map[expin.Index]runResult{}
 	resMu := sync.Mutex{}
 
-	for _, integration := range s.Integrations {
+	for ind, integration := range s.Integrations {
 		wg.Add(1)
+		ind := ind
 		integration := integration
 		go func() {
+			expin := s.ExpIn(ind)
 			defer wg.Done()
 			start := time.Now()
-			id := integration.ID
 			ret := func(err error, exportRes rpcdef.ExportResult) {
 				resMu.Lock()
-				res[id] = runResult{
+				res[ind] = runResult{
 					Duration: time.Since(start),
 					Err:      err,
 					Res:      exportRes,
 				}
 				resMu.Unlock()
 				if err != nil {
-					s.Logger.Error("Export failed", "integration", id, "dur", time.Since(start).String(), "err", err)
+					s.Logger.Error("Export failed", "integration", expin, "dur", time.Since(start).String(), "err", err)
 					return
 				}
-				s.Logger.Info("Export success", "integration", id, "dur", time.Since(start).String())
+				s.Logger.Info("Export success", "integration", expin, "dur", time.Since(start).String())
 			}
 
-			s.Logger.Info("Export starting", "integration", id)
+			s.Logger.Info("Export starting", "integration", expin)
 
-			exportConfig, ok := s.ExportConfigs[id]
+			exportConfig, ok := s.ExportConfigs[ind]
 			if !ok {
 				panic("no config for integration")
 			}
@@ -425,24 +434,25 @@ func (s *export) runExports() map[integrationid.ID]runResult {
 }
 
 // printExportRes show info on which exports works and which failed.
-func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors bool) error {
+func (s *export) printExportRes(res map[expin.Index]runResult, gitHadErrors bool) error {
 	s.Logger.Info("Printing export results for all integrations")
 
-	var successNoGit, failedNoGit []integrationid.ID
+	var successNoGit, failedNoGit []expin.Export
 
-	for id, integration := range s.Integrations {
-		ires := res[id]
+	for ind, integration := range s.Integrations {
+		ires := res[ind]
+		expin := s.ExpIn(ind)
 		if ires.Err != nil {
-			s.Logger.Error("Export failed", "integration", id, "dur", ires.Duration.String(), "err", ires.Err)
+			s.Logger.Error("Export failed", "integration", expin, "dur", ires.Duration.String(), "err", ires.Err)
 			if err := s.Command.CloseOnlyIntegrationAndHandlePanic(integration); err != nil {
 				s.Logger.Error("Could not close integration", "err", err)
 			}
-			failedNoGit = append(failedNoGit, id)
+			failedNoGit = append(failedNoGit, expin)
 			continue
 		}
 
-		s.Logger.Info("Export success", "integration", id, "dur", ires.Duration.String())
-		successNoGit = append(successNoGit, id)
+		s.Logger.Info("Export success", "integration", expin, "dur", ires.Duration.String())
+		successNoGit = append(successNoGit, expin)
 	}
 
 	dur := time.Since(s.StartTime)
@@ -451,9 +461,9 @@ func (s *export) printExportRes(res map[integrationid.ID]runResult, gitHadErrors
 	failedAll := failedNoGit
 
 	if gitHadErrors {
-		failedAll = append(failedAll, integrationid.ID{Name: "git"})
+		failedAll = append(failedAll, expin.Export{Integration: integrationid.ID{Name: "git"}})
 	} else {
-		successAll = append(failedAll, integrationid.ID{Name: "git"})
+		successAll = append(failedAll, expin.Export{Integration: integrationid.ID{Name: "git"}})
 	}
 
 	if len(failedAll) > 0 {

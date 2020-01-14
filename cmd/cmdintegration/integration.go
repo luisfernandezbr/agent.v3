@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/expin"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
@@ -86,13 +87,14 @@ type Command struct {
 	StartTime time.Time
 	Locs      fsconf.Locs
 
-	Integrations  map[integrationid.ID]*iloader.Integration
-	ExportConfigs map[integrationid.ID]rpcdef.ExportConfig
+	IntegrationIDs map[expin.Index]integrationid.ID
+	Integrations   map[expin.Index]*iloader.Integration
+	ExportConfigs  map[expin.Index]rpcdef.ExportConfig
 
 	// OAuthRefreshTokens contains refresh token for integrations
 	// using OAuth. These are allow getting new access tokens using
 	// pinpoint backend. Do not pass them to integrations, these are handled in agent instead.
-	OAuthRefreshTokens map[string]string
+	OAuthRefreshTokens map[expin.Index]string
 
 	EnrollConf agentconf.Config
 	Deviceinfo deviceinfo.CommonInfo
@@ -147,15 +149,22 @@ func NewCommand(opts Opts) (*Command, error) {
 	return s, nil
 }
 
-func (s *Command) setupConfig() error {
-	s.ExportConfigs = map[integrationid.ID]rpcdef.ExportConfig{}
-	s.OAuthRefreshTokens = map[string]string{}
+func (s *Command) ExpIn(ind expin.Index) expin.Export {
+	return expin.Export{Index: ind, Integration: s.IntegrationIDs[ind]}
+}
 
-	for _, obj := range s.Opts.Integrations {
+func (s *Command) setupConfig() error {
+	s.ExportConfigs = map[expin.Index]rpcdef.ExportConfig{}
+	s.OAuthRefreshTokens = map[expin.Index]string{}
+	s.IntegrationIDs = map[expin.Index]integrationid.ID{}
+
+	for i, obj := range s.Opts.Integrations {
+		ind := expin.Index(i)
 		id, err := obj.ID()
 		if err != nil {
 			return err
 		}
+		s.IntegrationIDs[ind] = id
 
 		ec := rpcdef.ExportConfig{}
 		ec.Pinpoint.CustomerID = s.Opts.AgentConfig.CustomerID
@@ -165,7 +174,7 @@ func (s *Command) setupConfig() error {
 
 		if refreshToken != "" {
 			// TODO: switch to using ID instead of name as key, so we could have azure issues and azure work to use different refresh tokens
-			s.OAuthRefreshTokens[id.Name] = refreshToken
+			s.OAuthRefreshTokens[ind] = refreshToken
 			ec.UseOAuth = true
 			// do not pass oauth_refresh_token to integration
 			// integrations should use
@@ -173,7 +182,7 @@ func (s *Command) setupConfig() error {
 			delete(ec.Integration, "oauth_refresh_token")
 		}
 
-		s.ExportConfigs[id] = ec
+		s.ExportConfigs[ind] = ec
 
 	}
 	return nil
@@ -188,19 +197,15 @@ func copyMap(data map[string]interface{}) map[string]interface{} {
 }
 
 func (s *Command) SetupIntegrations(
-	agentDelegates func(in integrationid.ID) rpcdef.Agent) error {
+	agentDelegates func(ind expin.Index) rpcdef.Agent) error {
 
 	if agentDelegates == nil {
 		agentDelegates = AgentDelegateMinFactory(s)
 	}
 
-	var ins []integrationid.ID
-	for _, integration := range s.Opts.Integrations {
-		in, err := integration.ID()
-		if err != nil {
-			return err
-		}
-		ins = append(ins, in)
+	var ins []expin.Export
+	for ind := range s.IntegrationIDs {
+		ins = append(ins, s.ExpIn(ind))
 	}
 
 	opts := iloader.Opts{}
@@ -214,7 +219,11 @@ func (s *Command) SetupIntegrations(
 	if err != nil {
 		return err
 	}
-	s.Integrations = res
+
+	s.Integrations = map[expin.Index]*iloader.Integration{}
+	for i, v := range res {
+		s.Integrations[expin.Index(i)] = v
+	}
 
 	go func() {
 		s.CaptureShutdown()
@@ -233,7 +242,7 @@ func (s *Command) CloseOnlyIntegrationAndHandlePanic(integration *iloader.Integr
 			data := &agent.Crash{
 				Data:      &panicOut,
 				Type:      agent.CrashTypeCrash,
-				Component: "integration/" + integration.ID.String(),
+				Component: "integration/" + integration.Export.Integration.String(),
 			}
 			date.ConvertToModel(time.Now(), &data.CrashDate)
 			if err := s.sendEvent(data); err != nil {
@@ -255,12 +264,12 @@ func (s *Command) CaptureShutdown() {
 	os.Exit(1)
 }
 
-func (s *Command) SendPauseEvent(in integrationid.ID, msg string, resumeDate time.Time) error {
+func (s *Command) SendPauseEvent(export expin.Export, msg string, resumeDate time.Time) error {
 
 	data := &agent.Pause{
 		Data:        &msg,
 		Type:        agent.PauseTypePause,
-		Integration: in.String(),
+		Integration: export.String(),
 		JobID:       s.Opts.AgentConfig.Backend.ExportJobID,
 	}
 	date.ConvertToModel(resumeDate, &data.ResumeDate)
@@ -270,12 +279,12 @@ func (s *Command) SendPauseEvent(in integrationid.ID, msg string, resumeDate tim
 	}
 	return nil
 }
-func (s *Command) SendResumeEvent(in integrationid.ID, msg string) error {
+func (s *Command) SendResumeEvent(export expin.Export, msg string) error {
 
 	data := &agent.Resume{
 		Data:        &msg,
 		Type:        agent.ResumeTypeResume,
-		Integration: in.String(),
+		Integration: export.String(),
 		JobID:       s.Opts.AgentConfig.Backend.ExportJobID,
 	}
 	date.ConvertToModel(time.Now(), &data.EventDate)

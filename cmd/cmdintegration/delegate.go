@@ -3,22 +3,22 @@ package cmdintegration
 import (
 	"time"
 
-	"github.com/pinpt/agent/pkg/integrationid"
+	"github.com/pinpt/agent/pkg/expin"
 	"github.com/pinpt/agent/rpcdef"
 )
 
 type AgentDelegateMinimal interface {
-	OAuthNewAccessToken(integrationName string) (token string, _ error)
+	OAuthNewAccessToken(ind expin.Index) (token string, _ error)
 }
 
 type agentDelegate struct {
 	min AgentDelegateMinimal
-	in  integrationid.ID
+	ind expin.Index
 }
 
-func AgentDelegateMinFactory(min AgentDelegateMinimal) func(in integrationid.ID) rpcdef.Agent {
-	return func(in integrationid.ID) rpcdef.Agent {
-		return &agentDelegate{min: min, in: in}
+func AgentDelegateMinFactory(min AgentDelegateMinimal) func(ind expin.Index) rpcdef.Agent {
+	return func(ind expin.Index) rpcdef.Agent {
+		return &agentDelegate{min: min, ind: ind}
 	}
 }
 
@@ -51,7 +51,7 @@ func (s agentDelegate) SessionRollback(id int) error {
 }
 
 func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
-	return s.min.OAuthNewAccessToken(s.in.Name)
+	return s.min.OAuthNewAccessToken(s.ind)
 }
 
 func (s agentDelegate) SendPauseEvent(msg string, resumeDate time.Time) error {

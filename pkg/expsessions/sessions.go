@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent/pkg/integrationid"
+	"github.com/pinpt/agent/pkg/expin"
 )
 
 // Opts are options for New call
@@ -52,23 +52,23 @@ type Manager struct {
 	lastID ID
 }
 
-func (s *Manager) SessionRoot(in integrationid.ID, modelType string) (_ ID, lastProcessed interface{}, _ error) {
-	return s.SessionFlex(in, false, modelType, 0, "", "")
+func (s *Manager) SessionRoot(export expin.Export, modelType string) (_ ID, lastProcessed interface{}, _ error) {
+	return s.SessionFlex(export, false, modelType, 0, "", "")
 }
 
-func (s *Manager) SessionRootTracking(in integrationid.ID, modelType string) (_ ID, lastProcessed interface{}, _ error) {
-	return s.SessionFlex(in, true, modelType, 0, "", "")
+func (s *Manager) SessionRootTracking(export expin.Export, modelType string) (_ ID, lastProcessed interface{}, _ error) {
+	return s.SessionFlex(export, true, modelType, 0, "", "")
 }
 
 func (s *Manager) Session(modelType string, parentSessionID ID, parentObjectID, parentObjectName string) (_ ID, lastProcessed interface{}, _ error) {
-	return s.SessionFlex(integrationid.ID{}, false, modelType, parentSessionID, parentObjectID, parentObjectName)
+	return s.SessionFlex(expin.Export{}, false, modelType, parentSessionID, parentObjectID, parentObjectName)
 }
 
 func (s *Manager) SessionTracking(modelType string, parentSessionID ID, parentObjectID, parentObjectName string) (_ ID, lastProcessed interface{}, _ error) {
-	return s.SessionFlex(integrationid.ID{}, true, modelType, parentSessionID, parentObjectID, parentObjectName)
+	return s.SessionFlex(expin.Export{}, true, modelType, parentSessionID, parentObjectID, parentObjectName)
 }
 
-func (s *Manager) SessionFlex(in integrationid.ID, isTracking bool, name string, parentSessionID ID, parentObjectID, parentObjectName string) (_ ID, lastProcessed interface{}, _ error) {
+func (s *Manager) SessionFlex(export expin.Export, isTracking bool, name string, parentSessionID ID, parentObjectID, parentObjectName string) (_ ID, lastProcessed interface{}, _ error) {
 	s.sessionsMu.Lock()
 	defer s.sessionsMu.Unlock()
 
@@ -82,7 +82,7 @@ func (s *Manager) SessionFlex(in integrationid.ID, isTracking bool, name string,
 	}
 
 	id := s.newID()
-	sess := newSession(in, isTracking, name, id, s.opts.NewWriter, s.opts.SendProgress, parent, parentObjectID, parentObjectName)
+	sess := newSession(export, isTracking, name, id, s.opts.NewWriter, s.opts.SendProgress, parent, parentObjectID, parentObjectName)
 	s.sessions[id] = sess
 
 	if s.opts.LastProcessed != nil {
