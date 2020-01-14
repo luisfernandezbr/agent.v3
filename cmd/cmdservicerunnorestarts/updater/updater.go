@@ -28,10 +28,12 @@ import (
 
 // Updater handles agent and built-in integration updates
 type Updater struct {
-	logger          hclog.Logger
-	fsconf          fsconf.Locs
-	channel         string
-	integrationsDir string
+	logger  hclog.Logger
+	fsconf  fsconf.Locs
+	channel string
+
+	integrationsParentDir string
+	integrationsSubDir    string
 }
 
 // New creates updater
@@ -40,14 +42,14 @@ func New(logger hclog.Logger, fslocs fsconf.Locs, conf agentconf.Config) *Update
 	s.logger = logger
 	s.fsconf = fslocs
 	s.channel = conf.Channel
-	s.integrationsDir = conf.IntegrationsDir
-	if s.integrationsDir == "" {
-		s.integrationsDir = fslocs.IntegrationsDefaultDir
+	s.integrationsParentDir = conf.IntegrationsDir
+	if s.integrationsParentDir == "" {
+		s.integrationsParentDir = fslocs.IntegrationsDefaultDir
 	}
 	// store downloaded integrations in bin subfolder, to allow updates using folder rename
 	// fixes error in docker when using /bin/integrations as integrationsDir
 	// Could not update: updateIntegrations: failed to replace integrations: could not rename curr to backup, err: rename /bin/integrations /bin/integrations.old0: invalid cross-device link
-	s.integrationsDir = filepath.Join(s.integrationsDir, "bin")
+	s.integrationsSubDir = filepath.Join(s.integrationsParentDir, "bin")
 	return s
 }
 
@@ -55,8 +57,7 @@ func New(logger hclog.Logger, fslocs fsconf.Locs, conf agentconf.Config) *Update
 // are not present in integrations dir. This would happen
 // if use only downloaded the agent binary.
 func (s *Updater) DownloadIntegrationsIfMissing() error {
-	dir := s.integrationsDir
-	exists, err := fs.Exists(dir)
+	exists, err := fs.Exists(s.integrationsParentDir)
 	if err != nil {
 		return fmt.Errorf("Could not read integration dir: %v", err)
 	}
@@ -66,7 +67,7 @@ func (s *Updater) DownloadIntegrationsIfMissing() error {
 
 	version := os.Getenv("PP_AGENT_VERSION")
 
-	s.logger.Info("Integrations dir does not exist, downloading integrations", "dir", dir, "version", version)
+	s.logger.Info("Integrations dir does not exist, downloading integrations", "dir", s.integrationsParentDir, "version", version)
 
 	err = os.MkdirAll(s.fsconf.Temp, 0777)
 	if err != nil {
@@ -175,19 +176,19 @@ func (s *Updater) updateAgent(version, downloadDir string) error {
 
 func (s *Updater) updateIntegrations(version string, downloadDir string) error {
 	downloadedIntegrations := filepath.Join(downloadDir, "integrations")
-	ok, err := fs.Exists(s.integrationsDir)
+	ok, err := fs.Exists(s.integrationsSubDir)
 	if err != nil {
 		return err
 	}
 	if !ok {
 		// integration dir did not exist, create an empty one, so that we can use replaceRestoringIfFailed
-		err = os.MkdirAll(s.integrationsDir, 0777)
+		err = os.MkdirAll(s.integrationsSubDir, 0777)
 		if err != nil {
 			return fmt.Errorf("could not create integrations dir: %v", err)
 		}
 	}
 
-	err = replaceRestoringIfFailed(s.integrationsDir, downloadedIntegrations, s.fsconf.Temp)
+	err = replaceRestoringIfFailed(s.integrationsSubDir, downloadedIntegrations, s.fsconf.Temp)
 	if err != nil {
 		return fmt.Errorf("failed to replace integrations: %v", err)
 	}
