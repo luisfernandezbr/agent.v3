@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent/pkg/integrationid"
+	"github.com/pinpt/agent/pkg/expin"
 )
 
 type session struct {
@@ -28,7 +28,7 @@ type session struct {
 }
 
 func newSession(
-	in integrationid.ID,
+	export expin.Export,
 	isTracking bool,
 	name string,
 	id ID,
@@ -55,7 +55,7 @@ func newSession(
 			ObjectName: parentObjectName})
 	} else {
 		s.ProgressPath = append(s.ProgressPath, ProgressPathComponent{
-			TrackingName: in.String()})
+			TrackingName: export.String()})
 	}
 
 	if s.isTracking {

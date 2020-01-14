@@ -5,15 +5,15 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent/pkg/expin"
 	"github.com/pinpt/agent/pkg/fsconf"
-	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/rpcdef"
 )
 
 type Opts struct {
 	Logger         hclog.Logger
 	Locs           fsconf.Locs
-	AgentDelegates func(in integrationid.ID) rpcdef.Agent
+	AgentDelegates func(ind expin.Index) rpcdef.Agent
 
 	// IntegrationsDir is a custom location of the integrations binaries
 	IntegrationsDir string
@@ -38,46 +38,45 @@ func New(opts Opts) *Loader {
 	return s
 }
 
-func (s *Loader) Load(ids []integrationid.ID) (map[integrationid.ID]*Integration, error) {
-	s.logger.Info("Loading integrations", "ids", fmt.Sprintf("%+v", ids))
+func (s *Loader) Load(exports []expin.Export) (res []*Integration, _ error) {
+	s.logger.Info("Loading integrations", "expin", fmt.Sprintf("%+v", exports))
 
-	res := make(chan *Integration)
+	res = make([]*Integration, len(exports))
+	var resMu sync.Mutex
 	var rerr error
 	var errMu sync.Mutex
 
-	go func() {
-		wg := sync.WaitGroup{}
-		for _, id := range ids {
-			wg.Add(1)
-			id := id
-			go func() {
-				defer wg.Done()
-				in, err := s.load(id)
-				if err != nil {
-					errMu.Lock()
-					rerr = err
-					errMu.Unlock()
-					return
-				}
-				res <- in
-			}()
-		}
-		wg.Wait()
-		close(res)
-	}()
-
-	loaded := map[integrationid.ID]*Integration{}
-	for in := range res {
-		loaded[in.ID] = in
+	wg := sync.WaitGroup{}
+	for i, export := range exports {
+		wg.Add(1)
+		i := i
+		export := export
+		go func() {
+			defer wg.Done()
+			in, err := s.load(export)
+			if err != nil {
+				errMu.Lock()
+				rerr = err
+				errMu.Unlock()
+				return
+			}
+			resMu.Lock()
+			res[i] = in
+			resMu.Unlock()
+		}()
 	}
-	return loaded, rerr
+	wg.Wait()
+	if rerr != nil {
+		return nil, rerr
+	}
+	return
 }
 
-func (s *Loader) load(id integrationid.ID) (*Integration, error) {
+func (s *Loader) load(export expin.Export) (*Integration, error) {
 	opts := IntegrationOpts{}
 	opts.Logger = s.opts.Logger
-	opts.Agent = s.opts.AgentDelegates(id)
-	opts.ID = id
+	opts.Agent = s.opts.AgentDelegates(export.Index)
+	opts.Export = export
 	opts.Locs = s.locs
 	opts.IntegrationsDir = s.opts.IntegrationsDir
 	opts.DevUseCompiledIntegrations = s.opts.DevUseCompiledIntegrations

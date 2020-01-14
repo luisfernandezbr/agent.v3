@@ -2,11 +2,13 @@ package cmdexport
 
 import (
 	"fmt"
+	"sort"
 	"time"
+
+	"github.com/pinpt/agent/pkg/expin"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/exportrepo"
-	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/rpcdef"
 )
 
@@ -15,6 +17,7 @@ type Result struct {
 }
 
 type ResultIntegration struct {
+	index    int
 	ID       string          `json:"id"`
 	Error    string          `json:"error"`
 	Projects []ResultProject `json:"projects"`
@@ -27,29 +30,32 @@ type ResultProject struct {
 	GitError   string `json:"git_error"`
 }
 
-func (s *export) handleIntegrationPanics(res map[integrationid.ID]runResult) {
+func (s *export) handleIntegrationPanics(res map[expin.Index]runResult) {
 	s.Logger.Info("Checking integrations for panics")
-	for id, integration := range s.Integrations {
-		ires := res[id]
+	for ind, integration := range s.Integrations {
+		expin := s.ExpIn(ind)
+		ires := res[ind]
 		if ires.Err != nil {
-			s.Logger.Error("Export failed in integration", "integration", id, "err", ires.Err)
+			s.Logger.Error("Export failed in integration", "integration", expin, "err", ires.Err)
 			if err := s.Command.CloseOnlyIntegrationAndHandlePanic(integration); err != nil {
 				s.Logger.Error("Could not close integration", "err", err)
 			}
 			continue
 		}
-		s.Logger.Info("Export success for integration", "integration", id)
+		s.Logger.Info("Export success for integration", "integration", expin)
 	}
 }
 
 // formatResults links git errors with integration errors and returns them as Result
-func (s *export) formatResults(runResult map[integrationid.ID]runResult) Result {
+func (s *export) formatResults(runResult map[expin.Index]runResult) Result {
 	gitResults := s.gitResults
 
 	resAll := Result{}
-	for id, res0 := range runResult {
+	for ind, res0 := range runResult {
+		expin := s.ExpIn(ind)
 		res := ResultIntegration{}
-		res.ID = id.String()
+		res.index = int(ind)
+		res.ID = expin.String()
 		if res0.Err != nil {
 			res.Error = res0.Err.Error()
 		}
@@ -57,7 +63,7 @@ func (s *export) formatResults(runResult map[integrationid.ID]runResult) Result 
 		for _, project0 := range res0.Res.Projects {
 			project := ResultProject{}
 			project.ExportProject = project0
-			gitErr, ok := gitResults[id][project.ID]
+			gitErr, ok := gitResults[ind][project.ID]
 			if ok {
 				project.HasGitRepo = true
 				if gitErr != nil {
@@ -72,7 +78,11 @@ func (s *export) formatResults(runResult map[integrationid.ID]runResult) Result 
 		}
 		resAll.Integrations = append(resAll.Integrations, res)
 	}
-
+	sort.Slice(resAll.Integrations, func(i, j int) bool {
+		a := resAll.Integrations[i]
+		b := resAll.Integrations[j]
+		return a.index < b.index
+	})
 	return resAll
 }
 

@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/cmd/cmdexport/process"
 	"github.com/pinpt/agent/pkg/commitusers"
+	"github.com/pinpt/agent/pkg/expin"
 	"github.com/pinpt/agent/pkg/expsessions"
-	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/rpcdef"
 )
 
@@ -142,10 +142,10 @@ func (s *sessions) Close() error {
 	return nil
 }
 
-func (s *sessions) new(in integrationid.ID, modelType string) (
+func (s *sessions) new(export expin.Export, modelType string) (
 	sessionID string, lastProcessed interface{}, _ error) {
 
-	id, lastProcessed, err := s.expsession.SessionRoot(in, modelType)
+	id, lastProcessed, err := s.expsession.SessionRoot(export, modelType)
 	if err != nil {
 		return "", nil, err
 	}

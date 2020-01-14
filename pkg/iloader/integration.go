@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/pinpt/agent/pkg/build"
-	"github.com/pinpt/agent/pkg/integrationid"
+	"github.com/pinpt/agent/pkg/expin"
 
 	"github.com/pinpt/agent/pkg/fsconf"
 
@@ -27,15 +27,14 @@ import (
 type IntegrationOpts struct {
 	Logger                     hclog.Logger
 	Agent                      rpcdef.Agent
-	ID                         integrationid.ID
+	Export                     expin.Export
 	Locs                       fsconf.Locs
 	IntegrationsDir            string
 	DevUseCompiledIntegrations bool
 }
 
 type Integration struct {
-	ID integrationid.ID
-
+	Export expin.Export
 	opts   IntegrationOpts
 	logger hclog.Logger
 
@@ -50,13 +49,13 @@ type Integration struct {
 }
 
 func NewIntegration(opts IntegrationOpts) (*Integration, error) {
-	if opts.Logger == nil || opts.Agent == nil || opts.ID.Empty() || opts.Locs.Root == "" || opts.IntegrationsDir == "" {
+	if opts.Logger == nil || opts.Agent == nil || opts.Export.Empty() || opts.Locs.Root == "" || opts.IntegrationsDir == "" {
 		panic("provide all opts")
 	}
 	s := &Integration{}
-	s.ID = opts.ID
+	s.Export = opts.Export
 	s.opts = opts
-	s.logger = opts.Logger.With("intg", s.opts.ID.String())
+	s.logger = opts.Logger.With("intg", s.Export.String())
 	err := s.setupLogFile()
 	if err != nil {
 		return nil, err
@@ -152,7 +151,7 @@ func (s *Integration) setupLogFile() error {
 	if err != nil {
 		return err
 	}
-	s.logFileLoc = filepath.Join(dir, s.ID.String())
+	s.logFileLoc = filepath.Join(dir, s.Export.String())
 	f, err := os.Create(s.logFileLoc)
 	if err != nil {
 		return err
@@ -165,13 +164,13 @@ func (s *Integration) setupRPC() error {
 	var cmd *exec.Cmd
 	if build.IsProduction() || s.opts.DevUseCompiledIntegrations {
 		var err error
-		cmd, err = prodIntegrationCommand(s.opts.IntegrationsDir, s.ID.Name)
+		cmd, err = prodIntegrationCommand(s.opts.IntegrationsDir, s.Export.Integration.Name)
 		if err != nil {
 			return err
 		}
 	} else {
 		var err error
-		cmd, err = devIntegrationCommand(s.ID.Name)
+		cmd, err = devIntegrationCommand(s.Export.Integration.Name)
 		if err != nil {
 			return err
 		}
