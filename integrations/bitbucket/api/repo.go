@@ -15,9 +15,9 @@ import (
 )
 
 func ReposOnboardPage(qc QueryContext, teamName string, params url.Values) (page PageInfo, repos []*agent.RepoResponseRepos, err error) {
-	qc.Logger.Debug("onboard repos request")
+	qc.Logger.Debug("onboard repos request", "teamName", teamName, "params", params.Encode())
 
-	objectPath := pstrings.JoinURL("teams", teamName, "repositories")
+	objectPath := pstrings.JoinURL("repositories", teamName)
 	params.Set("pagelen", "100")
 
 	var rr []struct {
@@ -56,9 +56,9 @@ func ReposOnboardPage(qc QueryContext, teamName string, params url.Values) (page
 	return
 }
 
-func ReposAll(qc interface{}, groupName string, res chan []commonrepo.Repo) error {
+func ReposAll(qc interface{}, teamName string, res chan []commonrepo.Repo) error {
 	return Paginate(qc.(QueryContext).Logger, func(log hclog.Logger, paginationParams url.Values) (page PageInfo, _ error) {
-		pi, repos, err := ReposPage(qc.(QueryContext), groupName, paginationParams)
+		pi, repos, err := ReposPage(qc.(QueryContext), teamName, paginationParams)
 		if err != nil {
 			return pi, err
 		}
@@ -67,10 +67,10 @@ func ReposAll(qc interface{}, groupName string, res chan []commonrepo.Repo) erro
 	})
 }
 
-func ReposPage(qc QueryContext, groupName string, params url.Values) (page PageInfo, repos []commonrepo.Repo, err error) {
-	qc.Logger.Debug("repos request")
+func ReposPage(qc QueryContext, teamName string, params url.Values) (page PageInfo, repos []commonrepo.Repo, err error) {
+	qc.Logger.Debug("repos request repos page", "team", teamName, "params", params.Encode())
 
-	objectPath := pstrings.JoinURL("teams", groupName, "repositories")
+	objectPath := pstrings.JoinURL("repositories", teamName)
 
 	var rr []struct {
 		UUID       string `json:"uuid"`
@@ -98,10 +98,10 @@ func ReposPage(qc QueryContext, groupName string, params url.Values) (page PageI
 	return
 }
 
-func ReposSourcecodePage(qc QueryContext, group string, params url.Values, stopOnUpdatedAt time.Time) (page PageInfo, repos []*sourcecode.Repo, err error) {
-	qc.Logger.Debug("repos request", "group", group)
+func ReposSourcecodePage(qc QueryContext, teamName string, params url.Values, stopOnUpdatedAt time.Time) (page PageInfo, repos []*sourcecode.Repo, err error) {
+	qc.Logger.Debug("repos request repos sourcecode page", "teamName", teamName)
 
-	objectPath := pstrings.JoinURL("teams", group, "repositories")
+	objectPath := pstrings.JoinURL("repositories", teamName)
 
 	params.Set("pagelen", "100")
 

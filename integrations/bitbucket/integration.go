@@ -286,6 +286,8 @@ func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender.Ses
 		return
 	}
 
+	s.logger.Info("exporting repos", "len", len(repos))
+
 	if err = repoSender.SetTotal(len(repos)); err != nil {
 		rerr = err
 		return
