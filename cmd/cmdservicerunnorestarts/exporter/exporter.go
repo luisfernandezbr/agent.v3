@@ -14,6 +14,7 @@ import (
 	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/inconfig"
 	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/subcommand"
 	"github.com/pinpt/agent/cmd/cmdupload"
+	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/go-common/event"
 
 	"github.com/pinpt/agent/pkg/agentconf"
@@ -142,10 +143,23 @@ func (s *Exporter) IsRunning() bool {
 	s.mu.Unlock()
 	return ex
 }
-func (s *Exporter) sendExportEvent(ctx context.Context, jobID string, data *agent.ExportResponse, ints []agent.ExportRequestIntegrations, isIncremental []bool) error {
+func (s *Exporter) sendExportEvent(jobID string, data agent.ExportResponse) error {
 	data.JobID = jobID
 	data.RefType = "export"
 	data.Type = agent.ExportResponseTypeExport
+
+	datap := &data
+	s.deviceInfo.AppendCommonInfo(datap)
+	publishEvent := event.PublishEvent{
+		Object: datap,
+		Headers: map[string]string{
+			"uuid": s.conf.DeviceID,
+		},
+	}
+	return event.Publish(context.Background(), publishEvent, s.conf.Channel, s.conf.APIKey)
+}
+
+func (s *Exporter) sendExportEventSettingIntegrations(jobID string, data agent.ExportResponse, ints []agent.ExportRequestIntegrations, isIncremental []bool) error {
 	for i, in := range ints {
 		v := agent.ExportResponseIntegrations{
 			IntegrationID: in.ID,
@@ -164,29 +178,31 @@ func (s *Exporter) sendExportEvent(ctx context.Context, jobID string, data *agen
 		}
 		data.Integrations = append(data.Integrations, v)
 	}
-	s.deviceInfo.AppendCommonInfo(data)
-	publishEvent := event.PublishEvent{
-		Object: data,
-		Headers: map[string]string{
-			"uuid": s.conf.DeviceID,
-		},
-	}
-	return event.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
+	return s.sendExportEvent(jobID, data)
 }
 
-func (s *Exporter) sendStartExportEvent(ctx context.Context, jobID string, ints []agent.ExportRequestIntegrations) error {
-	data := &agent.ExportResponse{
+func (s *Exporter) sendStartExportEvent(jobID string, ints []agent.ExportRequestIntegrations) error {
+	data := agent.ExportResponse{
 		State:   agent.ExportResponseStateStarting,
 		Success: true,
 	}
-	return s.sendExportEvent(ctx, jobID, data, ints, nil)
+	return s.sendExportEventSettingIntegrations(jobID, data, ints, nil)
 }
 
-func (s *Exporter) sendEndExportEvent(ctx context.Context, jobID string, started, ended time.Time, partsCount int, filesize int64, uploadurl *string, ints []agent.ExportRequestIntegrations, isIncremental []bool, err error) error {
-	if !s.opts.AgentConfig.Backend.Enable {
-		return nil
+func (s *Exporter) sendExportFailedEvent(jobID string, started, ended time.Time, err error) error {
+	data := agent.ExportResponse{
+		State: agent.ExportResponseStateCompleted,
 	}
-	data := &agent.ExportResponse{
+	date.ConvertToModel(started, &data.StartDate)
+	date.ConvertToModel(ended, &data.EndDate)
+	errstr := err.Error()
+	data.Error = &errstr
+	data.Success = false
+	return s.sendExportEvent(jobID, data)
+}
+
+func (s *Exporter) sendEndExportEvent(jobID string, started, ended time.Time, partsCount int, filesize int64, uploadurl *string, ints []agent.ExportRequestIntegrations, isIncremental []bool) error {
+	data := agent.ExportResponse{
 		State:           agent.ExportResponseStateCompleted,
 		Size:            filesize,
 		UploadURL:       uploadurl,
@@ -194,43 +210,55 @@ func (s *Exporter) sendEndExportEvent(ctx context.Context, jobID string, started
 	}
 	date.ConvertToModel(started, &data.StartDate)
 	date.ConvertToModel(ended, &data.EndDate)
-	if err != nil {
-		errstr := err.Error()
-		data.Error = &errstr
-		data.Success = false
-	} else {
-		data.Success = true
-	}
-	return s.sendExportEvent(ctx, jobID, data, ints, isIncremental)
+	data.Success = true
+	return s.sendExportEventSettingIntegrations(jobID, data, ints, isIncremental)
 }
 
 func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
-	ctx := context.Background()
+	started := time.Now()
+
+	handleError := func(err error) {
+		s.logger.Error("export finished with error", "err", err)
+		err2 := s.sendExportFailedEvent(data.JobID, started, time.Now(), err)
+		if err2 != nil {
+			s.logger.Error("error sending failed export event", "sending_err", err2, "export_err", err)
+		}
+	}
+
 	if len(data.Integrations) == 0 {
-		s.logger.Error("passed export request has no integrations, ignoring it")
+		handleError(errors.New("passed export request has no integrations, ignoring it"))
 		return
 	}
 
-	started := time.Now()
-	if err := s.sendStartExportEvent(ctx, data.JobID, data.Integrations); err != nil {
-		s.logger.Error("error sending export response start event", "err", err)
+	requestDate := datetime.DateFromEpoch(data.RequestDate.Epoch)
+	const exportEventDeadline = 5 * time.Minute
+	if requestDate.Before(time.Now().Add(-exportEventDeadline)) {
+		handleError(fmt.Errorf("export request date is older than deadline, ignoring. deadline: %v", exportEventDeadline.String()))
+		return
 	}
-	isIncremental, partsCount, fileSize, err := s.doExport(ctx, data, messageID)
+
+	if err := s.sendStartExportEvent(data.JobID, data.Integrations); err != nil {
+		handleError(fmt.Errorf("error sending export response start event: %v", err))
+		return
+	}
+
+	isIncremental, partsCount, fileSize, err := s.doExport(data, messageID)
 	if err != nil {
 		if _, o := err.(*subcommand.Cancelled); o {
-			s.logger.Info("export manually cancelled")
-		} else {
-			s.logger.Error("export finished with error", "err", err)
+			handleError(errors.New("export cancelled"))
+			return
 		}
-	} else {
-		s.logger.Info("sent back export result")
+		handleError(err)
+		return
 	}
-	if err := s.sendEndExportEvent(ctx, data.JobID, started, time.Now(), partsCount, fileSize, data.UploadURL, data.Integrations, isIncremental, err); err != nil {
-		s.logger.Error("error sending export response stop event", "err", err)
+	s.logger.Info("sending back export event")
+	err = s.sendEndExportEvent(data.JobID, started, time.Now(), partsCount, fileSize, data.UploadURL, data.Integrations, isIncremental)
+	if err != nil {
+		s.logger.Error("error sending back export completed event", "err", err)
 	}
 }
 
-func (s *Exporter) doExport(ctx context.Context, data *agent.ExportRequest, messageID string) (isIncremental []bool, partsCount int, fileSize int64, rerr error) {
+func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (isIncremental []bool, partsCount int, fileSize int64, rerr error) {
 	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
 
 	err := s.backupRestoreStateDir()
@@ -282,12 +310,12 @@ func (s *Exporter) doExport(ctx context.Context, data *agent.ExportRequest, mess
 		return
 	}
 
-	if err := s.execExport(ctx, integrations, data.ReprocessHistorical, messageID, data.JobID); err != nil {
+	if err := s.execExport(integrations, data.ReprocessHistorical, messageID, data.JobID); err != nil {
 		rerr = err
 		return
 	}
 	s.logger.Info("export finished, running upload")
-	if partsCount, fileSize, err = cmdupload.Run(ctx, s.logger, s.opts.PinpointRoot, *data.UploadURL, data.JobID, s.conf.APIKey); err != nil {
+	if partsCount, fileSize, err = cmdupload.Run(context.Background(), s.logger, s.opts.PinpointRoot, *data.UploadURL, data.JobID, s.conf.APIKey); err != nil {
 		if err == cmdupload.ErrNoFilesFound {
 			s.logger.Info("skipping upload, no files generated")
 			// do not return errors when no files to upload, which is ok for incremental
@@ -405,7 +433,7 @@ func (s *Exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport
 	return ts, nil
 }
 
-func (s *Exporter) execExport(ctx context.Context, integrations []cmdexport.Integration, reprocessHistorical bool, messageID string, jobID string) error {
+func (s *Exporter) execExport(integrations []cmdexport.Integration, reprocessHistorical bool, messageID string, jobID string) error {
 
 	agentConfig := s.opts.AgentConfig
 	agentConfig.Backend.ExportJobID = jobID
@@ -427,7 +455,7 @@ func (s *Exporter) execExport(ctx context.Context, integrations []cmdexport.Inte
 	if reprocessHistorical {
 		args = append(args, "--reprocess-historical=true")
 	}
-	err = c.Run(ctx, "export", messageID, nil, args...)
+	err = c.Run(context.Background(), "export", messageID, nil, args...)
 	if err != nil {
 		return err
 	}

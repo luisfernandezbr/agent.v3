@@ -3,12 +3,10 @@ package cmdservicerunnorestarts
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pinpt/integration-sdk/agent"
 
 	"github.com/pinpt/go-common/datamodel"
-	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/go-common/event/action"
 
 	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/exporter"
@@ -36,13 +34,6 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 
 		ev := instance.Object().(*agent.ExportRequest)
 		s.logger.Info("received export request", "id", ev.ID, "uuid", ev.UUID, "request_date", ev.RequestDate.Rfc3339)
-
-		const exportEventDeadline = 5 * time.Minute
-		requestDate := datetime.DateFromEpoch(ev.RequestDate.Epoch)
-		if requestDate.Before(time.Now().Add(-exportEventDeadline)) {
-			s.logger.Info("export request date is older than deadline, ignoring", "deadline", exportEventDeadline.String())
-			return nil, nil
-		}
 
 		header, err := parseHeader(instance.Message().Headers)
 		if err != nil {
