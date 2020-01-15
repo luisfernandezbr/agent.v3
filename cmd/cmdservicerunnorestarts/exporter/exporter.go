@@ -121,10 +121,31 @@ func (s *Exporter) Run() {
 	}()
 
 	for req := range s.ExportQueue {
+		data := req.Data
+
+		handleError := func(err error) {
+			s.logger.Error("export finished with error", "err", err)
+			err2 := s.sendExportFailedEvent(data.JobID, time.Now(), time.Now(), err)
+			if err2 != nil {
+				s.logger.Error("error sending failed export event", "sending_err", err2, "export_err", err)
+			}
+		}
+
+		// have handling of request deadline before we save the request on disk, otherwise requests would not be retried if failed
+		// need deadline here to prevent a bunch of older requests from queue being accepted
+		requestDate := datetime.DateFromEpoch(data.RequestDate.Epoch)
+		const exportEventDeadline = 5 * time.Minute
+		if requestDate.Before(time.Now().Add(-exportEventDeadline)) {
+			handleError(fmt.Errorf("export request date is older than deadline, ignoring. deadline: %v", exportEventDeadline.String()))
+			continue
+		}
+
 		m, err := structmarshal.StructToMap(req)
 		if err != nil {
-			s.logger.Error("could not marshal export request to map", "err", err)
+			handleError(fmt.Errorf("could not marshal export request to map: %v", err))
+			continue
 		}
+
 		s.queue.Input <- m
 	}
 	return
@@ -227,13 +248,6 @@ func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
 
 	if len(data.Integrations) == 0 {
 		handleError(errors.New("passed export request has no integrations, ignoring it"))
-		return
-	}
-
-	requestDate := datetime.DateFromEpoch(data.RequestDate.Epoch)
-	const exportEventDeadline = 5 * time.Minute
-	if requestDate.Before(time.Now().Add(-exportEventDeadline)) {
-		handleError(fmt.Errorf("export request date is older than deadline, ignoring. deadline: %v", exportEventDeadline.String()))
 		return
 	}
 
