@@ -82,8 +82,11 @@ func IssuesAndChangelogsPage(
 		Total      int `json:"total"`
 		MaxResults int `json:"maxResults"`
 		Issues     []struct {
-			ID             string                 `json:"id"`
-			Key            string                 `json:"key"`
+			ID  string `json:"id"`
+			Key string `json:"key"`
+			// Using map here instead of the Fields struct declared below,
+			// since we extract custom fields which could have keys prefixed
+			// with customfield_.
 			Fields         map[string]interface{} `json:"fields"`
 			RenderedFields struct {
 				Description string `json:"description"`
@@ -112,6 +115,11 @@ func IssuesAndChangelogsPage(
 		return
 	}
 
+	type LinkedIssue struct {
+		ID  string `json:"id"`
+		Key string `json:"key"`
+	}
+
 	type Fields struct {
 		Summary  string `json:"summary"`
 		DueDate  string `json:"duedate"`
@@ -129,17 +137,26 @@ func IssuesAndChangelogsPage(
 		Resolution struct {
 			Name string `json:"name"`
 		} `json:"resolution"`
-		Creator  User
-		Reporter User
-		Assignee User
-		Labels   []string `json:"labels"`
-
-		SprintIDs []string
+		Creator    User
+		Reporter   User
+		Assignee   User
+		Labels     []string `json:"labels"`
+		SprintIDs  []string
+		IssueLinks []struct {
+			ID   string `json:"id"`
+			Type struct {
+				//ID   string `json:"id"`
+				Name string `json:"name"` // Using Name instead of ID for mapping
+			} `json:"type"`
+			OutwardIssue LinkedIssue `json:"outwardIssue"`
+			InwardIssue  LinkedIssue `json:"inwardIssue"`
+		} `json:"issuelinks"`
 	}
 
 	var issuesTypedFields []Fields
 
 	for _, issue := range rr.Issues {
+
 		var f2 Fields
 		err := structmarshal.MapToStruct(issue.Fields, &f2)
 		if err != nil {
@@ -201,6 +218,7 @@ func IssuesAndChangelogsPage(
 		}
 
 		item.Title = fields.Summary
+
 		if data.RenderedFields.Description != "" {
 			// we need to pull out the HTML and parse it so we can properly display it in the application. the HTML will
 			// have a bunch of stuff we need to cleanup for rendering in our application such as relative urls, etc. we
@@ -269,6 +287,44 @@ func IssuesAndChangelogsPage(
 
 		item.URL = qc.IssueURL(data.Key)
 		item.Tags = fields.Labels
+
+		for _, link := range fields.IssueLinks {
+			var linkType work.IssueLinkedIssuesType
+			reverseDirection := false
+			switch link.Type.Name {
+			case "Blocks":
+				linkType = work.IssueLinkedIssuesTypeBlocks
+			case "Cloners":
+				linkType = work.IssueLinkedIssuesTypeClones
+			case "Duplicate":
+				linkType = work.IssueLinkedIssuesTypeDuplicates
+			case "Problem/Incident":
+				linkType = work.IssueLinkedIssuesTypeCauses
+			case "Relates":
+				linkType = work.IssueLinkedIssuesTypeRelates
+			default:
+				qc.Logger.Error("unknown link type name", "name", link.Type.Name)
+				continue
+			}
+			var linkedIssue LinkedIssue
+			if link.OutwardIssue.ID != "" {
+				linkedIssue = link.OutwardIssue
+			} else if link.InwardIssue.ID != "" {
+				linkedIssue = link.InwardIssue
+				reverseDirection = true
+			} else {
+				qc.Logger.Error("issue link does not have outward or inward issue", "issue_id", data.ID, "issue_key", data.Key)
+				continue
+			}
+			link2 := work.IssueLinkedIssues{}
+			link2.RefID = link.ID
+			link2.IssueID = qc.IssueID(linkedIssue.ID)
+			link2.IssueRefID = linkedIssue.ID
+			link2.IssueIdentifier = linkedIssue.Key
+			link2.ReverseDirection = reverseDirection
+			link2.Type = linkType
+			item.LinkedIssues = append(item.LinkedIssues, link2)
+		}
 
 		for k, d := range data.Fields {
 			if !strings.HasPrefix(k, "customfield_") {
