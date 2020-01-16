@@ -1,116 +1,135 @@
 package service
 
 import (
-	"context"
 	"runtime"
 	"strings"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/kardianos/service"
-	"github.com/pinpt/agent/cmd/cmdrun"
 )
 
-// Action type
-type Action int
+type ControlAction string
 
 const (
-	// Install action
-	Install Action = iota
-	// Uninstall action
-	Uninstall
-	// Start action
-	Start
-	// Stop action
-	Stop
-	// Restart action
-	Restart
-	// Status action
-	Status
-	// RunS action
-	RunS
+	Uninstall ControlAction = "uninstall"
+	Start                   = "start"
+	Stop                    = "stop"
+	Restart                 = "restart"
+	Status                  = "status"
 )
 
-func (a Action) String() string {
-	return [...]string{"install", "uninstall", "start", "stop", "restart", "status", "run"}[a]
+func Install(logger hclog.Logger, names Names, runArgs []string) error {
+	logger.Info("installing service")
+	config := names.serviceConfig()
+	config.Arguments = runArgs
+	svc, err := service.New(nil, config)
+	if err != nil {
+		return err
+	}
+	err = service.Control(svc, "install")
+	// TODO: check if we can ignore status 1
+	if err != nil && !strings.Contains(err.Error(), "exit status 1") {
+		return err
+	}
+	return nil
 }
 
-func Run(action Action, ctx context.Context, opts cmdrun.Opts) error {
+func Control(logger hclog.Logger, names Names, action ControlAction) error {
+	logger.Info("service-control", "action", string(action))
 
-	logger := opts.Logger
-
-	logger.Info("service-control", "action", action.String())
-
-	svcConfig := ServiceConfig(opts.PinpointRoot, opts.IntegrationsDir)
-
-	prg := &program{ctx: ctx, opts: opts}
-	s, err := service.New(prg, svcConfig)
+	config := names.serviceConfig()
+	svc, err := service.New(nil, config)
 	if err != nil {
 		return err
 	}
-	errs := make(chan error, 5)
-	l, err := s.Logger(errs)
+	if action == Status {
+		return status(logger, svc)
+	}
+
+	err = service.Control(svc, string(action))
+	// TODO: check if we can ignore status 1
+	if err != nil && !strings.Contains(err.Error(), "exit status 1") {
+		return err
+	}
+	return nil
+}
+
+func status(logger hclog.Logger, svc service.Service) error {
+	status, err := svc.Status()
 	if err != nil {
 		return err
 	}
+	switch status {
+	case service.StatusUnknown:
+		logger.Warn("Can't determine status. Agent is not installed or some other error encountered.")
+	case service.StatusRunning:
+		logger.Info("Agent running.")
+	case service.StatusStopped:
+		logger.Info("Agent stopped.")
+	}
+	return nil
+}
 
-	prg.serviceLogger = l
+func Run(names Names, serviceFunc func(cancel chan bool) error) {
 
+	prg := newProgram(serviceFunc)
+	config := names.serviceConfig()
+
+	svc, err := service.New(prg, config)
+	if err != nil {
+		panic(err)
+	}
+	logger, err := createLoggerFromService(svc)
+	if err != nil {
+		panic(err)
+	}
+	prg.SetLogger(logger)
+	err = svc.Run()
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	return
+}
+
+func createLoggerFromService(svc service.Service) (_ service.Logger, rerr error) {
+	errs := make(chan error)
+	logger, err := svc.Logger(errs)
+	if err != nil {
+		rerr = err
+		return
+	}
 	go func() {
 		for {
 			err := <-errs
 			if err != nil {
-				logger.Error("error on run command", "err", err)
+				logger.Error("logger error", "err", err)
 			}
 		}
 	}()
-
-	switch action {
-	case Install, Uninstall, Start, Stop, Restart:
-		err := service.Control(s, action.String())
-		if err != nil && !strings.Contains(err.Error(), "exit status 1") {
-			l.Error(err)
-			return err
-		}
-	case Status:
-		status, err := s.Status()
-		if err != nil {
-			l.Error(err)
-			return err
-		}
-		switch status {
-		case service.StatusUnknown:
-			logger.Info("status is unable to be determined due to an error or it was not installed")
-		case service.StatusRunning:
-			logger.Info("agent running")
-		case service.StatusStopped:
-			logger.Info("agent stopped")
-		}
-	case RunS:
-		err = s.Run()
-		if err != nil {
-			l.Error(err)
-			return err
-		}
-	}
-
-	return nil
+	return logger, nil
 }
 
-func ServiceConfig(root, integrationsDir string) *service.Config {
+type Names struct {
+	Name        string
+	DisplayName string
+	Description string
+}
+
+func (s Names) serviceConfig() *service.Config {
 	res := &service.Config{
-		Name:        "io.pinpt.agent",
-		DisplayName: "Pinpoint Agent",
-		Description: "The Pinpoint Agent will process data and send to Pinpoint",
-		Arguments:   []string{"service-run", "--pinpoint-root", root, "--integrations-dir", integrationsDir},
 		Option: service.KeyValue{
 			"RunAtLoad": true,
 		},
 	}
+	res.Name = s.Name
+	res.DisplayName = s.DisplayName
+	res.Description = s.Description
 	if runtime.GOOS != "linux" {
 		res.Option["UserService"] = true
 	}
 	if runtime.GOOS == "windows" {
 		res.Dependencies = []string{"RpcSs"}
 	}
-
 	return res
 }

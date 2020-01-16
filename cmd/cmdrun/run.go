@@ -15,7 +15,6 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/kardianos/service"
 	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/agent/pkg/pservice"
@@ -34,12 +33,12 @@ type Opts struct {
 	}
 }
 
-func Run(ctx context.Context, opts Opts, terminateCommand chan bool) error {
+func Run(ctx context.Context, opts Opts, cancel chan bool) error {
 	s, err := newRunner(opts)
 	if err != nil {
 		return err
 	}
-	return s.Run(terminateCommand)
+	return s.Run(cancel)
 }
 
 type runner struct {
@@ -56,7 +55,7 @@ func newRunner(opts Opts) (*runner, error) {
 	return s, nil
 }
 
-func (s *runner) Run(terminateCommand chan bool) error {
+func (s *runner) Run(cancel chan bool) error {
 	if s.opts.Enroll.Run {
 		err := s.runEnroll()
 		if err != nil {
@@ -68,25 +67,23 @@ func (s *runner) Run(terminateCommand chan bool) error {
 
 	delay := pservice.ExpRetryDelayFn(15*time.Second, 3*time.Hour, 2)
 	resetFailuresAfter := 24 * time.Hour
-	done, cancel := pservice.AsyncRunBg(pservice.Retrying(s.logger, s.runService, delay, resetFailuresAfter))
+	done, cancelPservice := pservice.AsyncRunBg(pservice.Retrying(s.logger, s.runService, delay, resetFailuresAfter))
 
-	if service.Interactive() {
-		s.CaptureShutdown(cancel, done)
-		return nil
-	}
-
-	<-terminateCommand
-	cancel()
-	<-done
+	s.CaptureShutdown(cancelPservice, cancel, done)
 	return nil
 }
 
-func (s *runner) CaptureShutdown(cancel func(), done chan error) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	<-c
-	s.logger.Info("signal received exiting")
-	cancel()
+func (s *runner) CaptureShutdown(cancelPservice func(), cancelRunner chan bool, done chan error) {
+	cancelSignal := make(chan os.Signal, 1)
+	signal.Notify(cancelSignal, os.Interrupt, syscall.SIGTERM)
+	select {
+	case <-cancelSignal:
+		s.logger.Info("signal received exiting")
+	case <-cancelRunner:
+		s.logger.Info("cancel received from service control")
+	}
+
+	cancelPservice()
 	<-done
 	s.logger.Info("exited")
 }

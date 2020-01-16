@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	pstrings "github.com/pinpt/go-common/strings"
 
+	"github.com/pinpt/agent/cmd/cmdvalidate"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/encrypt"
 	"github.com/pinpt/agent/pkg/sysinfo"
@@ -34,6 +36,7 @@ type Opts struct {
 	IntegrationsDir   string
 	Code              string
 	Channel           string
+	SkipValidate      bool
 	SkipEnrollIfFound bool
 }
 
@@ -89,6 +92,17 @@ func (s *enroller) Run(ctx context.Context) error {
 			return nil
 		}
 		return errors.New("agent is already enrolled")
+	}
+
+	if !s.opts.SkipValidate {
+		valid, err := cmdvalidate.Run(ctx, s.opts.Logger, s.opts.PinpointRoot)
+		if err != nil {
+			return err
+		}
+		if !valid {
+			// to avoid stacking errors exiting instead of returning error
+			os.Exit(1)
+		}
 	}
 
 	done := make(chan error)

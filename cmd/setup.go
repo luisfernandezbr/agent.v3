@@ -252,3 +252,18 @@ func (s outputFile) Close() {
 func flagOutputFile(cmd *cobra.Command) {
 	cmd.Flags().String("output-file", "", "File to save results. Writes to stdout if not specified.")
 }
+
+func defaultCommandWithFileLogger(cmd *cobra.Command) (logger cmdlogger.Logger, pinpointRoot string) {
+	cmd.Flags().Set("log-format", "json")
+	logger = cmdlogger.NewLogger(cmd)
+	pinpointRoot, err := getPinpointRoot(cmd)
+	if err != nil {
+		exitWithErr(logger, err)
+	}
+	logWriter, err := pinpointLogWriter(pinpointRoot)
+	if err != nil {
+		exitWithErr(logger, err)
+	}
+	logger = logger.AddWriter(logWriter)
+	return
+}

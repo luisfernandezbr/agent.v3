@@ -1,12 +1,11 @@
 package cmdservicestart
 
 import (
-	"context"
-
-	"github.com/pinpt/agent/cmd/cmdrun"
+	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent/cmd/pkg/ppservice"
 	"github.com/pinpt/agent/pkg/service"
 )
 
-func Run(ctx context.Context, opts cmdrun.Opts) error {
-	return service.Run(service.Start, ctx, opts)
+func Run(logger hclog.Logger) error {
+	return service.Control(logger, ppservice.Names, service.Start)
 }
