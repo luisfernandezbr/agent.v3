@@ -10,8 +10,8 @@ import (
 	"github.com/pinpt/agent/cmd/cmdexport"
 	"github.com/pinpt/agent/cmd/cmdexportonboarddata"
 	"github.com/pinpt/agent/cmd/cmdrun"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts"
 	"github.com/pinpt/agent/cmd/cmdserviceinstall"
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts"
 	"github.com/pinpt/agent/cmd/cmdvalidate"
 	"github.com/pinpt/agent/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent/cmd/pkg/cmdlogger"
@@ -24,34 +24,13 @@ func isInsideDocker() bool {
 	return pos.IsInsideContainer()
 }
 
-var cmdEnrollNoServiceRun = &cobra.Command{
-	Use:   "enroll-no-service-run <code>",
-	Short: "Enroll the agent with the Pinpoint Cloud",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		logger, pinpointRoot := defaultCommandWithFileLogger(cmd)
-		code := args[0]
-
-		// once we have pinpoint root, we can also log to a file
-		logWriter, err := pinpointLogWriter(pinpointRoot)
-		if err != nil {
-			exitWithErr(logger, err)
-		}
-		logger = logger.AddWriter(logWriter)
-
-		runEnroll(cmd, logger, pinpointRoot, code)
-	},
-}
-
 func runEnroll(cmd *cobra.Command, logger hclog.Logger, pinpointRoot string, code string) {
 	channel, _ := cmd.Flags().GetString("channel")
-	ctx := context.Background()
 	skipValidate, _ := cmd.Flags().GetBool("skip-validate")
-
 	integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
 	skipEnroll, _ := cmd.Flags().GetBool("skip-enroll-if-found")
 
-	err := cmdenroll.Run(ctx, cmdenroll.Opts{
+	err := cmdenroll.Run(context.Background(), cmdenroll.Opts{
 		Logger:            logger,
 		PinpointRoot:      pinpointRoot,
 		IntegrationsDir:   integrationsDir,
@@ -65,22 +44,12 @@ func runEnroll(cmd *cobra.Command, logger hclog.Logger, pinpointRoot string, cod
 	}
 }
 
-func init() {
-	cmd := cmdEnrollNoServiceRun
-	flagsLogger(cmd)
-	flagPinpointRoot(cmd)
-	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
-	cmd.Flags().String("channel", "stable", "Cloud channel to use.")
-	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
-	cmd.Flags().Bool("skip-enroll-if-found", false, "skip enroll if the config is already found")
-	cmdRoot.AddCommand(cmd)
-}
-
 type runType string
 
 const (
-	direct  runType = "direct"
-	service runType = "service"
+	rtDirect     runType = "direct"
+	rtService            = "service"
+	rtEnrollOnly         = "enroll-only"
 )
 
 var cmdEnroll = &cobra.Command{
@@ -88,39 +57,52 @@ var cmdEnroll = &cobra.Command{
 	Short: "Enroll the agent with the Pinpoint Cloud",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		skipRun, _ := cmd.Flags().GetBool("skip-run")
-		if skipRun {
-			cmdEnrollNoServiceRun.Run(cmd, args)
-			return
-		}
-
 		logger, pinpointRoot := defaultCommandWithFileLogger(cmd)
 		code := args[0]
 
-		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
-		skipEnroll, _ := cmd.Flags().GetBool("skip-enroll-if-found")
-		channel, _ := cmd.Flags().GetString("channel")
-		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
 		runTypeStr, _ := cmd.Flags().GetString("run-type")
 
+		channel, _ := cmd.Flags().GetString("channel")
+		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
+		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
+
+		enrollOpts := cmdenroll.Opts{
+			Logger:            logger,
+			PinpointRoot:      pinpointRoot,
+			IntegrationsDir:   integrationsDir,
+			Code:              code,
+			Channel:           channel,
+			SkipEnrollIfFound: false,
+			SkipValidate:      skipValidate,
+		}
+
+		runEnroll := func() {
+			err := cmdenroll.Run(context.Background(), enrollOpts)
+			if err != nil {
+				exitWithErr(logger, err)
+			}
+		}
+
 		switch runType(runTypeStr) {
-		case direct:
+		case rtEnrollOnly:
+			runEnroll()
+			return
+		case rtDirect:
+			enrollOpts.SkipEnrollIfFound = true
+			fmt.Println("enrollOpts", enrollOpts)
+			runEnroll()
+
 			ctx := context.Background()
 			opts := cmdrun.Opts{}
 			opts.Logger = logger
 			opts.PinpointRoot = pinpointRoot
 			opts.IntegrationsDir = integrationsDir
-			opts.Enroll.Run = true
-			opts.Enroll.Code = code
-			opts.Enroll.Channel = channel
-			opts.Enroll.SkipValidate = skipValidate
-			opts.Enroll.SkipEnrollIfFound = skipEnroll
 			err := cmdrun.Run(ctx, opts, nil)
 			if err != nil {
 				exitWithErr(logger, err)
 			}
-		case service:
-			runEnroll(cmd, logger, pinpointRoot, code)
+		case rtService:
+			runEnroll()
 			err := cmdserviceinstall.Run(logger, pinpointRoot, true)
 			if err != nil {
 				exitWithErr(logger, err)
@@ -136,12 +118,15 @@ func init() {
 	cmd := cmdEnroll
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
-	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Integrations dir")
+
 	cmd.Flags().String("channel", "stable", "Cloud channel to use.")
-	cmd.Flags().Bool("skip-validate", false, "skip minimum requirements")
-	cmd.Flags().Bool("skip-run", false, "Set to true to skip service run. Will need to run it separately.")
-	cmd.Flags().Bool("skip-enroll-if-found", false, "skip enroll if the config is already found")
-	cmd.Flags().String("run-type", "service", "run the agent either interactive or as a service")
+	cmd.Flags().Bool("skip-validate", false, "Skip hardware/software requirements check.")
+
+	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Custom directory for integrations binaries.")
+	cmd.Flags().String("run-type", "service", `One of service, direct, enroll-only. "service" installs agent as OS service. "direct" runs the agent directly after enrolling using one command, which is useful for docker. "enroll-only" does not run the service, use separate run command in this case.`)
+
+	cmd.Flags().Bool("skip-enroll-if-found", false, "Deprecated.")
+
 	cmdRoot.AddCommand(cmd)
 }
 
@@ -244,53 +229,47 @@ func init() {
 	cmdRoot.AddCommand(cmd)
 }
 
-var cmdServiceRunNoRestarts = &cobra.Command{
-	Use:   "service-run-no-restarts",
-	Short: "This command is called by OS service to run the service.",
-	Args:  cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		logger, pinpointRoot := defaultCommandWithFileLogger(cmd)
-		ctx := context.Background()
-		opts := cmdservicerunnorestarts.Opts{}
-		opts.Logger = logger
-		opts.LogLevelSubcommands = logger.Level
-		opts.PinpointRoot = pinpointRoot
-		err := cmdservicerunnorestarts.Run(ctx, opts)
-		if err != nil {
-			exitWithErr(logger, err)
-		}
-	},
+func runNoRestarts(cmd *cobra.Command, args []string) {
+	logger, pinpointRoot := defaultCommandWithFileLogger(cmd)
+	ctx := context.Background()
+	opts := cmdrunnorestarts.Opts{}
+	opts.Logger = logger
+	opts.LogLevelSubcommands = logger.Level
+	opts.PinpointRoot = pinpointRoot
+	err := cmdrunnorestarts.Run(ctx, opts)
+	if err != nil {
+		exitWithErr(logger, err)
+	}
 }
 
-func init() {
-	cmd := cmdServiceRunNoRestarts
-	flagsLogger(cmd)
-	flagPinpointRoot(cmd)
-	cmdRoot.AddCommand(cmd)
+func runWithRestarts(cmd *cobra.Command, args []string) {
+	cmd.Flags().Set("log-format", "json")
+	logger := cmdlogger.NewLogger(cmd)
+	pinpointRoot, err := getPinpointRoot(cmd)
+	if err != nil {
+		exitWithErr(logger, err)
+	}
+	ctx := context.Background()
+	opts := cmdrun.Opts{}
+	opts.Logger = logger
+	opts.PinpointRoot = pinpointRoot
+	err = cmdrun.Run(ctx, opts, nil)
+	if err != nil {
+		exitWithErr(logger, err)
+	}
 }
 
 var cmdRun = &cobra.Command{
 	Use:   "run",
-	Short: "This command is called by OS service to run the service.",
+	Short: "Run the agent directly without using os service",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		// only json is supported as log format for run command, since it proxies the logs from subcommands, from which export is required to be json to be sent to the server corretly
-		cmd.Flags().Set("log-format", "json")
-
-		logger := cmdlogger.NewLogger(cmd)
-		pinpointRoot, err := getPinpointRoot(cmd)
-		if err != nil {
-			exitWithErr(logger, err)
+		noRestarts, _ := cmd.Flags().GetBool("no-restarts")
+		if noRestarts {
+			runNoRestarts(cmd, args)
+			return
 		}
-
-		ctx := context.Background()
-		opts := cmdrun.Opts{}
-		opts.Logger = logger
-		opts.PinpointRoot = pinpointRoot
-		err = cmdrun.Run(ctx, opts, nil)
-		if err != nil {
-			exitWithErr(logger, err)
-		}
+		runWithRestarts(cmd, args)
 	},
 }
 
@@ -298,6 +277,7 @@ func init() {
 	cmd := cmdRun
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
+	cmd.Flags().Bool("no-restarts", false, "By default run restarts on errors and panics, set to true to avoid restarting.")
 	cmdRoot.AddCommand(cmd)
 }
 

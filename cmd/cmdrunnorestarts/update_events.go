@@ -1,4 +1,4 @@
-package cmdservicerunnorestarts
+package cmdrunnorestarts
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/updater"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/updater"
 	"github.com/pinpt/agent/pkg/build"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/go-common/datamodel"

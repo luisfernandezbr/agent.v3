@@ -1,11 +1,11 @@
-package cmdservicerunnorestarts
+package cmdrunnorestarts
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/subcommand"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/subcommand"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"

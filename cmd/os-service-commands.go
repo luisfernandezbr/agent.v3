@@ -14,7 +14,7 @@ import (
 
 var cmdServiceRun = &cobra.Command{
 	Use:   "service-run",
-	Short: "Run agent service",
+	Short: "Run agent service. This is called automatically once the service is installed.",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Flags().Set("log-format", "json")
@@ -34,6 +34,7 @@ var cmdServiceRun = &cobra.Command{
 
 func init() {
 	cmd := cmdServiceRun
+	cmd.Hidden = true
 	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
 	cmdRoot.AddCommand(cmd)
@@ -41,7 +42,7 @@ func init() {
 
 var cmdServiceInstall = &cobra.Command{
 	Use:   "service-install",
-	Short: "Install OS service of agent",
+	Short: "Install agent as OS managed service",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Flags().Set("log-format", "json")
@@ -107,7 +108,7 @@ func init() {
 
 var cmdServiceStatus = &cobra.Command{
 	Use:   "service-status",
-	Short: "Status agent service",
+	Short: "Show status of agent service",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Flags().Set("log-format", "json")

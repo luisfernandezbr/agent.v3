@@ -24,13 +24,6 @@ type Opts struct {
 	Logger          hclog.Logger
 	PinpointRoot    string
 	IntegrationsDir string
-	Enroll          struct {
-		Run               bool
-		Channel           string
-		Code              string
-		SkipValidate      bool
-		SkipEnrollIfFound bool
-	}
 }
 
 func Run(ctx context.Context, opts Opts, cancel chan bool) error {
@@ -56,12 +49,6 @@ func newRunner(opts Opts) (*runner, error) {
 }
 
 func (s *runner) Run(cancel chan bool) error {
-	if s.opts.Enroll.Run {
-		err := s.runEnroll()
-		if err != nil {
-			return err
-		}
-	}
 
 	s.logger.Info("starting service-run-with-restarts", "pinpoint-root", s.opts.PinpointRoot, "integration-dir", s.opts.IntegrationsDir)
 
@@ -86,25 +73,6 @@ func (s *runner) CaptureShutdown(cancelPservice func(), cancelRunner chan bool, 
 	cancelPservice()
 	<-done
 	s.logger.Info("exited")
-}
-
-func (s *runner) runEnroll() error {
-	args := []string{"enroll-no-service-run",
-		s.opts.Enroll.Code,
-		"--pinpoint-root", s.opts.PinpointRoot,
-		"--integrations-dir", s.opts.IntegrationsDir,
-		"--channel", s.opts.Enroll.Channel,
-	}
-	if s.opts.Enroll.SkipValidate {
-		args = append(args, "--skip-validate")
-	}
-	if s.opts.Enroll.SkipEnrollIfFound {
-		args = append(args, "--skip-enroll-if-found")
-	}
-	cmd := exec.Command(os.Args[0], args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
 }
 
 func (s *runner) runService(ctx context.Context) error {

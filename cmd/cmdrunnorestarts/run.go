@@ -1,4 +1,4 @@
-package cmdservicerunnorestarts
+package cmdrunnorestarts
 
 import (
 	"context"
@@ -28,10 +28,10 @@ import (
 	"github.com/pinpt/go-common/event/action"
 	isdk "github.com/pinpt/integration-sdk"
 
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/crashes"
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/exporter"
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/logsender"
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/updater"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/crashes"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/exporter"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/logsender"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/updater"
 )
 
 type Opts struct {

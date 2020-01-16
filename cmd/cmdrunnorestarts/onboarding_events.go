@@ -1,4 +1,4 @@
-package cmdservicerunnorestarts
+package cmdrunnorestarts
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 
 	"github.com/pinpt/agent/cmd/cmdexportonboarddata"
 	"github.com/pinpt/agent/cmd/cmdintegration"
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/inconfig"
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/subcommand"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/subcommand"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"
