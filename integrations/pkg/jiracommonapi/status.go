@@ -26,3 +26,35 @@ func Status(qc QueryContext) (res []string, rerr error) {
 
 	return
 }
+
+type StatusDetail struct {
+	Name           string `json:"name"`
+	StatusCategory struct {
+		Key  string `json:"key"`
+		Name string `json:"name"`
+	} `json:"statusCategory"`
+}
+
+func StatusWithDetail(qc QueryContext) ([]StatusDetail, []string, error) {
+	objectPath := "status"
+
+	var detail []StatusDetail
+	m := make(map[string]bool)
+
+	err := qc.Request(objectPath, nil, &detail)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, status := range detail {
+		m[status.Name] = true
+	}
+
+	var res []string
+
+	for k := range m {
+		res = append(res, k)
+	}
+
+	return detail, res, nil
+}

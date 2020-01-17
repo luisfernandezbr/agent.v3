@@ -1,0 +1,460 @@
+[
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/1",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/open.png",
+        "name": "Work Required",
+        "id": "1",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/3",
+        "description": "This issue is being actively worked on at the moment by the assignee.",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/inprogress.png",
+        "name": "In Progress",
+        "id": "3",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/4",
+            "id": 4,
+            "key": "indeterminate",
+            "colorName": "yellow",
+            "name": "In Progress"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/4",
+        "description": "This issue was once resolved, but the resolution was deemed incorrect. From here issues are either marked assigned or resolved.",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/reopened.png",
+        "name": "Rework",
+        "id": "4",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/6",
+        "description": "The issue is considered finished, the resolution is correct. Issues which are closed can be reopened.",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/closed.png",
+        "name": "Closed",
+        "id": "6",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/3",
+            "id": 3,
+            "key": "done",
+            "colorName": "green",
+            "name": "Done"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10000",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/",
+        "name": "To Do",
+        "id": "10000",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10201",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/",
+        "name": "Selected for Development",
+        "id": "10201",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10307",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/generic.png",
+        "name": "Awaiting Validation",
+        "id": "10307",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10309",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/generic.png",
+        "name": "Awaiting Release",
+        "id": "10309",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10324",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/generic.png",
+        "name": "Work Complete",
+        "id": "10324",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10325",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/generic.png",
+        "name": "In Testing",
+        "id": "10325",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10330",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/",
+        "name": "To Do",
+        "id": "10330",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        },
+        "scope": {
+            "type": "PROJECT",
+            "project": {
+                "id": "10626"
+            }
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10331",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/",
+        "name": "In Progress",
+        "id": "10331",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/4",
+            "id": 4,
+            "key": "indeterminate",
+            "colorName": "yellow",
+            "name": "In Progress"
+        },
+        "scope": {
+            "type": "PROJECT",
+            "project": {
+                "id": "10626"
+            }
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10332",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/",
+        "name": "Done",
+        "id": "10332",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/3",
+            "id": 3,
+            "key": "done",
+            "colorName": "green",
+            "name": "Done"
+        },
+        "scope": {
+            "type": "PROJECT",
+            "project": {
+                "id": "10626"
+            }
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10333",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/",
+        "name": "To Do",
+        "id": "10333",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        },
+        "scope": {
+            "type": "PROJECT",
+            "project": {
+                "id": "10627"
+            }
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10334",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/",
+        "name": "In Progress",
+        "id": "10334",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/4",
+            "id": 4,
+            "key": "indeterminate",
+            "colorName": "yellow",
+            "name": "In Progress"
+        },
+        "scope": {
+            "type": "PROJECT",
+            "project": {
+                "id": "10627"
+            }
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10335",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/",
+        "name": "Done",
+        "id": "10335",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/3",
+            "id": 3,
+            "key": "done",
+            "colorName": "green",
+            "name": "Done"
+        },
+        "scope": {
+            "type": "PROJECT",
+            "project": {
+                "id": "10627"
+            }
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10336",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/",
+        "name": "In Review",
+        "id": "10336",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/4",
+            "id": 4,
+            "key": "indeterminate",
+            "colorName": "yellow",
+            "name": "In Progress"
+        },
+        "scope": {
+            "type": "PROJECT",
+            "project": {
+                "id": "10627"
+            }
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10340",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/",
+        "name": "Backlog",
+        "id": "10340",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        },
+        "scope": {
+            "type": "PROJECT",
+            "project": {
+                "id": "10628"
+            }
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10341",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/",
+        "name": "In Review",
+        "id": "10341",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/4",
+            "id": 4,
+            "key": "indeterminate",
+            "colorName": "yellow",
+            "name": "In Progress"
+        },
+        "scope": {
+            "type": "PROJECT",
+            "project": {
+                "id": "10628"
+            }
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10342",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/",
+        "name": "Ready for Promotion",
+        "id": "10342",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/3",
+            "id": 3,
+            "key": "done",
+            "colorName": "green",
+            "name": "Done"
+        },
+        "scope": {
+            "type": "PROJECT",
+            "project": {
+                "id": "10628"
+            }
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10343",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/",
+        "name": "On Hold",
+        "id": "10343",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/4",
+            "id": 4,
+            "key": "indeterminate",
+            "colorName": "yellow",
+            "name": "In Progress"
+        },
+        "scope": {
+            "type": "PROJECT",
+            "project": {
+                "id": "10627"
+            }
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10346",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/generic.png",
+        "name": "Control Validation",
+        "id": "10346",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10347",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/generic.png",
+        "name": "Validated",
+        "id": "10347",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/3",
+            "id": 3,
+            "key": "done",
+            "colorName": "green",
+            "name": "Done"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10348",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/generic.png",
+        "name": "Evidence Needed",
+        "id": "10348",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10349",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/generic.png",
+        "name": "Gathering Evidence",
+        "id": "10349",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/4",
+            "id": 4,
+            "key": "indeterminate",
+            "colorName": "yellow",
+            "name": "In Progress"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10350",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/generic.png",
+        "name": "Validate Evidence",
+        "id": "10350",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10351",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/generic.png",
+        "name": "Evidence Validated",
+        "id": "10351",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/3",
+            "id": 3,
+            "key": "done",
+            "colorName": "green",
+            "name": "Done"
+        }
+    },
+    {
+        "self": "https://pinpt-hq.atlassian.net/rest/api/3/status/10356",
+        "description": "",
+        "iconUrl": "https://pinpt-hq.atlassian.net/images/icons/statuses/generic.png",
+        "name": "Acceptance",
+        "id": "10356",
+        "statusCategory": {
+            "self": "https://pinpt-hq.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+        }
+    }
+]
