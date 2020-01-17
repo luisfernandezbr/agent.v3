@@ -95,8 +95,8 @@ func appendStaticInfo(ws *agent.WorkStatusResponseWorkConfig, statuses []jiracom
 		Name: "Epic",
 		Type: "Issue",
 	}
-	ws.Resolutions.WorkDone = []string{"Completed"}
-	ws.Resolutions.NoWorkDone = []string{"Won't Do", "Invalid"}
+	ws.Resolutions.WorkDone = []string{"Done"}
+	ws.Resolutions.NoWorkDone = []string{} // NOTE: we don't use this currently so return empty for now until we do
 	ws.TypeRules = []agent.WorkStatusResponseWorkConfigTypeRules{
 		agent.WorkStatusResponseWorkConfigTypeRules{
 			IssueType: agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeFeature,
