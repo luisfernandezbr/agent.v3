@@ -84,13 +84,13 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 		for _, r := range res {
 
 			if stringEquals(r.ReferenceName,
-				"Microsoft.VSTS.WorkItemTypes.CodeReviewRequest", "CodeReview Request",
-				"Microsoft.VSTS.WorkItemTypes.CodeReviewResponse", "CodeReview Response",
-				"Microsoft.VSTS.WorkItemTypes.SharedParameter", "Shared Parameter",
-				"Microsoft.VSTS.WorkItemTypes.SharedStep", "Shared Step",
-				"Microsoft.VSTS.WorkItemTypes.TestCase", "Test Case",
-				"Microsoft.VSTS.WorkItemTypes.TestPlan", "Test Plan",
-				"Microsoft.VSTS.WorkItemTypes.TestSuite", "Test Suite",
+				"Microsoft.VSTS.WorkItemTypes.CodeReviewRequest", "CodeReviewRequest", "CodeReview Request",
+				"Microsoft.VSTS.WorkItemTypes.CodeReviewResponse", "CodeReviewResponse", "CodeReview Response",
+				"Microsoft.VSTS.WorkItemTypes.SharedParameter", "SharedParameter", "Shared Parameter",
+				"Microsoft.VSTS.WorkItemTypes.SharedStep", "SharedStep", "Shared Step",
+				"Microsoft.VSTS.WorkItemTypes.TestCase", "TestCase", "Test Case",
+				"Microsoft.VSTS.WorkItemTypes.TestPlan", "TestPlan", "Test Plan",
+				"Microsoft.VSTS.WorkItemTypes.TestSuite", "TestSuite", "Test Suite",
 			) {
 				continue
 			}

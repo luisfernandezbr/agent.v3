@@ -53,9 +53,22 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 	}
 	var res2 []*work.Issue
 	for _, each := range res {
+		fields := each.Fields
+
+		if stringEquals(fields.WorkItemType,
+			"Microsoft.VSTS.WorkItemTypes.CodeReviewRequest", "CodeReviewRequest", "CodeReview Request",
+			"Microsoft.VSTS.WorkItemTypes.CodeReviewResponse", "CodeReviewResponse", "CodeReview Response",
+			"Microsoft.VSTS.WorkItemTypes.SharedParameter", "SharedParameter", "Shared Parameter",
+			"Microsoft.VSTS.WorkItemTypes.SharedStep", "SharedStep", "Shared Step",
+			"Microsoft.VSTS.WorkItemTypes.TestCase", "TestCase", "Test Case",
+			"Microsoft.VSTS.WorkItemTypes.TestPlan", "TestPlan", "Test Plan",
+			"Microsoft.VSTS.WorkItemTypes.TestSuite", "TestSuite", "Test Suite",
+		) {
+			continue
+		}
+
 		issue, err := azureIssueToPinpointIssue(each, projid, api.customerid, api.reftype, api.IDs)
 		var updatedDate time.Time
-		fields := each.Fields
 		if issue.ChangeLog, updatedDate, err = api.fetchChangeLog(fields.WorkItemType, projid, issue.RefID); err != nil {
 			return nil, nil, err
 		}
