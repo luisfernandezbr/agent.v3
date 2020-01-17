@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/ids2"
 	pnumbers "github.com/pinpt/go-common/number"
 	"github.com/pinpt/integration-sdk/work"
 )
@@ -52,40 +53,9 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 	}
 	var res2 []*work.Issue
 	for _, each := range res {
-		fields := each.Fields
-		issue := work.Issue{
-			AssigneeRefID: fields.AssignedTo.ID,
-			CreatorRefID:  fields.CreatedBy.ID,
-			CustomerID:    api.customerid,
-			Description:   fields.Description,
-			Identifier:    fmt.Sprintf("%s-%d", fields.TeamProject, each.ID),
-			Priority:      fmt.Sprintf("%d", fields.Priority),
-			ProjectID:     api.IDs.WorkProject(projid),
-			RefID:         fmt.Sprintf("%d", each.ID),
-			RefType:       api.reftype,
-			ReporterRefID: fields.CreatedBy.ID,
-			Resolution:    fields.ResolvedReason,
-			Status:        fields.State,
-			StoryPoints:   pnumbers.Float64Pointer(fields.StoryPoints),
-			Tags:          strings.Split(fields.Tags, "; "),
-			Title:         fields.Title,
-			Type:          fields.WorkItemType,
-			URL:           each.Links.HTML.HREF,
-			SprintIds:     []string{api.IDs.WorkSprintID(fields.IterationPath)},
-		}
-		for _, rel := range each.Relations {
-			if rel.Rel == "ArtifactLink" {
-				matches := pullRequestFromIssue.FindAllStringSubmatch(rel.URL, 1)
-				if len(matches) > 0 {
-					// proj := matches[0][1]
-					repo := matches[0][2]
-					refid := matches[0][3]
-					prid := api.IDs.CodePullRequest(repo, refid)
-					issue.PullRequestIds = append(issue.PullRequestIds, prid)
-				}
-			}
-		}
+		issue, err := azureIssueToPinpointIssue(each, projid, api.customerid, api.reftype, api.IDs)
 		var updatedDate time.Time
+		fields := each.Fields
 		if issue.ChangeLog, updatedDate, err = api.fetchChangeLog(fields.WorkItemType, projid, issue.RefID); err != nil {
 			return nil, nil, err
 		}
@@ -94,12 +64,48 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 		if updatedDate.IsZero() {
 			updatedDate = fields.ChangedDate
 		}
-
-		date.ConvertToModel(fields.CreatedDate, &issue.CreatedDate)
-		date.ConvertToModel(fields.DueDate, &issue.DueDate)
 		date.ConvertToModel(updatedDate, &issue.UpdatedDate)
 
 		res2 = append(res2, &issue)
 	}
 	return res, res2, nil
+}
+
+func azureIssueToPinpointIssue(item WorkItemResponse, projid string, customerid string, reftype string, idgen ids2.Gen) (work.Issue, error) {
+	fields := item.Fields
+	issue := work.Issue{
+		AssigneeRefID: fields.AssignedTo.ID,
+		CreatorRefID:  fields.CreatedBy.ID,
+		CustomerID:    customerid,
+		Description:   fields.Description,
+		Identifier:    fmt.Sprintf("%s-%d", fields.TeamProject, item.ID),
+		Priority:      fmt.Sprintf("%d", fields.Priority),
+		ProjectID:     idgen.WorkProject(projid),
+		RefID:         fmt.Sprintf("%d", item.ID),
+		RefType:       reftype,
+		ReporterRefID: fields.CreatedBy.ID,
+		Resolution:    itemStateName(fields.ResolvedReason, item.Fields.WorkItemType),
+		Status:        itemStateName(fields.State, item.Fields.WorkItemType),
+		StoryPoints:   pnumbers.Float64Pointer(fields.StoryPoints),
+		Tags:          strings.Split(fields.Tags, "; "),
+		Title:         fields.Title,
+		Type:          fields.WorkItemType,
+		URL:           item.Links.HTML.HREF,
+		SprintIds:     []string{idgen.WorkSprintID(fields.IterationPath)},
+	}
+	for _, rel := range item.Relations {
+		if rel.Rel == "ArtifactLink" {
+			matches := pullRequestFromIssue.FindAllStringSubmatch(rel.URL, 1)
+			if len(matches) > 0 {
+				// proj := matches[0][1]
+				repo := matches[0][2]
+				refid := matches[0][3]
+				prid := idgen.CodePullRequest(repo, refid)
+				issue.PullRequestIds = append(issue.PullRequestIds, prid)
+			}
+		}
+	}
+	date.ConvertToModel(fields.CreatedDate, &issue.CreatedDate)
+	date.ConvertToModel(fields.DueDate, &issue.DueDate)
+	return issue, nil
 }

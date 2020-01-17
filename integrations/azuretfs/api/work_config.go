@@ -73,7 +73,7 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 	ws := &agent.WorkStatusResponseWorkConfig{}
 	for _, project := range projects {
 
-		api.fetchColumnsForStatuses(project.RefID, ws)
+		// api.fetchColumnsForStatuses(project.RefID, ws)
 
 		var res []workConfigRes
 
@@ -83,34 +83,46 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 		}
 		for _, r := range res {
 
-			if r.Name == "Epic" {
+			if stringEquals(r.ReferenceName,
+				"Microsoft.VSTS.WorkItemTypes.CodeReviewRequest", "CodeReview Request",
+				"Microsoft.VSTS.WorkItemTypes.CodeReviewResponse", "CodeReview Response",
+				"Microsoft.VSTS.WorkItemTypes.SharedParameter", "Shared Parameter",
+				"Microsoft.VSTS.WorkItemTypes.SharedStep", "Shared Step",
+				"Microsoft.VSTS.WorkItemTypes.TestCase", "Test Case",
+				"Microsoft.VSTS.WorkItemTypes.TestPlan", "Test Plan",
+				"Microsoft.VSTS.WorkItemTypes.TestSuite", "Test Suite",
+			) {
+				continue
+			}
+
+			if stringEquals(r.ReferenceName, "Microsoft.VSTS.WorkItemTypes.Epic", "Epic") {
 				ws.TopLevelIssue = agent.WorkStatusResponseWorkConfigTopLevelIssue{
 					Name: "Epic",
 					Type: "Epic",
 				}
 			}
 
-			// for _, s := range r.States {
-			// 	name := itemStateName(s.Name, r.Name)
-			// 	switch workConfigStatus(s.Category) {
-			// 	case workConfigCompletedStatus:
-			// 		// Work items whose state is in this category don't appear on the backlog
-			// 		ws.Statuses.ReleasedStatus = appendString(ws.Statuses.ReleasedStatus, name)
-			// 	case workConfigInProgressStatus:
-			// 		// Assigned to states that represent active work
-			// 		ws.Statuses.InProgressStatus = appendString(ws.Statuses.InProgressStatus, name)
-			// 	case workConfigProposedStatus:
-			// 		// Assigned to states associated with newly added work items so that they appear on the backlog
-			// 		ws.Statuses.OpenStatus = appendString(ws.Statuses.OpenStatus, name)
-			// 	case workConfigRemovedStatus:
-			// 		// Work items in a state mapped to the Removed category are hidden from the backlog and board experiences
-			// 		ws.Statuses.ClosedStatus = appendString(ws.Statuses.ClosedStatus, name)
-			// 	case workConfigResolvedStatus:
-			// 		// Assigned to states that represent a solution has been implemented, but are not yet verified
-			// 		ws.Statuses.InReviewStatus = appendString(ws.Statuses.InReviewStatus, name)
-			// 	}
-			// 	ws.AllStatuses = appendString(ws.AllStatuses, name)
-			// }
+			for _, s := range r.States {
+				name := itemStateName(s.Name, r.Name)
+				switch workConfigStatus(s.Category) {
+				case workConfigCompletedStatus:
+					// Work items whose state is in this category don't appear on the backlog
+					ws.Statuses.ReleasedStatus = appendString(ws.Statuses.ReleasedStatus, name)
+				case workConfigInProgressStatus:
+					// Assigned to states that represent active work
+					ws.Statuses.InProgressStatus = appendString(ws.Statuses.InProgressStatus, name)
+				case workConfigProposedStatus:
+					// Assigned to states associated with newly added work items so that they appear on the backlog
+					ws.Statuses.OpenStatus = appendString(ws.Statuses.OpenStatus, name)
+				case workConfigRemovedStatus:
+					// Work items in a state mapped to the Removed category are hidden from the backlog and board experiences
+					ws.Statuses.ClosedStatus = appendString(ws.Statuses.ClosedStatus, name)
+				case workConfigResolvedStatus:
+					// Assigned to states that represent a solution has been implemented, but are not yet verified
+					ws.Statuses.InReviewStatus = appendString(ws.Statuses.InReviewStatus, name)
+				}
+				ws.AllStatuses = appendString(ws.AllStatuses, name)
+			}
 
 			url2 := fmt.Sprintf(`%s/_apis/wit/workitemtypes/%s/fields`, project.RefID, r.ReferenceName)
 			var resres []resolutionRes
@@ -121,47 +133,11 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 				if len(g.AllowedValues) > 0 {
 					if g.ReferenceName == "Microsoft.VSTS.Common.ResolvedReason" {
 						for _, n := range g.AllowedValues {
-							ws.AllResolutions = appendString(ws.AllResolutions, n)
+							ws.AllResolutions = appendString(ws.AllResolutions, itemStateName(n, r.Name))
 						}
 					}
-					// 	continue
-					// }
-					// if g.ReferenceName == "System.BoardColumn" {
-					// 	for _, name := range g.AllowedValues {
-					// 		switch name {
-					// 		case "Fixed", "Abandoned", "Issue Removed", "Issue Resolved":
-					// 			ws.Statuses.ClosedStatus = appendString(ws.Statuses.ClosedStatus, name)
-					// 		case "New":
-					// 			ws.Statuses.OpenStatus = appendString(ws.Statuses.OpenStatus, name)
-					// 		case "Not fixed", "Reactivated":
-					// 			ws.Statuses.ReopenedStatus = appendString(ws.Statuses.ReopenedStatus, name)
-					// 		case "Implementation started", "Work started":
-					// 			ws.Statuses.InProgressStatus = appendString(ws.Statuses.InProgressStatus, name)
-					// 		case "Closed", "Completed":
-					// 			ws.Statuses.ReleasedStatus = appendString(ws.Statuses.ReleasedStatus, name)
-					// 		}
-					// 		ws.AllStatuses = appendString(ws.AllStatuses, name)
-					// 	}
-					// 	continue
-					// }
 				}
 			}
-
-			// type boardcolumnsRes struct {
-			// 	Name string `json:"name"`
-			// }
-			// url3 := fmt.Sprintf(`%s/_apis/work/boardcolumns`, project.RefID)
-			// var resres2 []boardcolumnsRes
-			// if err := api.getRequest(url3, nil, &resres2); err != nil {
-			// 	return nil, err
-			// }
-			// for _, g := range resres2 {
-			// 				ws.AllResolutions = appendString(ws.AllResolutions, g.Name)
-			// 				switch g.Name {
-			// 				case "":
-			// 					break
-			// 				}
-			// }
 
 			predicate := agent.WorkStatusResponseWorkConfigTypeRulesPredicates{
 				Field:    predFieldType,
