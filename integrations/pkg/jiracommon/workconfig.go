@@ -36,7 +36,7 @@ func GetWorkConfig(qc jiracommonapi.QueryContext, isCloud bool, usesOauth bool) 
 	}
 	ws.Types = issueTypes
 
-	allStatus, err := jiracommonapi.Status(qc)
+	statusDetail, allStatus, err := jiracommonapi.StatusWithDetail(qc)
 	if err != nil {
 		res.Error = err
 		return
@@ -51,7 +51,7 @@ func GetWorkConfig(qc jiracommonapi.QueryContext, isCloud bool, usesOauth bool) 
 
 	ws.AllResolutions = resolutions
 
-	appendStaticInfo(&ws)
+	appendStaticInfo(&ws, statusDetail)
 
 	res.Data = ws.ToMap()
 	return
@@ -75,14 +75,21 @@ func getExistedStatusesOnly(allstatus, optns []string) []string {
 	return res
 }
 
-func appendStaticInfo(ws *agent.WorkStatusResponseWorkConfig) {
-	ws.Statuses = agent.WorkStatusResponseWorkConfigStatuses{
-		ClosedStatus:     getExistedStatusesOnly(ws.AllStatuses, []string{"Work Complete", "Completed", "Closed", "Done", "Fixed"}),
-		InProgressStatus: getExistedStatusesOnly(ws.AllStatuses, []string{"In Progress", "On Hold"}),
-		OpenStatus:       getExistedStatusesOnly(ws.AllStatuses, []string{"Open", "Work Required", "To Do", "Backlog"}),
-		InReviewStatus:   getExistedStatusesOnly(ws.AllStatuses, []string{"Awaiting Release", "Awaiting Validation", "In Review"}),
-		ReleasedStatus:   getExistedStatusesOnly(ws.AllStatuses, []string{"Released"}),
-		ReopenedStatus:   getExistedStatusesOnly(ws.AllStatuses, []string{"Reopened", "Rework"}),
+func appendStaticInfo(ws *agent.WorkStatusResponseWorkConfig, statuses []jiracommonapi.StatusDetail) {
+	ws.Statuses = agent.WorkStatusResponseWorkConfigStatuses{}
+	found := make(map[string]bool)
+	for _, status := range statuses {
+		if !found[status.Name] {
+			found[status.Name] = true
+			switch status.StatusCategory.Key {
+			case "new":
+				ws.Statuses.OpenStatus = append(ws.Statuses.OpenStatus, status.Name)
+			case "done":
+				ws.Statuses.ClosedStatus = append(ws.Statuses.ClosedStatus, status.Name)
+			case "indeterminate":
+				ws.Statuses.InProgressStatus = append(ws.Statuses.InProgressStatus, status.Name)
+			}
+		}
 	}
 	ws.TopLevelIssue = agent.WorkStatusResponseWorkConfigTopLevelIssue{
 		Name: "Epic",
