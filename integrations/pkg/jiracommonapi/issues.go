@@ -289,19 +289,19 @@ func IssuesAndChangelogsPage(
 		item.Tags = fields.Labels
 
 		for _, link := range fields.IssueLinks {
-			var linkType work.IssueLinkedIssuesType
+			var linkType work.IssueLinkedIssuesLinkType
 			reverseDirection := false
 			switch link.Type.Name {
 			case "Blocks":
-				linkType = work.IssueLinkedIssuesTypeBlocks
+				linkType = work.IssueLinkedIssuesLinkTypeBlocks
 			case "Cloners":
-				linkType = work.IssueLinkedIssuesTypeClones
+				linkType = work.IssueLinkedIssuesLinkTypeClones
 			case "Duplicate":
-				linkType = work.IssueLinkedIssuesTypeDuplicates
+				linkType = work.IssueLinkedIssuesLinkTypeDuplicates
 			case "Problem/Incident":
-				linkType = work.IssueLinkedIssuesTypeCauses
+				linkType = work.IssueLinkedIssuesLinkTypeCauses
 			case "Relates":
-				linkType = work.IssueLinkedIssuesTypeRelates
+				linkType = work.IssueLinkedIssuesLinkTypeRelates
 			default:
 				qc.Logger.Error("unknown link type name", "name", link.Type.Name)
 				continue
@@ -322,7 +322,7 @@ func IssuesAndChangelogsPage(
 			link2.IssueRefID = linkedIssue.ID
 			link2.IssueIdentifier = linkedIssue.Key
 			link2.ReverseDirection = reverseDirection
-			link2.Type = linkType
+			link2.LinkType = linkType
 			item.LinkedIssues = append(item.LinkedIssues, link2)
 		}
 
