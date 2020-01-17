@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -20,6 +21,7 @@ func Paginate(log hclog.Logger, fn PaginateStartAtFn) error {
 		if err != nil {
 			return err
 		}
+		log.Debug("page", "info", fmt.Sprintf("%+v", pageInfo))
 		if pageInfo.NextPage == "" {
 			return nil
 		}
@@ -42,6 +44,7 @@ func PaginateNewerThan(log hclog.Logger, lastProcessed time.Time, fn PaginateNew
 		if err != nil {
 			return err
 		}
+		log.Debug("page", "info", fmt.Sprintf("%+v", pageInfo))
 		if pageInfo.NextPage == "" {
 			return nil
 		}

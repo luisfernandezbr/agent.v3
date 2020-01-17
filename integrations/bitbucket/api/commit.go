@@ -14,7 +14,7 @@ import (
 )
 
 func LastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (lastCommit agent.RepoResponseReposLastCommit, err error) {
-	qc.Logger.Debug("onboard repos request")
+	qc.Logger.Debug("onboard last commit", "repo", repo.Name)
 
 	objectPath := pstrings.JoinURL("repositories", repo.Name, "commits")
 
