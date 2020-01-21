@@ -123,7 +123,9 @@ func (api *API) doRequest(method, endPoint string, params stringmap, reader io.R
 	}
 	u, _ := url.Parse(rawurl)
 	vals := u.Query()
-	vals.Add("api-version", api.apiversion)
+	if vals.Get("api-version") == "" {
+		vals.Add("api-version", api.apiversion)
+	}
 	for k, v := range params {
 		vals.Set(k, v)
 	}
@@ -151,12 +153,13 @@ func (api *API) doRequest(method, endPoint string, params stringmap, reader io.R
 	if res.StatusCode == http.StatusOK {
 		err := json.Unmarshal(b, &out)
 		if err != nil {
+			rerr := err
 			var r []interface{}
 			err = json.Unmarshal(b, &r)
 			if err != nil {
 				return fmt.Errorf("response code: %v request url: %v", res.StatusCode, res.Request.URL)
 			}
-			return fmt.Errorf("response code: %v request url: %v\npayload: %v", res.StatusCode, res.Request.URL, stringify(r))
+			return fmt.Errorf("response code: %v request url: %v\npayload: %v err: %v", res.StatusCode, res.Request.URL, stringify(r), rerr)
 		}
 		return nil
 	}
@@ -181,5 +184,8 @@ func stringify(i interface{}) string {
 }
 
 func itemStateName(state string, itemtype string) string {
-	return fmt.Sprintf("%s (type: %s)", state, itemtype)
+	if state == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s (%s)", state, itemtype)
 }

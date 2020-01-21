@@ -59,6 +59,11 @@ func (api *API) fetchChangeLog(itemtype, projid, issueid string) (changelogs []w
 					if to == from {
 						continue
 					}
+					to = itemStateName(to, itemtype)
+					from = itemStateName(from, itemtype)
+				} else if name == work.IssueChangeLogFieldResolution {
+					to = itemStateName(to, itemtype)
+					from = itemStateName(from, itemtype)
 				}
 				changelogs = append(changelogs, work.IssueChangeLog{
 					RefID:       fmt.Sprintf("%d", changelog.ID),
@@ -162,8 +167,7 @@ func extractUsers(item changelogFieldWithIDGen) (from string, to string) {
 }
 
 var changelogFields = map[string]changeLogFieldExtractor{
-	// "System.State": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
-	"System.BoardColumn": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
+	"System.State": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
 		return work.IssueChangeLogFieldStatus, changelogToString(item.OldValue), changelogToString(item.NewValue)
 	},
 	"Microsoft.VSTS.Common.ResolvedReason": func(item changelogFieldWithIDGen) (work.IssueChangeLogField, string, string) {
