@@ -1,4 +1,4 @@
-FROM golang:alpine
+FROM golang:debian
 RUN apk add make dep git
 RUN apk add openrc --no-cache;
 WORKDIR $GOPATH/src/github.com/pinpt/agent

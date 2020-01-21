@@ -9,7 +9,7 @@ import (
 )
 
 var serviceNames = service.Names{
-	Name:        "io.pinpt.service-test",
+	Name:        "serviceexample3",
 	DisplayName: "Pinpoint Service Test",
 	Description: "Test description",
 }
@@ -27,7 +27,9 @@ var cmdRoot = &cobra.Command{
 }
 
 func newLogger() hclog.Logger {
-	return hclog.New(hclog.DefaultOptions)
+	opts := hclog.DefaultOptions
+	//opts.Output = os.Stdout
+	return hclog.New(opts)
 }
 
 func exitWithErr(logger hclog.Logger, err error) {

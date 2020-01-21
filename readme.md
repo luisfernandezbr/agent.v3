@@ -11,6 +11,7 @@
 - [Hidden features](./_docs/hidden_features.md)
 - [Development workflow](./_docs/dev_workflow.md)
 - [Exported data](./_docs/exported_data.md)
+- [Managing agent service](./_docs/managing_agent_service.md)
 
 ## Install
 
@@ -56,7 +57,6 @@ docker run -it --rm --name pinpoint_agent -v `pwd`/pinpoint:/pinpoint pinpt/agen
 - [GitLab](./integrations/gitlab/readme.md)
 - [Jira](./integrations/jira/readme.md)
 - [SonarQube](./integrations/sonarqube/readme.md)
-
 
 ## License
 All of this code is Copyright © 2018-2019 by Pinpoint Software, Inc. Licensed under the MIT License

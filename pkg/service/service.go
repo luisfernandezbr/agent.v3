@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"runtime"
 	"strings"
 
@@ -57,7 +58,7 @@ func Control(logger hclog.Logger, names Names, action ControlAction) error {
 func status(logger hclog.Logger, svc service.Service) error {
 	status, err := svc.Status()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not determine service status, err: %v", err)
 	}
 	switch status {
 	case service.StatusUnknown:

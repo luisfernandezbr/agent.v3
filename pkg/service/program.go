@@ -1,10 +1,7 @@
 package service
 
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"runtime"
 
 	"github.com/kardianos/service"
 )
@@ -54,15 +51,7 @@ func (p *program) run() (_ error) {
 	p.terminate = make(chan bool)
 	p.terminated = make(chan bool)
 
-	var doneStdoutProxy chan bool
-
 	cleanup := func() {
-		if doneStdoutProxy != nil {
-			if err := os.Stdout.Sync(); err != nil {
-				p.logger.Info("error closing writeFile", "err", err)
-			}
-			<-doneStdoutProxy
-		}
 		p.terminated <- true
 	}
 
@@ -72,15 +61,6 @@ func (p *program) run() (_ error) {
 		p.logger.Error(err)
 	}
 
-	if runtime.GOOS == "windows" {
-		var err error
-		doneStdoutProxy, err = p.proxyStdoutIntoLogger()
-		if err != nil {
-			rerr(fmt.Errorf("could not create output to log proxy: %v", err))
-			return
-		}
-	}
-
 	err := p.serviceFunc(p.terminate)
 	if err != nil {
 		rerr(fmt.Errorf("error in run: %v", err))
@@ -88,36 +68,4 @@ func (p *program) run() (_ error) {
 	}
 
 	return nil
-}
-
-func (p *program) proxyStdoutIntoLogger() (done chan bool, rerr error) {
-	done = make(chan bool)
-
-	var readFile *os.File
-	var writeFile *os.File
-
-	var err error
-	readFile, writeFile, err = os.Pipe()
-	if err != nil {
-		rerr = err
-		return
-	}
-
-	os.Stdout = writeFile
-
-	go func() {
-		scanner := bufio.NewScanner(readFile)
-		for scanner.Scan() {
-			line := scanner.Text()
-			// BUG: this logs all logs as info, even though we could have different underlying error levels
-			p.logger.Info(line)
-		}
-		err := scanner.Err()
-		if err != nil {
-			p.logger.Error("error on scanner", "err", err)
-		}
-		done <- true
-	}()
-
-	return
 }
