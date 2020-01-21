@@ -89,7 +89,6 @@ var cmdEnroll = &cobra.Command{
 			return
 		case rtDirect:
 			enrollOpts.SkipEnrollIfFound = true
-			fmt.Println("enrollOpts", enrollOpts)
 			runEnroll()
 
 			ctx := context.Background()

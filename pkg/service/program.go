@@ -49,7 +49,9 @@ func (p *program) run() (_ error) {
 	p.logger.Info("running service")
 
 	p.terminate = make(chan bool)
-	p.terminated = make(chan bool)
+	// if terminated via kill, Stop function will not be called
+	// for this reason need to use chan len 1
+	p.terminated = make(chan bool, 1)
 
 	cleanup := func() {
 		p.terminated <- true
@@ -66,6 +68,8 @@ func (p *program) run() (_ error) {
 		rerr(fmt.Errorf("error in run: %v", err))
 		return
 	}
+
+	p.logger.Info("os service run func done")
 
 	return nil
 }

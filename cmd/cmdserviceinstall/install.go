@@ -2,7 +2,7 @@ package cmdserviceinstall
 
 import (
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent/cmd/cmdservicerun"
+	"github.com/pinpt/agent/cmd/cmdservicestart"
 	"github.com/pinpt/agent/cmd/pkg/ppservice"
 	"github.com/pinpt/agent/pkg/service"
 )
@@ -15,7 +15,7 @@ func Run(logger hclog.Logger, pinpointRoot string, start bool) error {
 		return err
 	}
 	if start {
-		return cmdservicerun.Run(logger, pinpointRoot)
+		return cmdservicestart.Run(logger)
 	}
 	return nil
 }

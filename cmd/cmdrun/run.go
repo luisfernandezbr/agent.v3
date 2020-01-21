@@ -93,7 +93,7 @@ func (s *runner) runService(ctx context.Context) error {
 	defer errFile.Close()
 	stderr := io.MultiWriter(os.Stderr, errFile)
 
-	cmd := exec.CommandContext(ctx, os.Args[0], "service-run-no-restarts",
+	cmd := exec.CommandContext(ctx, os.Args[0], "run", "--no-restarts",
 		"--pinpoint-root", s.opts.PinpointRoot)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = stderr
