@@ -76,7 +76,6 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 		// api.fetchColumnsForStatuses(project.RefID, ws)
 
 		var res []workConfigRes
-
 		url := fmt.Sprintf(`%s/_apis/wit/workitemtypes`, project.RefID)
 		if err = api.getRequest(url, stringmap{}, &res); err != nil {
 			return nil, err
@@ -84,8 +83,6 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 		for _, r := range res {
 
 			if stringEquals(r.ReferenceName,
-				"Microsoft.VSTS.WorkItemTypes.CodeReviewRequest", "CodeReviewRequest", "CodeReview Request",
-				"Microsoft.VSTS.WorkItemTypes.CodeReviewResponse", "CodeReviewResponse", "CodeReview Response",
 				"Microsoft.VSTS.WorkItemTypes.SharedParameter", "SharedParameter", "Shared Parameter",
 				"Microsoft.VSTS.WorkItemTypes.SharedStep", "SharedStep", "Shared Step",
 				"Microsoft.VSTS.WorkItemTypes.TestCase", "TestCase", "Test Case",
@@ -129,13 +126,28 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 			if err := api.getRequest(url2, stringmap{"$expand": "allowedValues"}, &resres); err != nil {
 				return nil, err
 			}
+			var reasons []string
+			var hasResolution bool
 			for _, g := range resres {
 				if len(g.AllowedValues) > 0 {
 					if g.ReferenceName == "Microsoft.VSTS.Common.ResolvedReason" {
 						for _, n := range g.AllowedValues {
 							ws.AllResolutions = appendString(ws.AllResolutions, itemStateName(n, r.Name))
+							hasResolution = true
 						}
+						continue
 					}
+					if g.ReferenceName == "System.Reason" {
+						for _, n := range g.AllowedValues {
+							reasons = appendString(reasons, itemStateName(n, r.Name))
+						}
+						continue
+					}
+				}
+			}
+			if !hasResolution {
+				for _, re := range reasons {
+					ws.AllResolutions = appendString(ws.AllResolutions, itemStateName(re, r.Name))
 				}
 			}
 
@@ -177,6 +189,32 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 		}
 	}
 	return ws, err
+}
+
+var hasResolutions map[string]bool
+
+func init() {
+	hasResolutions = make(map[string]bool)
+}
+
+func (api *API) hasResolution(projid, refname string) bool {
+	has, ok := hasResolutions[refname]
+	if ok {
+		return has
+	}
+	url2 := fmt.Sprintf(`%s/_apis/wit/workitemtypes/%s/fields`, projid, refname)
+	var resres []resolutionRes
+	if err := api.getRequest(url2, stringmap{"$expand": "allowedValues"}, &resres); err != nil {
+		return false
+	}
+	for _, g := range resres {
+		if len(g.AllowedValues) > 0 && g.ReferenceName == "Microsoft.VSTS.Common.ResolvedReason" {
+			hasResolutions[refname] = true
+			return true
+		}
+	}
+	hasResolutions[refname] = false
+	return false
 }
 
 func (api *API) fetchColumnsForStatuses(projid string, ws *agent.WorkStatusResponseWorkConfig) {

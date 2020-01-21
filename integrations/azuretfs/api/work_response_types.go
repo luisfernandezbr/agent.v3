@@ -89,6 +89,7 @@ type WorkItemResponse struct {
 		IterationPath  string        `json:"System.IterationPath"`
 		TeamProject    string        `json:"System.TeamProject"`
 		Priority       int           `json:"Microsoft.VSTS.Common.Priority"`
+		Reason         string        `json:"System.Reason"`
 		ResolvedReason string        `json:"Microsoft.VSTS.Common.ResolvedReason"`
 		ResolvedDate   time.Time     `json:"Microsoft.VSTS.Common.ResolvedDate"`
 		StoryPoints    float64       `json:"Microsoft.VSTS.Scheduling.StoryPoints"`

@@ -56,8 +56,6 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 		fields := each.Fields
 
 		if stringEquals(fields.WorkItemType,
-			"Microsoft.VSTS.WorkItemTypes.CodeReviewRequest", "CodeReviewRequest", "CodeReview Request",
-			"Microsoft.VSTS.WorkItemTypes.CodeReviewResponse", "CodeReviewResponse", "CodeReview Response",
 			"Microsoft.VSTS.WorkItemTypes.SharedParameter", "SharedParameter", "Shared Parameter",
 			"Microsoft.VSTS.WorkItemTypes.SharedStep", "SharedStep", "Shared Step",
 			"Microsoft.VSTS.WorkItemTypes.TestCase", "TestCase", "Test Case",
@@ -65,6 +63,13 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 			"Microsoft.VSTS.WorkItemTypes.TestSuite", "TestSuite", "Test Suite",
 		) {
 			continue
+		}
+
+		if !api.hasResolution(projid, fields.WorkItemType) {
+			if api.completedState(projid, fields.WorkItemType, fields.State) {
+				panic(fields.WorkItemType + " - " + fields.State + " - " + fields.Reason)
+				fields.ResolvedReason = fields.Reason
+			}
 		}
 
 		issue, err := azureIssueToPinpointIssue(each, projid, api.customerid, api.reftype, api.IDs)
@@ -84,7 +89,35 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 	return res, res2, nil
 }
 
+var completedStates map[string]string
+
+func init() {
+	completedStates = make(map[string]string)
+}
+
+func (api *API) completedState(projid string, itemtype string, state string) bool {
+
+	if s, o := completedStates[itemtype]; o {
+		return state == s
+	}
+	var res []workConfigRes
+	url := fmt.Sprintf(`%s/_apis/wit/workitemtypes/%s`, projid, itemtype)
+	if err := api.getRequest(url, stringmap{}, &res); err != nil {
+		return false
+	}
+
+	conf := res[0]
+	for _, r := range conf.States {
+		if workConfigStatus(r.Category) == workConfigCompletedStatus {
+			completedStates[itemtype] = r.Name
+			return state == r.Name
+		}
+	}
+	return false
+}
+
 func azureIssueToPinpointIssue(item WorkItemResponse, projid string, customerid string, reftype string, idgen ids2.Gen) (work.Issue, error) {
+
 	fields := item.Fields
 	issue := work.Issue{
 		AssigneeRefID: fields.AssignedTo.ID,
