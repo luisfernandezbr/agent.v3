@@ -125,14 +125,21 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 
 	if resp.StatusCode != http.StatusOK {
 
-		if resp.StatusCode == http.StatusUnauthorized && e.opts.UseOAuth {
-			if rerr = e.opts.OAuth.Refresh(); rerr != nil {
-				return false, pi, rerr
+		if resp.StatusCode == http.StatusUnauthorized {
+			if e.opts.UseOAuth {
+				if rerr = e.opts.OAuth.Refresh(); rerr != nil {
+					return false, pi, rerr
+				}
 			}
 			return true, pi, fmt.Errorf("request not authorized")
 		}
 
-		e.logger.Debug("api request failed", "url", u)
+		if resp.StatusCode == http.StatusNotFound {
+			e.logger.Warn("the source or destination could not be found", "url", u)
+			return false, pi, nil
+		}
+
+		e.logger.Debug("api request failed", "url", u, "status", resp.StatusCode)
 		return true, pi, fmt.Errorf(`bitbucket returned invalid status code: %v`, resp.StatusCode)
 	}
 

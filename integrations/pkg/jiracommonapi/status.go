@@ -1,28 +1,31 @@
 package jiracommonapi
 
-func Status(qc QueryContext) (res []string, rerr error) {
+type StatusDetail struct {
+	Name           string `json:"name"`
+	StatusCategory struct {
+		Key  string `json:"key"`
+		Name string `json:"name"`
+	} `json:"statusCategory"`
+}
 
+func StatusWithDetail(qc QueryContext) (_ []StatusDetail, names []string, _ error) {
 	objectPath := "status"
 
-	var rawStatuses []struct {
-		Name string `json:"name"`
-	}
-
-	err := qc.Request(objectPath, nil, &rawStatuses)
+	var detail []StatusDetail
+	err := qc.Request(objectPath, nil, &detail)
 	if err != nil {
-		rerr = err
-		return
+		return nil, nil, err
 	}
 
-	m := make(map[string]bool)
-
-	for _, status := range rawStatuses {
+	// we dedup names, but not the []StatusDetail array
+	m := map[string]bool{}
+	for _, status := range detail {
 		m[status.Name] = true
 	}
-
+	var res []string
 	for k := range m {
 		res = append(res, k)
 	}
 
-	return
+	return detail, res, nil
 }
