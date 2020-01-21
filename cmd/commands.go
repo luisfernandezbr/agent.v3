@@ -123,7 +123,7 @@ func init() {
 	cmd.Flags().Bool("skip-validate", false, "Skip hardware/software requirements check.")
 
 	cmd.Flags().String("integrations-dir", defaultIntegrationsDir(), "Custom directory for integrations binaries.")
-	cmd.Flags().String("run-type", "service", `One of service, direct, enroll-only. "service" installs agent as OS service. "direct" runs the agent directly after enrolling using one command, which is useful for docker. "enroll-only" does not run the service, use separate run command in this case.`)
+	cmd.Flags().String("run-type", "direct", `One of service, direct, enroll-only. "service" installs agent as OS service. "direct" runs the agent directly after enrolling using one command, which is useful for docker. "enroll-only" does not run the service, use separate run command in this case.`)
 
 	cmd.Flags().Bool("skip-enroll-if-found", false, "Deprecated.")
 
