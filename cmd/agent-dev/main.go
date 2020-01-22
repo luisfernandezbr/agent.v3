@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -267,8 +266,7 @@ var cmdDownloadLogs = &cobra.Command{
 		agentUUID, _ := cmd.Flags().GetString("agent-uuid")
 		customerID, _ := cmd.Flags().GetString("customer-id")
 		noFormat, _ := cmd.Flags().GetBool("no-format")
-		lenRecordsStr, _ := cmd.Flags().GetString("len-records")
-		lenRecords, _ := strconv.Atoi(lenRecordsStr)
+		maxRecords, _ := cmd.Flags().GetInt("max-records")
 		cmddownloadlogs.Run(cmddownloadlogs.Opts{
 			User:       user,
 			Password:   password,
@@ -276,7 +274,7 @@ var cmdDownloadLogs = &cobra.Command{
 			AgentUUID:  agentUUID,
 			CustomerID: customerID,
 			NoFormat:   noFormat,
-			LenRecords: lenRecords,
+			MaxRecords: maxRecords,
 		})
 	},
 }
@@ -288,7 +286,7 @@ func init() {
 	cmd.Flags().String("url", "", "Elastic search URL")
 	cmd.Flags().String("agent-uuid", "", "Agent UUID")
 	cmd.Flags().String("customer-id", "", "Customer ID")
-	cmd.Flags().String("len-records", "10000", "number of records to fetch")
+	cmd.Flags().Int("max-records", 10000, "Max log records to fetch")
 	cmd.Flags().String("no-format", "", "Do not format resulting json (useful to see the exact data returned)")
 	cmdRoot.AddCommand(cmd)
 }

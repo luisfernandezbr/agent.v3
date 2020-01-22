@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"time"
 
@@ -22,7 +21,7 @@ type Opts struct {
 
 	NoFormat bool
 
-	LenRecords int
+	MaxRecords int
 }
 
 type jm map[string]interface{}
@@ -65,25 +64,27 @@ func authenticate(opts Opts) {
 }*/
 
 func getData(opts Opts) {
-
-	pageLimitSize := 10000
+	maxRecords := opts.MaxRecords
+	if maxRecords == 0 {
+		maxRecords = 10000
+	}
+	maxPageSize := 10000
 
 	index := "agent-" + getIndexDate() + ".*"
 
-	var searchAfter int
+	searchAfter := 0
 
-	totalPages := (opts.LenRecords) / pageLimitSize
-	currentPageSize := pageLimitSize
-	currentPage := 0
+	total := 0
 
 	for {
-
-		if currentPage == totalPages {
-			currentPageSize = int(math.Mod(float64(opts.LenRecords), float64(pageLimitSize)))
+		pageSize := maxPageSize
+		toGo := maxRecords - total
+		if toGo < maxPageSize {
+			pageSize = toGo
 		}
 
 		request := jm{
-			"size": currentPageSize,
+			"size": pageSize,
 			"query": jm{
 				"bool": jm{
 					"must": []jm{
@@ -171,10 +172,16 @@ func getData(opts Opts) {
 			}
 			fmt.Println(string(b))
 		}
-		if len(res.Hits.Hits) < pageLimitSize {
-			break
+
+		if len(res.Hits.Hits) == 0 {
+			return
 		}
-		currentPage++
+
+		total += len(res.Hits.Hits)
+
+		if total >= maxRecords {
+			return
+		}
 	}
 
 }
