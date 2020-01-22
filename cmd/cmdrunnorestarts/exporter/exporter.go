@@ -211,6 +211,7 @@ func (s *Exporter) sendStartExportEvent(jobID string, ints []agent.ExportRequest
 }
 
 func (s *Exporter) sendExportFailedEvent(jobID string, started, ended time.Time, err error) error {
+	s.logger.Info("sending ExportResponse Completed Success=false")
 	data := agent.ExportResponse{
 		State: agent.ExportResponseStateCompleted,
 	}
@@ -219,10 +220,17 @@ func (s *Exporter) sendExportFailedEvent(jobID string, started, ended time.Time,
 	errstr := err.Error()
 	data.Error = &errstr
 	data.Success = false
-	return s.sendExportEvent(jobID, data)
+	err = s.sendExportEvent(jobID, data)
+	if err != nil {
+		return err
+	}
+	s.logger.Info("sent ExportResponse Completed Success=false")
+	return nil
 }
 
 func (s *Exporter) sendEndExportEvent(jobID string, started, ended time.Time, partsCount int, filesize int64, uploadurl *string, ints []agent.ExportRequestIntegrations, isIncremental []bool) error {
+	s.logger.Info("sending ExportResponse Completed Success=true")
+
 	data := agent.ExportResponse{
 		State:           agent.ExportResponseStateCompleted,
 		Size:            filesize,
@@ -232,7 +240,12 @@ func (s *Exporter) sendEndExportEvent(jobID string, started, ended time.Time, pa
 	date.ConvertToModel(started, &data.StartDate)
 	date.ConvertToModel(ended, &data.EndDate)
 	data.Success = true
-	return s.sendExportEventSettingIntegrations(jobID, data, ints, isIncremental)
+	err := s.sendExportEventSettingIntegrations(jobID, data, ints, isIncremental)
+	if err != nil {
+		return err
+	}
+	s.logger.Info("sent ExportResponse Completed Success=true")
+	return nil
 }
 
 func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
