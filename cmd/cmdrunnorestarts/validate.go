@@ -1,11 +1,11 @@
-package cmdservicerunnorestarts
+package cmdrunnorestarts
 
 import (
 	"context"
 	"encoding/json"
 
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/inconfig"
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/subcommand"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/subcommand"
 	"github.com/pinpt/agent/cmd/cmdvalidateconfig"
 )
 

@@ -1,4 +1,4 @@
-package cmdserviceuninstall
+package cmdservicestart
 
 import (
 	"github.com/hashicorp/go-hclog"
@@ -7,5 +7,5 @@ import (
 )
 
 func Run(logger hclog.Logger) error {
-	return service.Control(logger, ppservice.Names, service.Uninstall)
+	return service.Control(logger, ppservice.Names, service.Start)
 }

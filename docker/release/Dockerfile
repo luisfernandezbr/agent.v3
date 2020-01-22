@@ -1,5 +1,6 @@
-FROM golang:alpine
+FROM golang:debian
 RUN apk add make dep git
+RUN apk add openrc --no-cache;
 WORKDIR $GOPATH/src/github.com/pinpt/agent
 
 # Do not require rebuilding container if dependencies are the same

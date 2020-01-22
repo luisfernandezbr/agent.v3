@@ -117,7 +117,7 @@ func devIntegrationCommand(binaryName string) (*exec.Cmd, error) {
 	// we don't need the resulting binary
 	cmd := exec.Command("go", "build", "-o", filepath.Join(os.TempDir(), "out"), packageName)
 
-	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {

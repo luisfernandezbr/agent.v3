@@ -1,4 +1,4 @@
-package cmdservicerunnorestarts
+package cmdrunnorestarts
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"
 
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/exporter"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/exporter"
 )
 
 func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {

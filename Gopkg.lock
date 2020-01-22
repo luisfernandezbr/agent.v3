@@ -279,11 +279,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:71ec2cca7c956e5ece209c169b64faa2e9fcd70d06fbe0884423390331c3b7d3"
+  digest = "1:3c00e65f6338649c86854cbf371bb1c30270bcce47deb246ae07a84c9e855bbb"
   name = "github.com/kardianos/service"
   packages = ["."]
   pruneopts = "T"
-  revision = "fffe6c52ed0fd8653543bbe72432dbf6ea02f300"
+  revision = "3c356ae54c8afa8b1010fc2d10eab6c22591c7c6"
 
 [[projects]]
   digest = "1:1610b1dc428b776a63bf5b93cfb1319a830df8357a9c4687768c2cf1bd1f25b4"
@@ -423,7 +423,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:6569b82464621ff125ef8a744873881ab1a31cd794cbd78ef05251135a768531"
+  digest = "1:c4df793a5b4d112e496f801bf591fb24c3e4602632ef75d89c53c899740a0f06"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -447,8 +447,8 @@
     "upload",
   ]
   pruneopts = "T"
-  revision = "1bd39f73335e993652e70e7e7565b7b68c79c05d"
-  version = "v9.1.50"
+  revision = "c870148bbe1798e2ef7ee5aa48b57d9e211581fe"
+  version = "v9.1.52"
 
 [[projects]]
   digest = "1:160af92c9d129fe26acd668a490d6dfe34fb73d9c9e2e77f13da7a6f427b1df0"
@@ -459,7 +459,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:7cd7be5b4122b7711700c8ca42951e7a3f359f22351dd5ed894749c7b7d6343d"
+  digest = "1:c28c1d4dd46f407cf2cb27e2f51b33a70a41e085cbe15bdfe9d748c0b68c6746"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -471,8 +471,8 @@
     "work",
   ]
   pruneopts = "T"
-  revision = "4bc4afc8a477508988538e9bf3ef6ddd47f9e14e"
-  version = "v0.0.675"
+  revision = "9229b1e97b47b2546050052e6f020e666f1c075a"
+  version = "v0.0.676"
 
 [[projects]]
   branch = "master"

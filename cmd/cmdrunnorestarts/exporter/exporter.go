@@ -1,4 +1,4 @@
-// Package exporter for scheduling and executing exports as part of service-run
+// Package exporter for scheduling and executing exports as part of run command
 package exporter
 
 import (
@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/cmd/cmdintegration"
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/exporter/fsqueue"
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/inconfig"
-	"github.com/pinpt/agent/cmd/cmdservicerunnorestarts/subcommand"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/exporter/fsqueue"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/subcommand"
 	"github.com/pinpt/agent/cmd/cmdupload"
 	"github.com/pinpt/go-common/datetime"
 	"github.com/pinpt/go-common/event"
