@@ -16,6 +16,7 @@ type Opts struct {
 	Request          func(objPath string, params url.Values, res interface{}) error
 	Agent            rpcdef.Agent
 	ExcludedProjects []string
+	IncludedProjects []string
 	// Projects only process these projects by key.
 	Projects []string
 }

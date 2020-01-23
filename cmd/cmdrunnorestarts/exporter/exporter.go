@@ -297,7 +297,7 @@ func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (isIncr
 	}
 
 	for _, integration := range data.Integrations {
-		s.logger.Info("exporting integration", "name", integration.Name, "len(exclusions)", len(integration.Exclusions))
+		s.logger.Info("exporting integration", "name", integration.Name, "len(exclusions)", len(integration.Exclusions), "len(inclusions)", len(integration.Inclusions))
 		conf, err := inconfig.ConfigFromEvent(integration.ToMap(), inconfig.IntegrationType(integration.SystemType), s.opts.PPEncryptionKey)
 		if err != nil {
 			rerr = err

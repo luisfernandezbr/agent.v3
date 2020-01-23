@@ -14,6 +14,7 @@ type RepoProject interface {
 type FilterConfig struct {
 	OnlyIncludeReadableIDs []string
 	ExcludedIDs            []string
+	IncludedIDs            []string
 	StopAfterN             int
 }
 
@@ -36,20 +37,37 @@ func Filter(logger hclog.Logger, repos []RepoProject, config FilterConfig) (res 
 		return
 	}
 
+	var included []RepoProject
+	{
+		onlyInclude := config.IncludedIDs
+
+		ok := map[string]bool{}
+		for _, id := range onlyInclude {
+			ok[id] = true
+		}
+		for _, repo := range repos {
+			if !ok[repo.GetID()] {
+				continue
+			}
+			included = append(included, repo)
+		}
+
+	}
+
 	excluded := map[string]bool{}
 	for _, id := range config.ExcludedIDs {
 		excluded[id] = true
 	}
 
 	filtered := map[string]RepoProject{}
-	for _, repo := range repos {
+	for _, repo := range included {
 		if excluded[repo.GetID()] {
 			continue
 		}
 		filtered[repo.GetID()] = repo
 	}
 
-	logger.Info("projects", "found", len(repos), "excluded_definition", len(config.ExcludedIDs), "result", len(filtered))
+	logger.Info("projects", "found", len(repos), "excluded_definition", len(config.ExcludedIDs), "included_definition", len(config.IncludedIDs), "result", len(filtered))
 
 	for _, repo := range filtered {
 		res = append(res, repo)

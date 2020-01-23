@@ -29,7 +29,7 @@ func (s *runner) validate(ctx context.Context, name string, messageID string, sy
 	if err != nil {
 		return res, err
 	}
-	inConf, agentIn, err := inconfig.ConvertConfig(name, systemType, config, []string{})
+	inConf, agentIn, err := inconfig.ConvertConfig(name, systemType, config, []string{}, []string{})
 	if err != nil {
 		return res, err
 	}

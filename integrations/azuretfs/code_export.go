@@ -47,7 +47,7 @@ func (s *Integration) processRepos() (
 	exportResults []rpcdef.ExportProject,
 	rerr error) {
 
-	ids, reposDetails, err := s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs)
+	ids, reposDetails, err := s.api.FetchAllRepos(s.Repos, s.ExcludedRepoIDs, s.IncludedRepoIDs)
 	if err != nil {
 		rerr = err
 		return

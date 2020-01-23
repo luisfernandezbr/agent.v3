@@ -110,6 +110,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 		Request:          s.qc.Request,
 		Agent:            s.agent,
 		ExcludedProjects: s.config.ExcludedProjects,
+		IncludedProjects: s.config.IncludedProjects,
 		Projects:         s.config.Projects,
 	})
 	if err != nil {

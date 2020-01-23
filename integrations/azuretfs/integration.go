@@ -54,10 +54,13 @@ type Integration struct {
 	IntegrationType IntegrationType `json:"type"`
 	// ExcludedRepoIDs this comes from the admin UI
 	ExcludedRepoIDs []string `json:"excluded_repos"`
+	IncludedRepoIDs []string `json:"included_repos"`
 	// ExcludedProjectIDs this comes from the admin UI
 	ExcludedProjectIDs []string `json:"excluded_projects"`
+	IncludedProjectIDs []string `json:"included_projects"`
 	// IncludedRepos names of repos to process. Used for debugging and development.
-	IncludedRepos       []string `json:"included_repos"`
+	Repos               []string `json:"repos"`
+	Projects            []string `json:"projects"`
 	OverrideGitHostName string   `json:"git_host_name"`
 	Concurrency         int      `json:"concurrency"`
 }
@@ -114,7 +117,7 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 	}
 	var repos []*sourcecode.Repo
 	// do a quick api call to see if the credentials, url, etc.. are correct
-	if _, repos, err = s.api.FetchAllRepos(s.IncludedRepos, s.ExcludedRepoIDs); err != nil {
+	if _, repos, err = s.api.FetchAllRepos(s.Repos, s.ExcludedRepoIDs, s.IncludedRepoIDs); err != nil {
 		// don't return, get as many errors are possible
 		res.Errors = append(res.Errors, err.Error())
 		return res, err

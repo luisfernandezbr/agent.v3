@@ -71,15 +71,33 @@ func (s *JiraCommon) getProjectsFilterExcluded(all []Project) ([]Project, error)
 		}
 		excluded[id] = true
 	}
+
+	var included []Project
+	{
+		onlyInclude := s.opts.IncludedProjects
+
+		ok := map[string]bool{}
+		for _, id := range onlyInclude {
+			ok[id] = true
+		}
+		for _, p := range all {
+			if !ok[p.JiraID] {
+				continue
+			}
+			included = append(included, p)
+		}
+
+	}
+
 	filtered := map[string]Project{}
-	for _, p := range all {
+	for _, p := range included {
 		if excluded[p.JiraID] {
 			continue
 		}
 		filtered[p.JiraID] = p
 	}
 
-	s.opts.Logger.Info("projects", "found", len(all), "excluded_definition", len(s.opts.ExcludedProjects), "result", len(filtered))
+	s.opts.Logger.Info("projects", "found", len(all), "excluded_definition", len(s.opts.ExcludedProjects), "included_definition", len(s.opts.IncludedProjects), "result", len(filtered))
 
 	res := []Project{}
 	for _, p := range filtered {
