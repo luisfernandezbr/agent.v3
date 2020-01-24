@@ -600,34 +600,38 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 				continue
 			}
 
-			bl := sourcecode.Blame{
-				Status:         statusFromRipsrc(blame.Status),
-				License:        &lic,
-				Excluded:       blame.Skipped != "",
-				ExcludedReason: blame.Skipped,
-				CommitID:       s.commitID(commit.SHA),
-				RefID:          commit.SHA,
-				RefType:        s.opts.RefType,
-				CustomerID:     customerID,
-				Hashcode:       "",
-				Size:           blame.Size,
-				Loc:            int64(loc),
-				Sloc:           int64(sloc),
-				Blanks:         int64(blanks),
-				Comments:       int64(comments),
-				Filename:       blame.Filename,
-				Language:       blame.Language,
-				Sha:            commit.SHA,
-				RepoID:         repoID,
-				Complexity:     blame.Complexity,
-				Lines:          lines,
+			// pipeline does not need sourcecode.Blame data at the moment
+			// skip writing it
+			if false {
+				bl := sourcecode.Blame{
+					Status:         statusFromRipsrc(blame.Status),
+					License:        &lic,
+					Excluded:       blame.Skipped != "",
+					ExcludedReason: blame.Skipped,
+					CommitID:       s.commitID(commit.SHA),
+					RefID:          commit.SHA,
+					RefType:        s.opts.RefType,
+					CustomerID:     customerID,
+					Hashcode:       "",
+					Size:           blame.Size,
+					Loc:            int64(loc),
+					Sloc:           int64(sloc),
+					Blanks:         int64(blanks),
+					Comments:       int64(comments),
+					Filename:       blame.Filename,
+					Language:       blame.Language,
+					Sha:            commit.SHA,
+					RepoID:         repoID,
+					Complexity:     blame.Complexity,
+					Lines:          lines,
+				}
+				date.ConvertToModel(commit.Date, &bl.ChangeDate)
+				err := writeBlame(bl)
+				if err != nil {
+					return "", err
+				}
 			}
-			date.ConvertToModel(commit.Date, &bl.ChangeDate)
 
-			err := writeBlame(bl)
-			if err != nil {
-				return "", err
-			}
 			ordinal++
 		}
 
