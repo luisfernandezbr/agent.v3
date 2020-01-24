@@ -66,7 +66,7 @@ type resolutionRes struct {
 }
 
 func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
-	projects, err := api.FetchProjects(nil)
+	projects, err := api.FetchProjects(nil, nil, nil)
 	if err != nil {
 		return nil, err
 	}

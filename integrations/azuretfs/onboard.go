@@ -15,7 +15,7 @@ import (
 func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
 
 	var repos []*sourcecode.Repo
-	_, repos, err = s.api.FetchAllRepos([]string{}, []string{})
+	_, repos, err = s.api.FetchAllRepos([]string{}, []string{}, []string{})
 	if err != nil {
 		s.logger.Error("error fetching repos for onboard export repos")
 		return
@@ -57,7 +57,7 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 }
 
 func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
-	projects, err := s.api.FetchProjects(nil)
+	projects, err := s.api.FetchProjects([]string{}, []string{}, []string{})
 	var records []map[string]interface{}
 	for _, proj := range projects {
 		itemids, err := s.api.FetchItemIDs(proj.RefID, time.Time{})

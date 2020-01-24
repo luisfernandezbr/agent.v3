@@ -59,6 +59,7 @@ func commonToRepos(common []repoprojects.RepoProject) (res []Repo) {
 type FilterConfig struct {
 	OnlyIncludeNames []string `json:"repos"`
 	ExcludedIDs      []string `json:"excluded_repos"`
+	IncludedIDs      []string `json:"included_repos"`
 	StopAfterN       int      `json:"stop_after_n"`
 }
 
@@ -66,6 +67,7 @@ func Filter(logger hclog.Logger, repos []Repo, config FilterConfig) []Repo {
 	res := repoprojects.Filter(logger, reposToCommon(repos), repoprojects.FilterConfig{
 		OnlyIncludeReadableIDs: config.OnlyIncludeNames,
 		ExcludedIDs:            config.ExcludedIDs,
+		IncludedIDs:            config.IncludedIDs,
 		StopAfterN:             config.StopAfterN,
 	})
 	return commonToRepos(res)

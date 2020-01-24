@@ -23,7 +23,8 @@ func (s *Integration) exportWork() (exportResults []rpcdef.ExportProject, rerr e
 		rerr = err
 		return
 	}
-	projectsDetails, err := s.api.FetchProjects(s.ExcludedProjectIDs)
+
+	projectsDetails, err := s.api.FetchProjects(s.Projects, s.ExcludedProjectIDs, s.IncludedProjectIDs)
 	if err != nil {
 		rerr = err
 		return

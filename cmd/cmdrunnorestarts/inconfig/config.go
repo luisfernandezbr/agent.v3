@@ -27,6 +27,7 @@ func ConfigFromEvent(data map[string]interface{},
 			Authorization string `json:"authorization"`
 		} `json:"authorization"`
 		Exclusions []string `json:"exclusions"`
+		Inclusions []string `json:"inclusions"`
 	}
 	err := structmarshal.MapToStruct(data, &obj)
 	if err != nil {
@@ -53,7 +54,7 @@ func ConfigFromEvent(data map[string]interface{},
 		return
 	}
 
-	configAgent, agentIn, err := ConvertConfig(obj.Name, systemType, authObj, obj.Exclusions)
+	configAgent, agentIn, err := ConvertConfig(obj.Name, systemType, authObj, obj.Exclusions, obj.Inclusions)
 	if err != nil {
 		rerr = fmt.Errorf("config object in event is not valid: %v", err)
 		return
@@ -71,9 +72,9 @@ type agentIntegration struct {
 }
 
 // ConvertConfig is similar to ConfigFromEvent, both convert backend config to integration config. But if ConfigFromEvent requires encryption key, ConvertConfig can process the configuration passed directly, which we use in validate.
-func ConvertConfig(integrationNameBackend string, systemTypeBackend IntegrationType, configBackend map[string]interface{}, exclusions []string) (configAgent map[string]interface{}, agentIn agentIntegration, rerr error) {
+func ConvertConfig(integrationNameBackend string, systemTypeBackend IntegrationType, configBackend map[string]interface{}, exclusions []string, inclusions []string) (configAgent map[string]interface{}, agentIn agentIntegration, rerr error) {
 
-	var fn func(integrationNameBackend string, systemTypeBackend IntegrationType, configBackend map[string]interface{}, exclusions []string) (configAgent map[string]interface{}, agentIn agentIntegration, rerr error)
+	var fn func(integrationNameBackend string, systemTypeBackend IntegrationType, configBackend map[string]interface{}, exclusions []string, inclusions []string) (configAgent map[string]interface{}, agentIn agentIntegration, rerr error)
 
 	switch integrationNameBackend {
 	case "github":
@@ -95,7 +96,7 @@ func ConvertConfig(integrationNameBackend string, systemTypeBackend IntegrationT
 		return
 	}
 
-	configAgent, agentIn, rerr = fn(integrationNameBackend, systemTypeBackend, configBackend, exclusions)
+	configAgent, agentIn, rerr = fn(integrationNameBackend, systemTypeBackend, configBackend, exclusions, inclusions)
 
 	if agentIn.Name == "" {
 		agentIn.Name = integrationNameBackend
@@ -104,7 +105,7 @@ func ConvertConfig(integrationNameBackend string, systemTypeBackend IntegrationT
 	return
 }
 
-func convertConfigGithub(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
+func convertConfigGithub(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string, inclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 
 	errStr := func(err string) {
 		rerr = errors.New(err)
@@ -117,6 +118,7 @@ func convertConfigGithub(integrationNameBackend string, systemTypeBackend Integr
 		URL           string   `json:"url"`
 		APIToken      string   `json:"apitoken"`
 		ExcludedRepos []string `json:"excluded_repos"`
+		IncludedRepos []string `json:"included_repos"`
 	}
 
 	err := structmarshal.MapToStruct(cb, &config)
@@ -151,6 +153,7 @@ func convertConfigGithub(integrationNameBackend string, systemTypeBackend Integr
 	}
 
 	config.ExcludedRepos = exclusions
+	config.IncludedRepos = inclusions
 	res, err = structmarshal.StructToMap(config)
 
 	if err != nil {
@@ -161,7 +164,7 @@ func convertConfigGithub(integrationNameBackend string, systemTypeBackend Integr
 	return
 }
 
-func convertConfigGitlab(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
+func convertConfigGitlab(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string, inclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 
 	errStr := func(err string) {
 		rerr = errors.New(err)
@@ -174,6 +177,7 @@ func convertConfigGitlab(integrationNameBackend string, systemTypeBackend Integr
 		URL           string   `json:"url"`
 		APIToken      string   `json:"apitoken"`
 		ExcludedRepos []string `json:"excluded_repos"`
+		IncludedRepos []string `json:"included_repos"`
 		AccessToken   string   `json:"access_token"`
 	}
 
@@ -209,6 +213,7 @@ func convertConfigGitlab(integrationNameBackend string, systemTypeBackend Integr
 	}
 
 	config.ExcludedRepos = exclusions
+	config.IncludedRepos = inclusions
 	res, err = structmarshal.StructToMap(config)
 
 	if err != nil {
@@ -219,7 +224,7 @@ func convertConfigGitlab(integrationNameBackend string, systemTypeBackend Integr
 	return
 }
 
-func convertConfigBitbucket(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
+func convertConfigBitbucket(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string, inclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 
 	errStr := func(err string) {
 		rerr = errors.New(err)
@@ -233,6 +238,7 @@ func convertConfigBitbucket(integrationNameBackend string, systemTypeBackend Int
 		Username          string   `json:"username"`
 		Password          string   `json:"password"`
 		ExcludedRepos     []string `json:"excluded_repos"`
+		IncludedRepos     []string `json:"included_repos"`
 		OauthRefreshToken string   `json:"oauth_refresh_token"`
 	}
 
@@ -278,6 +284,7 @@ func convertConfigBitbucket(integrationNameBackend string, systemTypeBackend Int
 	}
 
 	config.ExcludedRepos = exclusions
+	config.IncludedRepos = inclusions
 	res, err = structmarshal.StructToMap(config)
 
 	if err != nil {
@@ -288,7 +295,7 @@ func convertConfigBitbucket(integrationNameBackend string, systemTypeBackend Int
 	return
 }
 
-func convertConfigJira(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
+func convertConfigJira(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string, inclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 	errStr := func(err string) {
 		rerr = errors.New(err)
 		return
@@ -301,6 +308,7 @@ func convertConfigJira(integrationNameBackend string, systemTypeBackend Integrat
 		Username         string   `json:"username"`
 		Password         string   `json:"password"`
 		ExcludedProjects []string `json:"excluded_projects"`
+		IncludedProjects []string `json:"included_projects"`
 
 		OauthRefreshToken string `json:"oauth_refresh_token"`
 	}
@@ -345,6 +353,7 @@ func convertConfigJira(integrationNameBackend string, systemTypeBackend Integrat
 		}
 	}
 	config.ExcludedProjects = exclusions
+	config.IncludedProjects = inclusions
 	res, err = structmarshal.StructToMap(config)
 	if err != nil {
 		rerr = err
@@ -354,7 +363,7 @@ func convertConfigJira(integrationNameBackend string, systemTypeBackend Integrat
 	return
 }
 
-func convertConfigSonarqube(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
+func convertConfigSonarqube(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string, inclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 	errStr := func(err string) {
 		rerr = errors.New(err)
 		return
@@ -401,7 +410,7 @@ func convertConfigSonarqube(integrationNameBackend string, systemTypeBackend Int
 	return
 }
 
-func convertConfigAzureTFS(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
+func convertConfigAzureTFS(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string, inclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 	errStr := func(err string) {
 		rerr = errors.New(err)
 		return
@@ -412,7 +421,9 @@ func convertConfigAzureTFS(integrationNameBackend string, systemTypeBackend Inte
 		IntegrationType  string         `json:"type"`    // sourcecode or work
 		Credentials      azureapi.Creds `json:"credentials"`
 		ExcludedRepos    []string       `json:"excluded_repos"`
+		IncludedRepos    []string       `json:"included_repos"`
 		ExcludedProjects []string       `json:"excluded_projects"`
+		IncludedProjects []string       `json:"included_projects"`
 	}
 	if rerr = structmarshal.MapToStruct(cb, &conf.Credentials); rerr != nil {
 		return
@@ -443,9 +454,11 @@ func convertConfigAzureTFS(integrationNameBackend string, systemTypeBackend Inte
 	switch systemTypeBackend {
 	case IntegrationTypeSourcecode:
 		conf.ExcludedRepos = exclusions
+		conf.IncludedRepos = inclusions
 		agentIn.Type = integrationid.TypeSourcecode
 	case IntegrationTypeWork:
 		conf.ExcludedProjects = exclusions
+		conf.IncludedProjects = inclusions
 		agentIn.Type = integrationid.TypeWork
 	default:
 		rerr = fmt.Errorf("invalid systemtype received from backend: %v", systemTypeBackend)
@@ -455,7 +468,7 @@ func convertConfigAzureTFS(integrationNameBackend string, systemTypeBackend Inte
 	return
 }
 
-func convertConfigWorkday(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
+func convertConfigWorkday(integrationNameBackend string, systemTypeBackend IntegrationType, cb map[string]interface{}, exclusions []string, inclusions []string) (res map[string]interface{}, agentIn agentIntegration, rerr error) {
 	errStr := func(err string) {
 		rerr = errors.New(err)
 		return

@@ -15,7 +15,9 @@ import (
 func TestConfigFromEvent(t *testing.T) {
 	config := `{
 		"api_token": "t1",
-		"url": "u1"
+		"url": "u1",
+		"excluded_repos":["e1"],
+		"included_repos":["e1","e2"]
 	}`
 
 	encryptionKey, err := encrypt.GenerateKey()
@@ -27,7 +29,8 @@ func TestConfigFromEvent(t *testing.T) {
 	e := agent.ExportRequestIntegrations{}
 	e.Name = "github"
 	e.Authorization.Authorization = pstrings.Pointer(data)
-	e.Exclusions = []string{"e1", "e2"}
+	e.Exclusions = []string{"e1"}
+	e.Inclusions = []string{"e1", "e2"}
 
 	got, err := ConfigFromEvent(e.ToMap(), IntegrationTypeSourcecode, encryptionKey)
 	if err != nil {
@@ -40,7 +43,8 @@ func TestConfigFromEvent(t *testing.T) {
 		Config: map[string]interface{}{
 			"apitoken":       "t1",
 			"url":            "u1",
-			"excluded_repos": []interface{}{"e1", "e2"},
+			"excluded_repos": []interface{}{"e1"},
+			"included_repos": []interface{}{"e1", "e2"},
 		},
 	}
 

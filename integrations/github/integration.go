@@ -74,6 +74,7 @@ type Config struct {
 	Token                 string
 	Organization          string
 	ExcludedRepos         []string
+	IncludedRepos         []string
 	OnlyGit               bool
 	StopAfterN            int
 	Enterprise            bool
@@ -88,6 +89,7 @@ type configDef struct {
 
 	// ExcludedRepos are the repos to exclude from processing. This is based on github repo id.
 	ExcludedRepos []string `json:"excluded_repos"`
+	IncludedRepos []string `json:"included_repos"`
 	OnlyGit       bool     `json:"only_git"`
 
 	// Organization specifies the organization to export. By default all account organization are exported. Set this to export only one.
@@ -130,6 +132,7 @@ func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
 	res.Token = def.APIToken
 	res.Organization = def.Organization
 	res.ExcludedRepos = def.ExcludedRepos
+	res.IncludedRepos = def.IncludedRepos
 	res.Repos = def.Repos
 	res.OnlyGit = def.OnlyGit
 	res.StopAfterN = def.StopAfterN
@@ -285,6 +288,7 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 	filteredReposIface := repoprojects.Filter(s.logger, unfilteredReposIface, repoprojects.FilterConfig{
 		OnlyIncludeReadableIDs: s.config.Repos,
 		ExcludedIDs:            s.config.ExcludedRepos,
+		IncludedIDs:            s.config.IncludedRepos,
 		StopAfterN:             s.config.StopAfterN,
 	})
 
