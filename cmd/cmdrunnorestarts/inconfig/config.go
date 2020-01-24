@@ -153,6 +153,7 @@ func convertConfigGithub(integrationNameBackend string, systemTypeBackend Integr
 	}
 
 	config.ExcludedRepos = exclusions
+	config.IncludedRepos = inclusions
 	res, err = structmarshal.StructToMap(config)
 
 	if err != nil {

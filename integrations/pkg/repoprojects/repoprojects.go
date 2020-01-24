@@ -39,19 +39,20 @@ func Filter(logger hclog.Logger, repos []RepoProject, config FilterConfig) (res 
 
 	var included []RepoProject
 	{
-		onlyInclude := config.IncludedIDs
-
-		ok := map[string]bool{}
-		for _, id := range onlyInclude {
-			ok[id] = true
-		}
-		for _, repo := range repos {
-			if !ok[repo.GetID()] {
-				continue
+		if len(config.IncludedIDs) != 0 {
+			ok := map[string]bool{}
+			for _, id := range config.IncludedIDs {
+				ok[id] = true
 			}
-			included = append(included, repo)
+			for _, repo := range repos {
+				if !ok[repo.GetID()] {
+					continue
+				}
+				included = append(included, repo)
+			}
+		} else {
+			included = repos
 		}
-
 	}
 
 	excluded := map[string]bool{}
