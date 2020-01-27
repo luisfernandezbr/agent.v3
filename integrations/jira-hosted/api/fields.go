@@ -1,10 +1,10 @@
 package api
 
 import (
-	"github.com/pinpt/integration-sdk/work"
+	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 )
 
-func FieldsAll(qc QueryContext) (res []*work.CustomField, rerr error) {
+func FieldsAll(qc QueryContext) (res []jiracommonapi.CustomField, rerr error) {
 
 	objectPath := "field"
 
@@ -22,11 +22,8 @@ func FieldsAll(qc QueryContext) (res []*work.CustomField, rerr error) {
 	}
 
 	for _, data := range rr {
-		item := &work.CustomField{}
-		item.CustomerID = qc.CustomerID
-		item.RefType = "jira"
-		item.RefID = data.ID
-		item.Key = data.ID
+		item := jiracommonapi.CustomField{}
+		item.ID = data.ID
 		item.Name = data.Name
 		res = append(res, item)
 	}
