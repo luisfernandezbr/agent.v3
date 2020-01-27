@@ -26,7 +26,7 @@ func FieldsAll(qc QueryContext) (res []*work.CustomField, rerr error) {
 		item.CustomerID = qc.CustomerID
 		item.RefType = "jira"
 		item.RefID = data.ID
-		//item.Key = data.ID // TODO: hosted jira does not have key field
+		item.Key = data.ID
 		item.Name = data.Name
 		res = append(res, item)
 	}
