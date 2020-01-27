@@ -16,7 +16,6 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
-// TODO: check if all fields are needed, not that it's internal struct
 type CustomField struct {
 	ID    string
 	Name  string
@@ -368,7 +367,7 @@ func IssuesAndChangelogsPage(
 			}
 
 			f := CustomField{}
-			f.ID = fd.Key
+			f.ID = fd.RefID
 			f.Name = fd.Name
 			f.Value = v
 			item.CustomFields = append(item.CustomFields, f)
