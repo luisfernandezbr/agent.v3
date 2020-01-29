@@ -1,4 +1,3 @@
-// Package exporter for scheduling and executing exports as part of run command
 package exporter
 
 import (
@@ -14,17 +13,12 @@ import (
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/subcommand"
 	"github.com/pinpt/agent/cmd/cmdupload"
-	"github.com/pinpt/go-common/datetime"
-	"github.com/pinpt/go-common/event"
 
 	"github.com/pinpt/agent/pkg/agentconf"
-	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/deviceinfo"
-	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/agent/pkg/jsonstore"
 	"github.com/pinpt/agent/pkg/logutils"
-	"github.com/pinpt/agent/pkg/structmarshal"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/cmd/cmdexport"
@@ -97,60 +91,6 @@ func New(opts Opts) (*Exporter, error) {
 	return s, nil
 }
 
-// Run starts processing ExportQueue. This is a blocking call.
-func (s *Exporter) Run() {
-	go func() {
-		for req := range s.queueRequestForwarder {
-			req2 := Request{}
-			err := structmarshal.MapToStruct(req.Data, &req2)
-			if err != nil {
-				s.logger.Error("could not unmarshal export request from map", "err", err)
-			}
-			s.setRunning(true)
-			s.export(req2.Data, req2.MessageID)
-			s.setRunning(false)
-			req.Done <- struct{}{}
-		}
-	}()
-
-	go func() {
-		err := s.queue.Run(context.Background())
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	for req := range s.ExportQueue {
-		data := req.Data
-
-		handleError := func(err error) {
-			s.logger.Error("export finished with error", "err", err)
-			err2 := s.sendExportFailedEvent(data.JobID, time.Now(), time.Now(), err)
-			if err2 != nil {
-				s.logger.Error("error sending failed export event", "sending_err", err2, "export_err", err)
-			}
-		}
-
-		// have handling of request deadline before we save the request on disk, otherwise requests would not be retried if failed
-		// need deadline here to prevent a bunch of older requests from queue being accepted
-		requestDate := datetime.DateFromEpoch(data.RequestDate.Epoch)
-		const exportEventDeadline = 5 * time.Minute
-		if requestDate.Before(time.Now().Add(-exportEventDeadline)) {
-			handleError(fmt.Errorf("export request date is older than deadline, ignoring. deadline: %v", exportEventDeadline.String()))
-			continue
-		}
-
-		m, err := structmarshal.StructToMap(req)
-		if err != nil {
-			handleError(fmt.Errorf("could not marshal export request to map: %v", err))
-			continue
-		}
-
-		s.queue.Input <- m
-	}
-	return
-}
-
 func (s *Exporter) setRunning(ex bool) {
 	s.mu.Lock()
 	s.exporting = ex
@@ -164,96 +104,13 @@ func (s *Exporter) IsRunning() bool {
 	s.mu.Unlock()
 	return ex
 }
-func (s *Exporter) sendExportEvent(jobID string, data agent.ExportResponse) error {
-	data.JobID = jobID
-	data.RefType = "export"
-	data.Type = agent.ExportResponseTypeExport
-
-	datap := &data
-	s.deviceInfo.AppendCommonInfo(datap)
-	publishEvent := event.PublishEvent{
-		Object: datap,
-		Headers: map[string]string{
-			"uuid": s.conf.DeviceID,
-		},
-	}
-	return event.Publish(context.Background(), publishEvent, s.conf.Channel, s.conf.APIKey)
-}
-
-func (s *Exporter) sendExportEventSettingIntegrations(jobID string, data agent.ExportResponse, ints []agent.ExportRequestIntegrations, isIncremental []bool) error {
-	for i, in := range ints {
-		v := agent.ExportResponseIntegrations{
-			IntegrationID: in.ID,
-			Name:          in.Name,
-			SystemType:    agent.ExportResponseIntegrationsSystemType(in.SystemType),
-		}
-		if len(isIncremental) != 0 { // only sending this for completed event
-			if len(isIncremental) <= i {
-				return errors.New("could not check if export was incremental or not, isIncremental array is not of valid length")
-			}
-			if isIncremental[i] {
-				v.ExportType = agent.ExportResponseIntegrationsExportTypeIncremental
-			} else {
-				v.ExportType = agent.ExportResponseIntegrationsExportTypeHistorical
-			}
-		}
-		data.Integrations = append(data.Integrations, v)
-	}
-	return s.sendExportEvent(jobID, data)
-}
-
-func (s *Exporter) sendStartExportEvent(jobID string, ints []agent.ExportRequestIntegrations) error {
-	data := agent.ExportResponse{
-		State:   agent.ExportResponseStateStarting,
-		Success: true,
-	}
-	return s.sendExportEventSettingIntegrations(jobID, data, ints, nil)
-}
-
-func (s *Exporter) sendExportFailedEvent(jobID string, started, ended time.Time, err error) error {
-	s.logger.Info("sending ExportResponse Completed Success=false")
-	data := agent.ExportResponse{
-		State: agent.ExportResponseStateCompleted,
-	}
-	date.ConvertToModel(started, &data.StartDate)
-	date.ConvertToModel(ended, &data.EndDate)
-	errstr := err.Error()
-	data.Error = &errstr
-	data.Success = false
-	err = s.sendExportEvent(jobID, data)
-	if err != nil {
-		return err
-	}
-	s.logger.Info("sent ExportResponse Completed Success=false")
-	return nil
-}
-
-func (s *Exporter) sendEndExportEvent(jobID string, started, ended time.Time, partsCount int, filesize int64, uploadurl *string, ints []agent.ExportRequestIntegrations, isIncremental []bool) error {
-	s.logger.Info("sending ExportResponse Completed Success=true")
-
-	data := agent.ExportResponse{
-		State:           agent.ExportResponseStateCompleted,
-		Size:            filesize,
-		UploadURL:       uploadurl,
-		UploadPartCount: int64(partsCount),
-	}
-	date.ConvertToModel(started, &data.StartDate)
-	date.ConvertToModel(ended, &data.EndDate)
-	data.Success = true
-	err := s.sendExportEventSettingIntegrations(jobID, data, ints, isIncremental)
-	if err != nil {
-		return err
-	}
-	s.logger.Info("sent ExportResponse Completed Success=true")
-	return nil
-}
 
 func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
 	started := time.Now()
 
 	handleError := func(err error) {
 		s.logger.Error("export finished with error", "err", err)
-		err2 := s.sendExportFailedEvent(data.JobID, started, time.Now(), err)
+		err2 := s.sendFailedEvent(data.JobID, started, time.Now(), err)
 		if err2 != nil {
 			s.logger.Error("error sending failed export event", "sending_err", err2, "export_err", err)
 		}
@@ -269,7 +126,7 @@ func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
 		return
 	}
 
-	isIncremental, partsCount, fileSize, err := s.doExport(data, messageID)
+	exportResult, err := s.doExport(data, messageID)
 	if err != nil {
 		if _, o := err.(*subcommand.Cancelled); o {
 			handleError(errors.New("export cancelled"))
@@ -279,13 +136,58 @@ func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
 		return
 	}
 	s.logger.Info("sending back export event")
-	err = s.sendEndExportEvent(data.JobID, started, time.Now(), partsCount, fileSize, data.UploadURL, data.Integrations, isIncremental)
+
+	if data.UploadURL == nil || *data.UploadURL == "" {
+		handleError(errors.New("No UploadURL provided in ExportRequest"))
+		return
+	}
+
+	err = s.sendSuccessEvent(data.JobID, started, exportResult, *data.UploadURL, data.Integrations)
 	if err != nil {
 		s.logger.Error("error sending back export completed event", "err", err)
 	}
 }
 
-func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (isIncremental []bool, partsCount int, fileSize int64, rerr error) {
+type exportResult struct {
+	UploadPartsCount int
+	UploadFileSize   int64
+	Integrations     []exportResultIntegration
+}
+
+type exportResultIntegration struct {
+	IsIncremental bool
+	Error         string
+	Duration      time.Duration
+	ProjectErrors []agent.ExportResponseIntegrationsProjectErrors
+}
+
+func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (res exportResult, rerr error) {
+	isIncremental, partsCount, fileSize, res0, err := s.doExport2(data, messageID)
+	if err != nil {
+		rerr = err
+		return
+	}
+	res.UploadPartsCount = partsCount
+	res.UploadFileSize = fileSize
+	for i, in0 := range res0.Integrations {
+		in := exportResultIntegration{}
+		in.IsIncremental = isIncremental[i]
+		in.Error = in0.Error
+		in.Duration = in0.Duration
+		for _, pr0 := range in0.Projects {
+			pr := agent.ExportResponseIntegrationsProjectErrors{}
+			pr.ID = pr0.ID
+			pr.RefID = pr0.RefID
+			pr.ReadableID = pr0.ReadableID
+			pr.Error = pr0.Error
+			in.ProjectErrors = append(in.ProjectErrors, pr)
+		}
+		res.Integrations = append(res.Integrations, in)
+	}
+	return
+}
+
+func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (isIncremental []bool, partsCount int, fileSize int64, res cmdexport.Result, rerr error) {
 	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
 
 	err := s.backupRestoreStateDir()
@@ -295,7 +197,9 @@ func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (isIncr
 	}
 
 	var integrations []cmdexport.Integration
+
 	// add in additional integrations defined in config
+	// TODO: not currently used, remove or disable
 	for _, in := range s.conf.ExtraIntegrations {
 		integrations = append(integrations, cmdexport.Integration{
 			Name:   in.Name,
@@ -337,7 +241,8 @@ func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (isIncr
 		return
 	}
 
-	logFile, err := s.execExport(integrations, data.ReprocessHistorical, messageID, data.JobID)
+	logFile := ""
+	res, logFile, err = s.execExport(integrations, data.ReprocessHistorical, messageID, data.JobID)
 	if logFile != "" {
 		defer os.Remove(logFile)
 	}
@@ -368,89 +273,6 @@ func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (isIncr
 	return
 }
 
-func (s *Exporter) backupRestoreStateDir() error {
-	locs := s.opts.FSConf
-
-	stateExists, err := fs.Exists(locs.State)
-	if err != nil {
-		return err
-	}
-	if !stateExists {
-		err = os.MkdirAll(locs.State, 0755)
-		if err != nil {
-			return fmt.Errorf("could not create dir to save state, err: %v", err)
-		}
-		return nil
-	}
-
-	backupExists, err := fs.Exists(locs.Backup)
-	if err != nil {
-		return err
-	}
-
-	if backupExists {
-
-		s.logger.Info("previous export/upload did not finish since we found a backup dir, restoring previous state and trying again")
-
-		// restore the backup, but also keep backup, so we could restore to it again
-
-		if err := os.RemoveAll(locs.LastProcessedFile); err != nil {
-			return err
-		}
-
-		if err := fs.CopyFile(locs.LastProcessedFileBackup, locs.LastProcessedFile); err != nil {
-			// would happen when running first historical because backup does not have any state yet, but we should be able to recover to that in case of error
-			if !os.IsNotExist(err) {
-				return err
-			}
-		}
-
-		if err := os.RemoveAll(locs.RipsrcCheckpoints); err != nil {
-			return err
-		}
-
-		if err := fs.CopyDir(locs.RipsrcCheckpointsBackup, locs.RipsrcCheckpoints); err != nil {
-			// would happen when running first historical because backup does not have any state yet, but we should be able to recover to that in case of error
-			if !os.IsNotExist(err) {
-				return err
-			}
-		}
-
-		return nil
-	}
-
-	// save backup
-
-	err = os.MkdirAll(locs.Backup, 0755)
-	if err != nil {
-		return err
-	}
-
-	if err := fs.CopyFile(locs.LastProcessedFile, locs.LastProcessedFileBackup); err != nil {
-		// would happen if export did not create last processed file, which is very unlikely
-		if !os.IsNotExist(err) {
-			return err
-		}
-	}
-
-	if err := fs.CopyDir(locs.RipsrcCheckpoints, locs.RipsrcCheckpointsBackup); err != nil {
-		// would happen if export did not have any ripsrc data
-		if !os.IsNotExist(err) {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (s *Exporter) deleteBackupStateDir() error {
-	locs := s.opts.FSConf
-	if err := os.RemoveAll(locs.Backup); err != nil {
-		return fmt.Errorf("error deleting export backup file: %v", err)
-	}
-	return nil
-}
-
 func (s *Exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport.Integration) (string, error) {
 	id, err := in.ID()
 	if err != nil {
@@ -467,7 +289,7 @@ func (s *Exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport
 	return ts, nil
 }
 
-func (s *Exporter) execExport(integrations []cmdexport.Integration, reprocessHistorical bool, messageID string, jobID string) (logFile string, rerr error) {
+func (s *Exporter) execExport(integrations []cmdexport.Integration, reprocessHistorical bool, messageID string, jobID string) (res cmdexport.Result, logFile string, rerr error) {
 
 	agentConfig := s.opts.AgentConfig
 	agentConfig.Backend.ExportJobID = jobID
@@ -490,7 +312,8 @@ func (s *Exporter) execExport(integrations []cmdexport.Integration, reprocessHis
 	if reprocessHistorical {
 		args = append(args, "--reprocess-historical=true")
 	}
-	logFile, rerr = c.RunKeepLogFile(context.Background(), "export", messageID, nil, args...)
+	logFile, rerr = c.RunKeepLogFile(context.Background(), "export", messageID, &res, args...)
+	//s.logger.Debug("executed export command, got res", "v", fmt.Sprintf("%v", res))
 
 	return
 }

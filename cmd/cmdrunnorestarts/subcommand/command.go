@@ -228,6 +228,7 @@ func (c *Command) RunKeepLogFile(ctx context.Context, cmdname string, messageID 
 			rerr(err)
 			return
 		}
+		//c.logger.Debug("got output from a subcommand", "v", string(b))
 		err = json.Unmarshal(b, res)
 		if err != nil {
 			rerr(fmt.Errorf("invalid data returned in command output, expecting json, err %v", err))
