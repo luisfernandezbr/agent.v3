@@ -337,12 +337,19 @@ func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (isIncr
 		return
 	}
 
-	if err := s.execExport(integrations, data.ReprocessHistorical, messageID, data.JobID); err != nil {
+	logFile, err := s.execExport(integrations, data.ReprocessHistorical, messageID, data.JobID)
+	if logFile != "" {
+		defer os.Remove(logFile)
+	}
+	if err != nil {
 		rerr = err
 		return
 	}
+
 	s.logger.Info("export finished, running upload")
-	if partsCount, fileSize, err = cmdupload.Run(context.Background(), s.logger, s.opts.PinpointRoot, *data.UploadURL, data.JobID, s.conf.APIKey); err != nil {
+
+	partsCount, fileSize, err = cmdupload.Run(context.Background(), s.logger, s.opts.PinpointRoot, *data.UploadURL, data.JobID, s.conf.APIKey, logFile)
+	if err != nil {
 		if err == cmdupload.ErrNoFilesFound {
 			s.logger.Info("skipping upload, no files generated")
 			// do not return errors when no files to upload, which is ok for incremental
@@ -460,7 +467,7 @@ func (s *Exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport
 	return ts, nil
 }
 
-func (s *Exporter) execExport(integrations []cmdexport.Integration, reprocessHistorical bool, messageID string, jobID string) error {
+func (s *Exporter) execExport(integrations []cmdexport.Integration, reprocessHistorical bool, messageID string, jobID string) (logFile string, rerr error) {
 
 	agentConfig := s.opts.AgentConfig
 	agentConfig.Backend.ExportJobID = jobID
@@ -474,7 +481,8 @@ func (s *Exporter) execExport(integrations []cmdexport.Integration, reprocessHis
 		DeviceInfo:        s.deviceInfo,
 	})
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 	args := []string{
 		"--log-level", logutils.LogLevelToString(s.opts.LogLevelSubcommands),
@@ -482,9 +490,7 @@ func (s *Exporter) execExport(integrations []cmdexport.Integration, reprocessHis
 	if reprocessHistorical {
 		args = append(args, "--reprocess-historical=true")
 	}
-	err = c.Run(context.Background(), "export", messageID, nil, args...)
-	if err != nil {
-		return err
-	}
-	return err
+	logFile, rerr = c.RunKeepLogFile(context.Background(), "export", messageID, nil, args...)
+
+	return
 }
