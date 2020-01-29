@@ -1,7 +1,6 @@
 package cmdexport
 
 import (
-	"fmt"
 	"sort"
 	"time"
 
@@ -131,13 +130,4 @@ func (s Result) Log(logger hclog.Logger) {
 			logger.Error(prefix+"failed on project", "id", project.ID, "ref_id", project.RefID, "readable_id", project.ReadableID, "err", project.Error, "git_error", project.GitError)
 		}
 	}
-}
-
-func (s Result) FailInCaseOfIntegrationErrors() error {
-	for _, integration := range s.Integrations {
-		if integration.Error != "" {
-			return fmt.Errorf("Failed export. Integration %v returned error: %v", integration.ID, integration.Error)
-		}
-	}
-	return nil
 }

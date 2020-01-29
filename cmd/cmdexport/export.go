@@ -3,6 +3,7 @@ package cmdexport
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -53,12 +54,7 @@ func Run(opts Opts) error {
 
 	exportResults.Log(opts.Logger)
 
-	exportErr := exportResults.FailInCaseOfIntegrationErrors()
-	if exportErr != nil {
-		return exportErr
-	}
-
-	/*
+	if opts.Output != nil {
 		b, err := json.Marshal(exportResults)
 		if err != nil {
 			return err
@@ -68,7 +64,7 @@ func Run(opts Opts) error {
 		if err != nil {
 			return err
 		}
-	*/
+	}
 
 	return nil
 }

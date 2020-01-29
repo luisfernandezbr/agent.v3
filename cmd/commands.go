@@ -140,9 +140,12 @@ var cmdExport = &cobra.Command{
 		opts.Opts = opts2
 		opts.ReprocessHistorical, _ = cmd.Flags().GetBool("reprocess-historical")
 
-		outputFile := newOutputFile(logger, cmd)
-		defer outputFile.Close()
-		opts.Output = outputFile.Writer
+		outputFile, _ := cmd.Flags().GetString("output-file")
+		if outputFile != "" {
+			outputFile := newOutputFile(logger, cmd)
+			defer outputFile.Close()
+			opts.Output = outputFile.Writer
+		}
 
 		err := cmdexport.Run(opts)
 		if err != nil {
