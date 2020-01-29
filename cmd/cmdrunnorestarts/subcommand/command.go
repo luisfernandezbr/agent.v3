@@ -102,18 +102,29 @@ func KillCommand(logger hclog.Logger, cmdname string) error {
 
 // Run executes the command
 func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res interface{}, args ...string) error {
-
-	rerr := func(err error) error {
-		return fmt.Errorf("could not run subcommand %v err: %v", cmdname, err)
+	logFile, err := c.RunKeepLogFile(ctx, cmdname, messageID, res, args...)
+	if logFile != "" {
+		os.Remove(logFile)
 	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
+// RunKeepLogFile executes the command creating a file for stderr. It returns the path to that file.
+func (c *Command) RunKeepLogFile(ctx context.Context, cmdname string, messageID string, res interface{}, args ...string) (logFileName string, rerrv error) {
+	rerr := func(err error) {
+		rerrv = fmt.Errorf("could not run subcommand %v err: %v", cmdname, err)
+	}
 	fs, err := newFsPassedParams(c.tmpdir, []kv{
 		{"--agent-config-file", c.config},
 		{"--integrations-file", c.integrations},
 	})
 	defer fs.Clean()
 	if err != nil {
-		return rerr(err)
+		rerr(err)
+		return
 	}
 	flags := append([]string{cmdname}, fs.Args()...)
 	flags = append(flags, "--log-format", "json")
@@ -125,26 +136,37 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 	flags = append(flags, "--pinpoint-root="+c.config.PinpointRoot)
 
 	if err := os.MkdirAll(c.tmpdir, 0777); err != nil {
-		return rerr(err)
+		rerr(err)
+		return
 	}
 	var outfile *os.File
 	// the output goes into os.File, don't create the os.File if there is no res
 	if res != nil {
 		outfile, err = ioutil.TempFile(c.tmpdir, "")
 		if err != nil {
-			return err
+			rerr(err)
+			return
 		}
 		outfile.Close()
 		defer os.Remove(outfile.Name())
 		flags = append(flags, "--output-file", outfile.Name())
 	}
 
-	logsfile, err := ioutil.TempFile(c.tmpdir, "")
+	panicFile, err := ioutil.TempFile(c.tmpdir, "")
 	if err != nil {
-		return rerr(err)
+		rerr(err)
+		return
 	}
-	defer logsfile.Close()
-	defer os.Remove(logsfile.Name())
+	defer panicFile.Close()
+	defer os.Remove(panicFile.Name())
+
+	logFile, err := ioutil.TempFile(c.tmpdir, "")
+	if err != nil {
+		rerr(err)
+		return
+	}
+	defer logFile.Close()
+	logFileName = logFile.Name()
 
 	cmd := exec.CommandContext(ctx, os.Args[0], flags...)
 	if messageID != "" {
@@ -155,20 +177,21 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 				c.logger.Error("could not send export logs to the server", "err", err)
 			}
 		}()
-
-		cmd.Stdout = io.MultiWriter(os.Stdout, ls)
-		cmd.Stderr = io.MultiWriter(os.Stderr, logsfile, ls)
+		cmd.Stdout = io.MultiWriter(os.Stdout, logFile, ls)
+		cmd.Stderr = io.MultiWriter(os.Stderr, logFile, panicFile, ls)
 	} else {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = io.MultiWriter(os.Stderr, logsfile)
+		cmd.Stdout = io.MultiWriter(os.Stdout, logFile)
+		cmd.Stderr = io.MultiWriter(os.Stderr, logFile, panicFile)
 	}
 
 	if err := cmd.Start(); err != nil {
-		return rerr(fmt.Errorf("could not start the sub command: %v", err))
+		rerr(fmt.Errorf("could not start the sub command: %v", err))
+		return
 	}
 	if cmdname == "export" { // for now, only allow this command to be cancelled
 		if err := addProcess(c.logger, cmdname, cmd.Process); err != nil {
-			return rerr(fmt.Errorf("could not start the sub command, process already running: %v %v", err, cmdname))
+			rerr(fmt.Errorf("could not start the sub command, process already running: %v %v", err, cmdname))
+			return
 		}
 		defer func() {
 			// ignore error in this case since it will return an error if the process was kill manually
@@ -179,33 +202,40 @@ func (c *Command) Run(ctx context.Context, cmdname string, messageID string, res
 
 	if err != nil && cmdname == "export" {
 		if _, ok := processes[cmdname]; !ok {
-			return &Cancelled{s: "export cancelled"}
+			rerrv = &Cancelled{s: "export cancelled"}
+			return
 		}
 	}
 
 	if err != nil {
 		// the command wont be in the processes map if it has been canceled
-		if err := logsfile.Close(); err != nil {
-			return rerr(fmt.Errorf("could not close stderr file: %v", err))
+		if err := panicFile.Close(); err != nil {
+			rerr(fmt.Errorf("could not close stderr file: %v", err))
+			return
 		}
-		err2 := c.handlePanic(logsfile.Name(), cmdname)
+		err2 := c.handlePanic(panicFile.Name(), cmdname)
 		if err2 != nil {
-			return rerr(fmt.Errorf("could not get crash report file: %v command failed with: %v", err2, err))
+			rerr(fmt.Errorf("could not get crash report file: %v command failed with: %v", err2, err))
+			return
 		}
-		return rerr(fmt.Errorf("run: %v", err))
+		rerr(fmt.Errorf("run: %v", err))
+		return
 	}
 
 	if res != nil {
 		b, err := ioutil.ReadFile(outfile.Name())
 		if err != nil {
-			return rerr(err)
+			rerr(err)
+			return
 		}
 		err = json.Unmarshal(b, res)
 		if err != nil {
-			return rerr(fmt.Errorf("invalid data returned in command output, expecting json, err %v", err))
+			rerr(fmt.Errorf("invalid data returned in command output, expecting json, err %v", err))
+			return
 		}
 	}
-	return nil
+
+	return
 }
 
 func (c *Command) handlePanic(filename, cmdname string) error {

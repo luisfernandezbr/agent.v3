@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/pinpt/agent/pkg/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -17,17 +18,23 @@ import (
 	"github.com/pinpt/go-common/upload"
 )
 
+var ErrNoFilesFound = errors.New("no files found to upload")
+
+// Run uploads resulting export file.
+// Pass path to logFile to include that in uploaded zip as well.
 func Run(ctx context.Context,
 	logger hclog.Logger,
 	pinpointRoot string,
 	uploadURL string,
 	jobID string,
-	apiKey string) (parts int, size int64, err error) {
+	apiKey string,
+	logFile string) (parts int, size int64, rerr error) {
 
 	fsc := fsconf.New(pinpointRoot)
 
-	err = os.MkdirAll(fsc.UploadZips, 0777)
+	err := os.MkdirAll(fsc.UploadZips, 0777)
 	if err != nil {
+		rerr = err
 		return
 	}
 
@@ -36,39 +43,47 @@ func Run(ctx context.Context,
 
 	zipPath := filepath.Join(fsc.UploadZips, fileName+".zip")
 
-	err = zipFilesJSON(logger, zipPath, fsc.Uploads)
+	logger.Info("looking for files", "dir", fsc.Uploads)
+	files, err := fileutil.FindFiles(fsc.Uploads, regexp.MustCompile("\\.gz$"))
 	if err != nil {
+		rerr = err
+		return
+	}
+	if len(files) == 0 {
+		rerr = ErrNoFilesFound
+		return
+	}
+	if logFile != "" {
+		pathInUploads := filepath.Join(fsc.Uploads, "export.log")
+		err := fs.CopyFile(logFile, pathInUploads)
+		if err != nil {
+			rerr = err
+			return
+		}
+		files = append(files, pathInUploads)
+	}
+
+	err = archive.ZipFiles(zipPath, fsc.Uploads, files)
+	if err != nil {
+		rerr = err
 		return
 	}
 	logger.Info("uploading export result", "upload_url", uploadURL, "zip_path", zipPath)
 
 	parts, size, err = runUpload(logger, zipPath, uploadURL, apiKey)
 	if err != nil {
+		rerr = err
 		return
 	}
 
 	logger.Info("zip file uploaded with no errors", "zip_path", zipPath, "size", size/1024)
 	if err = os.RemoveAll(zipPath); err != nil {
-		err = fmt.Errorf("error deleting zip file %s", err)
+		rerr = fmt.Errorf("error deleting zip file %s", err)
 		return
 	}
+
 	logger.Info("zip file deleted", "zip_path", zipPath)
-
 	return
-}
-
-var ErrNoFilesFound = errors.New("no files found to upload")
-
-func zipFilesJSON(logger hclog.Logger, target, source string) error {
-	logger.Info("looking for files", "dir", source)
-	files, err := fileutil.FindFiles(source, regexp.MustCompile("\\.gz$"))
-	if err != nil {
-		return err
-	}
-	if len(files) == 0 {
-		return ErrNoFilesFound
-	}
-	return archive.ZipFiles(target, source, files)
 }
 
 func runUpload(logger hclog.Logger, zipPath, uploadURL, apiKey string) (parts int, uploadedSize int64, rerr error) {
