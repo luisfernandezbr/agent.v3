@@ -16,7 +16,7 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
-type CustomField struct {
+type CustomFieldValue struct {
 	ID    string
 	Name  string
 	Value string
@@ -24,7 +24,7 @@ type CustomField struct {
 
 type IssueWithCustomFields struct {
 	*work.Issue
-	CustomFields []CustomField
+	CustomFields []CustomFieldValue
 }
 
 func relativeDuration(d time.Duration) string {
@@ -47,7 +47,7 @@ var sprintRegexp = regexp.MustCompile(`(.+?sprint\.Sprint@.+?\[id=)(\d+)(,.+?sta
 func IssuesAndChangelogsPage(
 	qc QueryContext,
 	project Project,
-	fieldByKey map[string]*work.CustomField,
+	fieldByID map[string]CustomField,
 	updatedSince time.Time,
 	paginationParams url.Values) (
 	pi PageInfo,
@@ -330,7 +330,7 @@ func IssuesAndChangelogsPage(
 				continue
 			}
 
-			fd, ok := fieldByKey[k]
+			fd, ok := fieldByID[k]
 			if !ok {
 				qc.Logger.Error("when processing jira issues, could not find field definition by key", "project", project.Key, "key", k)
 				continue
@@ -366,8 +366,8 @@ func IssuesAndChangelogsPage(
 				date.ConvertToModel(d, &item.PlannedEndDate)
 			}
 
-			f := CustomField{}
-			f.ID = fd.RefID
+			f := CustomFieldValue{}
+			f.ID = fd.ID
 			f.Name = fd.Name
 			f.Value = v
 			item.CustomFields = append(item.CustomFields, f)

@@ -42,7 +42,7 @@ func projectsToChan(projects []Project) chan Project {
 func (s *JiraCommon) IssuesAndChangelogs(
 	projectSender *objsender.Session,
 	projects []Project,
-	fieldByID map[string]*work.CustomField) (_ []rpcdef.ExportProject, rerr error) {
+	fieldByID map[string]jiracommonapi.CustomField) (_ []rpcdef.ExportProject, rerr error) {
 
 	projectSender.SetNoAutoProgress(true)
 	projectSender.SetTotal(len(projects))
@@ -126,7 +126,7 @@ func (s *JiraCommon) IssuesAndChangelogs(
 func (s *JiraCommon) issuesAndChangelogsForProject(
 	ctx *repoprojects.ProjectCtx,
 	project Project,
-	fieldByID map[string]*work.CustomField,
+	fieldByID map[string]jiracommonapi.CustomField,
 	sprints *Sprints) error {
 
 	s.opts.Logger.Info("processing issues and changelogs for project", "project", project.Key)

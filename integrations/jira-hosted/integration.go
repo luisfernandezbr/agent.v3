@@ -149,6 +149,8 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 	return
 }
 
+type Project = jiracommon.Project
+
 func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, rerr error) {
 	err := s.initWithConfig(config, true)
 	if err != nil {
@@ -157,15 +159,15 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	}
 	s.common.SetupUsers()
 
-	fields, err := s.fields()
+	fields, err := api.FieldsAll(s.qc)
 	if err != nil {
 		rerr = err
 		return
 	}
 
-	fieldByID := map[string]*work.CustomField{}
+	fieldByID := map[string]jiracommonapi.CustomField{}
 	for _, f := range fields {
-		fieldByID[f.RefID] = f
+		fieldByID[f.ID] = f
 	}
 
 	projectSender, err := objsender.Root(s.agent, work.ProjectModelName.String())
@@ -211,28 +213,4 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	}
 
 	return res, nil
-}
-
-type Project = jiracommon.Project
-
-func (s *Integration) fields() (_ []*work.CustomField, rerr error) {
-	sender, err := objsender.Root(s.agent, work.CustomFieldModelName.String())
-	if err != nil {
-		rerr = err
-		return
-	}
-	res, err := api.FieldsAll(s.qc)
-	if err != nil {
-		rerr = err
-		return
-	}
-	for _, item := range res {
-		err := sender.Send(item)
-		if err != nil {
-			rerr = err
-			return
-		}
-	}
-
-	return res, sender.Done()
 }
