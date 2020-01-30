@@ -281,7 +281,7 @@ func (s *runner) newSubConfig(topic string) action.Config {
 	errorsChan := make(chan error, 1)
 	go func() {
 		for err := range errorsChan {
-			s.logger.Error("error in integration requests", "err", err)
+			s.logger.Error(fmt.Sprintf("error in %s requests", topic), "err", err)
 		}
 	}()
 	return action.Config{

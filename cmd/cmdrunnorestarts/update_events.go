@@ -85,7 +85,7 @@ func (s *runner) handleUpdateEvents(ctx context.Context) (closefunc, error) {
 
 	go func() {
 		for err := range errorsChan {
-			s.logger.Error("error in integration requests", "err", err)
+			s.logger.Error("error in update requests", "err", err)
 		}
 	}()
 

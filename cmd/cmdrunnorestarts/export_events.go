@@ -48,7 +48,7 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 
 	go func() {
 		for err := range errors {
-			s.logger.Error("error in integration requests", "err", err)
+			s.logger.Error("error in export requests", "err", err)
 		}
 	}()
 
