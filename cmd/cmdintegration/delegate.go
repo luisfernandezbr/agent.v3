@@ -3,6 +3,7 @@ package cmdintegration
 import (
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/expin"
 	"github.com/pinpt/agent/rpcdef"
 )
@@ -12,13 +13,14 @@ type AgentDelegateMinimal interface {
 }
 
 type agentDelegate struct {
-	min AgentDelegateMinimal
-	ind expin.Index
+	logger hclog.Logger
+	min    AgentDelegateMinimal
+	exp    expin.Export
 }
 
-func AgentDelegateMinFactory(min AgentDelegateMinimal) func(ind expin.Index) rpcdef.Agent {
-	return func(ind expin.Index) rpcdef.Agent {
-		return &agentDelegate{min: min, ind: ind}
+func AgentDelegateMinFactory(logger hclog.Logger, min AgentDelegateMinimal) func(exp expin.Export) rpcdef.Agent {
+	return func(exp expin.Export) rpcdef.Agent {
+		return &agentDelegate{logger: logger, min: min, exp: exp}
 	}
 }
 
@@ -51,13 +53,16 @@ func (s agentDelegate) SessionRollback(id int) error {
 }
 
 func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
-	return s.min.OAuthNewAccessToken(s.ind)
+	return s.min.OAuthNewAccessToken(s.exp.Index)
 }
 
 func (s agentDelegate) SendPauseEvent(msg string, resumeDate time.Time) error {
+	s.logger.Info("pausing integration due to throttling", "msg", msg, "integration", s.exp.String(), "duration", resumeDate.Sub(time.Now()).String())
 	return nil
 }
 
 func (s agentDelegate) SendResumeEvent(msg string) error {
+	s.logger.Info("continue with integration after throttling", "msg", msg, "integration", s.exp.String())
+
 	return nil
 }

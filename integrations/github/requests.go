@@ -93,7 +93,7 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 	rateLimited := func() (isErrorRetryable bool, rerr error) {
 		if retryThrottled >= maxThrottledRetries {
 			s.logger.Info("api request failed", "body", string(b))
-			rerr = fmt.Errorf(`resp resp.StatusCode != 200, got %v, can't retry, too many retries already`, resp.StatusCode)
+			rerr = fmt.Errorf(`can't retry, too many retries already (resp.StatusCode=%v)`, resp.StatusCode)
 			return
 		}
 		limitReset := resp.Header.Get("X-RateLimit-Reset")
@@ -115,7 +115,7 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 			waitTime = 30 * time.Minute
 		}
 
-		s.logger.Warn("api request failed due to throttling, will sleep for 30m and retry, this should only happen if hourly quota is used up, check here (https://developer.github.com/v4/guides/resource-limitations/#returning-a-calls-rate-limit-status)", "body", string(b), "retryThrottled", retryThrottled)
+		s.logger.Warn("api request failed due to throttling, will sleep and retry, this should only happen if hourly quota is used up, check here (https://developer.github.com/v4/guides/resource-limitations/#returning-a-calls-rate-limit-status)", "body", string(b), "retryThrottled", retryThrottled, "sleepTime", waitTime.String())
 
 		paused := time.Now()
 		resumeDate := paused.Add(waitTime)

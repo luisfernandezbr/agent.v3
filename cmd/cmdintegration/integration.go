@@ -197,10 +197,10 @@ func copyMap(data map[string]interface{}) map[string]interface{} {
 }
 
 func (s *Command) SetupIntegrations(
-	agentDelegates func(ind expin.Index) rpcdef.Agent) error {
+	agentDelegates func(ind expin.Export) rpcdef.Agent) error {
 
 	if agentDelegates == nil {
-		agentDelegates = AgentDelegateMinFactory(s)
+		agentDelegates = AgentDelegateMinFactory(s.Logger, s)
 	}
 
 	var ins []expin.Export
@@ -265,6 +265,7 @@ func (s *Command) CaptureShutdown() {
 }
 
 func (s *Command) SendPauseEvent(export expin.Export, msg string, resumeDate time.Time) error {
+	s.Logger.Info("pausing integration due to throttling", "msg", msg, "integration", export.String(), "duration", resumeDate.Sub(time.Now()).String())
 
 	data := &agent.Pause{
 		Data:        &msg,
@@ -280,6 +281,7 @@ func (s *Command) SendPauseEvent(export expin.Export, msg string, resumeDate tim
 	return nil
 }
 func (s *Command) SendResumeEvent(export expin.Export, msg string) error {
+	s.Logger.Info("continue with integration after throttling", "msg", msg, "integration", export.String())
 
 	data := &agent.Resume{
 		Data:        &msg,
