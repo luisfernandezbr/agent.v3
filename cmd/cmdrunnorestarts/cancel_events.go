@@ -68,7 +68,7 @@ func (s *runner) handleCancelEvents(ctx context.Context) (closefunc, error) {
 	}
 	go func() {
 		for err := range errors {
-			s.logger.Error("error in integration requests", "err", err)
+			s.logger.Error("error in cancel requests", "err", err)
 		}
 	}()
 
