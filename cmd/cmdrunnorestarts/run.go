@@ -310,7 +310,7 @@ func (s *runner) sendPings() {
 			if err != nil {
 				s.logger.Error("could not send ping", "err", err.Error())
 			} else {
-				s.logger.Debug("sent ping")
+				s.logger.Info("sent ping")
 			}
 		}
 	}
