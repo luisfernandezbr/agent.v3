@@ -17,8 +17,8 @@ var cmdServiceRun = &cobra.Command{
 	Short: "Run agent service. This is called automatically once the service is installed.",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Flags().Set("log-format", "json")
-		logger := cmdlogger.NewLogger(cmd)
+		// set to debug log output from restarter, it will not affect lower level components
+		logger := cmdlogger.NewLoggerJSON(cmd, "debug")
 
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
@@ -35,7 +35,6 @@ var cmdServiceRun = &cobra.Command{
 func init() {
 	cmd := cmdServiceRun
 	cmd.Hidden = true
-	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
 	cmdRoot.AddCommand(cmd)
 }
@@ -45,8 +44,8 @@ var cmdServiceInstall = &cobra.Command{
 	Short: "Install agent as OS managed service",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Flags().Set("log-format", "json")
-		logger := cmdlogger.NewLogger(cmd)
+		// set to debug log output from restarter, it will not affect lower level components
+		logger := cmdlogger.NewLoggerJSON(cmd, "debug")
 
 		pinpointRoot, err := getPinpointRoot(cmd)
 		if err != nil {
@@ -73,8 +72,8 @@ var cmdServiceStart = &cobra.Command{
 	Short: "Start agent service",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Flags().Set("log-format", "json")
-		logger := cmdlogger.NewLogger(cmd)
+		// set to debug log output from restarter, it will not affect lower level components
+		logger := cmdlogger.NewLoggerJSON(cmd, "debug")
 		err := cmdservicestart.Run(logger)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -92,8 +91,8 @@ var cmdServiceStop = &cobra.Command{
 	Short: "Stop agent service",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Flags().Set("log-format", "json")
-		logger := cmdlogger.NewLogger(cmd)
+		// set to debug log output from restarter, it will not affect lower level components
+		logger := cmdlogger.NewLoggerJSON(cmd, "debug")
 		err := cmdservicestop.Run(logger)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -111,8 +110,8 @@ var cmdServiceStatus = &cobra.Command{
 	Short: "Show status of agent service",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Flags().Set("log-format", "json")
-		logger := cmdlogger.NewLogger(cmd)
+		// set to debug log output from restarter, it will not affect lower level components
+		logger := cmdlogger.NewLoggerJSON(cmd, "debug")
 		err := cmdservicestatus.Run(logger)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -130,8 +129,8 @@ var cmdServiceRestart = &cobra.Command{
 	Short: "Restart agent service",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Flags().Set("log-format", "json")
-		logger := cmdlogger.NewLogger(cmd)
+		// set to debug log output from restarter, it will not affect lower level components
+		logger := cmdlogger.NewLoggerJSON(cmd, "debug")
 		err := cmdservicerestart.Run(logger)
 		if err != nil {
 			exitWithErr(logger, err)
@@ -148,8 +147,8 @@ var cmdServiceUninstall = &cobra.Command{
 	Short: "Uninstall OS service of agent, but keep data and configuration",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Flags().Set("log-format", "json")
-		logger := cmdlogger.NewLogger(cmd)
+		// set to debug log output from restarter, it will not affect lower level components
+		logger := cmdlogger.NewLoggerJSON(cmd, "debug")
 		err := cmdserviceuninstall.Run(logger)
 		if err != nil {
 			exitWithErr(logger, err)

@@ -41,6 +41,8 @@ type Opts struct {
 	// We need it here, because there is no way to get it from logger.
 	LogLevelSubcommands hclog.Level
 	PinpointRoot        string
+
+	AgentConf agentconf.Config
 }
 
 func Run(ctx context.Context, opts Opts) error {
@@ -82,6 +84,7 @@ type runner struct {
 func newRunner(opts Opts) (*runner, error) {
 	s := &runner{}
 	s.opts = opts
+
 	s.fsconf = fsconf.New(opts.PinpointRoot)
 
 	// cleanup temp files every time we start service
@@ -90,10 +93,8 @@ func newRunner(opts Opts) (*runner, error) {
 		return nil, err
 	}
 
-	s.conf, err = agentconf.Load(s.fsconf.Config2)
-	if err != nil {
-		return nil, err
-	}
+	s.conf = opts.AgentConf
+
 	s.agentConfig = s.getAgentConfig()
 	s.deviceInfo = s.getDeviceInfoOpts()
 
