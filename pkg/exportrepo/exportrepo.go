@@ -173,7 +173,7 @@ func (s *Export) run(ctx context.Context) (duration ExportDuration, rerr error) 
 	defer os.RemoveAll(tempCheckoutDir)
 
 	duration.Clone = time.Since(clonestarted)
-	s.logger.Debug("git clone finished", "duration", duration.Clone, "repo", s.opts.UniqueName)
+	s.logger.Debug("git clone finished", "duration", duration.Clone.String(), "repo", s.opts.UniqueName)
 	if !hasHeadCommit(ctx, tempCheckoutDir) {
 		rerr = ErrRevParseFailed
 		return
