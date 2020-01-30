@@ -15,6 +15,8 @@ import (
 	"github.com/pinpt/agent/cmd/cmdvalidate"
 	"github.com/pinpt/agent/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent/cmd/pkg/cmdlogger"
+	"github.com/pinpt/agent/pkg/agentconf"
+	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/agent/rpcdef"
 	pos "github.com/pinpt/go-common/os"
 	"github.com/spf13/cobra"
@@ -232,21 +234,32 @@ func init() {
 }
 
 func runNoRestarts(cmd *cobra.Command, args []string) {
-	logger, pinpointRoot := defaultCommandWithFileLogger(cmd)
+	pinpointRoot, err := getPinpointRoot(cmd)
+	if err != nil {
+		exitWithErr2(err)
+	}
+	fsconf := fsconf.New(pinpointRoot)
+	agentConf, err := agentconf.Load(fsconf.Config2)
+	if err != nil {
+		exitWithErr2(err)
+	}
+	logger := cmdlogger.NewLoggerJSON(cmd, agentConf.LogLevel)
+
 	ctx := context.Background()
 	opts := cmdrunnorestarts.Opts{}
 	opts.Logger = logger
 	opts.LogLevelSubcommands = logger.Level
+	opts.AgentConf = agentConf
 	opts.PinpointRoot = pinpointRoot
-	err := cmdrunnorestarts.Run(ctx, opts)
+	err = cmdrunnorestarts.Run(ctx, opts)
 	if err != nil {
 		exitWithErr(logger, err)
 	}
 }
 
 func runWithRestarts(cmd *cobra.Command, args []string) {
-	cmd.Flags().Set("log-format", "json")
-	logger := cmdlogger.NewLogger(cmd)
+	// set to debug log output from restarter, it will not affect lower level components
+	logger := cmdlogger.NewLoggerJSON(cmd, "debug")
 	pinpointRoot, err := getPinpointRoot(cmd)
 	if err != nil {
 		exitWithErr(logger, err)
@@ -277,7 +290,6 @@ var cmdRun = &cobra.Command{
 
 func init() {
 	cmd := cmdRun
-	flagsLogger(cmd)
 	flagPinpointRoot(cmd)
 	cmd.Flags().Bool("no-restarts", false, "By default run restarts on errors and panics, set to true to avoid restarting.")
 	cmdRoot.AddCommand(cmd)

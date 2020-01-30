@@ -20,11 +20,35 @@ type Logger struct {
 
 // NewLogger Creates a new Logger with default values
 func NewLogger(cmd *cobra.Command) Logger {
+
 	s := Logger{
 		opts: optsFromCommand(cmd),
 	}
 	s.cmdName = strings.Split(cmd.Use, " ")[0]
 
+	s.writers = []io.Writer{os.Stdout}
+	s.Logger = hclog.New(s.opts).With("comp", s.cmdName)
+	s.Level = s.opts.Level
+	return s
+}
+
+func NewLoggerJSON(cmd *cobra.Command, logLevel string) Logger {
+	opts := &hclog.LoggerOptions{
+		Output:     os.Stdout,
+		JSONFormat: true,
+	}
+	switch logLevel {
+	case "debug":
+		opts.Level = hclog.Debug
+	case "info":
+		opts.Level = hclog.Info
+	default:
+		opts.Level = hclog.Info
+	}
+	s := Logger{
+		opts: opts,
+	}
+	s.cmdName = strings.Split(cmd.Use, " ")[0]
 	s.writers = []io.Writer{os.Stdout}
 	s.Logger = hclog.New(s.opts).With("comp", s.cmdName)
 	s.Level = s.opts.Level

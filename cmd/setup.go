@@ -82,6 +82,12 @@ func exitWithErr(logger hclog.Logger, err error) {
 	os.Exit(1)
 }
 
+// provides a way to exit a command before logger is setup
+func exitWithErr2(err error) {
+	fmt.Fprintln(os.Stderr, "error: "+err.Error())
+	os.Exit(1)
+}
+
 func getPinpointRoot(cmd *cobra.Command) (root string, err error) {
 	root, _ = cmd.Flags().GetString("pinpoint-root")
 	if root != "" {
