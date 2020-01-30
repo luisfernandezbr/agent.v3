@@ -128,6 +128,11 @@ func NewCommand(opts Opts) (*Command, error) {
 
 	s.Logger.Debug("resolved config", "PinpointRoot", s.Locs.Root, "IntegrationsDir", s.integrationsDir)
 
+	err = os.MkdirAll(s.Locs.State, 0777)
+	if err != nil {
+		return nil, err
+	}
+
 	err = os.MkdirAll(s.Locs.Temp, 0777)
 	if err != nil {
 		return nil, err
@@ -204,7 +209,8 @@ func (s *Command) SetupIntegrations(
 	}
 
 	var ins []expin.Export
-	for ind := range s.IntegrationIDs {
+	for i := range s.Opts.Integrations {
+		ind := expin.Index(i)
 		ins = append(ins, s.ExpIn(ind))
 	}
 

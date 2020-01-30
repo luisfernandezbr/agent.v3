@@ -16,6 +16,7 @@ import (
 	"github.com/pinpt/agent/integrations/pkg/commiturl"
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 
+	"github.com/pinpt/agent/pkg/encrypt"
 	"github.com/pinpt/agent/pkg/expsessions"
 	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/agent/pkg/jsonstore"
@@ -288,6 +289,30 @@ func init() {
 	cmd.Flags().String("customer-id", "", "Customer ID")
 	cmd.Flags().Int("max-records", 10000, "Max log records to fetch")
 	cmd.Flags().String("no-format", "", "Do not format resulting json (useful to see the exact data returned)")
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdDecrypt = &cobra.Command{
+	Use:   "decrypt",
+	Short: "Decrypt authorization message",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		key, _ := cmd.Flags().GetString("key")
+		message, _ := cmd.Flags().GetString("message")
+
+		decr, err := encrypt.DecryptString(message, key)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		fmt.Println(decr)
+	},
+}
+
+func init() {
+	cmd := cmdDecrypt
+	cmd.Flags().String("key", "", "Key")
+	cmd.Flags().String("message", "", "Message")
 	cmdRoot.AddCommand(cmd)
 }
 
