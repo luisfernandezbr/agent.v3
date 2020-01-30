@@ -76,7 +76,7 @@ func (s *Exporter) sendSuccessEvent(jobID string, started time.Time, res exportR
 		v.Error = in.Error
 		// TODO: pass duration back to server as well
 		//v.Duration = in.Duration
-		v.ProjectErrors = in.ProjectErrors
+		v.EntityErrors = in.EntityErrors
 		data.Integrations = append(data.Integrations, v)
 	}
 
