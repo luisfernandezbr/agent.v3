@@ -13,7 +13,7 @@ import (
 type Opts struct {
 	Logger         hclog.Logger
 	Locs           fsconf.Locs
-	AgentDelegates func(ind expin.Index) rpcdef.Agent
+	AgentDelegates func(ind expin.Export) rpcdef.Agent
 
 	// IntegrationsDir is a custom location of the integrations binaries
 	IntegrationsDir string
@@ -75,7 +75,7 @@ func (s *Loader) Load(exports []expin.Export) (res []*Integration, _ error) {
 func (s *Loader) load(export expin.Export) (*Integration, error) {
 	opts := IntegrationOpts{}
 	opts.Logger = s.opts.Logger
-	opts.Agent = s.opts.AgentDelegates(export.Index)
+	opts.Agent = s.opts.AgentDelegates(export)
 	opts.Export = export
 	opts.Locs = s.locs
 	opts.IntegrationsDir = s.opts.IntegrationsDir

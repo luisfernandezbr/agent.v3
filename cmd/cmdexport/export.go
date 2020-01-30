@@ -177,8 +177,8 @@ func (s *export) Run() (_ Result, rerr error) {
 		gitProcessingDone <- hadErrors
 	}()
 
-	err = s.SetupIntegrations(func(ind expin.Index) rpcdef.Agent {
-		return newAgentDelegate(s, s.sessions.expsession, s.ExpIn(ind))
+	err = s.SetupIntegrations(func(exp expin.Export) rpcdef.Agent {
+		return newAgentDelegate(s, s.sessions.expsession, exp)
 	})
 	if err != nil {
 		rerr = err
