@@ -158,7 +158,7 @@ type exportResultIntegration struct {
 	IsIncremental bool
 	Error         string
 	Duration      time.Duration
-	ProjectErrors []agent.ExportResponseIntegrationsProjectErrors
+	EntityErrors  []agent.ExportResponseIntegrationsEntityErrors
 }
 
 func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (res exportResult, rerr error) {
@@ -175,12 +175,16 @@ func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (res ex
 		in.Error = in0.Error
 		in.Duration = in0.Duration
 		for _, pr0 := range in0.Projects {
-			pr := agent.ExportResponseIntegrationsProjectErrors{}
+			pr := agent.ExportResponseIntegrationsEntityErrors{}
 			pr.ID = pr0.ID
 			pr.RefID = pr0.RefID
-			pr.ReadableID = pr0.ReadableID
+			// not used in webapp/eventmachine
+			//pr.ReadableID = pr0.ReadableID
 			pr.Error = pr0.Error
-			in.ProjectErrors = append(in.ProjectErrors, pr)
+			if pr.Error != "" {
+				pr.Error = pr0.GitError
+			}
+			in.EntityErrors = append(in.EntityErrors, pr)
 		}
 		res.Integrations = append(res.Integrations, in)
 	}
