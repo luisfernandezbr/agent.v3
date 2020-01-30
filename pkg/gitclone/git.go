@@ -89,7 +89,7 @@ func cloneWithCacheNoRetries(ctx context.Context, logger hclog.Logger, access Ac
 	started := time.Now()
 	logger.Debug("cloneWithCacheNoRetries")
 	defer func() {
-		logger = logger.With("duration", time.Since(started))
+		logger = logger.With("duration", time.Since(started).String())
 		if rerr != nil {
 			logger.Debug("cloneWithCacheNoRetries failed", "err", rerr)
 			return

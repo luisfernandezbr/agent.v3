@@ -12,6 +12,7 @@ import (
 )
 
 type Result struct {
+	Duration     time.Duration       `json:"duration"`
 	Integrations []ResultIntegration `json:"integrations"`
 }
 
@@ -46,10 +47,11 @@ func (s *export) handleIntegrationPanics(res map[expin.Index]runResult) {
 }
 
 // formatResults links git errors with integration errors and returns them as Result
-func (s *export) formatResults(runResult map[expin.Index]runResult) Result {
+func (s *export) formatResults(runResult map[expin.Index]runResult, startTime time.Time) Result {
 	gitResults := s.gitResults
 
 	resAll := Result{}
+	resAll.Duration = time.Now().Sub(startTime)
 	for ind, res0 := range runResult {
 		expin := s.ExpIn(ind)
 		res := ResultIntegration{}
@@ -86,11 +88,11 @@ func (s *export) formatResults(runResult map[expin.Index]runResult) Result {
 }
 
 func (s Result) Log(logger hclog.Logger) {
-	logger.Info("Printing export results")
+	logger.Info("Printing export results", "duration", s.Duration.String())
 
 	for _, integration := range s.Integrations {
 		prefix := "Integration " + integration.ID + " "
-		logger.Info(prefix, "duration", integration.Duration)
+		logger.Info(prefix, "duration", integration.Duration.String())
 		if integration.Error != "" {
 			logger.Error(prefix+"failed with error", "err", integration.Error)
 			continue
