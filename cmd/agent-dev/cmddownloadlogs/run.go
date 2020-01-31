@@ -27,7 +27,7 @@ type Opts struct {
 type jm map[string]interface{}
 
 func Run(opts Opts) {
-	if opts.URL == "" || opts.User == "" || opts.Password == "" || opts.AgentUUID == "" || opts.CustomerID == "" {
+	if opts.URL == "" || opts.User == "" || opts.Password == "" || opts.CustomerID == "" {
 		panic("provide all required params")
 	}
 
@@ -83,14 +83,19 @@ func getData(opts Opts) {
 			pageSize = toGo
 		}
 
+		matches := []jm{
+			jm{"match": jm{"fields.customer_id": opts.CustomerID}},
+		}
+
+		if opts.AgentUUID != "" {
+			matches = append(matches, jm{"match": jm{"fields.uuid": opts.AgentUUID}})
+		}
+
 		request := jm{
 			"size": pageSize,
 			"query": jm{
 				"bool": jm{
-					"must": []jm{
-						jm{"match": jm{"fields.uuid": opts.AgentUUID}},
-						jm{"match": jm{"fields.customer_id": opts.CustomerID}},
-					},
+					"must": matches,
 				},
 			},
 			"sort": []jm{
