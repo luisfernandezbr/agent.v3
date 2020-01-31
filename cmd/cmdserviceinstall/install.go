@@ -9,7 +9,7 @@ import (
 
 func Run(logger hclog.Logger, pinpointRoot string, start bool) error {
 	err := service.Install(logger, ppservice.Names, []string{
-		"service-run", "--pinpoint-root", pinpointRoot,
+		"service-run-internal", "--pinpoint-root", pinpointRoot,
 	})
 	if err != nil {
 		return err
