@@ -233,7 +233,7 @@ func init() {
 	cmdRoot.AddCommand(cmd)
 }
 
-func runNoRestarts(cmd *cobra.Command, args []string) {
+func envBasedOnAgentConfig(cmd *cobra.Command) (_ cmdlogger.Logger, _ agentconf.Config, pinpointRoot string) {
 	pinpointRoot, err := getPinpointRoot(cmd)
 	if err != nil {
 		exitWithErr2(err)
@@ -244,6 +244,15 @@ func runNoRestarts(cmd *cobra.Command, args []string) {
 		exitWithErr2(err)
 	}
 	logger := cmdlogger.NewLoggerJSON(cmd, agentConf.LogLevel)
+	logWriter, err := pinpointLogWriter(pinpointRoot)
+	if err != nil {
+		exitWithErr(logger, err)
+	}
+	return logger.AddWriter(logWriter), agentConf, pinpointRoot
+}
+
+func runNoRestarts(cmd *cobra.Command, args []string) {
+	logger, agentConf, pinpointRoot := envBasedOnAgentConfig(cmd)
 
 	ctx := context.Background()
 	opts := cmdrunnorestarts.Opts{}
@@ -251,7 +260,7 @@ func runNoRestarts(cmd *cobra.Command, args []string) {
 	opts.LogLevelSubcommands = logger.Level
 	opts.AgentConf = agentConf
 	opts.PinpointRoot = pinpointRoot
-	err = cmdrunnorestarts.Run(ctx, opts)
+	err := cmdrunnorestarts.Run(ctx, opts)
 	if err != nil {
 		exitWithErr(logger, err)
 	}
@@ -264,6 +273,12 @@ func runWithRestarts(cmd *cobra.Command, args []string) {
 	if err != nil {
 		exitWithErr(logger, err)
 	}
+	logWriter, err := pinpointLogWriter(pinpointRoot)
+	if err != nil {
+		exitWithErr(logger, err)
+	}
+	logger = logger.AddWriter(logWriter)
+
 	ctx := context.Background()
 	opts := cmdrun.Opts{}
 	opts.Logger = logger
