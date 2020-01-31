@@ -295,6 +295,36 @@ func init() {
 	cmdRoot.AddCommand(cmd)
 }
 
+var cmdServiceRun = &cobra.Command{
+	Use:   "service-run",
+	Short: "Run the agent directly without using os service (deprecated)",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		runWithRestarts(cmd, args)
+	},
+}
+
+func init() {
+	cmd := cmdServiceRun
+	flagPinpointRoot(cmd)
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdServiceRunNoRestarts = &cobra.Command{
+	Use:   "service-run-no-restarts",
+	Short: "Run the agent directly without using os service (deprecated)",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		runNoRestarts(cmd, args)
+	},
+}
+
+func init() {
+	cmd := cmdServiceRunNoRestarts
+	flagPinpointRoot(cmd)
+	cmdRoot.AddCommand(cmd)
+}
+
 var cmdVersion = &cobra.Command{
 	Use:   "version",
 	Short: "Display the build version",

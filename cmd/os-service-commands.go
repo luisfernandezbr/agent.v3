@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/pinpt/agent/cmd/cmdserviceinstall"
 	"github.com/pinpt/agent/cmd/cmdservicerestart"
-	"github.com/pinpt/agent/cmd/cmdservicerun"
+	"github.com/pinpt/agent/cmd/cmdserviceruninternal"
 	"github.com/pinpt/agent/cmd/cmdservicestart"
 	"github.com/pinpt/agent/cmd/cmdservicestatus"
 	"github.com/pinpt/agent/cmd/cmdservicestop"
@@ -12,8 +12,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cmdServiceRun = &cobra.Command{
-	Use:   "service-run",
+var cmdServiceRunInternal = &cobra.Command{
+	Use:   "service-run-internal",
 	Short: "Run agent service. This is called automatically once the service is installed.",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -25,7 +25,7 @@ var cmdServiceRun = &cobra.Command{
 			exitWithErr(logger, err)
 		}
 
-		err = cmdservicerun.Run(logger, pinpointRoot)
+		err = cmdserviceruninternal.Run(logger, pinpointRoot)
 		if err != nil {
 			exitWithErr(logger, err)
 		}
@@ -33,7 +33,7 @@ var cmdServiceRun = &cobra.Command{
 }
 
 func init() {
-	cmd := cmdServiceRun
+	cmd := cmdServiceRunInternal
 	cmd.Hidden = true
 	flagPinpointRoot(cmd)
 	cmdRoot.AddCommand(cmd)
