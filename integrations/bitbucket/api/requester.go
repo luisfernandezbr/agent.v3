@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/oauthtoken"
@@ -123,6 +124,8 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 	}
 	defer resp.Body.Close()
 
+	e.logger.Debug("api request", "url", u, "status", resp.StatusCode)
+
 	if resp.StatusCode != http.StatusOK {
 
 		if resp.StatusCode == http.StatusUnauthorized {
@@ -130,8 +133,14 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 				if rerr = e.opts.OAuth.Refresh(); rerr != nil {
 					return false, pi, rerr
 				}
+				return true, pi, fmt.Errorf("error refreshing token")
 			}
-			return true, pi, fmt.Errorf("request not authorized")
+			return false, pi, fmt.Errorf("request not authorized")
+		}
+
+		if resp.StatusCode == http.StatusTooManyRequests {
+			time.Sleep(time.Minute) // according to docs there is quota available every minute
+			return true, pi, fmt.Errorf("rate limit hit")
 		}
 
 		if resp.StatusCode == http.StatusNotFound {
