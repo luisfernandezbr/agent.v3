@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/oauthtoken"
+	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/go-common/httpdefaults"
 	pstrings "github.com/pinpt/go-common/strings"
 )
@@ -24,6 +25,7 @@ type RequesterOpts struct {
 	UseOAuth           bool
 	OAuth              *oauthtoken.Manager
 	InsecureSkipVerify bool
+	Agent              rpcdef.Agent
 }
 
 type internalRequest struct {
@@ -139,7 +141,11 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 		}
 
 		if resp.StatusCode == http.StatusTooManyRequests {
-			time.Sleep(time.Minute) // according to docs there is quota available every minute
+			waitTime := time.Minute // according to docs there is quota available every minute
+			paused := time.Now()
+			e.opts.Agent.SendPauseEvent(fmt.Sprintf("bitbucket rate limit hit, will resume in %v ", waitTime), paused.Add(waitTime))
+			time.Sleep(waitTime)
+			e.opts.Agent.SendResumeEvent(fmt.Sprintf("bitbucket resumed, time elapsed %v", time.Since(paused)))
 			return true, pi, fmt.Errorf("rate limit hit")
 		}
 
