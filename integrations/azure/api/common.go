@@ -29,13 +29,13 @@ type stringmap map[string]string
 
 // Creds a credentials object, all properties are required
 type Creds struct {
-	URL            string  `json:"url"`
-	CollectionName *string `json:"collection_name"`
-	Organization   *string `json:"organization"`
-	Username       string  `json:"username"`
-	Password       string  `json:"password"`
-	APIKey         string  `json:"api_key"`     // https://your_url/tfs/DefaultCollection/_details/security/tokens
-	APIVersion     string  `json:"api_version"` // https://your_url/tfs/DefaultCollection/_details/security/tokens
+	URL            string `json:"url"`
+	CollectionName string `json:"collection_name"`
+	Organization   string `json:"organization"`
+	Username       string `json:"username"`
+	Password       string `json:"password"`
+	APIKey         string `json:"api_key"`     // https://your_url/tfs/DefaultCollection/_details/security/tokens
+	APIVersion     string `json:"api_version"` // https://your_url/tfs/DefaultCollection/_details/security/tokens
 }
 
 // API the api object for azure/fts
@@ -117,9 +117,9 @@ func (api *API) doRequest(method, endPoint string, params stringmap, reader io.R
 
 	var rawurl string
 	if api.tfs {
-		rawurl = pstrings.JoinURL(api.creds.URL, *api.creds.CollectionName, endPoint)
+		rawurl = pstrings.JoinURL(api.creds.URL, api.creds.CollectionName, endPoint)
 	} else {
-		rawurl = pstrings.JoinURL(api.creds.URL, *api.creds.Organization, endPoint)
+		rawurl = pstrings.JoinURL(api.creds.URL, api.creds.Organization, endPoint)
 	}
 	u, _ := url.Parse(rawurl)
 	vals := u.Query()

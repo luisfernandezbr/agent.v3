@@ -8,6 +8,9 @@ import (
 	"strings"
 	"time"
 
+	pjson "github.com/pinpt/go-common/json"
+
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -19,7 +22,6 @@ import (
 	"github.com/pinpt/agent/integrations/pkg/ibase"
 	"github.com/pinpt/agent/pkg/commitusers"
 	"github.com/pinpt/agent/pkg/ids2"
-	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/pkg/oauthtoken"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/agent/rpcdef"
@@ -42,9 +44,10 @@ type Config struct {
 	URL                string `json:"url"`
 	Username           string `json:"username"`
 	Password           string `json:"password"`
-	RefreshToken       string `json:"refresh_token"`
 	OnlyGit            bool   `json:"only_git"`
 	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
+
+	Exclusions []string `json:"exclusions"`
 }
 
 type Integration struct {
@@ -72,8 +75,7 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	return nil
 }
 
-func (s *Integration) ValidateConfig(ctx context.Context,
-	exportConfig rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
+func (s *Integration) ValidateConfig(ctx context.Context, exportConfig rpcdef.ExportConfig) (res rpcdef.ValidationResult, _ error) {
 
 	rerr := func(err error) {
 		res.Errors = append(res.Errors, err.Error())
@@ -144,8 +146,6 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		return err
 	}
 
-	s.UseOAuth = config.UseOAuth
-
 	var oauth *oauthtoken.Manager
 
 	s.qc.BaseURL = s.config.URL
@@ -169,7 +169,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.APIURL = s.config.URL + "/2.0"
 		opts.Username = s.config.Username
 		opts.Password = s.config.Password
-		opts.UseOAuth = config.UseOAuth
+		opts.UseOAuth = s.UseOAuth
 		opts.OAuth = oauth
 		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
 		requester := api.NewRequester(opts)
@@ -183,17 +183,21 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 
 func (s *Integration) setConfig(config rpcdef.ExportConfig) error {
 	rerr := func(msg string, args ...interface{}) error {
-		return fmt.Errorf("config validation error: "+msg, args...)
+		return fmt.Errorf("config validation error: "+msg+" "+pjson.Stringify(config.Integration.Config), args...)
 	}
 	var def Config
-	err := structmarshal.MapToStruct(config.Integration, &def)
+	err := structmarshal.MapToStruct(config.Integration.Config, &def)
 	if err != nil {
 		return err
 	}
-	if def.URL == "" {
-		return rerr("url is missing")
-	}
-	if !config.UseOAuth {
+
+	s.UseOAuth = config.UseOAuth
+	if s.UseOAuth {
+		def.URL = "https://api.bitbucket.org"
+	} else {
+		if def.URL == "" {
+			return rerr("url is missing")
+		}
 		if def.Username == "" {
 			return rerr("username is missing")
 		}
@@ -201,7 +205,6 @@ func (s *Integration) setConfig(config rpcdef.ExportConfig) error {
 			return rerr("password is missing")
 		}
 	}
-
 	s.config = def
 	return nil
 }
@@ -317,7 +320,7 @@ func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender.Ses
 	processOpts.Concurrency = 1
 	processOpts.Projects = reposIface
 
-	processOpts.IntegrationType = integrationid.TypeSourcecode
+	processOpts.IntegrationType = inconfig.IntegrationTypeSourcecode
 	processOpts.CustomerID = s.customerID
 	processOpts.RefType = s.refType
 	processOpts.Sender = repoSender

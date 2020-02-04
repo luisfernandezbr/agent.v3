@@ -12,7 +12,7 @@ Integrations JSON:
 {
 	"name":"sonarqube",
 	"config": {
-		"apitoken": API_TOKEN,               // required
+		"api_token": API_TOKEN,               // required
 		"url":       SONARQUBE_URL_ENDPOINT,  // required
 		"metrics": [                          // optional
 				"complexity","code_smells",
@@ -26,7 +26,7 @@ Integrations JSON:
 ----------
 go run . export \
     --agent-config-json='{"customer_id":"customer_id"}' \
-    --integrations-json='[{"name":"sonarqube", "config":{"apitoken":API_TOKEN, "url":SONARQUBE_URL_ENDPOINT,"metrics":METRICS_ARRAY}}]' \
+    --integrations-json='[{"name":"sonarqube", "config":{"api_token":API_TOKEN, "url":SONARQUBE_URL_ENDPOINT,"metrics":METRICS_ARRAY}}]' \
     --pinpoint-root=$HOME/.pinpoint/next-sonarqube
 ```
 

@@ -8,10 +8,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 	"github.com/pinpt/agent/pkg/ids"
-	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/pkg/reqstats"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -67,6 +67,19 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	return nil
 }
 
+type IntegrationConfig struct {
+	// URL URL of instance if relevant
+	URL string `json:"url"`
+	// APIKey API Key for instance, if relevant
+	APIKey string `json:"api_key"`
+	// Organization Organization for instance, if relevant
+	Organization string `json:"organization"`
+	// Exclusions list of exclusions
+	Exclusions []string `json:"exclusions"`
+	// Exclusions list of inclusions
+	Inclusions []string `json:"inclusions"`
+}
+
 type Config struct {
 	APIURL                string
 	APIURL3               string
@@ -84,16 +97,7 @@ type Config struct {
 }
 
 type configDef struct {
-	URL      string `json:"url"`
-	APIToken string `json:"apitoken"`
-
-	// ExcludedRepos are the repos to exclude from processing. This is based on github repo id.
-	ExcludedRepos []string `json:"excluded_repos"`
-	IncludedRepos []string `json:"included_repos"`
-	OnlyGit       bool     `json:"only_git"`
-
-	// Organization specifies the organization to export. By default all account organization are exported. Set this to export only one.
-	Organization string `json:"organization"`
+	OnlyGit bool `json:"only_git"`
 
 	// Repos specifies the repos to export. By default all repos are exported not including the ones from ExcludedRepos. This option overrides this.
 	// Use github nameWithOwner for this field.
@@ -112,33 +116,49 @@ type configDef struct {
 	Concurrency int `json:"concurrency"`
 }
 
-func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
+func (s *Integration) setIntegrationConfig(data rpcdef.IntegrationConfig) error {
 	rerr := func(msg string, args ...interface{}) error {
 		return fmt.Errorf("config validation error: "+msg, args...)
 	}
+
+	var inConfig IntegrationConfig
+	var res Config
 	var def configDef
-	err := structmarshal.MapToStruct(data, &def)
+
+	err := structmarshal.StructToStruct(data.Config, &inConfig)
 	if err != nil {
 		return err
 	}
+	err = structmarshal.StructToStruct(data.Config, &def)
+	if err != nil {
+		return err
+	}
+	if token, ok := data.Config["access_token"].(string); ok && token != "" {
+		inConfig.APIKey = token
+		inConfig.URL = "https://github.com"
+	}
+	if inConfig.APIKey == "" {
+		return errors.New("missing api_key")
+	}
+	res.Token = inConfig.APIKey
 
-	if def.URL == "" {
-		return rerr("url is missing")
+	if inConfig.URL == "" {
+		return errors.New("missing url")
 	}
-	if def.APIToken == "" {
-		return rerr("apitoken is missing")
+	purl := inConfig.URL
+
+	if inConfig.Organization != "" {
+		res.Organization = inConfig.Organization
 	}
-	var res Config
-	res.Token = def.APIToken
-	res.Organization = def.Organization
-	res.ExcludedRepos = def.ExcludedRepos
-	res.IncludedRepos = def.IncludedRepos
+	res.ExcludedRepos = inConfig.Exclusions
+	res.IncludedRepos = inConfig.Inclusions
+
 	res.Repos = def.Repos
 	res.OnlyGit = def.OnlyGit
 	res.StopAfterN = def.StopAfterN
 
 	{
-		u, err := url.Parse(def.URL)
+		u, err := url.Parse(purl)
 		if err != nil {
 			return rerr("url is invalid: %v", err)
 		}
@@ -211,8 +231,7 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	return nil
 }
 
-func (s *Integration) Export(ctx context.Context,
-	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
+func (s *Integration) Export(ctx context.Context, exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, _ error) {
 	err := s.initWithConfig(exportConfig)
 	if err != nil {
 		return res, err
@@ -327,7 +346,7 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 	}
 	processOpts.Projects = filteredReposIface
 
-	processOpts.IntegrationType = integrationid.TypeSourcecode
+	processOpts.IntegrationType = inconfig.IntegrationTypeSourcecode
 	processOpts.CustomerID = s.customerID
 	processOpts.RefType = s.refType
 	processOpts.Sender = repoSender

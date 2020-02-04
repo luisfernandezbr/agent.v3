@@ -4,7 +4,7 @@ package expin
 import (
 	"strconv"
 
-	"github.com/pinpt/agent/pkg/integrationid"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 )
 
 // Index is integration index in export request
@@ -13,7 +13,7 @@ type Index int
 // Export contains index and info on the integration that is running. Useful for pass around for logging and debugging.
 type Export struct {
 	Index       Index
-	Integration integrationid.ID
+	Integration inconfig.IntegrationID
 }
 
 func (s Export) String() string {

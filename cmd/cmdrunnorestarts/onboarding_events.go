@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 
 	"github.com/pinpt/agent/cmd/cmdexportonboarddata"
-	"github.com/pinpt/agent/cmd/cmdintegration"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/subcommand"
 	"github.com/pinpt/agent/pkg/structmarshal"
@@ -15,8 +14,6 @@ import (
 	"github.com/pinpt/go-common/eventing"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/agent"
-
-	"github.com/pinpt/agent/cmd/cmdvalidateconfig"
 )
 
 func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) {
@@ -35,7 +32,8 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		}
 
 		ctx := context.Background()
-		conf, err := inconfig.ConfigFromEvent(integration, systemType, s.conf.PPEncryptionKey)
+		conf, err := inconfig.AuthFromEvent(integration, s.conf.PPEncryptionKey)
+		conf.Type = systemType
 		if err != nil {
 			rerr = err
 			return
@@ -252,10 +250,10 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 	}, nil
 }
 
-func (s *runner) getOnboardData(ctx context.Context, config cmdintegration.Integration, messageID string, objectType string) (res cmdexportonboarddata.Result, _ error) {
+func (s *runner) getOnboardData(ctx context.Context, config inconfig.IntegrationAgent, messageID string, objectType string) (res cmdexportonboarddata.Result, _ error) {
 	s.logger.Info("getting onboarding data for integration", "name", config.Name, "objectType", objectType)
 
-	integrations := []cmdvalidateconfig.Integration{config}
+	integrations := []inconfig.IntegrationAgent{config}
 
 	c, err := subcommand.New(subcommand.Opts{
 		Logger:            s.logger,

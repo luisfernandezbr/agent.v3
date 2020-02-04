@@ -15,9 +15,9 @@ Create an `export.json` file in the root of the agent repo with the following
 ```
 [
     {
-        "name": "azuretfs",
+        "name": "azure",
         "config": {
-            "reftype": "azure", // or "tfs"
+            "reftype": "azure",
             "type": "",         // can be SOURCECODE, WORK, or empty for both
             "concurrency": 10,
             "credentials": {

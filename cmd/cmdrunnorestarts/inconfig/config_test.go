@@ -3,7 +3,6 @@ package inconfig
 import (
 	"testing"
 
-	"github.com/pinpt/agent/cmd/cmdintegration"
 	"github.com/stretchr/testify/assert"
 
 	pstrings "github.com/pinpt/go-common/strings"
@@ -12,7 +11,7 @@ import (
 	"github.com/pinpt/integration-sdk/agent"
 )
 
-func TestConfigFromEvent(t *testing.T) {
+func TestAuthFromEvent(t *testing.T) {
 	config := `{
 		"api_token": "t1",
 		"url": "u1",
@@ -32,21 +31,18 @@ func TestConfigFromEvent(t *testing.T) {
 	e.Exclusions = []string{"e1"}
 	e.Inclusions = []string{"e1", "e2"}
 
-	got, err := ConfigFromEvent(e.ToMap(), IntegrationTypeSourcecode, encryptionKey)
+	got, err := AuthFromEvent(e.ToMap(), encryptionKey)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	assert := assert.New(t)
-	want := cmdintegration.Integration{
-		Name: "github",
-		Config: map[string]interface{}{
-			"apitoken":       "t1",
-			"url":            "u1",
-			"excluded_repos": []interface{}{"e1"},
-			"included_repos": []interface{}{"e1", "e2"},
-		},
-	}
+	want := IntegrationAgent{}
+	want.Name = "github"
+	want.Config.Exclusions = []string{"e1"}
+	want.Config.Inclusions = []string{"e1", "e2"}
+	want.Config.APIKey = "t1"
+	want.Config.URL = "u1"
 
 	assert.Equal(want, got)
 }

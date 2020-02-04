@@ -51,7 +51,7 @@ docker run -it --rm --name pinpoint_agent -v `pwd`/pinpoint:/pinpoint pinpt/agen
 
 ## Integration docs
 
-- [Microsoft Azure DevOps and TFS](./integrations/azuretfs/readme.md)
+- [Microsoft Azure DevOps and TFS](./integrations/azure/readme.md)
 - [Bitbucket](./integrations/bitbucket/readme.md)
 - [GitHub](./integrations/github/readme.md)
 - [GitLab](./integrations/gitlab/readme.md)

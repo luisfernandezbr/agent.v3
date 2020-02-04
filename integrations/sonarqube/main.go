@@ -75,27 +75,36 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 }
 
 func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig) error {
-	var conf struct {
-		URL      string   `json:"url"`
-		APIToken string   `json:"apitoken"`
-		Metrics  []string `json:"metrics"`
+
+	var defConfig struct {
+		URL     string   `json:"url"`
+		APIKey  string   `json:"api_key"`
+		Metrics []string `json:"metrics"`
 	}
-	if err := structmarshal.MapToStruct(config.Integration, &conf); err != nil {
+
+	err := structmarshal.MapToStruct(config.Integration.Config, &defConfig)
+	if err != nil {
 		return err
 	}
-	if conf.URL == "" {
+	if defConfig.URL == "" {
 		return errors.New("url missing")
 	}
-	if _, err := url.ParseRequestURI(conf.URL); err != nil {
+	purl := defConfig.URL
+
+	if _, err := url.ParseRequestURI(purl); err != nil {
 		return errors.New("invalid url")
 	}
-	if conf.APIToken == "" {
-		return errors.New("apitoken missing")
+
+	if defConfig.APIKey == "" {
+		return errors.New("api_key missing")
 	}
-	if len(conf.Metrics) == 0 {
-		conf.Metrics = defaultMetrics
+	apikey := defConfig.APIKey
+
+	metrics := defConfig.Metrics
+	if len(metrics) == 0 {
+		metrics = defaultMetrics
 	}
-	s.api = api.NewSonarqubeAPI(ctx, s.logger, conf.URL, conf.APIToken, conf.Metrics)
+	s.api = api.NewSonarqubeAPI(ctx, s.logger, purl, apikey, metrics)
 	s.customerID = config.Pinpoint.CustomerID
 	return nil
 }

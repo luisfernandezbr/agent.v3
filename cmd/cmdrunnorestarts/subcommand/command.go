@@ -21,8 +21,8 @@ import (
 	"github.com/pinpt/integration-sdk/agent"
 
 	"github.com/pinpt/agent/cmd/cmdintegration"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/logsender"
-	"github.com/pinpt/agent/cmd/cmdvalidateconfig"
 	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/deviceinfo"
@@ -43,7 +43,7 @@ type Opts struct {
 	Tmpdir            string
 	IntegrationConfig cmdintegration.AgentConfig
 	AgentConfig       agentconf.Config
-	Integrations      []cmdvalidateconfig.Integration
+	Integrations      []inconfig.IntegrationAgent
 	DeviceInfo        deviceinfo.CommonInfo
 }
 
@@ -53,7 +53,7 @@ type Command struct {
 	tmpdir       string
 	config       cmdintegration.AgentConfig
 	agentConfig  agentconf.Config
-	integrations []cmdvalidateconfig.Integration
+	integrations []inconfig.IntegrationAgent
 	deviceInfo   deviceinfo.CommonInfo
 }
 

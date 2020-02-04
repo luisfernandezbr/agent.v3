@@ -6,6 +6,7 @@ import (
 
 	"github.com/pinpt/agent/pkg/reqstats"
 	"github.com/pinpt/agent/pkg/structmarshal"
+	pjson "github.com/pinpt/go-common/json"
 
 	"github.com/pinpt/agent/integrations/pkg/jiracommon"
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
@@ -27,7 +28,7 @@ func main() {
 type Integration struct {
 	logger hclog.Logger
 	agent  rpcdef.Agent
-	config Config
+	config jiracommon.Config
 	qc     api.QueryContext
 
 	common *jiracommon.JiraCommon
@@ -47,17 +48,18 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	return nil
 }
 
-type Config jiracommon.Config
+func ConfigFromMap(data rpcdef.IntegrationConfig) (res jiracommon.Config, rerr error) {
 
-func ConfigFromMap(data map[string]interface{}) (res Config, rerr error) {
 	validationErr := func(msg string, args ...interface{}) {
-		rerr = fmt.Errorf("config validation error: "+msg, args...)
+		rerr = fmt.Errorf("config validation error: "+msg+"  "+pjson.Stringify(data.Config), args...)
 	}
-	err := structmarshal.MapToStruct(data, &res)
+
+	err := structmarshal.MapToStruct(data.Config, &res)
 	if err != nil {
 		rerr = err
 		return
 	}
+
 	if res.URL == "" {
 		validationErr("url is missing")
 		return
@@ -109,8 +111,8 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 		CustomerID:       config.Pinpoint.CustomerID,
 		Request:          s.qc.Request,
 		Agent:            s.agent,
-		ExcludedProjects: s.config.ExcludedProjects,
-		IncludedProjects: s.config.IncludedProjects,
+		ExcludedProjects: s.config.Exclusions,
+		IncludedProjects: s.config.Inclusions,
 		Projects:         s.config.Projects,
 	})
 	if err != nil {

@@ -265,8 +265,8 @@ var cmdTestBackendMock = &cobra.Command{
 				Integration: agent.IntegrationRequestIntegration{
 					Name: "github",
 					Authorization: agent.IntegrationRequestIntegrationAuthorization{
-						URL:      pstrings.Pointer("https://api.github.com"),
-						APIToken: pstrings.Pointer(os.Getenv("PP_GITHUB_TOKEN")),
+						URL:    pstrings.Pointer("https://api.github.com"),
+						APIKey: pstrings.Pointer(os.Getenv("PP_GITHUB_TOKEN")),
 					},
 				},
 			}

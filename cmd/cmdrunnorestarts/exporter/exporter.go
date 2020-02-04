@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pinpt/agent/cmd/cmdexport"
 	"github.com/pinpt/agent/cmd/cmdintegration"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/exporter/fsqueue"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
@@ -21,7 +22,6 @@ import (
 	"github.com/pinpt/agent/pkg/logutils"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent/cmd/cmdexport"
 	"github.com/pinpt/integration-sdk/agent"
 )
 
@@ -200,16 +200,7 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (isInc
 		return
 	}
 
-	var integrations []cmdexport.Integration
-
-	// add in additional integrations defined in config
-	// TODO: not currently used, remove or disable
-	for _, in := range s.conf.ExtraIntegrations {
-		integrations = append(integrations, cmdexport.Integration{
-			Name:   in.Name,
-			Config: in.Config,
-		})
-	}
+	integrations := s.conf.ExtraIntegrations
 
 	lastProcessedStore, err := jsonstore.New(s.opts.FSConf.LastProcessedFile)
 	if err != nil {
@@ -219,7 +210,10 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (isInc
 
 	for _, integration := range data.Integrations {
 		s.logger.Info("exporting integration", "name", integration.Name, "len(exclusions)", len(integration.Exclusions), "len(inclusions)", len(integration.Inclusions))
-		conf, err := inconfig.ConfigFromEvent(integration.ToMap(), inconfig.IntegrationType(integration.SystemType), s.opts.PPEncryptionKey)
+
+		conf, err := inconfig.AuthFromEvent(integration.ToMap(), s.opts.PPEncryptionKey)
+		conf.Type = inconfig.IntegrationType(integration.SystemType)
+
 		if err != nil {
 			rerr = err
 			return
@@ -277,7 +271,7 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (isInc
 	return
 }
 
-func (s *Exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport.Integration) (string, error) {
+func (s *Exporter) getLastProcessed(lastProcessed *jsonstore.Store, in inconfig.IntegrationAgent) (string, error) {
 	id, err := in.ID()
 	if err != nil {
 		return "", err
@@ -293,7 +287,7 @@ func (s *Exporter) getLastProcessed(lastProcessed *jsonstore.Store, in cmdexport
 	return ts, nil
 }
 
-func (s *Exporter) execExport(integrations []cmdexport.Integration, reprocessHistorical bool, messageID string, jobID string) (res cmdexport.Result, logFile string, rerr error) {
+func (s *Exporter) execExport(integrations []inconfig.IntegrationAgent, reprocessHistorical bool, messageID string, jobID string) (res cmdexport.Result, logFile string, rerr error) {
 
 	agentConfig := s.opts.AgentConfig
 	agentConfig.Backend.ExportJobID = jobID

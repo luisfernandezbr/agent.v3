@@ -4,8 +4,9 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
+
 	"github.com/pinpt/agent/integrations/pkg/repoprojects"
-	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/rpcdef"
 	pjson "github.com/pinpt/go-common/json"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -55,10 +56,10 @@ func (s *Integration) processRepos() (
 	projectIDs = ids
 
 	var orgname string
-	if s.Creds.Organization != nil {
-		orgname = *s.Creds.Organization
+	if s.Creds.Organization != "" {
+		orgname = s.Creds.Organization
 	} else {
-		orgname = *s.Creds.CollectionName
+		orgname = s.Creds.CollectionName
 	}
 
 	sender, err := s.orgSession.Session(sourcecode.RepoModelName.String(), orgname, orgname)
@@ -102,7 +103,7 @@ func (s *Integration) processRepos() (
 
 	processOpts.Concurrency = s.Concurrency
 	processOpts.Projects = reposIface
-	processOpts.IntegrationType = integrationid.TypeSourcecode
+	processOpts.IntegrationType = inconfig.IntegrationTypeSourcecode
 	processOpts.CustomerID = s.customerid
 	processOpts.RefType = s.RefType.String()
 	processOpts.Sender = sender
@@ -179,10 +180,10 @@ func (s *Integration) processUsers(projectids []string) error {
 	}
 
 	var orgname string
-	if s.Creds.Organization != nil {
-		orgname = *s.Creds.Organization
+	if s.Creds.Organization != "" {
+		orgname = s.Creds.Organization
 	} else {
-		orgname = *s.Creds.CollectionName
+		orgname = s.Creds.CollectionName
 	}
 	sender, err := s.orgSession.Session(sourcecode.UserModelName.String(), orgname, orgname)
 	if err != nil {

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"time"
 
+	"github.com/pinpt/agent/integrations/azure/api"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/ids"
 	"github.com/pinpt/agent/rpcdef"
@@ -12,7 +12,7 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
+func (s *Integration) onboardExportRepos() (res rpcdef.OnboardExportResult, err error) {
 
 	var repos []*sourcecode.Repo
 	_, repos, err = s.api.FetchAllRepos([]string{}, []string{}, []string{})
@@ -22,14 +22,15 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 	}
 	var records []map[string]interface{}
 	for _, repo := range repos {
-		rawcommit, err := s.api.FetchLastCommit(repo.RefID)
+		var rawcommit *api.CommitResponse
+		rawcommit, err = s.api.FetchLastCommit(repo.RefID)
 		if rawcommit == nil {
-			s.logger.Error("last commit is nil, skipping", "repo ref_id", repo.RefID)
+			s.logger.Debug("last commit is nil, skipping", "ref_id", repo.RefID, "name", repo.Name)
 			continue
 		}
 		if err != nil {
 			s.logger.Error("error fetching last commit for onboard, skipping", "repo ref_id", repo.RefID, "err", err)
-			continue
+			return
 		}
 		r := &agent.RepoResponseRepos{
 			Active:      repo.Active,
@@ -56,7 +57,7 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 	return
 }
 
-func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
+func (s *Integration) onboardExportProjects() (res rpcdef.OnboardExportResult, err error) {
 	projects, err := s.api.FetchProjects([]string{}, []string{}, []string{})
 	var records []map[string]interface{}
 	for _, proj := range projects {
@@ -95,7 +96,7 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 	return res, err
 }
 
-func (s *Integration) onboardWorkConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, err error) {
+func (s *Integration) onboardWorkConfig() (res rpcdef.OnboardExportResult, err error) {
 	conf, err := s.api.FetchWorkConfig()
 	if err != nil {
 		res.Error = err

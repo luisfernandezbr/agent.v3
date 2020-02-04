@@ -9,8 +9,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/expin"
+	"github.com/pinpt/agent/pkg/structmarshal"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
@@ -18,7 +20,6 @@ import (
 	"github.com/pinpt/agent/pkg/deviceinfo"
 	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/agent/pkg/iloader"
-	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event"
@@ -28,7 +29,7 @@ import (
 type Opts struct {
 	Logger       hclog.Logger
 	AgentConfig  AgentConfig
-	Integrations []Integration
+	Integrations []inconfig.Integration
 }
 
 type AgentConfig struct {
@@ -65,21 +66,6 @@ func (s AgentConfig) Locs() (res fsconf.Locs, _ error) {
 	return fsconf.New(root), nil
 }
 
-type Integration struct {
-	Name   string                 `json:"name"`
-	Type   string                 `json:"type"` // sourcecode or work
-	Config map[string]interface{} `json:"config"`
-}
-
-func (s Integration) ID() (res integrationid.ID, err error) {
-	res.Name = s.Name
-	res.Type, err = integrationid.TypeFromString(s.Type)
-	if err != nil {
-		return res, fmt.Errorf("invalid integration config, integration: %v, err: %v", s.Name, err)
-	}
-	return
-}
-
 type Command struct {
 	Opts   Opts
 	Logger hclog.Logger
@@ -87,7 +73,7 @@ type Command struct {
 	StartTime time.Time
 	Locs      fsconf.Locs
 
-	IntegrationIDs map[expin.Index]integrationid.ID
+	IntegrationIDs map[expin.Index]inconfig.IntegrationID
 	Integrations   map[expin.Index]*iloader.Integration
 	ExportConfigs  map[expin.Index]rpcdef.ExportConfig
 
@@ -161,7 +147,7 @@ func (s *Command) ExpIn(ind expin.Index) expin.Export {
 func (s *Command) setupConfig() error {
 	s.ExportConfigs = map[expin.Index]rpcdef.ExportConfig{}
 	s.OAuthRefreshTokens = map[expin.Index]string{}
-	s.IntegrationIDs = map[expin.Index]integrationid.ID{}
+	s.IntegrationIDs = map[expin.Index]inconfig.IntegrationID{}
 
 	for i, obj := range s.Opts.Integrations {
 		ind := expin.Index(i)
@@ -173,18 +159,14 @@ func (s *Command) setupConfig() error {
 
 		ec := rpcdef.ExportConfig{}
 		ec.Pinpoint.CustomerID = s.Opts.AgentConfig.CustomerID
-		ec.Integration = obj.Config
 
-		refreshToken, _ := obj.Config["oauth_refresh_token"].(string)
-
-		if refreshToken != "" {
-			// TODO: switch to using ID instead of name as key, so we could have azure issues and azure work to use different refresh tokens
-			s.OAuthRefreshTokens[ind] = refreshToken
+		if refresh, ok := obj.Config["refresh_token"].(string); ok && refresh != "" {
+			s.OAuthRefreshTokens[ind] = refresh
 			ec.UseOAuth = true
-			// do not pass oauth_refresh_token to integration
-			// integrations should use
-			// NewAccessToken() to get access token instead
-			delete(ec.Integration, "oauth_refresh_token")
+		}
+		delete(obj.Config, "refresh_token")
+		if err := structmarshal.StructToStruct(obj, &ec.Integration); err != nil {
+			return err
 		}
 
 		s.ExportConfigs[ind] = ec

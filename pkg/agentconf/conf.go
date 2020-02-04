@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/pkg/fs"
 )
 
@@ -22,10 +23,8 @@ type Config struct {
 	// LogLevel to use for the service (optional)
 	LogLevel string `json:"log_level"`
 	// ExtraIntegrations defines additional integrations that will run on every export trigger in run command. This is needed to run a custom integration for one of our customers. You need to add these custom integrations to config manually after enroll.
-	ExtraIntegrations []struct {
-		Name   string                 `json:"name"`
-		Config map[string]interface{} `json:"config"`
-	} `json:"extra_integrations"`
+	Config            inconfig.IntegrationAgent   `json:"config"`
+	ExtraIntegrations []inconfig.IntegrationAgent `json:"extra_integrations"`
 }
 
 func Save(c Config, loc string) error {

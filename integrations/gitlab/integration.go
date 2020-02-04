@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/integrations/gitlab/api"
 	"github.com/pinpt/agent/integrations/pkg/commiturl"
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
@@ -17,7 +18,6 @@ import (
 	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 	"github.com/pinpt/agent/pkg/ids"
 	"github.com/pinpt/agent/pkg/ids2"
-	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -26,7 +26,7 @@ import (
 type Config struct {
 	commonrepo.FilterConfig
 	URL                string `json:"url"`
-	APIToken           string `json:"apitoken"`
+	APIKey             string `json:"api_key"`
 	AccessToken        string `json:"access_token"`
 	OnlyGit            bool   `json:"only_git"`
 	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
@@ -148,12 +148,11 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	s.qc.Logger = s.logger
 	s.qc.RefType = s.refType
 	s.customerID = config.Pinpoint.CustomerID
-
 	{
 		opts := api.RequesterOpts{}
 		opts.Logger = s.logger
 		opts.APIURL = s.config.URL + "/api/v4"
-		opts.APIToken = s.config.APIToken
+		opts.APIKey = s.config.APIKey
 		opts.AccessToken = s.config.AccessToken
 		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
 		opts.Concurrency = make(chan bool, 10)
@@ -167,23 +166,26 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 	return nil
 }
 
-func (s *Integration) setIntegrationConfig(data map[string]interface{}) error {
+func (s *Integration) setIntegrationConfig(data rpcdef.IntegrationConfig) error {
 	rerr := func(msg string, args ...interface{}) error {
 		return fmt.Errorf("config validation error: "+msg, args...)
 	}
 	var conf Config
-	err := structmarshal.MapToStruct(data, &conf)
-	if err != nil {
+	if err := structmarshal.MapToStruct(data.Config, &conf); err != nil {
 		return err
 	}
+	if token, ok := data.Config["access_token"].(string); ok && token != "" {
+		conf.APIKey = token
+		conf.URL = "https://gitlab.com"
+	}
+	if conf.APIKey == "" {
+		return rerr("api_key are missing")
+	}
 	if conf.URL == "" {
-		return rerr("url is missing")
+		return rerr("url missing")
 	}
 	if conf.URL == "https://www.gitlab.com" {
 		conf.URL = "https://gitlab.com"
-	}
-	if conf.APIToken == "" && conf.AccessToken == "" {
-		return rerr("apitoken and access_token are missing")
 	}
 	u, err := url.Parse(conf.URL)
 	if err != nil {
@@ -320,7 +322,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 	processOpts.Concurrency = 1
 	processOpts.Projects = reposIface
 
-	processOpts.IntegrationType = integrationid.TypeSourcecode
+	processOpts.IntegrationType = inconfig.IntegrationTypeSourcecode
 	processOpts.CustomerID = s.customerID
 	processOpts.RefType = s.refType
 	processOpts.Sender = repoSender
@@ -550,10 +552,10 @@ func (s *Integration) getRepoURL(nameWithOwner string) (string, error) {
 	}
 	if s.config.AccessToken != "" {
 		u.User = url.UserPassword("oauth2", s.config.AccessToken)
-	} else if s.config.APIToken != "" {
-		u.User = url.UserPassword("token", s.config.APIToken)
+	} else if s.config.APIKey != "" {
+		u.User = url.UserPassword("token", s.config.APIKey)
 	} else {
-		return "", errors.New("no APIToken or AccessToken passed to getRepoURL")
+		return "", errors.New("no APIKey or AccessToken passed to getRepoURL")
 	}
 	u.Path = nameWithOwner
 	return u.String(), nil

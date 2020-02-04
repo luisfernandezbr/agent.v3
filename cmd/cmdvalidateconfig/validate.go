@@ -21,7 +21,6 @@ type Opts struct {
 }
 
 type AgentConfig = cmdintegration.AgentConfig
-type Integration = cmdintegration.Integration
 
 func Run(opts Opts) error {
 	exp, err := newValidator(opts)

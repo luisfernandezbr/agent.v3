@@ -21,17 +21,17 @@ curl -H "Private-Token: $PP_GITLAB_TOKEN" http://lgitlab.com:8084/api/v4/user
 
 ```
 Minimal required args
-go run . export --agent-config-json='{"customer_id":"c1"}' --integrations-json='[{"name":"gitlab", "config":{"url":"https://YOUR_GITLAB_DOMAIN:PORT", "apitoken":"XXX"}}]'
+go run . export --agent-config-json='{"customer_id":"c1"}' --integrations-json='[{"name":"gitlab", "config":{"url":"https://YOUR_GITLAB_DOMAIN:PORT", "api_token":"XXX"}}]'
 ```
 
 ```
 All args
-go run . export --agent-config-json='{"customer_id":"c1", "skip_git":false}' --integrations-json='[{"name":"gitlab", "config":{"url":"https://YOUR_GITLAB_DOMAIN:PORT", "apitoken":"XXX", "excluded_repos":[],"only_git":false,repos:["pinpt/test_repo"], "stop_after_n":1}}]'
+go run . export --agent-config-json='{"customer_id":"c1", "skip_git":false}' --integrations-json='[{"name":"gitlab", "config":{"url":"https://YOUR_GITLAB_DOMAIN:PORT", "api_token":"XXX", "excluded_repos":[],"only_git":false,repos:["pinpt/test_repo"], "stop_after_n":1}}]'
 ```
 
 ```
 URL      string `json:"url"`
-APIToken string `json:"apitoken"`
+APIKey string `json:"api_key"`
 
 // ExcludedRepos are the repos to exclude from processing. This is based on github repo id.
 ExcludedRepos []string `json:"excluded_repos"`

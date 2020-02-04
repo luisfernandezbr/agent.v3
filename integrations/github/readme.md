@@ -19,7 +19,7 @@ You can see GitHub Enterprise version number in the webapp by hovering GitHub Oc
 
 It supports both auth tokens created manually and tokens created using OAuth flow.
 
-In both cases pass the token as apitoken.
+In both cases pass the token as api_token.
 
 - [Create auth token](https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line)
 - [OAuth docs](https://developer.github.com/v3/oauth_authorizations/)
@@ -56,7 +56,7 @@ curl -H "Authorization: bearer $PP_GITHUB_TOKEN" -X POST -d '{"query":"query { v
 
 ```
 Minimal required args
-go run . export --agent-config-json='{"customer_id":"c1"}' --integrations-json='[{"name":"github", "config":{"url":"https://api.github.com", "apitoken":"XXX"}}]'
+go run . export --agent-config-json='{"customer_id":"c1"}' --integrations-json='[{"name":"github", "config":{"url":"https://api.github.com", "api_token":"XXX"}}]'
 ```
 
 ## Datamodel notes

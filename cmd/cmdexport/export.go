@@ -14,11 +14,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
+
 	"github.com/pinpt/agent/pkg/deviceinfo"
 	"github.com/pinpt/agent/pkg/expin"
 	"github.com/pinpt/agent/pkg/expsessions"
 	"github.com/pinpt/agent/pkg/fs"
-	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/pkg/memorylogs"
 
 	plugin "github.com/hashicorp/go-plugin"
@@ -34,7 +35,6 @@ type Opts struct {
 }
 
 type AgentConfig = cmdintegration.AgentConfig
-type Integration = cmdintegration.Integration
 
 func Run(opts Opts) error {
 	exp, err := newExport(opts)
@@ -283,7 +283,7 @@ func (s *export) discardIncrementalData() error {
 }
 
 func (s *export) logLastProcessedTimestamps() error {
-	lastExport := map[integrationid.ID]string{}
+	lastExport := map[inconfig.IntegrationID]string{}
 	for _, ino := range s.Opts.Integrations {
 		in, err := ino.ID()
 		if err != nil {

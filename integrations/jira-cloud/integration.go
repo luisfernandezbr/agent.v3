@@ -17,6 +17,7 @@ import (
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/rpcdef"
+	pjson "github.com/pinpt/go-common/json"
 	"github.com/pinpt/integration-sdk/work"
 )
 
@@ -29,7 +30,7 @@ func main() {
 type Integration struct {
 	logger hclog.Logger
 	agent  rpcdef.Agent
-	config Config
+	config jiracommon.Config
 	qc     api.QueryContext
 
 	common *jiracommon.JiraCommon
@@ -50,29 +51,28 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	return nil
 }
 
-type Config struct {
-	jiracommon.Config
-	RefreshToken string `json:"refresh_token"`
-}
+func setConfig(config rpcdef.ExportConfig) (res jiracommon.Config, rerr error) {
 
-func setConfig(config rpcdef.ExportConfig) (res Config, rerr error) {
 	data := config.Integration
 	validationErr := func(msg string, args ...interface{}) {
-		rerr = fmt.Errorf("config validation error: "+msg, args...)
+		rerr = fmt.Errorf("config validation error: "+msg+"  "+pjson.Stringify(config.Integration.Config), args...)
 	}
-	err := structmarshal.MapToStruct(data, &res)
+
+	err := structmarshal.MapToStruct(data.Config, &res)
 	if err != nil {
 		rerr = err
 		return
+	}
+
+	if res.URL == "" {
+		validationErr("url is missing")
+
 	}
 	if config.UseOAuth {
 		// no required fields for OAuth
 		return
 	}
-	if res.URL == "" {
-		validationErr("url is missing")
-		return
-	}
+
 	if res.Username == "" {
 		validationErr("username is missing")
 		return
@@ -153,8 +153,8 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 		CustomerID:       config.Pinpoint.CustomerID,
 		Request:          s.qc.Request,
 		Agent:            s.agent,
-		ExcludedProjects: s.config.ExcludedProjects,
-		IncludedProjects: s.config.IncludedProjects,
+		ExcludedProjects: s.config.Exclusions,
+		IncludedProjects: s.config.Inclusions,
 		Projects:         s.config.Projects,
 	})
 	if err != nil {

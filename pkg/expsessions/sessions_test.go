@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/pkg/expin"
-	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +22,7 @@ func (s lastProcessedMock) Set(value interface{}, key ...string) error {
 	return nil
 }
 
-var testIn = expin.Export{Index: 1, Integration: integrationid.ID{Name: "in1"}}
+var testIn = expin.Export{Index: 1, Integration: inconfig.IntegrationID{Name: "in1"}}
 
 var inPre = testIn.String() + "/"
 

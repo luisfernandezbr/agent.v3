@@ -3,8 +3,9 @@ package main
 import (
 	"fmt"
 
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
+
 	"github.com/pinpt/agent/integrations/pkg/repoprojects"
-	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/rpcdef"
 
 	"github.com/pinpt/integration-sdk/work"
@@ -13,10 +14,10 @@ import (
 func (s *Integration) exportWork() (exportResults []rpcdef.ExportProject, rerr error) {
 
 	var orgname string
-	if s.Creds.Organization != nil {
-		orgname = *s.Creds.Organization
+	if s.Creds.Organization != "" {
+		orgname = s.Creds.Organization
 	} else {
-		orgname = *s.Creds.CollectionName
+		orgname = s.Creds.CollectionName
 	}
 	sender, err := s.orgSession.Session(work.ProjectModelName.String(), orgname, orgname)
 	if err != nil {
@@ -74,7 +75,7 @@ func (s *Integration) exportWork() (exportResults []rpcdef.ExportProject, rerr e
 
 	processOpts.Concurrency = s.Concurrency
 	processOpts.Projects = projectsIface
-	processOpts.IntegrationType = integrationid.TypeSourcecode
+	processOpts.IntegrationType = inconfig.IntegrationTypeSourcecode
 	processOpts.CustomerID = s.customerid
 	processOpts.RefType = s.RefType.String()
 	processOpts.Sender = sender

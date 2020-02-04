@@ -5,9 +5,9 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/pkg/ids2"
-	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/go-common/datamodel"
 )
@@ -18,7 +18,7 @@ type ProcessOpts struct {
 	Concurrency int
 	Projects    []RepoProject
 
-	IntegrationType integrationid.Type
+	IntegrationType inconfig.IntegrationType
 	CustomerID      string
 	RefType         string
 
@@ -32,7 +32,7 @@ type Process struct {
 }
 
 func NewProcess(opts ProcessOpts) *Process {
-	if opts.Logger == nil || opts.ProjectFn == nil || opts.Concurrency == 0 || opts.IntegrationType == "" || opts.CustomerID == "" || opts.RefType == "" || opts.Sender == nil {
+	if opts.Logger == nil || opts.ProjectFn == nil || opts.Concurrency == 0 || opts.IntegrationType.String() == "unset" || opts.CustomerID == "" || opts.RefType == "" || opts.Sender == nil {
 		panic("provide all args")
 	}
 	s := &Process{}
@@ -43,9 +43,9 @@ func NewProcess(opts ProcessOpts) *Process {
 func (s *Process) projectID(project RepoProject) string {
 	ids := ids2.New(s.opts.CustomerID, s.opts.RefType)
 	switch s.opts.IntegrationType {
-	case integrationid.TypeSourcecode:
+	case inconfig.IntegrationTypeSourcecode:
 		return ids.CodeRepo(project.GetID())
-	case integrationid.TypeWork:
+	case inconfig.IntegrationTypeWork:
 		return ids.WorkProject(project.GetID())
 	default:
 		panic(fmt.Errorf("not supported IntegrationType: %v", s.opts.IntegrationType))

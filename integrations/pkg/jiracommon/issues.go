@@ -5,11 +5,11 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 	"github.com/pinpt/agent/pkg/date"
-	"github.com/pinpt/agent/pkg/integrationid"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/work"
 )
@@ -63,7 +63,7 @@ func (s *JiraCommon) IssuesAndChangelogs(
 	}
 	processOpts.Projects = projectsIface
 
-	processOpts.IntegrationType = integrationid.TypeSourcecode
+	processOpts.IntegrationType = inconfig.IntegrationTypeSourcecode
 	processOpts.CustomerID = s.opts.CustomerID
 	processOpts.RefType = "jira"
 	processOpts.Sender = projectSender

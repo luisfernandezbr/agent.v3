@@ -30,7 +30,7 @@ go run . export --agent-config-json='{"customer_id":"c1", "skip_git":false}' --i
 
 ```
 URL      string `json:"url"`
-APIToken string `json:"apitoken"`
+APIKey string `json:"api_key"`
 
 // ExcludedRepos are the repos to exclude from processing. This is based on github repo id.
 ExcludedRepos []string `json:"excluded_repos"`

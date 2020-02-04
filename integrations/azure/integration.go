@@ -5,11 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent/integrations/azuretfs/api"
+	"github.com/pinpt/agent/integrations/azure/api"
 	"github.com/pinpt/agent/integrations/pkg/ibase"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/pkg/structmarshal"
@@ -72,6 +71,7 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 }
 
 func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, rerr error) {
+
 	err := s.initConfig(ctx, config)
 	if err != nil {
 		rerr = err
@@ -111,6 +111,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 }
 
 func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ValidationResult, err error) {
+
 	if err = s.initConfig(ctx, config); err != nil {
 		res.Errors = append(res.Errors, err.Error())
 		return res, err
@@ -138,17 +139,18 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 }
 
 func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.OnboardExportType, config rpcdef.ExportConfig) (rpcdef.OnboardExportResult, error) {
+
 	var res rpcdef.OnboardExportResult
 	if err := s.initConfig(ctx, config); err != nil {
 		return res, err
 	}
 	switch objectType {
 	case rpcdef.OnboardExportTypeRepos:
-		return s.onboardExportRepos(ctx, config)
+		return s.onboardExportRepos()
 	case rpcdef.OnboardExportTypeProjects:
-		return s.onboardExportProjects(ctx, config)
+		return s.onboardExportProjects()
 	case rpcdef.OnboardExportTypeWorkConfig:
-		return s.onboardWorkConfig(ctx, config)
+		return s.onboardWorkConfig()
 	default:
 		s.logger.Error("objectType not supported", "objectType", objectType)
 		res.Error = rpcdef.ErrOnboardExportNotSupported
@@ -157,49 +159,52 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 }
 
 func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig) (err error) {
-	// type IntegrationType
-	if err = structmarshal.MapToStruct(config.Integration, &s); err != nil {
+
+	err = structmarshal.StructToStruct(config.Integration.Config, &s.Creds)
+	if err != nil {
 		return err
 	}
-	var istfs bool
-	if s.RefType == RefTypeTFS {
-		istfs = true
-		if s.Creds.CollectionName == nil {
-			s.Creds.CollectionName = pstrings.Pointer("DefaultCollection")
-		}
+	if s.Creds.Organization != "" {
+		s.RefType = RefTypeAzure
+
 		if s.Creds.Username == "" {
-			return errors.New("missing username")
+			s.Creds.Username = s.Creds.Organization
 		}
-		if s.Creds.Password == "" {
-			return errors.New("missing password")
-		}
-	} else if s.RefType == RefTypeAzure {
-		if s.Creds.Organization == nil {
-			return fmt.Errorf("missing organization %s", stringify(s))
-		}
-		if s.Creds.Username == "" {
-			s.Creds.Username = *s.Creds.Organization
-		}
+
 		if s.Creds.Password == "" {
 			s.Creds.Password = s.Creds.APIKey
 		}
+
+	} else if s.Creds.CollectionName != "" {
+		s.RefType = RefTypeTFS
+
+		if s.Creds.Username == "" {
+			return errors.New("missing username")
+		}
+
+		if s.Creds.Password == "" {
+			return errors.New("missing password")
+		}
+
 	} else {
-		return errors.New(`"retype" must be "` + RefTypeTFS.String() + `" or "` + RefTypeAzure.String())
+		return fmt.Errorf("missing organization or collection %s", stringify(config.Integration.Config))
 	}
-	if s.Concurrency == 0 {
-		s.Concurrency = 10
+
+	if s.Creds.URL == "" {
+		return fmt.Errorf("missing url %s", stringify(config.Integration.Config))
 	}
+
+	if s.Creds.APIKey == "" {
+		return fmt.Errorf("missing api key %s", stringify(config.Integration.Config))
+	}
+	s.IntegrationType = IntegrationType(config.Integration.Type.String())
+
 	if s.IntegrationType != IntegrationTypeCode && s.IntegrationType != IntegrationTypeIssues {
 		return errors.New(`"type" must be "` + IntegrationTypeIssues.String() + `", "` + IntegrationTypeCode.String() + `"`)
 	}
-	if s.Creds.URL == "" {
-		return errors.New("missing url")
-	}
-	if s.Creds.APIKey == "" {
-		return errors.New("missing api_key")
-	}
+	s.Concurrency = 10
 	s.customerid = config.Pinpoint.CustomerID
-	s.api = api.NewAPI(ctx, s.logger, s.Concurrency, s.customerid, s.RefType.String(), s.Creds, istfs)
+	s.api = api.NewAPI(ctx, s.logger, s.Concurrency, s.customerid, s.RefType.String(), s.Creds, s.RefType == RefTypeTFS)
 	return nil
 }
 

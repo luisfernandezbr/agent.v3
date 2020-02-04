@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
+
 	"github.com/pinpt/agent/rpcdef/proto"
 	"google.golang.org/grpc"
 
@@ -23,9 +25,10 @@ type Integration interface {
 	OnboardExport(ctx context.Context, objectType OnboardExportType, config ExportConfig) (OnboardExportResult, error)
 }
 
+type IntegrationConfig inconfig.Integration
 type ExportConfig struct {
 	Pinpoint    ExportConfigPinpoint
-	Integration map[string]interface{}
+	Integration IntegrationConfig
 	UseOAuth    bool
 }
 
@@ -160,9 +163,7 @@ func (s *IntegrationClient) Destroy() {
 	s.agentGRPCServer.Stop()
 }
 
-func (s *IntegrationClient) Export(
-	ctx context.Context,
-	exportConfig ExportConfig) (res ExportResult, _ error) {
+func (s *IntegrationClient) Export(ctx context.Context, exportConfig ExportConfig) (res ExportResult, _ error) {
 
 	args := &proto.IntegrationExportReq{}
 	var err error
@@ -185,8 +186,7 @@ func (s *IntegrationClient) Export(
 	return res, nil
 }
 
-func (s *IntegrationClient) ValidateConfig(ctx context.Context,
-	exportConfig ExportConfig) (res ValidationResult, _ error) {
+func (s *IntegrationClient) ValidateConfig(ctx context.Context, exportConfig ExportConfig) (res ValidationResult, _ error) {
 	args := &proto.IntegrationValidateConfigReq{}
 	var err error
 	args.Config, err = exportConfig.proto()

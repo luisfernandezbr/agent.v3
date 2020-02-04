@@ -17,7 +17,7 @@ type Opts struct {
 }
 
 var integrationBinaries = []string{
-	"azuretfs",
+	"azure",
 	"bitbucket",
 	"github",
 	"gitlab",

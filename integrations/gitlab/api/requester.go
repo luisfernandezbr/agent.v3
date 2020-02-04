@@ -21,7 +21,7 @@ import (
 type RequesterOpts struct {
 	Logger             hclog.Logger
 	APIURL             string
-	APIToken           string
+	APIKey             string
 	AccessToken        string
 	InsecureSkipVerify bool
 	ServerType         ServerType
@@ -110,10 +110,10 @@ func (e *Requester) makeRequestRetry(req *internalRequest, generalRetry int) (pa
 }
 
 func (e *Requester) setAuthHeader(req *http.Request) {
-	if e.opts.APIToken == "" {
+	if e.opts.APIKey == "" {
 		req.Header.Set("Authorization", "bearer "+e.opts.AccessToken)
 	} else {
-		req.Header.Set("Private-Token", e.opts.APIToken)
+		req.Header.Set("Private-Token", e.opts.APIKey)
 	}
 }
 

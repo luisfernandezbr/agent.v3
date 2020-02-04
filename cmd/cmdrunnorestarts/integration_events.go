@@ -10,6 +10,7 @@ import (
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/encrypt"
+	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"
 	pjson "github.com/pinpt/go-common/json"
@@ -70,9 +71,18 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 			return sendEvent(resp)
 		}
 
-		auth := integration.Authorization.ToMap()
+		integration2 := inconfig.IntegrationAgent{}
+		integration2.Name = integration.Name
+		integration2.Type = inconfig.IntegrationType(integration.SystemType)
 
-		res, err := s.validate(ctx, integration.Name, headers.MessageID, inconfig.IntegrationType(req.Integration.SystemType), auth)
+		structmarshal.StructToStruct(integration.Authorization, &integration2.Config)
+
+		if integration.Authorization.APIToken != nil {
+			integration2.Config.APIKey = *integration.Authorization.APIToken
+		}
+		inconfig.ConvertEdgeCases(&integration2)
+
+		res, err := s.validate(ctx, headers.MessageID, integration2)
 		if err != nil {
 			return rerr(fmt.Errorf("could not call validate, err: %v", err))
 		}
@@ -81,7 +91,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 			return rerr(errors.New(strings.Join(res.Errors, ", ")))
 		}
 
-		encrAuthData, err := encrypt.EncryptString(pjson.Stringify(auth), s.conf.PPEncryptionKey)
+		encrAuthData, err := encrypt.EncryptString(pjson.Stringify(integration.Authorization), s.conf.PPEncryptionKey)
 		if err != nil {
 			return rerr(err)
 		}

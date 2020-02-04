@@ -19,9 +19,6 @@ type Opts struct {
 	ExportType rpcdef.OnboardExportType
 }
 
-type AgentConfig = cmdintegration.AgentConfig
-type Integration = cmdintegration.Integration
-
 func Run(opts Opts) error {
 	exp, err := newExport(opts)
 	if err != nil {

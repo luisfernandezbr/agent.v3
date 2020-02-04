@@ -22,30 +22,15 @@ func depointer(data map[string]interface{}) (map[string]interface{}, error) {
 	return res, nil
 }
 
-func (s *runner) validate(ctx context.Context, name string, messageID string, systemType inconfig.IntegrationType, config map[string]interface{}) (res cmdvalidateconfig.Result, _ error) {
-	s.logger.Info("validating config for integration", "name", name)
-	// convert to non pointer strings
-	config, err := depointer(config)
-	if err != nil {
-		return res, err
-	}
-	inConf, agentIn, err := inconfig.ConvertConfig(name, systemType, config, []string{}, []string{})
-	if err != nil {
-		return res, err
-	}
-	in := cmdvalidateconfig.Integration{}
-	in.Name = agentIn.Name
-	in.Type = agentIn.Type
-	in.Config = inConf
-
-	integrations := []cmdvalidateconfig.Integration{in}
+func (s *runner) validate(ctx context.Context, messageID string, integration inconfig.IntegrationAgent) (res cmdvalidateconfig.Result, _ error) {
+	s.logger.Info("validating config for integration", "name", integration.Name)
 
 	c, err := subcommand.New(subcommand.Opts{
 		Logger:            s.logger,
 		Tmpdir:            s.fsconf.Temp,
 		IntegrationConfig: s.agentConfig,
 		AgentConfig:       s.conf,
-		Integrations:      integrations,
+		Integrations:      []inconfig.IntegrationAgent{integration},
 		DeviceInfo:        s.deviceInfo,
 	})
 	if err != nil {
