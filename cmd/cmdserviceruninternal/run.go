@@ -10,7 +10,9 @@ import (
 )
 
 func Run(logger hclog.Logger, pinpointRoot string) error {
-	service.Run(ppservice.Names, func(cancel chan bool) error {
+	service.Run(ppservice.Names, service.Opts{
+		PinpointRoot: pinpointRoot,
+	}, func(cancel chan bool) error {
 		opts := cmdrun.Opts{
 			Logger:       logger,
 			PinpointRoot: pinpointRoot,

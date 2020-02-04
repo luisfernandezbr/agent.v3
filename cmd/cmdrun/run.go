@@ -18,6 +18,7 @@ import (
 	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/agent/pkg/pservice"
+	"github.com/pinpt/agent/pkg/service"
 )
 
 type Opts struct {
@@ -56,23 +57,30 @@ func (s *runner) Run(cancel chan bool) error {
 	resetFailuresAfter := 24 * time.Hour
 	done, cancelPservice := pservice.AsyncRunBg(pservice.Retrying(s.logger, s.runService, delay, resetFailuresAfter))
 
-	s.CaptureShutdown(cancelPservice, cancel, done)
-	return nil
+	return s.CaptureShutdown(cancelPservice, cancel, done)
 }
 
-func (s *runner) CaptureShutdown(cancelPservice func(), cancelRunner chan bool, done chan error) {
+func (s *runner) CaptureShutdown(cancelPservice func(), cancelRunner chan bool, done chan error) error {
 	cancelSignal := make(chan os.Signal, 1)
 	signal.Notify(cancelSignal, os.Interrupt, syscall.SIGTERM)
 	select {
 	case <-cancelSignal:
 		s.logger.Info("signal received exiting")
+		if cancelRunner != nil {
+			<-cancelRunner
+		}
 	case <-cancelRunner:
 		s.logger.Info("cancel received from service control")
+	case e := <-done:
+		s.logger.Info("exited", "err", e)
+		cancelPservice()
+		return service.ErrUninstallExit
 	}
 
 	cancelPservice()
 	<-done
 	s.logger.Info("exited")
+	return nil
 }
 
 func (s *runner) runService(ctx context.Context) error {
@@ -98,6 +106,10 @@ func (s *runner) runService(ctx context.Context) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = stderr
 	runErr := cmd.Run()
+	if runErr.Error() == "exit status 2" {
+		s.logger.Info("exited from run --no-restarts")
+		return runErr
+	}
 	err = errFile.Sync()
 	if err != nil {
 		return fmt.Errorf("could not sync file for err output: %v", err)

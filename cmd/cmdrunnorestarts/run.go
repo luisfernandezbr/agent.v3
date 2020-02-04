@@ -224,6 +224,19 @@ func (s *runner) Run(ctx context.Context) error {
 		}
 		defer close()
 	}
+	finishMain := make(chan bool, 1)
+	{
+		close, err := s.handleUninstallEvents(ctx, finishMain)
+		if err != nil {
+			return fmt.Errorf("error handling uninstall requests, err: %v", err)
+		}
+		defer close()
+	}
+
+	// go func() {
+	// 	<-time.After(time.Second * 20)
+	// 	finishMain <- true
+	// }()
 
 	/*
 		if os.Getenv("PP_AGENT_SERVICE_TEST_MOCK") != "" {
@@ -236,8 +249,7 @@ func (s *runner) Run(ctx context.Context) error {
 
 	s.logger.Info("waiting for requests...")
 
-	block := make(chan bool)
-	<-block
+	<-finishMain
 
 	return nil
 }

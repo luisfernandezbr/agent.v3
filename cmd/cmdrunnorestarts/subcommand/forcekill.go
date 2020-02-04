@@ -1,4 +1,4 @@
-package forcekill
+package subcommand
 
 import (
 	"fmt"
@@ -6,11 +6,10 @@ import (
 	"os/exec"
 	"runtime"
 
-	hclog "github.com/hashicorp/go-hclog"
 	pps "github.com/mitchellh/go-ps"
 )
 
-func Kill(logger hclog.Logger, process *os.Process) error {
+func Kill(opts KillCmdOpts, process *os.Process) error {
 	prs, _ := pps.Processes()
 	pid := process.Pid
 	array := []int{pid}
@@ -43,11 +42,11 @@ func Kill(logger hclog.Logger, process *os.Process) error {
 		pr, _ := os.FindProcess(p)
 		if runtime.GOOS == "windows" {
 			if err := exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprintf("%d", p)).Run(); err != nil {
-				logger.Debug("error calling taskkill", "err", err)
+				opts.PrintLog("error calling taskkill", "err", err)
 			}
 		} else {
 			if err := pr.Signal(os.Interrupt); err != nil {
-				logger.Debug("error calling Signal(os.Interrupt)", "err", err)
+				opts.PrintLog("error calling Signal(os.Interrupt)", "err", err)
 			}
 		}
 	}

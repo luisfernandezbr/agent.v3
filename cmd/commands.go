@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	hclog "github.com/hashicorp/go-hclog"
+	pservice "github.com/kardianos/service"
 	"github.com/pinpt/agent/cmd/cmdenroll"
 	"github.com/pinpt/agent/cmd/cmdexport"
 	"github.com/pinpt/agent/cmd/cmdexportonboarddata"
@@ -17,6 +19,7 @@ import (
 	"github.com/pinpt/agent/cmd/pkg/cmdlogger"
 	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/agent/pkg/fsconf"
+	"github.com/pinpt/agent/pkg/service"
 	"github.com/pinpt/agent/rpcdef"
 	pos "github.com/pinpt/go-common/os"
 	"github.com/spf13/cobra"
@@ -284,9 +287,22 @@ func runWithRestarts(cmd *cobra.Command, args []string) {
 	opts.Logger = logger
 	opts.PinpointRoot = pinpointRoot
 	err = cmdrun.Run(ctx, opts, nil)
-	if err != nil {
-		exitWithErr(logger, err)
+	if err == service.ErrUninstallExit && pservice.Interactive() {
+		err = nil
+		opts := service.UninstallOpts{}
+		opts.PrintLog = func(msg string, args ...interface{}) {
+			logger.Info(msg, args)
+		}
+		err := service.UninstallAndDelete(opts, pinpointRoot)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+	} else {
+		if err != nil {
+			exitWithErr(logger, err)
+		}
 	}
+
 }
 
 var cmdRun = &cobra.Command{
@@ -297,7 +313,7 @@ var cmdRun = &cobra.Command{
 		noRestarts, _ := cmd.Flags().GetBool("no-restarts")
 		if noRestarts {
 			runNoRestarts(cmd, args)
-			return
+			os.Exit(2) // exit code to let cmdRunWithRestart know it is an uninstall event
 		}
 		runWithRestarts(cmd, args)
 	},

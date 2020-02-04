@@ -10,6 +10,9 @@ clean:
 docker-dev:
 	docker run --rm -it -v $(GOPATH)/src/github.com/pinpt/agent:/go/src/github.com/pinpt/agent $(shell docker build -q . -f docker/dev/Dockerfile)
 
+docker-dev-ubuntu:
+	docker run --rm -it -v $(GOPATH)/src/github.com/pinpt/agent:/go/src/github.com/pinpt/agent $(shell docker build -q . -f docker/dev/ubuntu/Dockerfile)
+
 dependencies:
 	@rm -rf .vendor-new
 	@dep ensure -v -vendor-only

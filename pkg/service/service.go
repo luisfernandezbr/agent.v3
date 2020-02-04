@@ -71,9 +71,10 @@ func status(logger hclog.Logger, svc service.Service) error {
 	return nil
 }
 
-func Run(names Names, serviceFunc func(cancel chan bool) error) {
+func Run(names Names, opts Opts, serviceFunc func(cancel chan bool) error) {
 
-	prg := newProgram(serviceFunc)
+	prg := newProgram(names.Name, opts, serviceFunc)
+	prg.names = names
 	config := names.serviceConfig()
 
 	svc, err := service.New(prg, config)
@@ -88,7 +89,6 @@ func Run(names Names, serviceFunc func(cancel chan bool) error) {
 	err = svc.Run()
 	if err != nil {
 		logger.Error(err)
-		return
 	}
 	return
 }

@@ -12,3 +12,7 @@ cat /usr/local/var/log/SERVICE_NAME.out.log
 # Alpine (openrc)
 - /var/log/SERVICE_NAME.log 
 - /var/log/SERVICE_NAME.err
+
+# Ubuntu Bionic(docker) (service)
+- /var/log/SERVICE_NAME.log 
+- /var/log/SERVICE_NAME.err

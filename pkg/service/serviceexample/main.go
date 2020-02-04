@@ -79,7 +79,7 @@ var cmdRun = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := newLogger()
-		service.Run(serviceNames, func(cancel chan bool) error {
+		service.Run(serviceNames, service.Opts{}, func(cancel chan bool) error {
 			logger.Info("waiting for cancellation")
 			<-cancel
 			logger.Info("cancelled")

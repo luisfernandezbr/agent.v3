@@ -11,8 +11,9 @@ When service option is selected, the agent will be installed as a standard OS se
 The following platforms are supported for OS service:
 
 - Windows
-- Linux: openrc, tested in Alpine
-- Linux: systemd, tested in Ubuntu
+- Linux Ubuntu (systemd)
+- Linux Alpine (openrc)
+- Linux Ubuntu (docker, no systemd)
 
 When installed as OS service, agent service will be automatically started on computer restarts and the logs will be available in a standard way which differs by service manager.
 
@@ -41,7 +42,7 @@ When running on Windows, service logs only contain information about service sta
 - Open Event Viewer
 - Windows Logs -> Application
 
-#### Linux Systemd (Ubuntu)
+#### Linux Ubuntu (systemd)
 
 ```
 Check status
@@ -56,9 +57,7 @@ Start/Stop/Restart
 sudo systemctl restart pinpoint-agent
 ```
 
-#### Linux Alpine (OpenRC)
-
-- TODO: incomplete support, can't stop/restart service
+#### Linux Alpine (openrc)
 
 ```
 List services
@@ -67,6 +66,24 @@ Show status
 rc-service pinpoint-agent ((start, stop, restart, status)
 
 When using OpenRC, all logs from the service would be available in the following locations:
+
+- /var/log/SERVICE_NAME.err
+Logs from the service, as well as service start/stop events are logged in err.
+
+- /var/log/SERVICE_NAME.log 
+We do not log anything to regular log file.
+```
+
+#### Linux Ubuntu (docker, no systemd)
+
+```
+List services
+service --status-all
+
+Show status
+service pinpoint-agent ((start, stop, restart, status)
+
+When using Service, all logs from the service would be available in the following locations:
 
 - /var/log/SERVICE_NAME.err
 Logs from the service, as well as service start/stop events are logged in err.

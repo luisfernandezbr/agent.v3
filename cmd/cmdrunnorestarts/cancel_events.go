@@ -53,7 +53,11 @@ func (s *runner) handleCancelEvents(ctx context.Context) (closefunc, error) {
 			s.logger.Error("error in cancel request", "err", err)
 
 		} else {
-			if err := subcommand.KillCommand(s.logger, cmdname); err != nil {
+			if err := subcommand.KillCommand(subcommand.KillCmdOpts{
+				PrintLog: func(msg string, args ...interface{}) {
+					s.logger.Debug(msg, args)
+				},
+			}, cmdname); err != nil {
 				errstr := err.Error()
 				resp.Error = &errstr
 				s.logger.Error("error processing cancel request", "err", err.Error())
