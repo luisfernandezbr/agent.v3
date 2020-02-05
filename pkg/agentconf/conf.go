@@ -22,8 +22,8 @@ type Config struct {
 	IntegrationsDir string `json:"integrations-dir"`
 	// LogLevel to use for the service (optional)
 	LogLevel string `json:"log_level"`
+
 	// ExtraIntegrations defines additional integrations that will run on every export trigger in run command. This is needed to run a custom integration for one of our customers. You need to add these custom integrations to config manually after enroll.
-	Config            inconfig.IntegrationAgent   `json:"config"`
 	ExtraIntegrations []inconfig.IntegrationAgent `json:"extra_integrations"`
 }
 
