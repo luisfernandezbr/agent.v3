@@ -1,8 +1,6 @@
 package jiracommon
 
 import (
-	"net/url"
-
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/rpcdef"
 
@@ -13,7 +11,7 @@ type Opts struct {
 	WebsiteURL       string
 	Logger           hclog.Logger
 	CustomerID       string
-	Request          func(objPath string, params url.Values, res interface{}) error
+	Req              jiracommonapi.Requester
 	Agent            rpcdef.Agent
 	ExcludedProjects []string
 	IncludedProjects []string
@@ -29,7 +27,7 @@ type JiraCommon struct {
 
 func New(opts Opts) (*JiraCommon, error) {
 	s := &JiraCommon{}
-	if opts.WebsiteURL == "" || opts.CustomerID == "" || opts.Request == nil || opts.Agent == nil {
+	if opts.WebsiteURL == "" || opts.CustomerID == "" || opts.Req == nil || opts.Agent == nil {
 		panic("provide required params")
 	}
 	s.opts = opts
@@ -49,7 +47,7 @@ func (s *JiraCommon) CommonQC() jiracommonapi.QueryContext {
 	res.CustomerID = s.opts.CustomerID
 	res.Logger = s.opts.Logger
 	res.ExportUser = s.users.ExportUser
-	res.Request = s.opts.Request
+	res.Req = s.opts.Req
 	res.Validate()
 	return res
 }

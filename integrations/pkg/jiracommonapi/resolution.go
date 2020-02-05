@@ -8,7 +8,7 @@ func Resolution(qc QueryContext) (res []string, rerr error) {
 		Name string `json:"name"`
 	}
 
-	err := qc.Request(objectPath, nil, &resolutions)
+	err := qc.Req.Get(objectPath, nil, &resolutions)
 	if err != nil {
 		rerr = err
 		return

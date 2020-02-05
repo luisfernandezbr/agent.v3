@@ -8,7 +8,7 @@ func ServerVersion(qc QueryContext) (serverVersion string, err error) {
 		Version string `json:"version"`
 	}
 
-	err = qc.Request(objectPath, nil, &serverInfo)
+	err = qc.Req.Get(objectPath, nil, &serverInfo)
 	if err != nil {
 		return
 	}

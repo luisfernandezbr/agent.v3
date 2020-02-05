@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"runtime"
 	"time"
 
@@ -46,6 +47,10 @@ func (s *Integration) ValidateConfig(ctx context.Context, config rpcdef.ExportCo
 func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.OnboardExportType, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
 	res.Error = rpcdef.ErrOnboardExportNotSupported
 	return
+}
+
+func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef.ExportConfig) error {
+	return errors.New("mutate not supported")
 }
 
 func main() {

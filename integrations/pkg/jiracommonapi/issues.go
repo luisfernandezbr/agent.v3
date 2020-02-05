@@ -108,7 +108,7 @@ func IssuesAndChangelogsPage(
 		} `json:"issues"`
 	}
 
-	err := qc.Request(objectPath, params, &rr)
+	err := qc.Req.Get(objectPath, params, &rr)
 	if err != nil {
 		rerr = err
 		return

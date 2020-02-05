@@ -31,7 +31,7 @@ func ProjectsOnboard(qc QueryContext) (res []*agent.ProjectResponseProjects, rer
 		} `json:"projectCategory"`
 	}
 
-	err := qc.Request(objectPath, params, &rr)
+	err := qc.Req.Get(objectPath, params, &rr)
 	if err != nil {
 		rerr = err
 		return

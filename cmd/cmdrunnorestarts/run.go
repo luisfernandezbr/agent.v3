@@ -224,6 +224,14 @@ func (s *runner) Run(ctx context.Context) error {
 		}
 		defer close()
 	}
+	{
+		close, err := s.handleMutationEvents(ctx)
+		if err != nil {
+			return fmt.Errorf("error handling mutation requests, err: %v", err)
+		}
+		defer close()
+	}
+
 	finishMain := make(chan bool, 1)
 	{
 		close, err := s.handleUninstallEvents(ctx, finishMain)

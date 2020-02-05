@@ -23,6 +23,8 @@ type Integration interface {
 	ValidateConfig(context.Context, ExportConfig) (ValidationResult, error)
 	// OnboardExport returns the data used in onboard. Kind is one of users, repos, projects.
 	OnboardExport(ctx context.Context, objectType OnboardExportType, config ExportConfig) (OnboardExportResult, error)
+	// Mutate changes integration data
+	Mutate(ctx context.Context, fn string, data string, config ExportConfig) error
 }
 
 type IntegrationConfig inconfig.Integration
@@ -223,6 +225,22 @@ func (s *IntegrationClient) OnboardExport(ctx context.Context, objectType Onboar
 	return res, nil
 }
 
+func (s *IntegrationClient) Mutate(ctx context.Context, mutateFn string, mutateData string, exportConfig ExportConfig) error {
+	args := &proto.IntegrationMutateReq{}
+	var err error
+	args.Config, err = exportConfig.proto()
+	if err != nil {
+		return err
+	}
+	args.MutateFn = mutateFn
+	args.MutateData = mutateData
+	_, err = s.client.Mutate(ctx, args)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type IntegrationServer struct {
 	Impl   Integration
 	broker *plugin.GRPCBroker
@@ -311,6 +329,21 @@ func (s *IntegrationServer) OnboardExport(ctx context.Context, req *proto.Integr
 		return res, r0.Error
 	}
 	res.DataJson, err = json.Marshal(r0.Data)
+	if err != nil {
+		return res, err
+	}
+	return res, nil
+}
+
+func (s *IntegrationServer) Mutate(ctx context.Context, req *proto.IntegrationMutateReq) (res *proto.IntegrationMutateResp, _ error) {
+	res = &proto.IntegrationMutateResp{}
+
+	config, err := exportConfigFromProto(req.Config)
+	if err != nil {
+		return res, err
+	}
+
+	err = s.Impl.Mutate(ctx, req.MutateFn, req.MutateData, config)
 	if err != nil {
 		return res, err
 	}

@@ -8,7 +8,7 @@ func Labels(qc QueryContext) (res []string, rerr error) {
 		Values []string `json:"values"`
 	}
 
-	err := qc.Request(objectPath, nil, &labelsInfo)
+	err := qc.Req.Get(objectPath, nil, &labelsInfo)
 	if err != nil {
 		rerr = err
 		return
