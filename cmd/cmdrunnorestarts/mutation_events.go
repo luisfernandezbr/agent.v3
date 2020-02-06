@@ -63,20 +63,27 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 			return sendError(fmt.Errorf("error parsing header. err %v", err))
 		}
 
-		conf, err := inconfig.AuthFromEvent(req.Integration.ToMap(), s.conf.PPEncryptionKey)
-		conf.Type = inconfig.IntegrationType(req.Integration.SystemType)
+		data := map[string]interface{}{
+			"name": req.IntegrationName,
+			"authorization": map[string]interface{}{
+				"authorization": req.Authorization.RefreshToken,
+			},
+		}
+
+		conf, err := inconfig.AuthFromEvent(data, s.conf.PPEncryptionKey)
+		conf.Type = inconfig.IntegrationType(req.SystemType)
 		if err != nil {
 			return sendError(err)
 		}
 
 		var mutationData interface{}
-		err = json.Unmarshal([]byte(req.MutationData), &mutationData)
+		err = json.Unmarshal([]byte(req.Data), &mutationData)
 		if err != nil {
 			return sendError(fmt.Errorf("mutation data is not valid json: %v", err))
 		}
 
 		mutation := cmdmutate.Mutation{}
-		mutation.Fn = req.MutationFn
+		mutation.Fn = req.Action.String()
 		mutation.Data = mutationData
 		res, err := s.execMutate(context.Background(), conf, header.MessageID, mutation)
 		if err != nil {

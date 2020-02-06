@@ -7,6 +7,7 @@ import (
 
 	"github.com/pinpt/agent/integrations/jira-cloud/api"
 	"github.com/pinpt/agent/rpcdef"
+	"github.com/pinpt/go-datamodel/agent"
 )
 
 func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef.ExportConfig) (rerr error) {
@@ -16,8 +17,15 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 		return
 	}
 
-	switch fn {
-	case "issue_add_comment":
+	var action agent.IntegrationMutationRequestAction
+	err = action.UnmarshalJSON([]byte(fn))
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	switch action {
+	case agent.IntegrationMutationRequestActionIssueAddComment:
 		var obj struct {
 			IssueRefID string `json:"ref_id"`
 			Body       string `json:"body"`
