@@ -15,14 +15,15 @@ import (
 
 type Mutation struct {
 	// Fn is the name of the mutation function
-	Fn string `json:"mutation"`
+	Fn string `json:"fn"`
 	// Data contains mutation parameters as json
 	Data interface{} `json:"data"`
 }
 
 type Result struct {
-	Success bool   `json:"success"`
-	Error   string `json:"error"`
+	Objects rpcdef.MutatedObjects `json:"objects"`
+	Success bool                  `json:"success"`
+	Error   string                `json:"error"`
 }
 
 type Opts struct {
@@ -77,13 +78,14 @@ func newExport(opts Opts) (*export, error) {
 }
 
 func (s *export) runAndPrint() error {
-	err := s.run()
+	objects, err := s.run()
 
 	res := Result{}
 	if err != nil {
 		res.Error = err.Error()
 	} else {
 		res.Success = true
+		res.Objects = objects
 	}
 
 	b, err := json.Marshal(res)
@@ -102,24 +104,27 @@ func (s *export) runAndPrint() error {
 	return nil
 }
 
-func (s *export) run() error {
+func (s *export) run() (_ rpcdef.MutatedObjects, rerr error) {
 	ctx := context.Background()
 	client := s.integration.RPCClient()
 
 	data, err := json.Marshal(s.Opts.Mutation.Data)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
-	err = client.Mutate(ctx, s.Opts.Mutation.Fn, string(data), s.exportConfig)
+	objects, err := client.Mutate(ctx, s.Opts.Mutation.Fn, string(data), s.exportConfig)
 	if err != nil {
 		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
-		return fmt.Errorf("could not execute mutation: %v %v err: %v", s.IntegrationIDs[0], s.Opts.Mutation.Fn, err)
+		rerr = fmt.Errorf("could not execute mutation: %v %v err: %v", s.IntegrationIDs[0], s.Opts.Mutation.Fn, err)
+		return
 	}
 	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
 	if err != nil {
-		return fmt.Errorf("error closing integration, err: %v", err)
+		rerr = fmt.Errorf("error closing integration, err: %v", err)
+		return
 	}
-	return nil
+	return objects, nil
 }
 
 func (s *export) Destroy() error {

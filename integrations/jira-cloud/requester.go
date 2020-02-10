@@ -106,7 +106,7 @@ func (s *Requester) JSON(req requests2.Request, res interface{}) (_ requests2.Re
 	return s.json(req, res, 1)
 }
 
-func (s *Requester) json(req requests2.Request, res interface{}, maxOAuthRetries int) (_ requests2.Result, rerr error) {
+func (s *Requester) json(req requests2.Request, res interface{}, maxOAuthRetries int) (resp requests2.Result, rerr error) {
 
 	var reqs requests2.Requests
 	if s.opts.RetryRequests {
@@ -125,12 +125,11 @@ func (s *Requester) json(req requests2.Request, res interface{}, maxOAuthRetries
 		req.BasicAuthPassword = s.opts.Password
 	}
 
-	resp0, err := reqs.JSON(req, res)
-
-	resp := resp0.Resp
+	var err error
+	resp, err = reqs.JSON(req, res)
 
 	if s.opts.OAuthToken != nil {
-		if resp != nil && resp.StatusCode == 401 {
+		if resp.Resp != nil && resp.Resp.StatusCode == 401 {
 			if maxOAuthRetries == 0 {
 				rerr = fmt.Errorf("received error 401 after retrying with new oauth token, uri: %v", req.URL)
 				return
@@ -148,5 +147,5 @@ func (s *Requester) json(req requests2.Request, res interface{}, maxOAuthRetries
 		return
 	}
 
-	return resp0, nil
+	return
 }

@@ -195,10 +195,6 @@ func (opts Requests) Do(ctx context.Context, req Request) (res Result, rerr erro
 	} else {
 		resp, err = opts.retryDo(ctx, req)
 	}
-	if err != nil {
-		rerr = err
-		return
-	}
 
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -235,7 +231,7 @@ func (opts Requests) Do(ctx context.Context, req Request) (res Result, rerr erro
 // JSON makes http request and unmarshals resulting json. Returns errors on StatusCode != 200. Logs request and response body on errors.
 func (opts Requests) JSON(
 	req Request,
-	res interface{}) (_ Result, rerr error) {
+	res interface{}) (resp Result, rerr error) {
 
 	if req.Header == nil {
 		req.Header = http.Header{}
@@ -243,25 +239,28 @@ func (opts Requests) JSON(
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 
-	resp0, err := opts.Do(context.TODO(), req)
+	var err error
+	resp, err = opts.Do(context.TODO(), req)
 	if err != nil {
 		rerr = err
 		return
 	}
-	resp := resp0.Resp
-	if resp.StatusCode != 200 && resp.StatusCode != 201 {
-		rerr = resp0.ErrorContext(fmt.Errorf(`wanted status code 200 or 201, got %v`, resp.StatusCode))
+	resp2 := resp.Resp
+	if !(resp2.StatusCode >= 200 && resp2.StatusCode < 300) {
+		rerr = resp.ErrorContext(fmt.Errorf(`wanted status code 200..299, got %v`, resp2.StatusCode))
 		return
 	}
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := ioutil.ReadAll(resp2.Body)
 	if err != nil {
-		rerr = resp0.ErrorContext(err)
+		rerr = resp.ErrorContext(err)
 		return
 	}
-	err = json.Unmarshal(b, &res)
-	if err != nil {
-		rerr = resp0.ErrorContext(err)
-		return
+	if len(b) != 0 {
+		err = json.Unmarshal(b, &res)
+		if err != nil {
+			rerr = resp.ErrorContext(err)
+			return
+		}
 	}
-	return resp0, nil
+	return
 }
