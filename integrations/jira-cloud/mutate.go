@@ -8,8 +8,8 @@ import (
 	"github.com/pinpt/agent/integrations/jira-cloud/api"
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/rpcdef"
-	"github.com/pinpt/go-datamodel/agent"
-	"github.com/pinpt/go-datamodel/work"
+	"github.com/pinpt/integration-sdk/agent"
+	"github.com/pinpt/integration-sdk/work"
 )
 
 func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef.ExportConfig) (_ rpcdef.MutatedObjects, rerr error) {
@@ -37,37 +37,22 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 
 	switch action {
 	case agent.IntegrationMutationRequestActionIssueAddComment:
+
 		var obj struct {
-			IssueID string `json:"ref_id"`
-			UserID  string `json:"user_ref_id"`
+			IssueRefID string `json:"ref_id"`
+			Body       string `json:"body"`
 		}
 		err := json.Unmarshal([]byte(data), &obj)
 		if err != nil {
 			rerr = err
 			return
 		}
-		err = api.AssignUser(s.qc, obj.IssueID, obj.UserID)
-		if err != nil {
+		err = api.AddComment(s.qc, obj.IssueRefID, obj.Body)
+		if err == nil {
 			rerr = err
 			return
 		}
-	/*case agent.IntegrationMutationRequestActionIssueAddComment:
-
-	var obj struct {
-		IssueRefID string `json:"ref_id"`
-		Body       string `json:"body"`
-	}
-	err := json.Unmarshal([]byte(data), &obj)
-	if err != nil {
-		rerr = err
-		return
-	}
-	err = api.AddComment(s.qc, obj.IssueRefID, obj.Body)
-	if err == nil {
-		rerr = err
-		return
-	}*/
-	case agent.IntegrationMutationRequestAction(-1): //case EditTitle:
+	case agent.IntegrationMutationRequestActionIssueSetTitle:
 		var obj struct {
 			IssueID string `json:"ref_id"`
 			Title   string `json:"title"`
@@ -82,7 +67,7 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 			rerr = err
 			return
 		}
-	case agent.IntegrationMutationRequestAction(-2): //case EditStatus:
+	case agent.IntegrationMutationRequestActionIssueSetStatus:
 		var obj struct {
 			IssueID  string `json:"ref_id"`
 			StatusID string `json:"status_ref_id"`
@@ -97,7 +82,7 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 			rerr = err
 			return
 		}
-	case agent.IntegrationMutationRequestAction(-3): //case EditPriority:
+	case agent.IntegrationMutationRequestActionIssueSetPriority:
 		var obj struct {
 			IssueID    string `json:"ref_id"`
 			PriorityID string `json:"priority_ref_id"`
@@ -112,7 +97,7 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 			rerr = err
 			return
 		}
-	case agent.IntegrationMutationRequestAction(-4): //case AssingUser:
+	case agent.IntegrationMutationRequestActionIssueSetAssignee:
 		var obj struct {
 			IssueID string `json:"ref_id"`
 			UserID  string `json:"user_ref_id"`
