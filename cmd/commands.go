@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 
-	hclog "github.com/hashicorp/go-hclog"
 	pservice "github.com/kardianos/service"
 	"github.com/pinpt/agent/cmd/cmdenroll"
 	"github.com/pinpt/agent/cmd/cmdexport"
@@ -27,26 +26,6 @@ import (
 
 func isInsideDocker() bool {
 	return pos.IsInsideContainer()
-}
-
-func runEnroll(cmd *cobra.Command, logger hclog.Logger, pinpointRoot string, code string) {
-	channel, _ := cmd.Flags().GetString("channel")
-	skipValidate, _ := cmd.Flags().GetBool("skip-validate")
-	integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
-	skipEnroll, _ := cmd.Flags().GetBool("skip-enroll-if-found")
-
-	err := cmdenroll.Run(context.Background(), cmdenroll.Opts{
-		Logger:            logger,
-		PinpointRoot:      pinpointRoot,
-		IntegrationsDir:   integrationsDir,
-		Code:              code,
-		Channel:           channel,
-		SkipEnrollIfFound: skipEnroll,
-		SkipValidate:      skipValidate,
-	})
-	if err != nil {
-		exitWithErr(logger, err)
-	}
 }
 
 type runType string
@@ -70,6 +49,7 @@ var cmdEnroll = &cobra.Command{
 		channel, _ := cmd.Flags().GetString("channel")
 		skipValidate, _ := cmd.Flags().GetBool("skip-validate")
 		integrationsDir, _ := cmd.Flags().GetString("integrations-dir")
+		logLevel, _ := cmd.Flags().GetString("log-level")
 
 		enrollOpts := cmdenroll.Opts{
 			Logger:            logger,
@@ -79,6 +59,7 @@ var cmdEnroll = &cobra.Command{
 			Channel:           channel,
 			SkipEnrollIfFound: false,
 			SkipValidate:      skipValidate,
+			LogLevel:          logLevel,
 		}
 
 		runEnroll := func() {
@@ -120,7 +101,9 @@ var cmdEnroll = &cobra.Command{
 
 func init() {
 	cmd := cmdEnroll
-	flagsLogger(cmd)
+	cmd.Flags().String("log-format", "", "Deprecated")
+	cmd.Flags().String("log-level", "info", "Log level (debug or info)")
+
 	flagPinpointRoot(cmd)
 
 	cmd.Flags().String("channel", "stable", "Cloud channel to use.")

@@ -38,6 +38,7 @@ type Opts struct {
 	Channel           string
 	SkipValidate      bool
 	SkipEnrollIfFound bool
+	LogLevel          string
 }
 
 func Run(ctx context.Context, opts Opts) error {
@@ -65,7 +66,6 @@ func newEnroller(opts Opts) (*enroller, error) {
 	if opts.Channel == "" {
 		return nil, errors.New("provide enroll channel")
 	}
-
 	s := &enroller{}
 	s.logger = opts.Logger
 	s.opts = opts
@@ -254,6 +254,7 @@ func (s *enroller) ProcessResult(res agent.EnrollResponse) error {
 	if err != nil {
 		return err
 	}
+	conf.LogLevel = s.opts.LogLevel
 
 	err = agentconf.Save(conf, s.fsconf.Config2)
 	if err != nil {
