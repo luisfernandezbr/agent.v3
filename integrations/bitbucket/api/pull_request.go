@@ -125,7 +125,6 @@ func PullRequestPage(
 				review.RefID = hash.Values(pr.RefID, participant.User.AccountID)
 				review.RefType = qc.RefType
 				review.RepoID = qc.IDs.CodeRepo(repoID)
-				review.UpdatedAt = participant.ParticipatedOn.Unix()
 
 				if participant.Approved {
 					review.State = sourcecode.PullRequestReviewStateApproved

@@ -27,7 +27,7 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
 		Channel: s.conf.Channel,
 		Factory: factory,
-		Topic:   agent.IntegrationMutationRequestTopic.String(),
+		Topic:   agent.IntegrationMutationRequestModelName.String(),
 		Errors:  errorsChan,
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,

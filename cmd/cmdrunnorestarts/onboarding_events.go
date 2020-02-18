@@ -217,22 +217,22 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		return datamodel.NewModelSendEvent(resp), nil
 	}
 
-	usub, err := action.Register(ctx, action.NewAction(cbUser), s.newSubConfig(agent.UserRequestTopic.String()))
+	usub, err := action.Register(ctx, action.NewAction(cbUser), s.newSubConfig(agent.UserRequestModelName.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	rsub, err := action.Register(ctx, action.NewAction(cbRepo), s.newSubConfig(agent.RepoRequestTopic.String()))
+	rsub, err := action.Register(ctx, action.NewAction(cbRepo), s.newSubConfig(agent.RepoRequestModelName.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	psub, err := action.Register(ctx, action.NewAction(cbProject), s.newSubConfig(agent.ProjectRequestTopic.String()))
+	psub, err := action.Register(ctx, action.NewAction(cbProject), s.newSubConfig(agent.ProjectRequestModelName.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	wsub, err := action.Register(ctx, action.NewAction(cbWorkconfig), s.newSubConfig(agent.WorkStatusRequestTopic.String()))
+	wsub, err := action.Register(ctx, action.NewAction(cbWorkconfig), s.newSubConfig(agent.WorkStatusRequestModelName.String()))
 	if err != nil {
 		panic(err)
 	}

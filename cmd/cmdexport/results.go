@@ -42,7 +42,7 @@ func (s *export) handleIntegrationPanics(res map[expin.Index]runResult) {
 			}
 			continue
 		}
-		s.Logger.Info("Export success for integration", "integration", expin)
+		s.Logger.Info("Export success for integration", "integration", expin.String())
 	}
 }
 

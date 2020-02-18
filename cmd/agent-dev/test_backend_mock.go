@@ -175,7 +175,6 @@ var cmdTestBackendMock = &cobra.Command{
 			assertEqual(pinpointCODE, req.Code, "expected code to be %v but was %v")
 			assertValidInt64(req.RequestDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.RequestDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
-			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
 			date := datetime.NewDateNow()
 
 			enrollResponse := &agent.EnrollResponse{
@@ -216,7 +215,7 @@ var cmdTestBackendMock = &cobra.Command{
 			return cfg
 		}
 
-		enrollActionSub, err := action.Register(ctx, enrollAction, newConfig(agent.EnrollRequestTopic.String(), ""))
+		enrollActionSub, err := action.Register(ctx, enrollAction, newConfig(agent.EnrollRequestModelName.String(), ""))
 		if err != nil {
 			exitWithErr("error registering enroll action", "err", err)
 		}
@@ -234,7 +233,6 @@ var cmdTestBackendMock = &cobra.Command{
 			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
-			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
 			assertEqual(true, req.Success, "expected success to be %v but was %v")
 			assertEqual("", req.Message, "expected message to be %v but was %v")
 			assertEqual(nil, req.Error, "expected error to be %v but was %v")
@@ -290,7 +288,6 @@ var cmdTestBackendMock = &cobra.Command{
 			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
-			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
 			assertEqual(true, req.Success, "expected success to be %v but was %v")
 			assertEqual(nil, req.Error, "expected error to be %v but was %v")
 			assertEqual(nil, req.Data, "expected data to be %v but was %v")
@@ -361,7 +358,6 @@ var cmdTestBackendMock = &cobra.Command{
 			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
-			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
 			assertEqual(true, req.Success, "expected success to be %v but was %v")
 			assertEqual(nil, req.Error, "expected error to be %v but was %v")
 			assertEqual(nil, req.Data, "expected data to be %v but was %v")
@@ -426,7 +422,6 @@ var cmdTestBackendMock = &cobra.Command{
 			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
-			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
 			assertEqual(true, req.Success, "expected success to be %v but was %v")
 			assertEqual(nil, req.Error, "expected error to be %v but was %v")
 			if req.RefType == "progress" {
@@ -462,7 +457,6 @@ var cmdTestBackendMock = &cobra.Command{
 			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
-			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
 			assertEqual(true, req.Success, "expected success to be %v but was %v")
 			assertEqual("", req.Message, "expected message to be %v but was %v")
 			assertEqual(nil, req.Error, "expected error to be %v but was %v")
@@ -492,7 +486,6 @@ var cmdTestBackendMock = &cobra.Command{
 			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
-			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
 			assertEqual(true, req.Success, "expected success to be %v but was %v")
 			assertEqual(nil, req.Error, "expected error to be %v but was %v")
 			assertEqual(nil, req.Data, "expected data to be %v but was %v")
@@ -519,7 +512,6 @@ var cmdTestBackendMock = &cobra.Command{
 			assertEqual(pinpointUUID, req.UUID, "missing uuid, expected %v, was %v")
 			assertValidInt64(req.EventDate.Epoch, "expected request date epoch to be valid but was %v")
 			assertValidRfc3339(req.EventDate.Rfc3339, "expected request date Rfc3339 to be valid but was %v")
-			assertValidInt64(req.UpdatedAt, "expected updatedAt to be valid but was %v")
 			assertEqual(true, req.Success, "expected success to be %v but was %v")
 			assertEqual(nil, req.Error, "expected error to be %v but was %v")
 			assertEqual(nil, req.Data, "expected data to be %v but was %v")
@@ -537,43 +529,43 @@ var cmdTestBackendMock = &cobra.Command{
 			return nil, nil
 		})
 
-		agentEnabledSub, err := action.Register(ctx, agentEnabledAction, newConfig(agent.EnabledTopic.String(), ""))
+		agentEnabledSub, err := action.Register(ctx, agentEnabledAction, newConfig(agent.EnabledModelName.String(), ""))
 		if err != nil {
 			exitWithErr("error registering enabled action", "err", err)
 		}
 		defer agentEnabledSub.Close()
 
-		integrationSub, err := action.Register(ctx, integrationResponseAction, newConfig(agent.IntegrationResponseTopic.String(), pinpointCustomerID))
+		integrationSub, err := action.Register(ctx, integrationResponseAction, newConfig(agent.IntegrationResponseModelName.String(), pinpointCustomerID))
 		if err != nil {
 			exitWithErr("error registering integration action", "err", err)
 		}
 		defer integrationSub.Close()
 
-		repoSub, err := action.Register(ctx, repoResponseAction, newConfig(agent.RepoResponseTopic.String(), pinpointCustomerID))
+		repoSub, err := action.Register(ctx, repoResponseAction, newConfig(agent.RepoResponseModelName.String(), pinpointCustomerID))
 		if err != nil {
 			exitWithErr("error registering repo action", "err", err)
 		}
 		defer repoSub.Close()
 
-		exportSub, err := action.Register(ctx, exportRequestAction, newConfig(agent.ExportResponseTopic.String(), pinpointCustomerID))
+		exportSub, err := action.Register(ctx, exportRequestAction, newConfig(agent.ExportResponseModelName.String(), pinpointCustomerID))
 		if err != nil {
 			exitWithErr("error registering export action", "err", err)
 		}
 		defer exportSub.Close()
 
-		pingSub, err := action.Register(ctx, pingAction, newConfig(agent.PingTopic.String(), pinpointCustomerID))
+		pingSub, err := action.Register(ctx, pingAction, newConfig(agent.PingModelName.String(), pinpointCustomerID))
 		if err != nil {
 			exitWithErr("error registering ping action", "err", err)
 		}
 		defer pingSub.Close()
 
-		startSub, err := action.Register(ctx, startAction, newConfig(agent.StartTopic.String(), pinpointCustomerID))
+		startSub, err := action.Register(ctx, startAction, newConfig(agent.StartModelName.String(), pinpointCustomerID))
 		if err != nil {
 			exitWithErr("error registering start action", "err", err)
 		}
 		defer startSub.Close()
 
-		stopSub, err := action.Register(ctx, stopAction, newConfig(agent.StopTopic.String(), pinpointCustomerID))
+		stopSub, err := action.Register(ctx, stopAction, newConfig(agent.StopModelName.String(), pinpointCustomerID))
 		if err != nil {
 			exitWithErr("error registering stop action", "err", err)
 		}
