@@ -21,15 +21,12 @@ import (
 func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for integration requests")
 
-	errorsChan := make(chan error, 1)
-
 	actionConfig := action.Config{
 		APIKey:  s.conf.APIKey,
 		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
 		Channel: s.conf.Channel,
 		Factory: factory,
 		Topic:   agent.IntegrationRequestModelName.String(),
-		Errors:  errorsChan,
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,
 			"uuid":        s.conf.DeviceID,
@@ -103,12 +100,6 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 		resp.ServerVersion = pstrings.Pointer(res.ServerVersion)
 		return sendEvent(resp)
 	}
-
-	go func() {
-		for err := range errorsChan {
-			s.logger.Error("error in integration requests", "err", err)
-		}
-	}()
 
 	sub, err := action.Register(ctx, action.NewAction(cb), actionConfig)
 	if err != nil {

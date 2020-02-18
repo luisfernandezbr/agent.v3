@@ -181,14 +181,11 @@ var factory action.ModelFactory = &modelFactory{}
 
 func (s *enroller) WaitForResponse(ctx context.Context, ready chan<- bool) (res agent.EnrollResponse, _ error) {
 
-	errors := make(chan error, 1)
-
 	enrollConfig := action.Config{
 		GroupID: fmt.Sprintf("agent-%v", s.deviceID),
 		Channel: s.opts.Channel,
 		Factory: factory,
 		Topic:   agent.EnrollResponseModelName.String(),
-		Errors:  errors,
 		Headers: map[string]string{
 			"uuid": s.deviceID,
 		},
@@ -223,12 +220,6 @@ func (s *enroller) WaitForResponse(ctx context.Context, ready chan<- bool) (res 
 	// wait for the subscription to be ready before sending any events
 	sub.WaitForReady()
 	ready <- true
-
-	go func() {
-		for err := range errors {
-			s.logger.Error("event subscription error", "err", err)
-		}
-	}()
 
 	<-done
 

@@ -305,19 +305,12 @@ func (f *modelFactory) New(name datamodel.ModelNameType) datamodel.Model {
 var factory action.ModelFactory = &modelFactory{}
 
 func (s *runner) newSubConfig(topic string) action.Config {
-	errorsChan := make(chan error, 1)
-	go func() {
-		for err := range errorsChan {
-			s.logger.Error(fmt.Sprintf("error in %s requests", topic), "err", err)
-		}
-	}()
 	return action.Config{
 		APIKey:  s.conf.APIKey,
 		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
 		Channel: s.conf.Channel,
 		Factory: factory,
 		Topic:   topic,
-		Errors:  errorsChan,
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,
 			"uuid":        s.conf.DeviceID,

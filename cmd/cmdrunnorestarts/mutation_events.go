@@ -20,15 +20,12 @@ import (
 func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for mutation requests")
 
-	errorsChan := make(chan error, 1)
-
 	actionConfig := action.Config{
 		APIKey:  s.conf.APIKey,
 		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
 		Channel: s.conf.Channel,
 		Factory: factory,
 		Topic:   agent.IntegrationMutationRequestModelName.String(),
-		Errors:  errorsChan,
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,
 			"uuid":        s.conf.DeviceID,
@@ -101,12 +98,6 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 		resp.UpdatedObjects = string(objects)
 		return sendEvent(resp)
 	}
-
-	go func() {
-		for err := range errorsChan {
-			s.logger.Error("error in mutation requests", "err", err)
-		}
-	}()
 
 	sub, err := action.Register(ctx, action.NewAction(cb), actionConfig)
 	if err != nil {

@@ -15,15 +15,12 @@ import (
 func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for export requests")
 
-	errors := make(chan error, 1)
-
 	actionConfig := action.Config{
 		APIKey:  s.conf.APIKey,
 		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
 		Channel: s.conf.Channel,
 		Factory: factory,
 		Topic:   agent.ExportRequestModelName.String(),
-		Errors:  errors,
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,
 			"uuid":        s.conf.DeviceID,
@@ -45,12 +42,6 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 		}
 		return nil, nil
 	}
-
-	go func() {
-		for err := range errors {
-			s.logger.Error("error in export requests", "err", err)
-		}
-	}()
 
 	sub, err := action.Register(ctx, action.NewAction(cb), actionConfig)
 	if err != nil {
