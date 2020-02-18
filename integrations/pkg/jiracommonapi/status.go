@@ -12,7 +12,7 @@ func StatusWithDetail(qc QueryContext) (_ []StatusDetail, names []string, _ erro
 	objectPath := "status"
 
 	var detail []StatusDetail
-	err := qc.Request(objectPath, nil, &detail)
+	err := qc.Req.Get(objectPath, nil, &detail)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -140,8 +140,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 			opts.Password = s.config.Password
 		}
 		requester := NewRequester(opts)
-		s.qc.Request = requester.Request
-		s.qc.Request2 = requester.Request2
+		s.qc.Req = requester
 	}
 
 	s.qc.CustomerID = config.Pinpoint.CustomerID
@@ -151,7 +150,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 		WebsiteURL:       s.qc.WebsiteURL,
 		Logger:           s.logger,
 		CustomerID:       config.Pinpoint.CustomerID,
-		Request:          s.qc.Request,
+		Req:              s.qc.Req,
 		Agent:            s.agent,
 		ExcludedProjects: s.config.Exclusions,
 		IncludedProjects: s.config.Inclusions,

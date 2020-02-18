@@ -101,15 +101,14 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 		opts.Password = s.config.Password
 		opts.RetryRequests = retryRequests
 		requester := NewRequester(opts)
-		s.qc.Request = requester.Request
-		s.qc.Request2 = requester.Request2
+		s.qc.Req = requester
 	}
 
 	s.common, err = jiracommon.New(jiracommon.Opts{
 		WebsiteURL:       s.config.URL,
 		Logger:           s.logger,
 		CustomerID:       config.Pinpoint.CustomerID,
-		Request:          s.qc.Request,
+		Req:              s.qc.Req,
 		Agent:            s.agent,
 		ExcludedProjects: s.config.Exclusions,
 		IncludedProjects: s.config.Inclusions,

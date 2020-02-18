@@ -8,6 +8,7 @@ service Integration {
     rpc Export(IntegrationExportReq) returns (IntegrationExportResp);    
     rpc ValidateConfig(IntegrationValidateConfigReq) returns (IntegrationValidateConfigResp);
     rpc OnboardExport(IntegrationOnboardExportReq) returns (IntegrationOnboardExportResp);
+    rpc Mutate(IntegrationMutateReq) returns (IntegrationMutateResp);
 }
 
 message IntegrationInitReq {
@@ -20,7 +21,7 @@ message IntegrationExportReq {
 
 message IntegrationExportConfig {
     bytes integration_config_json = 1;
-    IntegrationAgentConfig agent_config = 2;   
+    IntegrationAgentConfig agent_config = 2;
     bool use_oauth = 3;
 }
 
@@ -67,6 +68,16 @@ message IntegrationOnboardExportResp {
     }
     Error error = 1;
     bytes data_json = 2;
+}
+
+message IntegrationMutateReq {
+    IntegrationExportConfig config = 1;
+    string mutate_fn = 2;
+    string mutate_data = 3;
+}
+
+message IntegrationMutateResp {
+    string objects_json = 1;
 }
 
 service Agent {

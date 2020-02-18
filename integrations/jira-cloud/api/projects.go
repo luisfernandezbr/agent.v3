@@ -35,7 +35,7 @@ func ProjectsPage(
 		} `json:"values"`
 	}
 
-	err := qc.Request(objectPath, params, &rr)
+	err := qc.Req.Get(objectPath, params, &rr)
 	if err != nil {
 		return pi, res, err
 	}

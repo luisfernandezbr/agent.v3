@@ -1,8 +1,6 @@
 package api
 
 import (
-	"net/url"
-
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 )
@@ -11,8 +9,7 @@ type QueryContext struct {
 	WebsiteURL string
 	Logger     hclog.Logger
 	CustomerID string
-	Request    func(objPath string, params url.Values, res interface{}) error
-	Request2   func(objPath string, params url.Values, res interface{}) (statusCode int, _ error)
+	Req        jiracommonapi.Requester
 }
 
 type PageInfo struct {
@@ -27,8 +24,7 @@ func (s *QueryContext) Common() jiracommonapi.QueryContext {
 	res.CustomerID = s.CustomerID
 	res.Logger = s.Logger
 	res.ExportUser = nil
-	res.Request = s.Request
-	res.Request2 = s.Request2
+	res.Req = s.Req
 	res.Validate()
 	return res
 }

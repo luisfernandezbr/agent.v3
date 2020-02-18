@@ -1,8 +1,6 @@
 package jiracommonapi
 
 import (
-	"net/url"
-
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/pinpt/agent/pkg/ids"
@@ -13,13 +11,12 @@ type QueryContext struct {
 	WebsiteURL string
 	Logger     hclog.Logger
 	CustomerID string
-	Request    func(objPath string, params url.Values, res interface{}) error
-	Request2   func(objPath string, params url.Values, res interface{}) (statusCode int, _ error)
 	ExportUser func(user User) error
+	Req        Requester
 }
 
 func (s QueryContext) Validate() {
-	if s.WebsiteURL == "" || s.Logger == nil || s.CustomerID == "" || s.Request == nil {
+	if s.WebsiteURL == "" || s.Logger == nil || s.CustomerID == "" || s.Req == nil {
 		panic("set all required fields")
 	}
 }

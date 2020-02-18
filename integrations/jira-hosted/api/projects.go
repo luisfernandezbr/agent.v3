@@ -26,7 +26,7 @@ func Projects(qc QueryContext) (res []*work.Project, rerr error) {
 		} `json:"projectCategory"`
 	}
 
-	err := qc.Request(objectPath, params, &rr)
+	err := qc.Req.Get(objectPath, params, &rr)
 	if err != nil {
 		rerr = err
 		return

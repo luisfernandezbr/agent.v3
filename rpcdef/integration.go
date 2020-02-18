@@ -23,7 +23,12 @@ type Integration interface {
 	ValidateConfig(context.Context, ExportConfig) (ValidationResult, error)
 	// OnboardExport returns the data used in onboard. Kind is one of users, repos, projects.
 	OnboardExport(ctx context.Context, objectType OnboardExportType, config ExportConfig) (OnboardExportResult, error)
+
+	// Mutate changes integration data
+	Mutate(ctx context.Context, fn string, data string, config ExportConfig) (MutatedObjects, error)
 }
+
+type MutatedObjects map[string][]interface{}
 
 type IntegrationConfig inconfig.Integration
 type ExportConfig struct {
@@ -223,6 +228,29 @@ func (s *IntegrationClient) OnboardExport(ctx context.Context, objectType Onboar
 	return res, nil
 }
 
+func (s *IntegrationClient) Mutate(ctx context.Context, mutateFn string, mutateData string, exportConfig ExportConfig) (res MutatedObjects, rerr error) {
+	args := &proto.IntegrationMutateReq{}
+	var err error
+	args.Config, err = exportConfig.proto()
+	if err != nil {
+		rerr = err
+		return
+	}
+	args.MutateFn = mutateFn
+	args.MutateData = mutateData
+	resp, err := s.client.Mutate(ctx, args)
+	if err != nil {
+		rerr = err
+		return
+	}
+	err = json.Unmarshal([]byte(resp.ObjectsJson), &res)
+	if err != nil {
+		rerr = err
+		return
+	}
+	return
+}
+
 type IntegrationServer struct {
 	Impl   Integration
 	broker *plugin.GRPCBroker
@@ -314,6 +342,26 @@ func (s *IntegrationServer) OnboardExport(ctx context.Context, req *proto.Integr
 	if err != nil {
 		return res, err
 	}
+	return res, nil
+}
+
+func (s *IntegrationServer) Mutate(ctx context.Context, req *proto.IntegrationMutateReq) (res *proto.IntegrationMutateResp, _ error) {
+	res = &proto.IntegrationMutateResp{}
+
+	config, err := exportConfigFromProto(req.Config)
+	if err != nil {
+		return res, err
+	}
+
+	objects, err := s.Impl.Mutate(ctx, req.MutateFn, req.MutateData, config)
+	if err != nil {
+		return res, err
+	}
+	objectsJSONBytes, err := json.Marshal(objects)
+	if err != nil {
+		return res, err
+	}
+	res.ObjectsJson = string(objectsJSONBytes)
 	return res, nil
 }
 

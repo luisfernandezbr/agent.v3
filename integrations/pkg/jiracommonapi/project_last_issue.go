@@ -38,7 +38,7 @@ func GetProjectLastIssue(qc QueryContext, project Project) (res ProjectLastIssue
 		} `json:"issues"`
 	}
 
-	statusCode, err := qc.Request2(objectPath, q, &rr)
+	statusCode, err := qc.Req.Get2(objectPath, q, &rr)
 	if err != nil {
 		if statusCode == 400 {
 			qc.Logger.Error("failed getting last project issue, probably due to insufficient permissions", "err", err)

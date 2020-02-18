@@ -16,7 +16,7 @@ func FieldsAll(qc QueryContext) (res []jiracommonapi.CustomField, rerr error) {
 		Name string `json:"name"`
 	}
 
-	err := qc.Request(objectPath, nil, &rr)
+	err := qc.Req.Get(objectPath, nil, &rr)
 	if err != nil {
 		rerr = err
 		return

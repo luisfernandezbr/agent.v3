@@ -8,7 +8,7 @@ func IssueTypes(qc QueryContext) (res []string, rerr error) {
 		Name string `json:"name"`
 	}
 
-	err := qc.Request(objectPath, nil, &issueTypes)
+	err := qc.Req.Get(objectPath, nil, &issueTypes)
 	if err != nil {
 		rerr = err
 		return

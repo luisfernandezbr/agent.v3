@@ -8,7 +8,7 @@ func Priorities(qc QueryContext) (res []string, rerr error) {
 		Name string `json:"name"`
 	}
 
-	err := qc.Request(objectPath, nil, &rawPriorities)
+	err := qc.Req.Get(objectPath, nil, &rawPriorities)
 	if err != nil {
 		rerr = err
 		return

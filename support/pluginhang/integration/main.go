@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"runtime"
 	"time"
 
@@ -48,6 +49,10 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 	return
 }
 
+func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef.ExportConfig) (res rpcdef.MutatedObjects, rerr error) {
+	rerr = errors.New("mutate not supported")
+	return
+}
 func main() {
 	ibase.MainFunc(func(logger hclog.Logger) rpcdef.Integration {
 		return NewIntegration(logger)

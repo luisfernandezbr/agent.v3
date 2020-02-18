@@ -6,6 +6,7 @@ import (
 
 	"github.com/pinpt/agent/pkg/reqstats"
 	"github.com/pinpt/agent/pkg/requests"
+	"github.com/pinpt/agent/pkg/requests2"
 	pstrings "github.com/pinpt/go-common/strings"
 
 	"github.com/hashicorp/go-hclog"
@@ -37,16 +38,16 @@ func NewRequester(opts RequesterOpts) *Requester {
 	return s
 }
 
-func (s *Requester) Request(objPath string, params url.Values, res interface{}) error {
-	_, err := s.request(objPath, params, res)
+func (s *Requester) Get(objPath string, params url.Values, res interface{}) error {
+	_, err := s.get(objPath, params, res)
 	return err
 }
 
-func (s *Requester) Request2(objPath string, params url.Values, res interface{}) (statusCode int, _ error) {
-	return s.request(objPath, params, res)
+func (s *Requester) Get2(objPath string, params url.Values, res interface{}) (statusCode int, _ error) {
+	return s.get(objPath, params, res)
 }
 
-func (s *Requester) request(objPath string, params url.Values, res interface{}) (statusCode int, rerr error) {
+func (s *Requester) get(objPath string, params url.Values, res interface{}) (statusCode int, rerr error) {
 
 	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
 	if len(params) != 0 {
@@ -77,4 +78,12 @@ func (s *Requester) request(objPath string, params url.Values, res interface{}) 
 	}
 
 	return
+}
+
+func (s *Requester) JSON(req requests2.Request, res interface{}) (resp requests2.Result, rerr error) {
+	panic("not implemented")
+}
+
+func (s *Requester) URL(objPath string) string {
+	panic("not implemented")
 }

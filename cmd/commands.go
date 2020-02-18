@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"github.com/pinpt/agent/cmd/cmdenroll"
 	"github.com/pinpt/agent/cmd/cmdexport"
 	"github.com/pinpt/agent/cmd/cmdexportonboarddata"
+	"github.com/pinpt/agent/cmd/cmdmutate"
 	"github.com/pinpt/agent/cmd/cmdrun"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts"
 	"github.com/pinpt/agent/cmd/cmdserviceinstall"
@@ -216,6 +218,51 @@ func init() {
 	integrationCommandFlags(cmd)
 	flagOutputFile(cmd)
 	cmd.Flags().String("object-type", "", "Object type to export, one of: users, repos, projects.")
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdMutate = &cobra.Command{
+	Use:    "mutate",
+	Hidden: true,
+	Short:  "Update data in source system",
+	Args:   cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		logger, baseOpts := integrationCommandOpts(cmd)
+		opts := cmdmutate.Opts{}
+		opts.Opts = baseOpts
+
+		outputFile := newOutputFile(logger, cmd)
+		defer outputFile.Close()
+		opts.Output = outputFile.Writer
+
+		{
+			v, _ := cmd.Flags().GetString("mutation")
+			if v == "" {
+				exitWithErr(logger, errors.New("provide mutation arg"))
+			}
+			m := cmdmutate.Mutation{}
+			err := json.Unmarshal([]byte(v), &m)
+			if err != nil {
+				exitWithErr(logger, errors.New("can't parse mutation json"))
+			}
+			opts.Mutation = m
+			if opts.Mutation.Fn == "" {
+				exitWithErr(logger, errors.New("mutation missing fn"))
+			}
+		}
+
+		err := cmdmutate.Run(opts)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+	},
+}
+
+func init() {
+	cmd := cmdMutate
+	integrationCommandFlags(cmd)
+	flagOutputFile(cmd)
+	cmd.Flags().String("mutation", "", "Mutation definition in json format")
 	cmdRoot.AddCommand(cmd)
 }
 
