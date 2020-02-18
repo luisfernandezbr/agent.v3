@@ -322,12 +322,26 @@ func (s *runner) newSubConfig(topic string) action.Config {
 func (s *runner) sendPings() {
 	ctx := context.Background()
 	s.sendPing(ctx) // always send ping immediately upon start
+
+	var failedPings []time.Time
 	for {
 		select {
 		case <-time.After(30 * time.Second):
 			err := s.sendPing(ctx)
 			if err != nil {
 				s.logger.Error("could not send ping", "err", err.Error())
+				var pastHour []time.Time
+				cutoff := time.Now().Add(-time.Hour)
+				for _, p := range failedPings {
+					if p.After(cutoff) {
+						pastHour = append(pastHour, p)
+					}
+				}
+				pastHour = append(pastHour, time.Now())
+				failedPings = pastHour
+				if len(failedPings) > 5 {
+					panic("more than 5 pings failed in the past hour, exiting to restart")
+				}
 			} else {
 				s.logger.Info("sent ping")
 			}
