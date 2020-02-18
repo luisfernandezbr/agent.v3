@@ -187,7 +187,7 @@ func (s *enroller) WaitForResponse(ctx context.Context, ready chan<- bool) (res 
 		GroupID: fmt.Sprintf("agent-%v", s.deviceID),
 		Channel: s.opts.Channel,
 		Factory: factory,
-		Topic:   agent.EnrollResponseTopic.String(),
+		Topic:   agent.EnrollResponseModelName.String(),
 		Errors:  errors,
 		Headers: map[string]string{
 			"uuid": s.deviceID,

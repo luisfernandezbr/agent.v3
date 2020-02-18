@@ -21,7 +21,7 @@ func (s *runner) handleCancelEvents(ctx context.Context) (closefunc, error) {
 		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
 		Channel: s.conf.Channel,
 		Factory: factory,
-		Topic:   agent.CancelRequestTopic.String(),
+		Topic:   agent.CancelRequestModelName.String(),
 		Errors:  errors,
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,

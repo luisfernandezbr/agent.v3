@@ -11,42 +11,6 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func ApprovedDate(qc QueryContext, repoID string, prIID string, username string) (unixDate int64, err error) {
-
-	qc.Logger.Debug("approval date", "repo", repoID, "prIID", prIID)
-
-	objectPath := pstrings.JoinURL("projects", repoID, "merge_requests", prIID, "discussions")
-
-	var discussions []struct {
-		Notes []struct {
-			Body      string    `json:"body"`
-			CreatedAt time.Time `json:"created_at"`
-			Author    struct {
-				Username string `json:"username"`
-			} `json:"author"`
-		} `json:"notes"`
-	}
-
-	_, err = qc.Request(objectPath, nil, &discussions)
-	if err != nil {
-		return
-	}
-
-	var date time.Time
-
-	for _, discussion := range discussions {
-		for _, note := range discussion.Notes {
-			if note.Body == "approved this merge request" && note.Author.Username == username && note.CreatedAt.After(date) {
-				date = note.CreatedAt
-			}
-		}
-	}
-
-	unixDate = date.Unix()
-
-	return
-}
-
 func PullRequestReviewsPage(
 	qc QueryContext,
 	repo commonrepo.Repo,
@@ -88,10 +52,6 @@ func PullRequestReviewsPage(
 		item.CustomerID = qc.CustomerID
 		item.RefType = qc.RefType
 		item.RefID = fmt.Sprint(rreview.ID)
-		item.UpdatedAt, err = ApprovedDate(qc, repo.ID, pr.IID, a.User.Username)
-		if err != nil {
-			return
-		}
 		item.RepoID = qc.IDs.CodeRepo(repo.ID)
 		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, pr.ID)
 		item.State = sourcecode.PullRequestReviewStateApproved
@@ -108,7 +68,6 @@ func PullRequestReviewsPage(
 		item.CustomerID = qc.CustomerID
 		item.RefType = qc.RefType
 		item.RefID = fmt.Sprint(rreview.ID)
-		item.UpdatedAt = rreview.UpdatedAt.Unix()
 		item.RepoID = qc.IDs.CodeRepo(repo.ID)
 		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, pr.ID)
 		item.State = sourcecode.PullRequestReviewStatePending

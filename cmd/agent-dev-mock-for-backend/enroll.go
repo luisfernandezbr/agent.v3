@@ -21,7 +21,7 @@ func enrollRequest(ctx context.Context, log hclog.Logger, code string, agentOpts
 		GroupID: fmt.Sprintf("agent-%v", agentOpts.DeviceID),
 		Channel: agentOpts.Channel,
 		Factory: factory,
-		Topic:   agent.EnrollResponseTopic.String(),
+		Topic:   agent.EnrollResponseModelName.String(),
 		Errors:  errors,
 		Headers: map[string]string{
 			"uuid": agentOpts.DeviceID,
