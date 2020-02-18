@@ -4,6 +4,8 @@ package logsender
 import (
 	"bytes"
 	"compress/gzip"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -11,7 +13,12 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/go-common/api"
+	pos "github.com/pinpt/go-common/os"
+	"github.com/pinpt/httpclient"
 )
+
+// logSenderTimeout is the timeout before giving up on log upload
+var logSenderTimeout = pos.Getenv("PP_AGENT_LOG_UPLOAD_TIMEOUT", "2m")
 
 // Sender is a log Writer that send the logs to the backend
 type Sender struct {
@@ -23,6 +30,19 @@ type Sender struct {
 	ch     chan []byte
 	buf    []byte
 	closed chan bool
+	client httpclient.Client
+}
+
+func newHTTPAPIClientDefault() httpclient.Client {
+	dur, err := time.ParseDuration(logSenderTimeout)
+	if err != nil {
+		panic(fmt.Sprintf("invalid parse duration (%s). error: %s", logSenderTimeout, err))
+	}
+	cl, err := api.NewHTTPAPIClientDefaultWithTimeout(dur)
+	if err != nil {
+		panic(err)
+	}
+	return cl
 }
 
 // New creates Sender
@@ -34,6 +54,7 @@ func New(logger hclog.Logger, conf agentconf.Config, cmdname, messageID string) 
 	s.cmdname = cmdname
 	s.ch = make(chan []byte, 10000)
 	s.closed = make(chan bool)
+	s.client = newHTTPAPIClientDefault()
 
 	maxBufBytes := 10 * 1024 * 1024
 	maxDelayBetweenSends := 1 * time.Second
@@ -60,11 +81,6 @@ func (s *Sender) upload() {
 	}
 
 	url := api.BackendURL(api.EventService, s.conf.Channel)
-	client, err := api.NewHTTPAPIClientDefault()
-	if err != nil {
-		perr(err)
-		return
-	}
 
 	url += "log/agent/" + s.conf.DeviceID + "/" + s.messageID
 
@@ -73,7 +89,7 @@ func (s *Sender) upload() {
 	// gzip the bytes before sending
 	buf := &bytes.Buffer{}
 	gw := gzip.NewWriter(buf)
-	_, err = gw.Write(s.buf)
+	_, err := gw.Write(s.buf)
 	if err != nil {
 		perr(err)
 		return
@@ -96,7 +112,7 @@ func (s *Sender) upload() {
 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
-	resp, err := client.Do(req)
+	resp, err := s.client.Do(req)
 	if err != nil {
 		perr(err)
 		return
@@ -108,6 +124,7 @@ func (s *Sender) upload() {
 		resp.Body.Close()
 		return
 	}
+	io.Copy(ioutil.Discard, resp.Body) // must always read body to prevent leak
 	resp.Body.Close()
 }
 

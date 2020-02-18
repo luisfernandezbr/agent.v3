@@ -119,7 +119,9 @@ func (s *runner) Run(ctx context.Context) error {
 
 	s.logger.Info("Starting service", "pinpoint-root", s.opts.PinpointRoot)
 
-	s.logger.Info("Config", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot, "integrations-dir", s.conf.IntegrationsDir)
+	s.logger.Info("Config", "version", os.Getenv("PP_AGENT_VERSION"), "commit", os.Getenv("PP_AGENT_COMMIT"), "pinpoint-root", s.opts.PinpointRoot, "integrations-dir", s.conf.IntegrationsDir, "uuid", s.opts.AgentConf.DeviceID)
+
+	s.logger.Debug("Debug log level enabled")
 
 	if build.IsProduction() &&
 		(runtime.GOOS == "linux" || runtime.GOOS == "windows") {
@@ -152,10 +154,14 @@ func (s *runner) Run(ctx context.Context) error {
 		return fmt.Errorf("could not send crashes, err: %v", err)
 	}
 
+	s.logger.Info("Sending enabled event")
+
 	err = s.sendEnabled(ctx)
 	if err != nil {
 		return fmt.Errorf("could not send enabled request, err: %v", err)
 	}
+
+	s.logger.Info("Sent enabled event")
 
 	err = s.sendStart(ctx)
 	if err != nil {

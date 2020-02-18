@@ -189,26 +189,30 @@ func (c *Command) RunKeepLogFile(ctx context.Context, cmdname string, messageID 
 		return
 	}
 
-	if err := addProcess(c.logger, cmdname, cmd.Process); err != nil {
-		rerr(fmt.Errorf("could not start the sub command, process already running: %v %v", err, cmdname))
-		return
-	}
-	defer func() {
-		// ignore error in this case since it will return an error if the process was kill manually
-		opts := KillCmdOpts{
-			PrintLog: func(msg string, args ...interface{}) {
-				c.logger.Debug(msg, args)
-			},
+	if cmdname == "export" { // for now, only allow this command to be cancelled
+		if err := addProcess(c.logger, cmdname, cmd.Process); err != nil {
+			rerr(fmt.Errorf("could not start the sub command, process already running: %v %v", err, cmdname))
+			return
 		}
-		removeProcess(opts, cmdname)
-	}()
+		defer func() {
+			// ignore error in this case since it will return an error if the process was kill manually
+			opts := KillCmdOpts{
+				PrintLog: func(msg string, args ...interface{}) {
+					c.logger.Debug(msg, args)
+				},
+			}
+			removeProcess(opts, cmdname)
+		}()
+	}
 
 	err = cmd.Wait()
 
 	if err != nil {
-		if _, ok := processes[cmdname]; !ok {
-			rerrv = &Cancelled{s: cmdname + " cancelled"}
-			return
+		if cmdname == "export" {
+			if _, ok := processes[cmdname]; !ok {
+				rerrv = &Cancelled{s: cmdname + " cancelled"}
+				return
+			}
 		}
 	}
 

@@ -51,7 +51,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 	cbUser := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
 
 		rerr := func(err error) {
-			s.logger.Error("could not process onboard event", "err", err)
+			s.logger.Error("could not process users event", "err", err)
 		}
 
 		req := instance.Object().(*agent.UserRequest)
@@ -95,7 +95,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 	cbRepo := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
 
 		rerr := func(err error) {
-			s.logger.Error("could not process onboard event", "err", err)
+			s.logger.Error("could not process repo requests event", "err", err)
 		}
 
 		req := instance.Object().(*agent.RepoRequest)
@@ -138,7 +138,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 	cbProject := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
 
 		rerr := func(err error) {
-			s.logger.Error("could not process onboard event", "err", err)
+			s.logger.Error("could not process project requests event", "err", err)
 		}
 
 		req := instance.Object().(*agent.ProjectRequest)
@@ -179,7 +179,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 	cbWorkconfig := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
 
 		rerr := func(err error) {
-			s.logger.Error("could not process onboard event", "err", err)
+			s.logger.Error("could not process work config event", "err", err)
 		}
 
 		req := instance.Object().(*agent.WorkStatusRequest)

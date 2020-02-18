@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/go-common/event"
 )
 
 type RetryableRequest struct {
@@ -51,25 +52,20 @@ func (opts Requests) retryDo(ctx context.Context, req *http.Request) (resp *http
 	count := 0
 	for time.Since(started) < retry.MaxDuration {
 		resp, err = opts.Client.Do(req)
-		if err != nil {
+		if err != nil && !event.IsErrorRetryable(err) {
 			return
 		}
-		// if this request looks like a normal, non-retryable response
-		// then just return it without attempting a retry
-		if (resp.StatusCode >= 200 && resp.StatusCode < 300) ||
-			resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusPaymentRequired ||
-			resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusNotFound ||
-			resp.StatusCode == http.StatusMethodNotAllowed || resp.StatusCode == http.StatusPermanentRedirect ||
-			resp.StatusCode == http.StatusTemporaryRedirect || resp.StatusCode == http.StatusConflict ||
-			resp.StatusCode == http.StatusRequestEntityTooLarge || resp.StatusCode == http.StatusRequestedRangeNotSatisfiable ||
-			resp.StatusCode == http.StatusRequestHeaderFieldsTooLarge || resp.StatusCode == http.StatusBadRequest ||
-			resp.StatusCode == http.StatusUnprocessableEntity || resp.StatusCode == http.StatusInternalServerError {
-			return
-		}
-		// make sure we read all (if any) content and close the response stream as to not leak resources
-		if resp.Body != nil {
-			ioutil.ReadAll(resp.Body)
-			resp.Body.Close()
+		if err == nil {
+			// if this request looks like a normal, non-retryable response
+			// then just return it without attempting a retry
+			if !event.IsHTTPStatusRetryable(resp.StatusCode) {
+				return
+			}
+			// make sure we read all (if any) content and close the response stream as to not leak resources
+			if resp.Body != nil {
+				ioutil.ReadAll(resp.Body)
+				resp.Body.Close()
+			}
 		}
 		if retry.RetryDelay > 0 {
 			remaining := math.Min(float64(retry.MaxDuration-time.Since(started)), float64(retry.RetryDelay))
