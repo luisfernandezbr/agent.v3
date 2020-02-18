@@ -19,7 +19,7 @@ func (s *runner) handleUninstallEvents(ctx context.Context, finishMain chan bool
 		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
 		Channel: s.conf.Channel,
 		Factory: factory,
-		Topic:   agent.UninstallRequestTopic.String(),
+		Topic:   agent.UninstallRequestModelName.String(),
 		Errors:  errorsChan,
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,

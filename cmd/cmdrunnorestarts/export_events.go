@@ -22,7 +22,7 @@ func (s *runner) handleExportEvents(ctx context.Context) (closefunc, error) {
 		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
 		Channel: s.conf.Channel,
 		Factory: factory,
-		Topic:   agent.ExportRequestTopic.String(),
+		Topic:   agent.ExportRequestModelName.String(),
 		Errors:  errors,
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,

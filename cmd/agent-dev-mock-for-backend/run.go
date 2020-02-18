@@ -68,7 +68,7 @@ func handleIntegrationEvents(ctx context.Context, log hclog.Logger, apiKey strin
 		GroupID: fmt.Sprintf("agent-%v", agentOpts.DeviceID),
 		Channel: agentOpts.Channel,
 		Factory: factory,
-		Topic:   agent.IntegrationRequestTopic.String(),
+		Topic:   agent.IntegrationRequestModelName.String(),
 		Errors:  errors,
 		Headers: map[string]string{
 			"customer_id": customerID,
@@ -134,7 +134,7 @@ func handleExportEvents(ctx context.Context, log hclog.Logger, apiKey string, cu
 		GroupID: fmt.Sprintf("agent-%v", agentOpts.DeviceID),
 		Channel: agentOpts.Channel,
 		Factory: factory,
-		Topic:   agent.ExportRequestTopic.String(),
+		Topic:   agent.ExportRequestModelName.String(),
 		Errors:  errors,
 		Headers: map[string]string{
 			"customer_id": customerID,
