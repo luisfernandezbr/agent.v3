@@ -275,26 +275,7 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 	item.Title = fields.Summary
 
 	if data.RenderedFields.Description != "" {
-		// we need to pull out the HTML and parse it so we can properly display it in the application. the HTML will
-		// have a bunch of stuff we need to cleanup for rendering in our application such as relative urls, etc. we
-		// clean this up here and fix any urls and weird html issues
-		item.Description = data.RenderedFields.Description
-		for _, m := range imgRegexp.FindAllStringSubmatch(item.Description, -1) {
-			url := m[2] // this is the image group
-			// if a relative url but not a // meaning protocol to the page, then make an absolute url to the server
-			if strings.HasPrefix(url, "/") && !strings.HasPrefix(url, "//") {
-				// replace the relative url with an absolute url. the app will handle the case where the app
-				// image is unreachable because the server is behind a corporate firewall and the user isn't on
-				// the network when viewing it
-				url = pstrings.JoinURL(qc.WebsiteURL, url)
-			}
-			// replace the <span> wrapped thumbnail junk with just a simple image tag
-			newval := strings.Replace(m[0], m[1], `<img src="`+url+`" />`, 1)
-			item.Description = strings.ReplaceAll(item.Description, m[0], newval)
-		}
-		// we apply a special tag here to allow the front-end to handle integration specific data for the integration in
-		// case we need to do integration specific image handling
-		item.Description = `<div class="source-jira">` + strings.TrimSpace(item.Description) + `</div>`
+		item.Description = adjustRenderedHTML(qc.WebsiteURL, data.RenderedFields.Description)
 	}
 
 	created, err := ParseTime(fields.Created)
@@ -513,10 +494,10 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 			case "project":
 				item.Field = work.IssueChangeLogFieldProjectID
 				if data.From != "" {
-					item.From = work.NewProjectID(qc.CustomerID, "jira", data.From)
+					item.From = qc.ProjectID(data.From)
 				}
 				if data.To != "" {
-					item.To = work.NewProjectID(qc.CustomerID, "jira", data.To)
+					item.From = qc.ProjectID(data.To)
 				}
 			case "key":
 				item.Field = work.IssueChangeLogFieldIdentifier
@@ -564,4 +545,30 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 
 	return issue, nil
 
+}
+
+// we need to pull out the HTML and parse it so we can properly display it in the application. the HTML will
+// have a bunch of stuff we need to cleanup for rendering in our application such as relative urls, etc. we
+// clean this up here and fix any urls and weird html issues
+func adjustRenderedHTML(websiteURL, data string) string {
+	if data == "" {
+		return ""
+	}
+
+	for _, m := range imgRegexp.FindAllStringSubmatch(data, -1) {
+		url := m[2] // this is the image group
+		// if a relative url but not a // meaning protocol to the page, then make an absolute url to the server
+		if strings.HasPrefix(url, "/") && !strings.HasPrefix(url, "//") {
+			// replace the relative url with an absolute url. the app will handle the case where the app
+			// image is unreachable because the server is behind a corporate firewall and the user isn't on
+			// the network when viewing it
+			url = pstrings.JoinURL(websiteURL, url)
+		}
+		// replace the <span> wrapped thumbnail junk with just a simple image tag
+		newval := strings.Replace(m[0], m[1], `<img src="`+url+`" />`, 1)
+		data = strings.ReplaceAll(data, m[0], newval)
+	}
+	// we apply a special tag here to allow the front-end to handle integration specific data for the integration in
+	// case we need to do integration specific image handling
+	return `<div class="source-jira">` + strings.TrimSpace(data) + `</div>`
 }
