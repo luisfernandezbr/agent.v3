@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 
 	pstrings "github.com/pinpt/go-common/strings"
@@ -33,6 +34,10 @@ func NewUsers(integration *Integration, orgs []api.Org) (*Users, error) {
 	s.loginToID = map[string]string{}
 
 	err = s.createGhost()
+	if err != nil {
+		return nil, err
+	}
+	err = s.createGithubNoReply()
 	if err != nil {
 		return nil, err
 	}
@@ -77,8 +82,6 @@ func (s *Users) createGhost() error {
 		}
 	*/
 
-	s.loginToID[""] = "ghost"
-
 	user := &sourcecode.User{}
 	user.RefID = "ghost"
 	user.RefType = "github"
@@ -86,6 +89,18 @@ func (s *Users) createGhost() error {
 	user.Username = pstrings.Pointer("ghost")
 	user.Member = false
 	user.Type = sourcecode.UserTypeDeletedSpecialUser
+	return s.sendUser(user)
+}
+
+func (s *Users) createGithubNoReply() error {
+	// commits from github bot are created with noreply@github.com email
+	user := &sourcecode.User{}
+	user.RefID = "github-noreply"
+	user.RefType = "github"
+	user.Name = "GitHub (noreply)"
+	user.Username = pstrings.Pointer("github")
+	user.Member = false
+	user.Type = sourcecode.UserTypeBot
 	return s.sendUser(user)
 }
 
@@ -158,30 +173,65 @@ func (s *Users) exportOrganizationUsers(org api.Org) error {
 	return <-done
 }
 
-func (s *Users) LoginToRefID(login string) (refID string, _ error) {
-	if login == "dependabot" || strings.HasSuffix(login, "[bot]") {
-		return "", nil
-	}
+func (s *Users) LoginToRefID(login string) (refID string, rerr error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.loginToID[login] == "" {
-		s.integration.logger.Info("could not find user in organization querying non-org github user", "login", login)
-		user, err := api.User(s.integration.qc, login, false)
-		if err != nil {
-			return "", err
-		}
-		err = s.sendUser(user)
-		if err != nil {
-			return "", err
-		}
-		s.loginToID[*user.Username] = user.RefID
+
+	if s.loginToID[login] != "" {
+		return s.loginToID[login], nil
 	}
+
+	logger := s.integration.logger
+
+	if login == "" {
+		// deleted authors don't have login, but ui links to ghost user
+		return "ghost", nil
+	}
+
+	if login == "dependabot" || strings.HasSuffix(login, "[bot]") {
+		logger.Info("user is a bot, creating new record", "login", login)
+		s.loginToID[login] = login
+
+		user := &sourcecode.User{}
+		user.RefID = login
+		user.RefType = "github"
+		user.Name = "Bot " + login
+		user.Username = pstrings.Pointer(login)
+		user.Member = false
+		user.Type = sourcecode.UserTypeBot
+		err := s.sendUser(user)
+		if err != nil {
+			rerr = err
+			return
+		}
+
+		return login, nil
+	}
+
+	logger.Info("could not find user in organization, querying non-org github user for additional details", "login", login)
+
+	user, err := api.User(s.integration.qc, login, false)
+	if err != nil {
+		rerr = err
+		return
+	}
+	err = s.sendUser(user)
+	if err != nil {
+		rerr = err
+		return
+	}
+	s.loginToID[*user.Username] = user.RefID
 	return s.loginToID[login], nil
 }
 
-func (s *Users) LoginToRefIDFromCommit(login string, email string) (refID string, _ error) {
-	if email == "noreply@github.com" {
-		return "", errors.New("can not resolve user with email: noreply@github.com")
+func (s *Users) LoginToRefIDFromCommit(logger hclog.Logger, login, name, email string) (refID string, _ error) {
+	// link all github bot commits
+	if name == "GitHub" && email == "noreply@github.com" {
+		return "github-noreply", nil
+	}
+	if login == "" {
+		// this is for commits with no matching github accounts, which is completely normaly
+		return "", nil
 	}
 	return s.LoginToRefID(login)
 }

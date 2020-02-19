@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+
 	pjson "github.com/pinpt/go-common/json"
 )
 
@@ -17,7 +19,7 @@ type CommitAuthor struct {
 func CommitsPage(
 	qc QueryContext,
 	repo Repo, branchName string,
-	queryParams string) (pi PageInfo, res []CommitAuthor, _ error) {
+	queryParams string) (pi PageInfo, res []CommitAuthor, rerr error) {
 
 	qc.Logger.Debug("commits request", "repo", repo.NameWithOwner, "branchName", branchName, "q", queryParams)
 
@@ -96,7 +98,8 @@ func CommitsPage(
 
 	err := qc.Request(query, &requestRes)
 	if err != nil {
-		return pi, res, err
+		rerr = err
+		return
 	}
 
 	//qc.Logger.Info(fmt.Sprintf("object %+v", requestRes))
@@ -108,20 +111,26 @@ func CommitsPage(
 		item := CommitAuthor{}
 		item.CommitHash = data.OID
 
-		if data.Author.User.Login != "" {
+		logger := qc.Logger.With("repo", repo.NameWithOwner, "commit", item.CommitHash)
+
+		{
 			login := data.Author.User.Login
+			name := data.Author.Name
 			email := data.Author.Email
-			item.AuthorRefID, err = qc.UserLoginToRefIDFromCommit(login, email)
+			item.AuthorRefID, err = qc.UserLoginToRefIDFromCommit(logger, login, name, email)
 			if err != nil {
-				qc.Logger.Error("could not resolve author when processing commit", "login", login, "repo", repo.NameWithOwner, "commit", item.CommitHash)
+				rerr = fmt.Errorf("failed resolving commit user (author), login: %v err: %v", login, err)
+				return
 			}
 		}
-		if data.Committer.User.Login != "" {
+		{
 			login := data.Committer.User.Login
+			name := data.Committer.Name
 			email := data.Committer.Email
-			item.CommitterRefID, err = qc.UserLoginToRefIDFromCommit(login, email)
+			item.CommitterRefID, err = qc.UserLoginToRefIDFromCommit(logger, login, name, email)
 			if err != nil {
-				qc.Logger.Error("could not resolve committer when processing commit", "login", login, "repo", repo.NameWithOwner, "commit", item.CommitHash)
+				rerr = fmt.Errorf("failed resolving commit user (commiter), login: %v err: %v", login, err)
+				return
 			}
 		}
 		item.AuthorName = data.Author.Name

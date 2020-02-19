@@ -25,7 +25,7 @@ type QueryContext struct {
 	RefType    string
 
 	UserLoginToRefID           func(login string) (refID string, _ error)
-	UserLoginToRefIDFromCommit func(login, email string) (refID string, _ error)
+	UserLoginToRefIDFromCommit func(logger hclog.Logger, login, name, email string) (refID string, _ error)
 
 	IsEnterprise func() bool
 
