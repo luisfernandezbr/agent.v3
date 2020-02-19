@@ -34,10 +34,6 @@ func Retrying(logger hclog.Logger, run Run, delay RetryDelayFn, resetFailuresAft
 			logger.Info("starting service", "run", i)
 			runStart := time.Now()
 			err := run(ctx)
-			if err != nil && err.Error() == "exit status 2" {
-				logger.Info("exited from retrying")
-				return err
-			}
 			runEnd := time.Now()
 			dur := runEnd.Sub(runStart)
 			logger.Info("service exited", "err", err, "dur", dur, "run", i)
