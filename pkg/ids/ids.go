@@ -39,7 +39,7 @@ func CodeBranch(customerID string, refType string, repoID string, branchName str
 }
 
 func WorkProject(customerID string, refType string, refID string) string {
-	return work.NewProjectID(customerID, refType, refID)
+	return work.NewProjectID(customerID, refID, refType)
 }
 
 func WorkSprint(customerID string, refType string, refID string) string {
@@ -47,11 +47,11 @@ func WorkSprint(customerID string, refType string, refID string) string {
 }
 
 func WorkIssue(customerID string, refType string, refID string) string {
-	return work.NewIssueID(customerID, refType, refID)
+	return work.NewIssueID(customerID, refID, refType)
 }
 
 func WorkUser(customerID string, refType string, refID string) string {
-	return work.NewUserID(customerID, refType, refID)
+	return work.NewUserID(customerID, refID, refType)
 }
 
 func WorkUserAssociatedRefID(customerID string, refType string, associatedRefID string) string {

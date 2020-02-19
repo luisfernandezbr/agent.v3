@@ -22,7 +22,7 @@ Supports basic auth and OAuth 2
 
 ### Required permissions
 
-In general jira token does not have separate levels of permissions. But the users that this token belongs to can have different visibility and security settings. The user used for export should be able to see all issues and related data that we want to texport.
+In general jira token does not have separate levels of permissions. But the users that this token belongs to can have different visibility and security settings. The user used for export should be able to see all issues and related data that we want to export.
 
 Permission is Browse Project for each. If the project has issues with different Security levels, the user should have the valid permission to see those.
 
@@ -31,7 +31,7 @@ Permission is Browse Project for each. If the project has issues with different 
 ### Example request
 
 ```
-curl -u user@example.com:API_TOKEN 'https://pinpt-hq.atlassian.net/rest/api/3/search'
+curl -u user@example.com:API_TOKEN 'https://pinpt-hq.atlassian.net/rest/api/3/search?jql=id%3DDINT-151&expand=fields'
 ```
 
 ## Jira Server
@@ -72,3 +72,7 @@ func main() {
 	fmt.Println(params.Encode())
 }
 ```
+
+### Incremental exports
+
+Incrementals work correctly for work.IssueComment. When new comment is added or existing edited it updates the updated filed of the issue. Because of that all comment changes are picked up in incrementals.

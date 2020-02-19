@@ -195,6 +195,14 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 			}
 		}
 
+		for _, obj := range resIssues {
+			err := s.exportIssueComments(senderIssues, project, obj.RefID)
+			if err != nil {
+				rerr = err
+				return
+			}
+		}
+
 		return pi.HasMore, pi.MaxResults, nil
 	})
 	if err != nil {
@@ -202,4 +210,37 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 	}
 
 	return nil
+}
+
+func (s *JiraCommon) exportIssueComments(
+	senderIssues *objsender.Session,
+	project Project,
+	issueRefID string) error {
+	s.opts.Logger.Debug("exporting comments for issue", "project", project, "issue_ref_id", issueRefID)
+
+	senderComments, err := senderIssues.Session(work.IssueCommentModelName.String(), issueRefID, issueRefID)
+	if err != nil {
+		return err
+	}
+
+	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
+		pi, res, err := jiracommonapi.IssueComments(s.CommonQC(), project.Project, issueRefID, paginationParams)
+		if err != nil {
+			rerr = err
+			return
+		}
+		for _, item := range res {
+			err := senderComments.Send(item)
+			if err != nil {
+				rerr = err
+				return
+			}
+		}
+		return pi.HasMore, pi.MaxResults, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return senderComments.Done()
 }
