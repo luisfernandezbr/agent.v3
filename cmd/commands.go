@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 
 	pservice "github.com/kardianos/service"
 	"github.com/pinpt/agent/cmd/cmdenroll"
@@ -343,7 +342,6 @@ var cmdRun = &cobra.Command{
 		noRestarts, _ := cmd.Flags().GetBool("no-restarts")
 		if noRestarts {
 			runNoRestarts(cmd, args)
-			os.Exit(2) // exit code to let cmdRunWithRestart know it is an uninstall event
 		}
 		runWithRestarts(cmd, args)
 	},

@@ -305,19 +305,12 @@ func (f *modelFactory) New(name datamodel.ModelNameType) datamodel.Model {
 var factory action.ModelFactory = &modelFactory{}
 
 func (s *runner) newSubConfig(topic string) action.Config {
-	errorsChan := make(chan error, 1)
-	go func() {
-		for err := range errorsChan {
-			s.logger.Error(fmt.Sprintf("error in %s requests", topic), "err", err)
-		}
-	}()
 	return action.Config{
 		APIKey:  s.conf.APIKey,
 		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
 		Channel: s.conf.Channel,
 		Factory: factory,
 		Topic:   topic,
-		Errors:  errorsChan,
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,
 			"uuid":        s.conf.DeviceID,
@@ -329,12 +322,26 @@ func (s *runner) newSubConfig(topic string) action.Config {
 func (s *runner) sendPings() {
 	ctx := context.Background()
 	s.sendPing(ctx) // always send ping immediately upon start
+
+	var failedPings []time.Time
 	for {
 		select {
 		case <-time.After(30 * time.Second):
 			err := s.sendPing(ctx)
 			if err != nil {
 				s.logger.Error("could not send ping", "err", err.Error())
+				var pastHour []time.Time
+				cutoff := time.Now().Add(-time.Hour)
+				for _, p := range failedPings {
+					if p.After(cutoff) {
+						pastHour = append(pastHour, p)
+					}
+				}
+				pastHour = append(pastHour, time.Now())
+				failedPings = pastHour
+				if len(failedPings) > 5 {
+					panic("more than 5 pings failed in the past hour, exiting to restart")
+				}
 			} else {
 				s.logger.Info("sent ping")
 			}

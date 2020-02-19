@@ -15,14 +15,12 @@ import (
 func (s *runner) handleCancelEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for cancel requests")
 
-	errors := make(chan error, 1)
 	actionConfig := action.Config{
 		APIKey:  s.conf.APIKey,
 		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
 		Channel: s.conf.Channel,
 		Factory: factory,
 		Topic:   agent.CancelRequestModelName.String(),
-		Errors:  errors,
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,
 			"uuid":        s.conf.DeviceID,
@@ -70,11 +68,6 @@ func (s *runner) handleCancelEvents(ctx context.Context) (closefunc, error) {
 	if err != nil {
 		return nil, err
 	}
-	go func() {
-		for err := range errors {
-			s.logger.Error("error in cancel requests", "err", err)
-		}
-	}()
 
 	sub.WaitForReady()
 
