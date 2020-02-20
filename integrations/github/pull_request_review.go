@@ -7,14 +7,14 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *objsender.Session, pullRequests chan []api.PullRequest) error {
+func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *objsender.Session, repo api.Repo, pullRequests chan []api.PullRequest) error {
 	for prs := range pullRequests {
 		for _, pr := range prs {
 			if !pr.HasReviews {
 				// perf optimization
 				continue
 			}
-			err := s.exportPullRequestReviews(logger, prSender, pr.RefID)
+			err := s.exportPullRequestReviews(logger, prSender, repo, pr.RefID)
 			if err != nil {
 				return err
 			}
@@ -23,14 +23,14 @@ func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *o
 	return nil
 }
 
-func (s *Integration) exportPullRequestReviews(logger hclog.Logger, prSender *objsender.Session, prID string) error {
+func (s *Integration) exportPullRequestReviews(logger hclog.Logger, prSender *objsender.Session, repo api.Repo, prID string) error {
 	reviewsSender, err := prSender.Session(sourcecode.PullRequestReviewModelName.String(), prID, prID)
 	if err != nil {
 		return err
 	}
 
 	err = api.PaginateRegularWithPageSize(pageSizeHeavyQueries, func(query string) (api.PageInfo, error) {
-		pi, res, totalCount, err := api.PullRequestReviewsPage(s.qc, prID, query)
+		pi, res, totalCount, err := api.PullRequestReviewTimelineItemsPage(s.qc, repo, prID, query)
 		if err != nil {
 			return pi, err
 		}
