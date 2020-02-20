@@ -111,6 +111,19 @@ type issueFields struct {
 		OutwardIssue linkedIssue `json:"outwardIssue"`
 		InwardIssue  linkedIssue `json:"inwardIssue"`
 	} `json:"issuelinks"`
+	Attachment []struct {
+		ID       string `json:"id"`
+		Filename string `json:"filename"`
+		Author   struct {
+			Key       string `json:"key"`
+			AccountID string `json:"accountId"`
+		} `json:"author"`
+		Created   string `json:"created"`
+		Size      int    `json:"size"`
+		MimeType  string `json:"mimeType"`
+		Content   string `json:"content"`
+		Thumbnail string `json:"thumbnail"`
+	} `json:"attachment"`
 }
 
 // IssuesAndChangelogsPage returns issues and related changelogs. Calls qc.ExportUser for each user. Current difference from jira-cloud version is that user.Key is used instead of user.AccountID everywhere.
@@ -144,6 +157,7 @@ func IssuesAndChangelogsPage(
 	params.Set("jql", jql)
 	// we need both fields and renderedFields so that we can get the unprocessed (fields) and processed (html for renderedFields)
 	params.Add("expand", "changelog,fields,renderedFields")
+	params.Add("fields", "*navigable,attachment")
 
 	qc.Logger.Debug("issues request", "project", project.Key, "params", params)
 
@@ -366,6 +380,28 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 		link2.ReverseDirection = reverseDirection
 		link2.LinkType = linkType
 		item.LinkedIssues = append(item.LinkedIssues, link2)
+	}
+
+	for _, data := range fields.Attachment {
+		var attachment work.IssueAttachments
+		attachment.RefID = data.ID
+		attachment.Name = data.Filename
+		attachment.URL = data.Content
+		attachment.ThumbnailURL = data.Thumbnail
+		attachment.MimeType = data.MimeType
+		attachment.Size = int64(data.Size)
+		user := data.Author.AccountID // cloud
+		if user == "" {
+			user = data.Author.Key // hosted
+		}
+		attachment.UserRefID = user
+		created, err := ParseTime(data.Created)
+		if err != nil {
+			rerr = err
+			return
+		}
+		date.ConvertToModel(created, &attachment.CreatedDate)
+		item.Attachments = append(item.Attachments, attachment)
 	}
 
 	for k, d := range data.Fields {
