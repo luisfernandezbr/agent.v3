@@ -137,11 +137,8 @@ func PullRequestReviewTimelineItemsPage(
 		return
 	}
 
-	//qc.Logger.Info(fmt.Sprintf("%+v", res))
-
 	nodesContainer := requestRes.Data.Node.Reviews
 	nodes := nodesContainer.Nodes
-	//qc.Logger.Info("got reviews", "n", len(nodes))
 	for _, m := range nodes {
 		typename, _ := m["__typename"].(string)
 
