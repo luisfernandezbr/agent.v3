@@ -116,8 +116,25 @@ func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
 		}
 	}
 
+	var in2 []agent.ExportRequestIntegrations
+	hasIntegrationsWithNoInclusions := false
+	for _, in := range data.Integrations {
+		if len(in.Inclusions) == 0 {
+			hasIntegrationsWithNoInclusions = true
+			s.logger.Warn("export request contains an integration with no inclusions, ignoring it")
+			continue
+		}
+		in2 = append(in2, in)
+	}
+	data.Integrations = in2
+
 	if len(data.Integrations) == 0 {
-		handleError(errors.New("passed export request has no integrations, ignoring it"))
+		if hasIntegrationsWithNoInclusions {
+			handleError(errors.New("all integrations in passed export request have no inclusions, ignoring this export request"))
+
+		} else {
+			handleError(errors.New("passed export request has no integrations, ignoring it"))
+		}
 		return
 	}
 
