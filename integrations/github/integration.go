@@ -579,7 +579,7 @@ func (s *Integration) exportPullRequestsForRepo(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := s.exportPullRequestsReviews(logger, pullRequestSender, pullRequestsForReviews)
+		err := s.exportPullRequestsReviews(logger, pullRequestSender, repo, pullRequestsForReviews)
 		if err != nil {
 			setErr(err)
 		}
