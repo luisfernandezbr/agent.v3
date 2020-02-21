@@ -68,7 +68,7 @@ func (s *Exporter) sendSuccessEvent(jobID string, started time.Time, res exportR
 			SystemType:    agent.ExportResponseIntegrationsSystemType(reqIn.SystemType),
 		}
 		in := res.Integrations[i]
-		if in.IsIncremental {
+		if in.Incremental {
 			v.ExportType = agent.ExportResponseIntegrationsExportTypeIncremental
 		} else {
 			v.ExportType = agent.ExportResponseIntegrationsExportTypeHistorical

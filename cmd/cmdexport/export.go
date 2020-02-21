@@ -14,8 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
-
 	"github.com/pinpt/agent/pkg/deviceinfo"
 	"github.com/pinpt/agent/pkg/expin"
 	"github.com/pinpt/agent/pkg/expsessions"
@@ -87,6 +85,8 @@ type export struct {
 	gitSessions map[expin.Export]expsessions.ID
 	// map[integration.ID]map[repoID]error
 	gitResults map[expin.Export]map[string]error
+
+	isIncremental map[expin.Export]bool
 }
 
 type gitRepoFetch struct {
@@ -152,7 +152,7 @@ func (s *export) Run() (_ Result, rerr error) {
 		return
 	}
 
-	err = s.logLastProcessedTimestamps()
+	err = s.checkIfIncremental()
 	if err != nil {
 		rerr = err
 		return
@@ -198,7 +198,7 @@ func (s *export) Run() (_ Result, rerr error) {
 		<-gitProcessingDone
 	}
 
-	err = s.updateLastProcessedTimestamps(startTime)
+	err = s.updateLastProcessedTimestampsForIncrementalCheck(startTime)
 	if err != nil {
 		rerr = err
 		return
@@ -282,22 +282,21 @@ func (s *export) discardIncrementalData() error {
 	return os.RemoveAll(s.Locs.RipsrcCheckpoints)
 }
 
-func (s *export) logLastProcessedTimestamps() error {
-	lastExport := map[inconfig.IntegrationDef]string{}
-	for _, ino := range s.Opts.Integrations {
-		in, err := ino.IntegrationDef()
-		if err != nil {
-			return err
-		}
-		v := s.lastProcessed.Get(in.String())
+func (s *export) checkIfIncremental() error {
+	lastExport := map[expin.Export]string{}
+	s.isIncremental = map[expin.Export]bool{}
+	for exp, in := range s.Integrations {
+		v := s.lastProcessed.Get(in.Export.String())
 		if v != nil {
 			ts, ok := v.(string)
 			if !ok {
 				return errors.New("not a valid value saved in last processed key")
 			}
-			lastExport[in] = ts
+			lastExport[exp] = ts
+			s.isIncremental[exp] = true
 		} else {
-			lastExport[in] = ""
+			lastExport[exp] = ""
+			s.isIncremental[exp] = false
 		}
 	}
 
@@ -310,13 +309,9 @@ func (s *export) logLastProcessedTimestamps() error {
 	return nil
 }
 
-func (s *export) updateLastProcessedTimestamps(startTime time.Time) error {
-	for _, ino := range s.Opts.Integrations {
-		in, err := ino.IntegrationDef()
-		if err != nil {
-			return err
-		}
-		err = s.lastProcessed.Set(startTime.Format(time.RFC3339), in.String())
+func (s *export) updateLastProcessedTimestampsForIncrementalCheck(startTime time.Time) error {
+	for exp := range s.Integrations {
+		err := s.lastProcessed.Set(startTime.Format(time.RFC3339), exp.String())
 		if err != nil {
 			return err
 		}

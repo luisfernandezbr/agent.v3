@@ -17,10 +17,11 @@ type Result struct {
 }
 
 type ResultIntegration struct {
-	ID       string          `json:"id"`
-	Error    string          `json:"error"`
-	Projects []ResultProject `json:"projects"`
-	Duration time.Duration   `json:"duration"`
+	ID          string          `json:"id"`
+	Error       string          `json:"error"`
+	Projects    []ResultProject `json:"projects"`
+	Duration    time.Duration   `json:"duration"`
+	Incremental bool            `json:"incremental"`
 }
 
 type ResultProject struct {
@@ -57,6 +58,7 @@ func (s *export) formatResults(runResult map[expin.Export]runResult, startTime t
 			res.Error = res0.Err.Error()
 		}
 		res.Duration = res0.Duration
+		res.Incremental = s.isIncremental[exp]
 		for _, project0 := range res0.Res.Projects {
 			project := ResultProject{}
 			project.ExportProject = project0
