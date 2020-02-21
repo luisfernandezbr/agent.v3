@@ -47,6 +47,10 @@
   version = "3.6.0"
 
 [[constraint]]
+  branch = "master"
+  name = "github.com/songgao/stacktraces"
+  
+[[constraint]]
   name = "github.com/pinpt/ripsrc"
   #version = "6"
   branch = "master"

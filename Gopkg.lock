@@ -540,6 +540,17 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:5213964028599ca507f6c142b0de8bc67f9b6d1105bd7856bc2788d5452631fa"
+  name = "github.com/songgao/stacktraces"
+  packages = [
+    ".",
+    "on/SIGUSR1",
+  ]
+  pruneopts = "T"
+  revision = "0f98d2fb7fc3051b528076b5d15d792e4c858992"
+
+[[projects]]
   digest = "1:0d40f08f9f1d486f6c56a0cb0d50f28ee1d216497adb7ea060b6dfe9587a2a3d"
   name = "github.com/spf13/cobra"
   packages = ["."]
@@ -1005,6 +1016,7 @@
     "github.com/pinpt/integration-sdk/work",
     "github.com/pinpt/ripsrc/ripsrc",
     "github.com/pinpt/ripsrc/ripsrc/branchmeta",
+    "github.com/songgao/stacktraces/on/SIGUSR1",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
     "google.golang.org/grpc",
