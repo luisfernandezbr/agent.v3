@@ -191,8 +191,6 @@ func IssuesAndChangelogsPage(
 	return
 }
 
-var imgRegexp = regexp.MustCompile(`(?s)<span class="image-wrap"[^\>]*>(.*?src\=(?:\"|\')(.+?)(?:\"|\').*?)<\/span>`)
-
 // BUG: returned data will have missing start and end date, because we don't pass fieldsByID here
 func IssueByID(qc QueryContext, issueIDOrKey string) (_ IssueWithCustomFields, rerr error) {
 	// https://developer.atlassian.com/cloud/jira/platform/rest/v3/#api-rest-api-3-issue-issueIdOrKey-get
@@ -583,6 +581,10 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 
 }
 
+var imgRegexp = regexp.MustCompile(`(?s)<span class="image-wrap"[^\>]*>(.*?src\=(?:\"|\')(.+?)(?:\"|\').*?)<\/span>`)
+
+var emoticonRegexp = regexp.MustCompile(`<img class="emoticon" src="([^"]*)"[^>]*\/>`)
+
 // we need to pull out the HTML and parse it so we can properly display it in the application. the HTML will
 // have a bunch of stuff we need to cleanup for rendering in our application such as relative urls, etc. we
 // clean this up here and fix any urls and weird html issues
@@ -604,6 +606,16 @@ func adjustRenderedHTML(websiteURL, data string) string {
 		newval := strings.Replace(m[0], m[1], `<img src="`+url+`" />`, 1)
 		data = strings.ReplaceAll(data, m[0], newval)
 	}
+
+	for _, m := range emoticonRegexp.FindAllStringSubmatch(data, -1) {
+		url := m[1]
+		if strings.HasPrefix(url, "/") && !strings.HasPrefix(url, "//") {
+			url = pstrings.JoinURL(websiteURL, url)
+		}
+		newval := strings.Replace(m[0], m[1], url, 1)
+		data = strings.ReplaceAll(data, m[0], newval)
+	}
+
 	// we apply a special tag here to allow the front-end to handle integration specific data for the integration in
 	// case we need to do integration specific image handling
 	return `<div class="source-jira">` + strings.TrimSpace(data) + `</div>`
