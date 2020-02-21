@@ -13,12 +13,9 @@ type IntegrationBase struct {
 	Type IntegrationType `json:"type"` // sourcecode or work
 }
 
-func (s IntegrationBase) ID() (res IntegrationID, err error) {
+func (s IntegrationBase) IntegrationDef() (res IntegrationDef, _ error) {
 	res.Name = s.Name
 	res.Type = s.Type
-	if err != nil {
-		return res, fmt.Errorf("invalid integration config, integration: %v, err: %v", s.Name, err)
-	}
 	return
 }
 
@@ -70,10 +67,10 @@ type IntegrationConfigAgent struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-// IntegrationID defines a unique integration.
+// IntegrationDef defines a unique integration.
 // Since some integration binaries contain different
 // integrations based on type, we neeed to include type as well.
-type IntegrationID struct {
+type IntegrationDef struct {
 	// Name is the name of the integration binary
 	Name string
 
@@ -82,11 +79,11 @@ type IntegrationID struct {
 	Type IntegrationType
 }
 
-func (s IntegrationID) Empty() bool {
+func (s IntegrationDef) Empty() bool {
 	return s.String() == ""
 }
 
-func (s IntegrationID) String() string {
+func (s IntegrationDef) String() string {
 	if s.Type == -1 || s.Type.String() == "" || s.Type.String() == "unset" {
 		return s.Name
 	}

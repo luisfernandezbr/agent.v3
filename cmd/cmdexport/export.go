@@ -283,9 +283,9 @@ func (s *export) discardIncrementalData() error {
 }
 
 func (s *export) logLastProcessedTimestamps() error {
-	lastExport := map[inconfig.IntegrationID]string{}
+	lastExport := map[inconfig.IntegrationDef]string{}
 	for _, ino := range s.Opts.Integrations {
-		in, err := ino.ID()
+		in, err := ino.IntegrationDef()
 		if err != nil {
 			return err
 		}
@@ -312,7 +312,7 @@ func (s *export) logLastProcessedTimestamps() error {
 
 func (s *export) updateLastProcessedTimestamps(startTime time.Time) error {
 	for _, ino := range s.Opts.Integrations {
-		in, err := ino.ID()
+		in, err := ino.IntegrationDef()
 		if err != nil {
 			return err
 		}

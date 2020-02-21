@@ -13,7 +13,7 @@ type Index int
 // Export contains index and info on the integration that is running. Useful for pass around for logging and debugging.
 type Export struct {
 	Index       Index
-	Integration inconfig.IntegrationID
+	Integration inconfig.IntegrationDef
 }
 
 func (s Export) String() string {

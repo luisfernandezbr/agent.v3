@@ -73,7 +73,7 @@ type Command struct {
 	StartTime time.Time
 	Locs      fsconf.Locs
 
-	IntegrationIDs map[expin.Index]inconfig.IntegrationID
+	IntegrationIDs map[expin.Index]inconfig.IntegrationDef
 	Integrations   map[expin.Index]*iloader.Integration
 	ExportConfigs  map[expin.Index]rpcdef.ExportConfig
 
@@ -147,11 +147,11 @@ func (s *Command) ExpIn(ind expin.Index) expin.Export {
 func (s *Command) setupConfig() error {
 	s.ExportConfigs = map[expin.Index]rpcdef.ExportConfig{}
 	s.OAuthRefreshTokens = map[expin.Index]string{}
-	s.IntegrationIDs = map[expin.Index]inconfig.IntegrationID{}
+	s.IntegrationIDs = map[expin.Index]inconfig.IntegrationDef{}
 
 	for i, obj := range s.Opts.Integrations {
 		ind := expin.Index(i)
-		id, err := obj.ID()
+		id, err := obj.IntegrationDef()
 		if err != nil {
 			return err
 		}

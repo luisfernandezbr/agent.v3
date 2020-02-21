@@ -289,7 +289,7 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (isInc
 }
 
 func (s *Exporter) getLastProcessed(lastProcessed *jsonstore.Store, in inconfig.IntegrationAgent) (string, error) {
-	id, err := in.ID()
+	id, err := in.IntegrationDef()
 	if err != nil {
 		return "", err
 	}
