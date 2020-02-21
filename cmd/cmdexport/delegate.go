@@ -47,7 +47,7 @@ func (s agentDelegate) SendExported(sessionID string, objs []rpcdef.ExportObj) {
 func (s agentDelegate) ExportGitRepo(fetch rpcdef.GitRepoFetch) error {
 	fetch2 := gitRepoFetch{}
 	fetch2.GitRepoFetch = fetch
-	fetch2.ind = s.expin.Index
+	fetch2.exp = s.expin
 	s.export.gitProcessingRepos <- fetch2
 	return nil
 }
@@ -70,7 +70,7 @@ func (s agentDelegate) SessionRollback(id int) error {
 }
 
 func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
-	return s.export.OAuthNewAccessToken(s.expin.Index)
+	return s.export.OAuthNewAccessToken(s.expin)
 }
 
 func (s agentDelegate) SendPauseEvent(msg string, resumeDate time.Time) error {

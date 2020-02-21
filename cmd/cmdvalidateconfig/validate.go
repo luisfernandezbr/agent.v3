@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/gitclone"
-	"github.com/pinpt/agent/pkg/iloader"
 	"github.com/pinpt/agent/rpcdef"
 
 	"github.com/pinpt/agent/cmd/cmdintegration"
@@ -35,7 +34,7 @@ type validator struct {
 
 	Opts Opts
 
-	integration  *iloader.Integration
+	integration  cmdintegration.Integration
 	exportConfig rpcdef.ExportConfig
 }
 
@@ -63,8 +62,7 @@ func newValidator(opts Opts) (_ *validator, rerr error) {
 		return
 	}
 
-	s.integration = s.Integrations[0]
-	s.exportConfig = s.ExportConfigs[0]
+	s.integration = s.OnlyIntegration()
 
 	err = s.runValidateAndPrint()
 	if err != nil {
@@ -119,7 +117,7 @@ func (s *validator) output(serverVersion string, errs []string) error {
 
 func (s *validator) runValidate() (serverVersion string, errs []string) {
 	ctx := context.Background()
-	client := s.integration.RPCClient()
+	client := s.integration.ILoader.RPCClient()
 
 	rerr := func(err error) {
 		errs = append(errs, err.Error())
@@ -127,7 +125,7 @@ func (s *validator) runValidate() (serverVersion string, errs []string) {
 
 	res0, err := client.ValidateConfig(ctx, s.exportConfig)
 	if err != nil {
-		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
+		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
 		rerr(err)
 		return
 	}
@@ -140,7 +138,7 @@ func (s *validator) runValidate() (serverVersion string, errs []string) {
 		}
 	}
 
-	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
+	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
 	if err != nil {
 		rerr(err)
 		return

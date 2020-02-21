@@ -7,7 +7,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/pinpt/agent/pkg/iloader"
 	"github.com/pinpt/agent/rpcdef"
 
 	"github.com/pinpt/agent/cmd/cmdintegration"
@@ -32,7 +31,7 @@ type export struct {
 
 	Opts Opts
 
-	integration  *iloader.Integration
+	integration  cmdintegration.Integration
 	exportConfig rpcdef.ExportConfig
 }
 
@@ -54,8 +53,7 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
-	s.integration = s.Integrations[0]
-	s.exportConfig = s.ExportConfigs[0]
+	s.integration = s.OnlyIntegration()
 
 	err = s.runExportAndPrint()
 	if err != nil {
@@ -92,18 +90,18 @@ func (s *export) runExportAndPrint() error {
 
 func (s *export) runExport() (data interface{}, _ error) {
 	ctx := context.Background()
-	client := s.integration.RPCClient()
+	client := s.integration.ILoader.RPCClient()
 
 	res, err := client.OnboardExport(ctx, s.Opts.ExportType, s.exportConfig)
 	if err != nil {
-		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
+		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
 		return nil, err
 	}
 	if res.Error != nil {
-		return nil, fmt.Errorf("could not retrive data for onboard type: %v integration: %v err: %v", s.Opts.ExportType, s.IntegrationIDs[0], res.Error.Error())
+		return nil, fmt.Errorf("could not retrive data for onboard type: %v integration: %v err: %v", s.Opts.ExportType, s.integration.Export.String(), res.Error.Error())
 	}
 
-	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
+	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
 	if err != nil {
 		return nil, fmt.Errorf("error closing integration, err: %v", err)
 	}

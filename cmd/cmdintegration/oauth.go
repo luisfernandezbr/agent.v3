@@ -21,13 +21,14 @@ func oauthIntegrationNameToBackend(name string) string {
 	}
 }
 
-func (s *Command) OAuthNewAccessToken(ii expin.Index) (accessToken string, _ error) {
-	integrationName := s.IntegrationIDs[ii].Name
+func (s *Command) OAuthNewAccessToken(exp expin.Export) (accessToken string, _ error) {
+	integration := s.Integrations[exp]
+	integrationName := exp.IntegrationDef.Name
 
 	if !s.Opts.AgentConfig.Backend.Enable {
 		return "", errors.New("requested oauth access token, but Backend.Enable is false")
 	}
-	refresh := s.OAuthRefreshTokens[ii]
+	refresh := integration.OauthRefreshToken
 	if refresh == "" {
 		return "", fmt.Errorf("requested oauth access token for integration %v, but we don't have refresh token for it", integrationName)
 	}

@@ -84,13 +84,13 @@ type export struct {
 
 	opts Opts
 
-	gitSessions map[expin.Index]expsessions.ID
+	gitSessions map[expin.Export]expsessions.ID
 	// map[integration.ID]map[repoID]error
-	gitResults map[expin.Index]map[string]error
+	gitResults map[expin.Export]map[string]error
 }
 
 type gitRepoFetch struct {
-	ind expin.Index
+	exp expin.Export
 	rpcdef.GitRepoFetch
 }
 
@@ -109,7 +109,7 @@ func newExport(opts Opts) (*export, error) {
 
 func (s *export) Destroy() error {
 	for _, integration := range s.Integrations {
-		err := integration.Close()
+		err := integration.ILoader.Close()
 		if err != nil {
 			return err
 		}
@@ -330,44 +330,38 @@ type runResult struct {
 	Res      rpcdef.ExportResult
 }
 
-func (s *export) runExports() map[expin.Index]runResult {
+func (s *export) runExports() map[expin.Export]runResult {
 	ctx := context.Background()
 	wg := sync.WaitGroup{}
 
-	res := map[expin.Index]runResult{}
+	res := map[expin.Export]runResult{}
 	resMu := sync.Mutex{}
 
-	for ind, integration := range s.Integrations {
+	for exp, integration := range s.Integrations {
 		wg.Add(1)
-		ind := ind
+		exp := exp
 		integration := integration
 		go func() {
-			expin := s.ExpIn(ind)
 			defer wg.Done()
 			start := time.Now()
 			ret := func(err error, exportRes rpcdef.ExportResult) {
 				resMu.Lock()
-				res[ind] = runResult{
+				res[exp] = runResult{
 					Duration: time.Since(start),
 					Err:      err,
 					Res:      exportRes,
 				}
 				resMu.Unlock()
 				if err != nil {
-					s.Logger.Error("Export failed", "integration", expin, "dur", time.Since(start).String(), "err", err)
+					s.Logger.Error("Export failed", "integration", exp.String(), "dur", time.Since(start).String(), "err", err)
 					return
 				}
-				s.Logger.Info("Export success", "integration", expin, "dur", time.Since(start).String())
+				s.Logger.Info("Export success", "integration", exp.String(), "dur", time.Since(start).String())
 			}
 
-			s.Logger.Info("Export starting", "integration", expin)
+			s.Logger.Info("Export starting", "integration", exp.String())
 
-			exportConfig, ok := s.ExportConfigs[ind]
-			if !ok {
-				panic("no config for integration")
-			}
-
-			exportRes, err := integration.RPCClient().Export(ctx, exportConfig)
+			exportRes, err := integration.ILoader.RPCClient().Export(ctx, integration.ExportConfig)
 			ret(err, exportRes)
 		}()
 	}

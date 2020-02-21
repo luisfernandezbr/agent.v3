@@ -9,6 +9,9 @@ import (
 // IntegrationType is the enumeration type for backend system_type
 
 type IntegrationBase struct {
+	// ID is the integration id passed from backend. We add it to last processed key to avoid conflicts and to maintain state in case ordering of integrations changes in export.
+	// Can be left empty when export is called manually in that case will use index in integration array instead.
+	ID   string          `json:"id"`
 	Name string          `json:"name"`
 	Type IntegrationType `json:"type"` // sourcecode or work
 }

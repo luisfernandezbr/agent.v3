@@ -12,48 +12,45 @@ import (
 	"github.com/pinpt/agent/pkg/gitclone"
 )
 
-func (s *export) gitSession(logger hclog.Logger, ind expin.Index) (_ expsessions.ID, rerr error) {
+func (s *export) gitSession(logger hclog.Logger, exp expin.Export) (_ expsessions.ID, rerr error) {
 	if s.gitSessions == nil {
-		s.gitSessions = map[expin.Index]expsessions.ID{}
+		s.gitSessions = map[expin.Export]expsessions.ID{}
 	}
 
-	if sessID, ok := s.gitSessions[ind]; ok {
+	if sessID, ok := s.gitSessions[exp]; ok {
 		return sessID, nil
 	}
 
-	expin := s.ExpIn(ind)
-
-	sessID, _, err := s.sessions.expsession.SessionRootTracking(expin, "git")
+	sessID, _, err := s.sessions.expsession.SessionRootTracking(exp, "git")
 	if err != nil {
-		logger.Error("could not create session for git export", "integration", expin.String(), "err", err.Error())
+		logger.Error("could not create session for git export", "integration", exp.String(), "err", err.Error())
 		rerr = err
 		return
 	}
 
-	s.gitSessions[ind] = sessID
+	s.gitSessions[exp] = sessID
 	return sessID, nil
 }
 
 func (s *export) gitSessionsClose(logger hclog.Logger) error {
-	for ind, sessID := range s.gitSessions {
-		expin := s.ExpIn(ind)
+	for exp, sessID := range s.gitSessions {
 		err := s.sessions.expsession.Done(sessID, nil)
 		if err != nil {
-			logger.Error("could not close session for git export", "integration", expin.String(), "err", err.Error())
+			logger.Error("could not close session for git export", "integration", exp.String(), "err", err.Error())
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *export) gitSetResult(ind expin.Index, repoID string, err error) {
+func (s *export) gitSetResult(exp expin.Export, repoID string, err error) {
 	if s.gitResults == nil {
-		s.gitResults = map[expin.Index]map[string]error{}
+		s.gitResults = map[expin.Export]map[string]error{}
 	}
-	if _, ok := s.gitResults[ind]; !ok {
-		s.gitResults[ind] = map[string]error{}
+	if _, ok := s.gitResults[exp]; !ok {
+		s.gitResults[exp] = map[string]error{}
 	}
-	s.gitResults[ind][repoID] = err
+	s.gitResults[exp][repoID] = err
 }
 
 func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
@@ -85,7 +82,7 @@ func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 		access := gitclone.AccessDetails{}
 		access.URL = fetch.URL
 
-		sessionID, err := s.gitSession(logger, fetch.ind)
+		sessionID, err := s.gitSession(logger, fetch.exp)
 		if err != nil {
 			fatalError = err
 			return
@@ -126,7 +123,7 @@ func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 		}
 		repoDirName := runResult.RepoNameUsedInCacheDir
 		err = runResult.OtherErr
-		s.gitSetResult(fetch.ind, fetch.RepoID, err)
+		s.gitSetResult(fetch.exp, fetch.RepoID, err)
 		s.sessions.expsession.Progress(sessionID, i, 0)
 		if err == exportrepo.ErrRevParseFailed {
 			reposFailedRevParse++

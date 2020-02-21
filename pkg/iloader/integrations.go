@@ -38,18 +38,17 @@ func New(opts Opts) *Loader {
 	return s
 }
 
-func (s *Loader) Load(exports []expin.Export) (res []*Integration, _ error) {
+func (s *Loader) Load(exports []expin.Export) (res map[expin.Export]*Integration, _ error) {
 	s.logger.Info("Loading integrations", "expin", fmt.Sprintf("%+v", exports))
 
-	res = make([]*Integration, len(exports))
+	res = map[expin.Export]*Integration{}
 	var resMu sync.Mutex
 	var rerr error
 	var errMu sync.Mutex
 
 	wg := sync.WaitGroup{}
-	for i, export := range exports {
+	for _, export := range exports {
 		wg.Add(1)
-		i := i
 		export := export
 		go func() {
 			defer wg.Done()
@@ -61,7 +60,7 @@ func (s *Loader) Load(exports []expin.Export) (res []*Integration, _ error) {
 				return
 			}
 			resMu.Lock()
-			res[i] = in
+			res[export] = in
 			resMu.Unlock()
 		}()
 	}

@@ -22,7 +22,7 @@ func (s lastProcessedMock) Set(value interface{}, key ...string) error {
 	return nil
 }
 
-var testIn = expin.Export{Index: 1, Integration: inconfig.IntegrationDef{Name: "in1"}}
+var testIn = expin.Export{IntegrationID: "1", IntegrationDef: inconfig.IntegrationDef{Name: "in1"}}
 
 var inPre = testIn.String() + "/"
 
