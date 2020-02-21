@@ -29,7 +29,7 @@ type sessions struct {
 	trackProgress bool
 }
 
-func newSessions(logger hclog.Logger, export *export, reprocessHistorical bool, trackProgress bool) (_ *sessions, rerr error) {
+func newSessions(logger hclog.Logger, export *export, trackProgress bool) (_ *sessions, rerr error) {
 
 	s := &sessions{}
 	s.logger = logger
@@ -45,8 +45,7 @@ func newSessions(logger hclog.Logger, export *export, reprocessHistorical bool, 
 		return expsessions.NewFileWriter(modelName, export.Locs.Uploads, id)
 	}
 
-	// we dedup objects in incremental processing, as perf optimization do not store hashes for hitorical export
-	if !reprocessHistorical && os.Getenv("PP_AGENT_DISABLE_DEDUP") == "" {
+	if os.Getenv("PP_AGENT_DISABLE_DEDUP") == "" {
 		var err error
 		s.dedupStore, err = expsessions.NewDedupStore(export.Locs.DedupFile)
 		if err != nil {

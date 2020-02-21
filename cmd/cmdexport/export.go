@@ -159,7 +159,8 @@ func (s *export) Run() (_ Result, rerr error) {
 	}
 
 	trackProgress := os.Getenv("PP_AGENT_NO_TRACK_PROGRESS") == ""
-	s.sessions, err = newSessions(s.Logger, s, opts.ReprocessHistorical, trackProgress)
+
+	s.sessions, err = newSessions(s.Logger, s, trackProgress)
 	if err != nil {
 		rerr = err
 		return
