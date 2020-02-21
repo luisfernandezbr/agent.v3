@@ -166,7 +166,7 @@ func (s *Command) setupConfig() error {
 			id = strconv.Itoa(i)
 		}
 		def := obj.IntegrationDef()
-		exp := expin.NewExport(id, def)
+		exp := expin.NewExport(i, id, def)
 
 		in := Integration{}
 		in.Export = exp

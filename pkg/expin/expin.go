@@ -7,12 +7,15 @@ import (
 
 // Export contains index and info on the integration that is running. Useful for pass around for logging and debugging.
 type Export struct {
+	// Index is the index of integration in the passed export array
+	Index          int
 	IntegrationID  string
 	IntegrationDef inconfig.IntegrationDef
 }
 
-func NewExport(id string, def inconfig.IntegrationDef) Export {
+func NewExport(index int, id string, def inconfig.IntegrationDef) Export {
 	return Export{
+		Index:          index,
 		IntegrationID:  id,
 		IntegrationDef: def,
 	}

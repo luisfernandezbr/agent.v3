@@ -17,6 +17,8 @@ type Result struct {
 }
 
 type ResultIntegration struct {
+	// for sorting to maintain the same order as in passed integration list
+	index       int
 	ID          string          `json:"id"`
 	Error       string          `json:"error"`
 	Projects    []ResultProject `json:"projects"`
@@ -53,6 +55,7 @@ func (s *export) formatResults(runResult map[expin.Export]runResult, startTime t
 	resAll.Duration = time.Now().Sub(startTime)
 	for exp, res0 := range runResult {
 		res := ResultIntegration{}
+		res.index = exp.Index
 		res.ID = exp.String()
 		if res0.Err != nil {
 			res.Error = res0.Err.Error()
@@ -80,7 +83,7 @@ func (s *export) formatResults(runResult map[expin.Export]runResult, startTime t
 	sort.Slice(resAll.Integrations, func(i, j int) bool {
 		a := resAll.Integrations[i]
 		b := resAll.Integrations[j]
-		return a.ID < b.ID
+		return a.index < b.index
 	})
 	return resAll
 }

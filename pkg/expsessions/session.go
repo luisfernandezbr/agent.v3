@@ -54,8 +54,17 @@ func newSession(
 			ObjectID:   parentObjectID,
 			ObjectName: parentObjectName})
 	} else {
+		// we do not need integration id or index in the last processed file
+		// having it would require reprocessing if repos switch between
+		// integrations. since all last processing times are namespaced by repo/projects
+		// that is sufficient
+		//
+		// not particularly important for progress path either
+		// use integration with id/index
+		prefix := export.IntegrationDef.String()
+
 		s.ProgressPath = append(s.ProgressPath, ProgressPathComponent{
-			TrackingName: export.String()})
+			TrackingName: prefix})
 	}
 
 	if s.isTracking {

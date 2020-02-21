@@ -24,7 +24,7 @@ func (s lastProcessedMock) Set(value interface{}, key ...string) error {
 
 var testIn = expin.Export{IntegrationID: "1", IntegrationDef: inconfig.IntegrationDef{Name: "in1"}}
 
-var inPre = testIn.String() + "/"
+var inPre = testIn.IntegrationDef.String() + "/"
 
 func TestExpSessionsBasic(t *testing.T) {
 	opts := Opts{}
