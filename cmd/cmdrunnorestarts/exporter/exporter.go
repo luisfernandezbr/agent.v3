@@ -238,6 +238,8 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (parts
 		return
 	}
 
+	integrations = dedupInclusions(integrations)
+
 	logFile := ""
 	res, logFile, err = s.execExport(integrations, data.ReprocessHistorical, messageID, data.JobID)
 	if logFile != "" {
@@ -265,6 +267,33 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (parts
 	if err != nil {
 		rerr = err
 		return
+	}
+
+	return
+}
+
+func dedupInclusions(integrations []inconfig.IntegrationAgent) (res []inconfig.IntegrationAgent) {
+	all := map[inconfig.IntegrationDef]map[string]bool{}
+	for _, in := range integrations {
+		def := in.IntegrationDef()
+		if all[def] == nil {
+			all[def] = map[string]bool{}
+		}
+		seenIn := all[def]
+		var dedup []string
+		for _, inclusion := range in.Config.Inclusions {
+			if seenIn[inclusion] {
+				continue
+			}
+			dedup = append(dedup, inclusion)
+			seenIn[inclusion] = true
+		}
+		if len(dedup) == 0 {
+			// integration definition does not have any new repos/projects skip it
+			continue
+		}
+		in.Config.Inclusions = dedup
+		res = append(res, in)
 	}
 
 	return

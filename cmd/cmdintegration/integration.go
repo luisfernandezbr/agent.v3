@@ -165,10 +165,7 @@ func (s *Command) setupConfig() error {
 		if id == "" {
 			id = strconv.Itoa(i)
 		}
-		def, err := obj.IntegrationDef()
-		if err != nil {
-			return err
-		}
+		def := obj.IntegrationDef()
 		exp := expin.NewExport(id, def)
 
 		in := Integration{}

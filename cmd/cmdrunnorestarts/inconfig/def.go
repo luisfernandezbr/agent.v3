@@ -16,7 +16,7 @@ type IntegrationBase struct {
 	Type IntegrationType `json:"type"` // sourcecode or work
 }
 
-func (s IntegrationBase) IntegrationDef() (res IntegrationDef, _ error) {
+func (s IntegrationBase) IntegrationDef() (res IntegrationDef) {
 	res.Name = s.Name
 	res.Type = s.Type
 	return
