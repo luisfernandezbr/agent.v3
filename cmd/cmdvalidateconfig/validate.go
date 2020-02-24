@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/pinpt/agent/pkg/gitclone"
-	"github.com/pinpt/agent/rpcdef"
 
 	"github.com/pinpt/agent/cmd/cmdintegration"
 )
@@ -22,6 +22,7 @@ type Opts struct {
 type AgentConfig = cmdintegration.AgentConfig
 
 func Run(opts Opts) error {
+	fmt.Println("validate config called", os.Args)
 	exp, err := newValidator(opts)
 	if err != nil {
 		return err
@@ -34,8 +35,7 @@ type validator struct {
 
 	Opts Opts
 
-	integration  cmdintegration.Integration
-	exportConfig rpcdef.ExportConfig
+	integration cmdintegration.Integration
 }
 
 func newValidator(opts Opts) (_ *validator, rerr error) {
@@ -123,7 +123,7 @@ func (s *validator) runValidate() (serverVersion string, errs []string) {
 		errs = append(errs, err.Error())
 	}
 
-	res0, err := client.ValidateConfig(ctx, s.exportConfig)
+	res0, err := client.ValidateConfig(ctx, s.integration.ExportConfig)
 	if err != nil {
 		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
 		rerr(err)

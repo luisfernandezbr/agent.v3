@@ -31,8 +31,7 @@ type export struct {
 
 	Opts Opts
 
-	integration  cmdintegration.Integration
-	exportConfig rpcdef.ExportConfig
+	integration cmdintegration.Integration
 }
 
 func newExport(opts Opts) (*export, error) {
@@ -92,7 +91,7 @@ func (s *export) runExport() (data interface{}, _ error) {
 	ctx := context.Background()
 	client := s.integration.ILoader.RPCClient()
 
-	res, err := client.OnboardExport(ctx, s.Opts.ExportType, s.exportConfig)
+	res, err := client.OnboardExport(ctx, s.Opts.ExportType, s.integration.ExportConfig)
 	if err != nil {
 		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
 		return nil, err

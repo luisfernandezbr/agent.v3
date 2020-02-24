@@ -222,12 +222,16 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (parts
 		s.logger.Info("exporting integration", "name", integration.Name, "len(exclusions)", len(integration.Exclusions), "len(inclusions)", len(integration.Inclusions))
 
 		conf, err := inconfig.AuthFromEvent(integration.ToMap(), s.opts.PPEncryptionKey)
-		conf.Type = inconfig.IntegrationType(integration.SystemType)
-
 		if err != nil {
 			rerr = err
 			return
 		}
+		if conf.ID == "" || conf.Name == "" || len(conf.Config.Inclusions) == 0 {
+			err = errors.New("id, name and inclusions are required in export requests")
+			return
+		}
+		conf.Type = inconfig.IntegrationType(integration.SystemType)
+
 		integrations = append(integrations, conf)
 	}
 

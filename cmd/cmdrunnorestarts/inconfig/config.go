@@ -65,10 +65,7 @@ func AuthFromEvent(data map[string]interface{}, encryptionKey string) (in Integr
 	in.ID = obj.ID
 	in.Name = obj.Name
 	in.Config.Inclusions = obj.Inclusions
-	if in.ID == "" || in.Name == "" || len(in.Config.Inclusions) == 0 {
-		err = errors.New("id, name and inclusions are required")
-		return
-	}
+
 	in.Config.Exclusions = obj.Exclusions
 	err = ConvertEdgeCases(&in)
 
