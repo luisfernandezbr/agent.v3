@@ -13,6 +13,7 @@ type userGithub struct {
 	Name      string `json:"name"`
 	AvatarURL string `json:"avatarUrl"`
 	Login     string `json:"login"`
+	URL       string `json:"url"`
 }
 
 const userGithubFields = `{
@@ -20,6 +21,7 @@ const userGithubFields = `{
 	name
 	avatarUrl
 	login
+	url
 }`
 
 func (s userGithub) Convert(customerID string, orgMember bool) (user *sourcecode.User) {
@@ -32,6 +34,7 @@ func (s userGithub) Convert(customerID string, orgMember bool) (user *sourcecode
 	user.Username = pstrings.Pointer(s.Login)
 	user.Member = orgMember
 	user.Type = sourcecode.UserTypeHuman
+	user.URL = pstrings.Pointer(s.URL)
 	return user
 }
 
