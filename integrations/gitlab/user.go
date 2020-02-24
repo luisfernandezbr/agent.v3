@@ -12,6 +12,7 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
+// used for hosted gitlab
 func UsersEmails(s *Integration) error {
 
 	userSender, err := objsender.Root(s.agent, sourcecode.UserModelName.String())
@@ -68,7 +69,6 @@ func UsersEmails(s *Integration) error {
 
 			sourceUser := sourcecode.User{}
 			sourceUser.RefType = s.qc.RefType
-			//sourceUser.Email = pstrings.Pointer(user.Email)
 			sourceUser.CustomerID = s.qc.CustomerID
 			sourceUser.RefID = strconv.FormatInt(user.ID, 10)
 			sourceUser.Name = user.Name
@@ -76,7 +76,7 @@ func UsersEmails(s *Integration) error {
 			sourceUser.Username = pstrings.Pointer(user.Username)
 			sourceUser.Member = true
 			sourceUser.Type = sourcecode.UserTypeHuman
-			//sourceUser.AssociatedRefID = pstrings.Pointer(user.Username)
+			sourceUser.URL = pstrings.Pointer(user.URL)
 
 			if err := userSender.Send(&sourceUser); err != nil {
 				return page, err
