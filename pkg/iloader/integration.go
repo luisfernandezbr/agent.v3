@@ -164,13 +164,13 @@ func (s *Integration) setupRPC() error {
 	var cmd *exec.Cmd
 	if build.IsProduction() || s.opts.DevUseCompiledIntegrations {
 		var err error
-		cmd, err = prodIntegrationCommand(s.opts.IntegrationsDir, s.Export.Integration.Name)
+		cmd, err = prodIntegrationCommand(s.opts.IntegrationsDir, s.Export.IntegrationDef.Name)
 		if err != nil {
 			return err
 		}
 	} else {
 		var err error
-		cmd, err = devIntegrationCommand(s.Export.Integration.Name)
+		cmd, err = devIntegrationCommand(s.Export.IntegrationDef.Name)
 		if err != nil {
 			return err
 		}

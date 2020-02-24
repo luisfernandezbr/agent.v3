@@ -9,7 +9,7 @@ import (
 )
 
 type AgentDelegateMinimal interface {
-	OAuthNewAccessToken(ind expin.Index) (token string, _ error)
+	OAuthNewAccessToken(ind expin.Export) (token string, _ error)
 }
 
 type agentDelegate struct {
@@ -53,7 +53,7 @@ func (s agentDelegate) SessionRollback(id int) error {
 }
 
 func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
-	return s.min.OAuthNewAccessToken(s.exp.Index)
+	return s.min.OAuthNewAccessToken(s.exp)
 }
 
 func (s agentDelegate) SendPauseEvent(msg string, resumeDate time.Time) error {

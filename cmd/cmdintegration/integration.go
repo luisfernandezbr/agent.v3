@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -66,6 +67,19 @@ func (s AgentConfig) Locs() (res fsconf.Locs, _ error) {
 	return fsconf.New(root), nil
 }
 
+type Integration struct {
+	// When created from passed args Export, ExportConfig and OauthRefreshToken are set. ILoader is set later before running.
+
+	Export       expin.Export
+	ExportConfig rpcdef.ExportConfig
+	// OAuthRefreshTokens contains refresh token for integrations
+	// using OAuth. These are allow getting new access tokens using
+	// pinpoint backend. Do not pass them to integrations, these are handled in agent instead.
+	OauthRefreshToken string
+
+	ILoader *iloader.Integration
+}
+
 type Command struct {
 	Opts   Opts
 	Logger hclog.Logger
@@ -73,14 +87,7 @@ type Command struct {
 	StartTime time.Time
 	Locs      fsconf.Locs
 
-	IntegrationIDs map[expin.Index]inconfig.IntegrationID
-	Integrations   map[expin.Index]*iloader.Integration
-	ExportConfigs  map[expin.Index]rpcdef.ExportConfig
-
-	// OAuthRefreshTokens contains refresh token for integrations
-	// using OAuth. These are allow getting new access tokens using
-	// pinpoint backend. Do not pass them to integrations, these are handled in agent instead.
-	OAuthRefreshTokens map[expin.Index]string
+	Integrations map[expin.Export]Integration
 
 	EnrollConf agentconf.Config
 	Deviceinfo deviceinfo.CommonInfo
@@ -140,36 +147,45 @@ func NewCommand(opts Opts) (*Command, error) {
 	return s, nil
 }
 
-func (s *Command) ExpIn(ind expin.Index) expin.Export {
-	return expin.Export{Index: ind, Integration: s.IntegrationIDs[ind]}
+func (s *Command) OnlyIntegration() Integration {
+	if len(s.Integrations) == 1 {
+		for _, v := range s.Integrations {
+			return v
+		}
+	}
+	panic("cmdintegration.OnlyIntegration called when s.Integrations != 1")
 }
 
 func (s *Command) setupConfig() error {
-	s.ExportConfigs = map[expin.Index]rpcdef.ExportConfig{}
-	s.OAuthRefreshTokens = map[expin.Index]string{}
-	s.IntegrationIDs = map[expin.Index]inconfig.IntegrationID{}
+
+	s.Integrations = map[expin.Export]Integration{}
 
 	for i, obj := range s.Opts.Integrations {
-		ind := expin.Index(i)
-		id, err := obj.ID()
-		if err != nil {
-			return err
+		id := obj.ID
+		if id == "" {
+			id = strconv.Itoa(i)
 		}
-		s.IntegrationIDs[ind] = id
+		def := obj.IntegrationDef()
+		exp := expin.NewExport(i, id, def)
+
+		in := Integration{}
+		in.Export = exp
 
 		ec := rpcdef.ExportConfig{}
 		ec.Pinpoint.CustomerID = s.Opts.AgentConfig.CustomerID
 
 		if refresh, ok := obj.Config["refresh_token"].(string); ok && refresh != "" {
-			s.OAuthRefreshTokens[ind] = refresh
+			in.OauthRefreshToken = refresh
 			ec.UseOAuth = true
 		}
 		delete(obj.Config, "refresh_token")
+
 		if err := structmarshal.StructToStruct(obj, &ec.Integration); err != nil {
 			return err
 		}
 
-		s.ExportConfigs[ind] = ec
+		in.ExportConfig = ec
+		s.Integrations[exp] = in
 
 	}
 	return nil
@@ -191,9 +207,8 @@ func (s *Command) SetupIntegrations(
 	}
 
 	var ins []expin.Export
-	for i := range s.Opts.Integrations {
-		ind := expin.Index(i)
-		ins = append(ins, s.ExpIn(ind))
+	for _, in := range s.Integrations {
+		ins = append(ins, in.Export)
 	}
 
 	opts := iloader.Opts{}
@@ -208,9 +223,10 @@ func (s *Command) SetupIntegrations(
 		return err
 	}
 
-	s.Integrations = map[expin.Index]*iloader.Integration{}
-	for i, v := range res {
-		s.Integrations[expin.Index(i)] = v
+	for key, v := range res {
+		in := s.Integrations[key]
+		in.ILoader = v
+		s.Integrations[key] = in
 	}
 
 	go func() {
@@ -230,7 +246,7 @@ func (s *Command) CloseOnlyIntegrationAndHandlePanic(integration *iloader.Integr
 			data := &agent.Crash{
 				Data:      &panicOut,
 				Type:      agent.CrashTypeCrash,
-				Component: "integration/" + integration.Export.Integration.String(),
+				Component: "integration/" + integration.Export.IntegrationDef.String(),
 			}
 			date.ConvertToModel(time.Now(), &data.CrashDate)
 			if err := s.sendEvent(data); err != nil {

@@ -26,6 +26,7 @@ func TestAuthFromEvent(t *testing.T) {
 	data, err := encrypt.EncryptString(config, encryptionKey)
 
 	e := agent.ExportRequestIntegrations{}
+	e.ID = "id1"
 	e.Name = "github"
 	e.Authorization.Authorization = pstrings.Pointer(data)
 	e.Exclusions = []string{"e1"}
@@ -38,6 +39,7 @@ func TestAuthFromEvent(t *testing.T) {
 
 	assert := assert.New(t)
 	want := IntegrationAgent{}
+	want.ID = "id1"
 	want.Name = "github"
 	want.Config.Exclusions = []string{"e1"}
 	want.Config.Inclusions = []string{"e1", "e2"}

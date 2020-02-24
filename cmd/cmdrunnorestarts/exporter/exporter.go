@@ -18,7 +18,6 @@ import (
 	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/agent/pkg/deviceinfo"
 	"github.com/pinpt/agent/pkg/fsconf"
-	"github.com/pinpt/agent/pkg/jsonstore"
 	"github.com/pinpt/agent/pkg/logutils"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -172,23 +171,23 @@ type exportResult struct {
 }
 
 type exportResultIntegration struct {
-	IsIncremental bool
-	Error         string
-	Duration      time.Duration
-	EntityErrors  []agent.ExportResponseIntegrationsEntityErrors
+	Incremental  bool
+	Error        string
+	Duration     time.Duration
+	EntityErrors []agent.ExportResponseIntegrationsEntityErrors
 }
 
 func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (res exportResult, rerr error) {
-	isIncremental, partsCount, fileSize, res0, err := s.doExport2(data, messageID)
+	partsCount, fileSize, res0, err := s.doExport2(data, messageID)
 	if err != nil {
 		rerr = err
 		return
 	}
 	res.UploadPartsCount = partsCount
 	res.UploadFileSize = fileSize
-	for i, in0 := range res0.Integrations {
+	for _, in0 := range res0.Integrations {
 		in := exportResultIntegration{}
-		in.IsIncremental = isIncremental[i]
+		in.Incremental = in0.Incremental
 		in.Error = in0.Error
 		in.Duration = in0.Duration
 		for _, pr0 := range in0.Projects {
@@ -208,7 +207,7 @@ func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (res ex
 	return
 }
 
-func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (isIncremental []bool, partsCount int, fileSize int64, res cmdexport.Result, rerr error) {
+func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (partsCount int, fileSize int64, res cmdexport.Result, rerr error) {
 	s.logger.Info("processing export request", "job_id", data.JobID, "request_date", data.RequestDate.Rfc3339, "reprocess_historical", data.ReprocessHistorical)
 
 	err := s.backupRestoreStateDir()
@@ -219,34 +218,21 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (isInc
 
 	integrations := s.conf.ExtraIntegrations
 
-	lastProcessedStore, err := jsonstore.New(s.opts.FSConf.LastProcessedFile)
-	if err != nil {
-		rerr = err
-		return
-	}
-
 	for _, integration := range data.Integrations {
 		s.logger.Info("exporting integration", "name", integration.Name, "len(exclusions)", len(integration.Exclusions), "len(inclusions)", len(integration.Inclusions))
 
 		conf, err := inconfig.AuthFromEvent(integration.ToMap(), s.opts.PPEncryptionKey)
-		conf.Type = inconfig.IntegrationType(integration.SystemType)
-
 		if err != nil {
 			rerr = err
 			return
 		}
-		integrations = append(integrations, conf)
-
-		if data.ReprocessHistorical {
-			isIncremental = append(isIncremental, false)
-		} else {
-			lastProcessed, err := s.getLastProcessed(lastProcessedStore, conf)
-			if err != nil {
-				rerr = err
-				return
-			}
-			isIncremental = append(isIncremental, lastProcessed != "")
+		if conf.ID == "" || conf.Name == "" || len(conf.Config.Inclusions) == 0 {
+			err = errors.New("id, name and inclusions are required in export requests")
+			return
 		}
+		conf.Type = inconfig.IntegrationType(integration.SystemType)
+
+		integrations = append(integrations, conf)
 	}
 
 	fsconf := s.opts.FSConf
@@ -255,6 +241,8 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (isInc
 		rerr = err
 		return
 	}
+
+	integrations = dedupInclusions(integrations)
 
 	logFile := ""
 	res, logFile, err = s.execExport(integrations, data.ReprocessHistorical, messageID, data.JobID)
@@ -288,20 +276,31 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (isInc
 	return
 }
 
-func (s *Exporter) getLastProcessed(lastProcessed *jsonstore.Store, in inconfig.IntegrationAgent) (string, error) {
-	id, err := in.ID()
-	if err != nil {
-		return "", err
+func dedupInclusions(integrations []inconfig.IntegrationAgent) (res []inconfig.IntegrationAgent) {
+	all := map[inconfig.IntegrationDef]map[string]bool{}
+	for _, in := range integrations {
+		def := in.IntegrationDef()
+		if all[def] == nil {
+			all[def] = map[string]bool{}
+		}
+		seenIn := all[def]
+		var dedup []string
+		for _, inclusion := range in.Config.Inclusions {
+			if seenIn[inclusion] {
+				continue
+			}
+			dedup = append(dedup, inclusion)
+			seenIn[inclusion] = true
+		}
+		if len(dedup) == 0 {
+			// integration definition does not have any new repos/projects skip it
+			continue
+		}
+		in.Config.Inclusions = dedup
+		res = append(res, in)
 	}
-	v := lastProcessed.Get(id.String())
-	if v == nil {
-		return "", nil
-	}
-	ts, ok := v.(string)
-	if !ok {
-		return "", errors.New("not a valid value saved in last processed key")
-	}
-	return ts, nil
+
+	return
 }
 
 func (s *Exporter) execExport(integrations []inconfig.IntegrationAgent, reprocessHistorical bool, messageID string, jobID string) (res cmdexport.Result, logFile string, rerr error) {

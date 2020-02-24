@@ -17,11 +17,13 @@ type Result struct {
 }
 
 type ResultIntegration struct {
-	index    int
-	ID       string          `json:"id"`
-	Error    string          `json:"error"`
-	Projects []ResultProject `json:"projects"`
-	Duration time.Duration   `json:"duration"`
+	// for sorting to maintain the same order as in passed integration list
+	index       int
+	ID          string          `json:"id"`
+	Error       string          `json:"error"`
+	Projects    []ResultProject `json:"projects"`
+	Duration    time.Duration   `json:"duration"`
+	Incremental bool            `json:"incremental"`
 }
 
 type ResultProject struct {
@@ -30,41 +32,40 @@ type ResultProject struct {
 	GitError   string `json:"git_error"`
 }
 
-func (s *export) handleIntegrationPanics(res map[expin.Index]runResult) {
+func (s *export) handleIntegrationPanics(res map[expin.Export]runResult) {
 	s.Logger.Info("Checking integrations for panics")
-	for ind, integration := range s.Integrations {
-		expin := s.ExpIn(ind)
-		ires := res[ind]
+	for exp, integration := range s.Integrations {
+		ires := res[exp]
 		if ires.Err != nil {
-			s.Logger.Error("Export failed in integration", "integration", expin, "err", ires.Err)
-			if err := s.Command.CloseOnlyIntegrationAndHandlePanic(integration); err != nil {
+			s.Logger.Error("Export failed in integration", "integration", exp.String(), "err", ires.Err)
+			if err := s.Command.CloseOnlyIntegrationAndHandlePanic(integration.ILoader); err != nil {
 				s.Logger.Error("Could not close integration", "err", err)
 			}
 			continue
 		}
-		s.Logger.Info("Export success for integration", "integration", expin.String())
+		s.Logger.Info("Export success for integration", "integration", exp.String())
 	}
 }
 
 // formatResults links git errors with integration errors and returns them as Result
-func (s *export) formatResults(runResult map[expin.Index]runResult, startTime time.Time) Result {
+func (s *export) formatResults(runResult map[expin.Export]runResult, startTime time.Time) Result {
 	gitResults := s.gitResults
 
 	resAll := Result{}
 	resAll.Duration = time.Now().Sub(startTime)
-	for ind, res0 := range runResult {
-		expin := s.ExpIn(ind)
+	for exp, res0 := range runResult {
 		res := ResultIntegration{}
-		res.index = int(ind)
-		res.ID = expin.String()
+		res.index = exp.Index
+		res.ID = exp.String()
 		if res0.Err != nil {
 			res.Error = res0.Err.Error()
 		}
 		res.Duration = res0.Duration
+		res.Incremental = s.isIncremental[exp]
 		for _, project0 := range res0.Res.Projects {
 			project := ResultProject{}
 			project.ExportProject = project0
-			gitErr, ok := gitResults[ind][project.ID]
+			gitErr, ok := gitResults[exp][project.ID]
 			if ok {
 				project.HasGitRepo = true
 				if gitErr != nil {

@@ -14,8 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
-
 	"github.com/pinpt/agent/pkg/deviceinfo"
 	"github.com/pinpt/agent/pkg/expin"
 	"github.com/pinpt/agent/pkg/expsessions"
@@ -84,13 +82,15 @@ type export struct {
 
 	opts Opts
 
-	gitSessions map[expin.Index]expsessions.ID
+	gitSessions map[expin.Export]expsessions.ID
 	// map[integration.ID]map[repoID]error
-	gitResults map[expin.Index]map[string]error
+	gitResults map[expin.Export]map[string]error
+
+	isIncremental map[expin.Export]bool
 }
 
 type gitRepoFetch struct {
-	ind expin.Index
+	exp expin.Export
 	rpcdef.GitRepoFetch
 }
 
@@ -109,7 +109,7 @@ func newExport(opts Opts) (*export, error) {
 
 func (s *export) Destroy() error {
 	for _, integration := range s.Integrations {
-		err := integration.Close()
+		err := integration.ILoader.Close()
 		if err != nil {
 			return err
 		}
@@ -152,14 +152,15 @@ func (s *export) Run() (_ Result, rerr error) {
 		return
 	}
 
-	err = s.logLastProcessedTimestamps()
+	err = s.checkIfIncremental()
 	if err != nil {
 		rerr = err
 		return
 	}
 
 	trackProgress := os.Getenv("PP_AGENT_NO_TRACK_PROGRESS") == ""
-	s.sessions, err = newSessions(s.Logger, s, opts.ReprocessHistorical, trackProgress)
+
+	s.sessions, err = newSessions(s.Logger, s, trackProgress)
 	if err != nil {
 		rerr = err
 		return
@@ -198,7 +199,7 @@ func (s *export) Run() (_ Result, rerr error) {
 		<-gitProcessingDone
 	}
 
-	err = s.updateLastProcessedTimestamps(startTime)
+	err = s.updateLastProcessedTimestampsForIncrementalCheck(startTime)
 	if err != nil {
 		rerr = err
 		return
@@ -282,22 +283,21 @@ func (s *export) discardIncrementalData() error {
 	return os.RemoveAll(s.Locs.RipsrcCheckpoints)
 }
 
-func (s *export) logLastProcessedTimestamps() error {
-	lastExport := map[inconfig.IntegrationID]string{}
-	for _, ino := range s.Opts.Integrations {
-		in, err := ino.ID()
-		if err != nil {
-			return err
-		}
-		v := s.lastProcessed.Get(in.String())
+func (s *export) checkIfIncremental() error {
+	lastExport := map[expin.Export]string{}
+	s.isIncremental = map[expin.Export]bool{}
+	for exp, in := range s.Integrations {
+		v := s.lastProcessed.Get(in.Export.String())
 		if v != nil {
 			ts, ok := v.(string)
 			if !ok {
 				return errors.New("not a valid value saved in last processed key")
 			}
-			lastExport[in] = ts
+			lastExport[exp] = ts
+			s.isIncremental[exp] = true
 		} else {
-			lastExport[in] = ""
+			lastExport[exp] = ""
+			s.isIncremental[exp] = false
 		}
 	}
 
@@ -310,13 +310,9 @@ func (s *export) logLastProcessedTimestamps() error {
 	return nil
 }
 
-func (s *export) updateLastProcessedTimestamps(startTime time.Time) error {
-	for _, ino := range s.Opts.Integrations {
-		in, err := ino.ID()
-		if err != nil {
-			return err
-		}
-		err = s.lastProcessed.Set(startTime.Format(time.RFC3339), in.String())
+func (s *export) updateLastProcessedTimestampsForIncrementalCheck(startTime time.Time) error {
+	for exp := range s.Integrations {
+		err := s.lastProcessed.Set(startTime.Format(time.RFC3339), exp.String())
 		if err != nil {
 			return err
 		}
@@ -330,44 +326,38 @@ type runResult struct {
 	Res      rpcdef.ExportResult
 }
 
-func (s *export) runExports() map[expin.Index]runResult {
+func (s *export) runExports() map[expin.Export]runResult {
 	ctx := context.Background()
 	wg := sync.WaitGroup{}
 
-	res := map[expin.Index]runResult{}
+	res := map[expin.Export]runResult{}
 	resMu := sync.Mutex{}
 
-	for ind, integration := range s.Integrations {
+	for exp, integration := range s.Integrations {
 		wg.Add(1)
-		ind := ind
+		exp := exp
 		integration := integration
 		go func() {
-			expin := s.ExpIn(ind)
 			defer wg.Done()
 			start := time.Now()
 			ret := func(err error, exportRes rpcdef.ExportResult) {
 				resMu.Lock()
-				res[ind] = runResult{
+				res[exp] = runResult{
 					Duration: time.Since(start),
 					Err:      err,
 					Res:      exportRes,
 				}
 				resMu.Unlock()
 				if err != nil {
-					s.Logger.Error("Export failed", "integration", expin, "dur", time.Since(start).String(), "err", err)
+					s.Logger.Error("Export failed", "integration", exp.String(), "dur", time.Since(start).String(), "err", err)
 					return
 				}
-				s.Logger.Info("Export success", "integration", expin, "dur", time.Since(start).String())
+				s.Logger.Info("Export success", "integration", exp.String(), "dur", time.Since(start).String())
 			}
 
-			s.Logger.Info("Export starting", "integration", expin)
+			s.Logger.Info("Export starting", "integration", exp.String())
 
-			exportConfig, ok := s.ExportConfigs[ind]
-			if !ok {
-				panic("no config for integration")
-			}
-
-			exportRes, err := integration.RPCClient().Export(ctx, exportConfig)
+			exportRes, err := integration.ILoader.RPCClient().Export(ctx, integration.ExportConfig)
 			ret(err, exportRes)
 		}()
 	}

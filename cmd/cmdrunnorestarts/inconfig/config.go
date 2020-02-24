@@ -16,6 +16,7 @@ import (
 // Also requires encryptionKey to decrypt the auth data.
 func AuthFromEvent(data map[string]interface{}, encryptionKey string) (in IntegrationAgent, err error) {
 	var obj struct {
+		ID            string `json:"id"`
 		Name          string `json:"name"`
 		Authorization struct {
 			Authorization string `json:"authorization"`
@@ -61,9 +62,11 @@ func AuthFromEvent(data map[string]interface{}, encryptionKey string) (in Integr
 		in.Config.APIKey = workaround.APIToken2
 	}
 
+	in.ID = obj.ID
 	in.Name = obj.Name
-	in.Config.Exclusions = obj.Exclusions
 	in.Config.Inclusions = obj.Inclusions
+
+	in.Config.Exclusions = obj.Exclusions
 	err = ConvertEdgeCases(&in)
 
 	return

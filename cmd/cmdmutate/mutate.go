@@ -7,7 +7,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/pinpt/agent/pkg/iloader"
 	"github.com/pinpt/agent/rpcdef"
 
 	"github.com/pinpt/agent/cmd/cmdintegration"
@@ -45,8 +44,7 @@ type export struct {
 
 	Opts Opts
 
-	integration  *iloader.Integration
-	exportConfig rpcdef.ExportConfig
+	integration cmdintegration.Integration
 }
 
 func newExport(opts Opts) (*export, error) {
@@ -67,8 +65,7 @@ func newExport(opts Opts) (*export, error) {
 		return nil, err
 	}
 
-	s.integration = s.Integrations[0]
-	s.exportConfig = s.ExportConfigs[0]
+	s.integration = s.OnlyIntegration()
 
 	err = s.runAndPrint()
 	if err != nil {
@@ -106,20 +103,20 @@ func (s *export) runAndPrint() error {
 
 func (s *export) run() (_ rpcdef.MutatedObjects, rerr error) {
 	ctx := context.Background()
-	client := s.integration.RPCClient()
+	client := s.integration.ILoader.RPCClient()
 
 	data, err := json.Marshal(s.Opts.Mutation.Data)
 	if err != nil {
 		rerr = err
 		return
 	}
-	objects, err := client.Mutate(ctx, s.Opts.Mutation.Fn, string(data), s.exportConfig)
+	objects, err := client.Mutate(ctx, s.Opts.Mutation.Fn, string(data), s.integration.ExportConfig)
 	if err != nil {
-		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
-		rerr = fmt.Errorf("could not execute mutation: %v %v err: %v", s.IntegrationIDs[0], s.Opts.Mutation.Fn, err)
+		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
+		rerr = fmt.Errorf("could not execute mutation: %v %v err: %v", s.integration.Export.String(), s.Opts.Mutation.Fn, err)
 		return
 	}
-	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration)
+	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
 	if err != nil {
 		rerr = fmt.Errorf("error closing integration, err: %v", err)
 		return
