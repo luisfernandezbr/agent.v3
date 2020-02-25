@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
+	"github.com/pinpt/agent/pkg/aevent"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/expin"
 	"github.com/pinpt/agent/pkg/structmarshal"
@@ -314,5 +315,5 @@ func (s *Command) sendEvent(data datamodel.Model) error {
 			"job_id":      s.Opts.AgentConfig.Backend.ExportJobID,
 		},
 	}
-	return event.Publish(context.Background(), publishEvent, s.EnrollConf.Channel, s.EnrollConf.APIKey)
+	return aevent.Publish(context.Background(), publishEvent, s.EnrollConf.Channel, s.EnrollConf.APIKey)
 }
