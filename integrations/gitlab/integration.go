@@ -391,6 +391,7 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 	return nil
 }
 
+// used for gitlab.com
 func (s *Integration) exportUsersFromRepo(ctx *repoprojects.ProjectCtx, repo commonrepo.Repo) error {
 	sender, err := ctx.Session(sourcecode.UserModelName)
 	if err != nil {

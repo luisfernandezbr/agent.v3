@@ -18,6 +18,7 @@ type User struct {
 	Username  string
 	Name      string
 	AvatarURL string
+	URL       string
 }
 
 func emailsUser(qc QueryContext, username string) (emails []string, err error) {
@@ -53,6 +54,7 @@ func UsersPage(qc QueryContext, params url.Values) (page PageInfo, users []User,
 		Name      string `json:"name"`
 		ID        int64  `json:"id"`
 		AvatarURL string `json:"avatar_url"`
+		WebURL    string `json:"web_url"`
 	}
 
 	params.Set("membership", "true")
@@ -70,6 +72,7 @@ func UsersPage(qc QueryContext, params url.Values) (page PageInfo, users []User,
 			Name:      user.Name,
 			ID:        user.ID,
 			AvatarURL: user.AvatarURL,
+			URL:       user.WebURL,
 		}
 
 		users = append(users, nUser)
@@ -110,6 +113,7 @@ func RepoUsersPageREST(qc QueryContext, repo commonrepo.Repo, params url.Values)
 		Name      string `json:"name"`
 		Username  string `json:"username"`
 		AvatarURL string `json:"avatar_url"`
+		WebURL    string `json:"web_url"`
 	}
 
 	page, err = qc.Request(objectPath, params, &ru)
@@ -128,6 +132,7 @@ func RepoUsersPageREST(qc QueryContext, repo commonrepo.Repo, params url.Values)
 		sourceUser.Username = pstrings.Pointer(user.Username)
 		sourceUser.Member = true
 		sourceUser.Type = sourcecode.UserTypeHuman
+		sourceUser.URL = pstrings.Pointer(user.WebURL)
 
 		repos = append(repos, &sourceUser)
 	}
