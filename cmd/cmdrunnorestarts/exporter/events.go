@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pinpt/agent/pkg/aevent"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/integration-sdk/agent"
@@ -101,5 +102,7 @@ func (s *Exporter) sendExportEvent(jobID string, data agent.ExportResponse) erro
 			"uuid": s.conf.DeviceID,
 		},
 	}
-	return event.Publish(context.Background(), publishEvent, s.conf.Channel, s.conf.APIKey)
+	// wait longer for export events, since if those are missed, processing will not continue normally
+	deadline := time.Now().Add(15 * time.Minute)
+	return aevent.Publish(context.Background(), publishEvent, s.conf.Channel, s.conf.APIKey, event.WithDeadline(deadline))
 }

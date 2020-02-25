@@ -10,6 +10,7 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent/pkg/aevent"
 	"github.com/pinpt/agent/pkg/build"
 
 	"github.com/pinpt/agent/cmd/cmdintegration"
@@ -297,7 +298,7 @@ func (s *runner) sendEnabled(ctx context.Context) error {
 		},
 	}
 
-	err := event.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
+	err := aevent.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
 	if err != nil {
 		return err
 	}
@@ -413,7 +414,7 @@ func (s *runner) sendEvent(ctx context.Context, agentEvent datamodel.Model, jobI
 		Object:  agentEvent,
 		Headers: headers,
 	}
-	return event.Publish(ctx, e, s.conf.Channel, s.conf.APIKey)
+	return aevent.Publish(ctx, e, s.conf.Channel, s.conf.APIKey)
 }
 
 func (s *runner) sendEventAppendingDeviceInfo(ctx context.Context, event datamodel.Model, jobID string, extraHeaders map[string]string) error {

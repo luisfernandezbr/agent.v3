@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/pinpt/agent/pkg/aevent"
 	"github.com/pinpt/integration-sdk/agent"
 
 	"github.com/pinpt/go-common/event"
@@ -37,6 +38,5 @@ func (s *export) sendProgress(ctx context.Context, progressData []byte) error {
 			"uuid": s.EnrollConf.DeviceID,
 		},
 	}
-
-	return event.Publish(ctx, publishEvent, s.EnrollConf.Channel, s.EnrollConf.APIKey)
+	return aevent.Publish(ctx, publishEvent, s.EnrollConf.Channel, s.EnrollConf.APIKey)
 }

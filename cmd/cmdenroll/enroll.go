@@ -8,12 +8,12 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	pstrings "github.com/pinpt/go-common/strings"
-
 	"github.com/pinpt/agent/cmd/cmdvalidate"
+	"github.com/pinpt/agent/pkg/aevent"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/encrypt"
 	"github.com/pinpt/agent/pkg/sysinfo"
+	pstrings "github.com/pinpt/go-common/strings"
 
 	"github.com/pinpt/go-common/fileutil"
 
@@ -160,8 +160,9 @@ func (s *enroller) SendEvent(ctx context.Context) error {
 			"uuid": s.deviceID,
 		},
 	}
-
-	err := event.Publish(ctx, reqEvent, s.opts.Channel, "")
+	// wait longer on enroll requests
+	deadline := time.Now().Add(15 * time.Minute)
+	err := aevent.Publish(ctx, reqEvent, s.opts.Channel, "", event.WithDeadline(deadline))
 	if err != nil {
 		return fmt.Errorf("could not send enroll event, err: %v", err)
 	}

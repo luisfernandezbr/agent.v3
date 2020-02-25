@@ -23,6 +23,7 @@ import (
 	"github.com/pinpt/agent/cmd/cmdintegration"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/logsender"
+	"github.com/pinpt/agent/pkg/aevent"
 	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/deviceinfo"
@@ -273,7 +274,7 @@ func (c *Command) handlePanic(filename, cmdname string) error {
 			"job_id":      c.config.Backend.ExportJobID,
 		},
 	}
-	if err := event.Publish(context.Background(), publishEvent, c.agentConfig.Channel, c.agentConfig.APIKey); err != nil {
+	if err := aevent.Publish(context.Background(), publishEvent, c.agentConfig.Channel, c.agentConfig.APIKey); err != nil {
 		return fmt.Errorf("error sending agent.Crash to backend, err: %v", err)
 	}
 	return nil
