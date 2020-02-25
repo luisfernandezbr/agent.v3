@@ -423,7 +423,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:55c191cc979760b261d1b6d8270a25d06f979300d28b6b479e48b80385011c0a"
+  digest = "1:9069e08c248a5ba39d622f5eb604d1c109dd9dba12d381c4f1bed4d84a4fe54e"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -447,8 +447,8 @@
     "upload",
   ]
   pruneopts = "T"
-  revision = "845e929481af1a68fe6e09012fe77352648f4fa5"
-  version = "v9.1.57"
+  revision = "ed3cfbebcd7ef86a61361e5222b6780ddf8c4d70"
+  version = "v9.1.60"
 
 [[projects]]
   digest = "1:160af92c9d129fe26acd668a490d6dfe34fb73d9c9e2e77f13da7a6f427b1df0"
@@ -545,7 +545,7 @@
   name = "github.com/songgao/stacktraces"
   packages = [
     ".",
-    "on/SIGUSR1",
+    "on/SIGUSR2",
   ]
   pruneopts = "T"
   revision = "0f98d2fb7fc3051b528076b5d15d792e4c858992"
@@ -1016,7 +1016,7 @@
     "github.com/pinpt/integration-sdk/work",
     "github.com/pinpt/ripsrc/ripsrc",
     "github.com/pinpt/ripsrc/ripsrc/branchmeta",
-    "github.com/songgao/stacktraces/on/SIGUSR1",
+    "github.com/songgao/stacktraces/on/SIGUSR2",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
     "google.golang.org/grpc",
