@@ -113,9 +113,9 @@ func (s *runner) close() {
 }
 
 func (s *runner) Run(ctx context.Context) error {
-	defer func() {
-		s.close()
-	}()
+	var closers []func()
+	// do not use defer, to avoid indefinite timeouts in case of panics
+	closers = append(closers, s.close)
 
 	s.logger.Info("Starting service", "pinpoint-root", s.opts.PinpointRoot)
 
@@ -199,14 +199,14 @@ func (s *runner) Run(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("error handling update requests, err: %v", err)
 		}
-		defer close()
+		closers = append(closers, close)
 	}
 	{
 		close, err := s.handleIntegrationEvents(ctx)
 		if err != nil {
 			return fmt.Errorf("error handling integration requests, err: %v", err)
 		}
-		defer close()
+		closers = append(closers, close)
 	}
 	{
 		close, err := s.handleOnboardingEvents(ctx)
@@ -214,28 +214,28 @@ func (s *runner) Run(ctx context.Context) error {
 			return fmt.Errorf("error handling onboarding requests, err: %v", err)
 		}
 
-		defer close()
+		closers = append(closers, close)
 	}
 	{
 		close, err := s.handleExportEvents(ctx)
 		if err != nil {
 			return fmt.Errorf("error handling export requests, err: %v", err)
 		}
-		defer close()
+		closers = append(closers, close)
 	}
 	{
 		close, err := s.handleCancelEvents(ctx)
 		if err != nil {
 			return fmt.Errorf("error handling cancel requests, err: %v", err)
 		}
-		defer close()
+		closers = append(closers, close)
 	}
 	{
 		close, err := s.handleMutationEvents(ctx)
 		if err != nil {
 			return fmt.Errorf("error handling mutation requests, err: %v", err)
 		}
-		defer close()
+		closers = append(closers, close)
 	}
 
 	finishMain := make(chan bool, 1)
@@ -244,7 +244,7 @@ func (s *runner) Run(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("error handling uninstall requests, err: %v", err)
 		}
-		defer close()
+		closers = append(closers, close)
 	}
 
 	// go func() {
@@ -262,6 +262,16 @@ func (s *runner) Run(ctx context.Context) error {
 		}*/
 
 	s.logger.Info("waiting for requests...")
+
+	defer func() {
+		s.logger.Info("Will exit in 5s, closing up...")
+		go func() {
+			for _, cl := range closers {
+				cl()
+			}
+		}()
+		time.Sleep(5 * time.Second)
+	}()
 
 	<-finishMain
 
