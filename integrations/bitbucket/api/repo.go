@@ -40,12 +40,6 @@ func ReposOnboardPage(qc QueryContext, teamName string, params url.Values) (page
 			Name:        v.FullName,
 			Description: v.Description,
 			Language:    v.Language,
-			Active:      true,
-		}
-
-		repo.LastCommit, err = LastCommit(qc, repo)
-		if err != nil {
-			return
 		}
 
 		date.ConvertToModel(v.CreatedOn, &repo.CreatedDate)

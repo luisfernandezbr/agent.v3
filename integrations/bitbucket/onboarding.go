@@ -23,15 +23,16 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 	}
 }
 
-func (s *Integration) onboardExportRepos(ctx context.Context) (res rpcdef.OnboardExportResult, _ error) {
+func (s *Integration) onboardExportRepos(ctx context.Context) (res rpcdef.OnboardExportResult, rerr error) {
 	teamNames, err := api.Teams(s.qc)
 	if err != nil {
-		return res, err
+		rerr = err
+		return
 	}
 	var records []map[string]interface{}
 
 	for _, teamName := range teamNames {
-		api.Paginate(s.logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
+		err := api.Paginate(s.logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
 			pageInfo, repos, err := api.ReposOnboardPage(s.qc, teamName, paginationParams)
 			if err != nil {
 				return page, err
@@ -41,9 +42,13 @@ func (s *Integration) onboardExportRepos(ctx context.Context) (res rpcdef.Onboar
 			}
 			return pageInfo, nil
 		})
+		if err != nil {
+			rerr = err
+			return
+		}
 	}
 
 	res.Data = records
 
-	return res, nil
+	return
 }
