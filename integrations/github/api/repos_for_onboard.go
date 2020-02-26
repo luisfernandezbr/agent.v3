@@ -3,8 +3,6 @@ package api
 import (
 	"time"
 
-	"github.com/pinpt/agent/pkg/ids"
-
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/integration-sdk/agent"
 
@@ -51,22 +49,6 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 					primaryLanguage {
 						name
 					}			
-					defaultBranchRef {
-						target {
-							... on Commit {
-								oid
-								url
-								message
-								author {
-									name
-									email
-									avatarUrl
-								}
-								committedDate
-								authoredDate
-							}
-						}
-					}
 					isFork
 					isArchived
 				}
@@ -90,20 +72,6 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 						PrimaryLanguage struct {
 							Name string `json:"name"`
 						} `json:"primaryLanguage"`
-						DefaultBranchRef struct {
-							Target struct {
-								OID     string `json:"oid"`
-								URL     string `json:"url"`
-								Message string `json:"message"`
-								Author  struct {
-									Name      string `json:"name"`
-									Email     string `json:"email"`
-									AvatarURL string `json:"avatarUrl"`
-								} `json:"author"`
-								CommittedDate time.Time `json:"committedDate"`
-								AuthoredDate  time.Time `json:"authoredDate"`
-							} `json:"target"`
-						} `json:"defaultBranchRef"`
 						IsFork     bool `json:"isFork"`
 						IsArchived bool `json:"isArchived"`
 					} `json:"nodes"`
@@ -130,48 +98,17 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 		}
 
 		repo := &agent.RepoResponseRepos{}
-		repoID := ids.CodeRepo(qc.CustomerID, qc.RefType, data.ID)
 
 		repo.RefType = qc.RefType
-		//repo.CustomerID = qc.CustomerID
 		repo.RefID = data.ID
 		repo.Name = data.NameWithOwner
 		repo.Description = data.Description
 		repo.Language = data.PrimaryLanguage.Name
 
-		lastCommitDate := data.DefaultBranchRef.Target.CommittedDate
-		repo.Active = isActive(lastCommitDate, data.CreatedAt, data.IsFork, data.IsArchived)
-
 		date.ConvertToModel(data.CreatedAt, &repo.CreatedDate)
-
-		cdata := data.DefaultBranchRef.Target
-		if cdata.OID != "" {
-			commit := agent.RepoResponseReposLastCommit{}
-			commit.CommitSha = cdata.OID
-			commit.CommitID = ids.CodeCommit(qc.CustomerID, qc.RefType, repoID, commit.CommitSha)
-			commit.URL = cdata.URL
-			commit.Message = cdata.Message
-			commit.Author.Name = cdata.Author.Name
-			commit.Author.Email = cdata.Author.Email
-			commit.Author.AvatarURL = cdata.Author.AvatarURL
-			date.ConvertToModel(cdata.AuthoredDate, &commit.CreatedDate)
-			repo.LastCommit = commit
-		}
 
 		repos = append(repos, repo)
 	}
 
 	return repositories.PageInfo, repos, nil
-}
-
-func isActive(lastCommitDate time.Time, createdAt time.Time, isFork bool, isArchived bool) bool {
-	sixMonthsAgo := time.Now().AddDate(0, -6, 0)
-	oneMonthAgo := time.Now().AddDate(0, -1, 0)
-
-	active := (lastCommitDate.After(sixMonthsAgo) ||
-		createdAt.After(oneMonthAgo)) &&
-		!isFork &&
-		!isArchived
-
-	return active
 }
