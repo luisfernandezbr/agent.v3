@@ -88,8 +88,18 @@ func (s *Process) Run() (allRes []rpcdef.ExportProject, rerr error) {
 					return
 				}
 
-				ctx := newProjectCtx(s.opts.Logger, p, s.opts.Sender)
+				logger := s.opts.Logger.With("project_name", p.GetReadableID(), "project_ref_id", p.GetID())
+				ctx := newProjectCtx(logger, p, s.opts.Sender)
+
+				logger.Info("starting processing repo/project")
 				projectErr := s.opts.ProjectFn(ctx)
+				logger.Info("completed processing repo/project", "err", projectErr)
+
+				err := s.opts.Sender.IncProgress()
+				if err != nil {
+					rerr(err)
+					return
+				}
 
 				p2 := rpcdef.ExportProject{}
 				p2.ID = s.projectID(p)
@@ -97,12 +107,6 @@ func (s *Process) Run() (allRes []rpcdef.ExportProject, rerr error) {
 				p2.ReadableID = p.GetReadableID()
 				if projectErr != nil {
 					p2.Error = projectErr.Error()
-				}
-
-				err := s.opts.Sender.IncProgress()
-				if err != nil {
-					rerr(err)
-					return
 				}
 
 				mu.Lock()

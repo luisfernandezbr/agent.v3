@@ -159,7 +159,7 @@ func IssuesAndChangelogsPage(
 	params.Add("expand", "changelog,fields,renderedFields")
 	params.Add("fields", "*navigable,attachment")
 
-	qc.Logger.Debug("issues request", "project", project.Key, "params", params)
+	qc.Logger.Info("issues request", "project", project.Key, "params", params)
 
 	var rr struct {
 		Total      int           `json:"total"`
