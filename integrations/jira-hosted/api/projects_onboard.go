@@ -3,10 +3,6 @@ package api
 import (
 	"net/url"
 
-	"github.com/pinpt/agent/pkg/date"
-
-	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
-
 	"github.com/pinpt/integration-sdk/agent"
 
 	pstrings "github.com/pinpt/go-common/strings"
@@ -50,32 +46,6 @@ func ProjectsOnboard(qc QueryContext) (res []*agent.ProjectResponseProjects, rer
 		item.Description = pstrings.Pointer(data.Description)
 		if data.Category.Name != "" {
 			item.Category = pstrings.Pointer(data.Category.Name)
-		}
-
-		project := jiracommonapi.Project{JiraID: data.ID, Key: data.Key}
-
-		lastIssue, totalIssues, err := jiracommonapi.GetProjectLastIssue(qc.Common(), project)
-		if err != nil {
-			if err == jiracommonapi.ErrPermissions {
-				// this is a private project, skip setting last issue
-				item.Error = agent.ProjectResponseProjectsErrorPERMISSIONS
-			} else {
-				rerr = err
-				return
-			}
-		} else {
-			item.LastIssue.IssueID = lastIssue.IssueID
-			item.LastIssue.Identifier = lastIssue.Identifier
-
-			date.ConvertToModel(lastIssue.CreatedDate, &item.LastIssue.CreatedDate)
-
-			creator := lastIssue.Creator
-
-			item.LastIssue.LastUser.UserID = creator.RefID()
-			item.LastIssue.LastUser.Name = creator.Name
-			item.LastIssue.LastUser.AvatarURL = creator.Avatars.Large
-
-			item.TotalIssues = int64(totalIssues)
 		}
 
 		res = append(res, item)
