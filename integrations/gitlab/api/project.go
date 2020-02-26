@@ -13,7 +13,6 @@ import (
 
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent/pkg/date"
-	"github.com/pinpt/agent/pkg/ids"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/agent"
 	"github.com/pinpt/integration-sdk/sourcecode"
@@ -50,11 +49,6 @@ func ReposOnboardPage(qc QueryContext, groupName string, params url.Values) (pag
 			Name:        v.FullName,
 			Description: v.Description,
 			Active:      true,
-		}
-
-		repo.LastCommit, err = repoLastCommit(qc, repo)
-		if err != nil {
-			return
 		}
 
 		repo.Language, err = repoLanguage(qc, ID)
@@ -166,54 +160,6 @@ func ReposPageCommon(qc QueryContext, groupName string, params url.Values) (page
 func getRepoID(gID string) string {
 	tokens := strings.Split(gID, "/")
 	return tokens[len(tokens)-1]
-}
-
-func repoLastCommit(qc QueryContext, repo *agent.RepoResponseRepos) (lastCommit agent.RepoResponseReposLastCommit, err error) {
-	qc.Logger.Debug("last commit request", "repo", repo.Name)
-
-	objectPath := pstrings.JoinURL("projects", repo.RefID, "repository", "commits")
-	params := url.Values{}
-	params.Set("page", "1")
-	params.Set("per_page", "1")
-
-	var commits []struct {
-		ID          string    `json:"id"`
-		Message     string    `json:"message"`
-		CreatedAt   time.Time `json:"created_at"`
-		AuthorName  string    `json:"author_name"`
-		AuthorEmail string    `json:"author_email"`
-	}
-
-	if _, err = qc.Request(objectPath, params, &commits); err != nil {
-		return
-	}
-
-	if len(commits) == 0 {
-		return
-	}
-
-	lastCommitSource := commits[0]
-	var u *url.URL
-	if u, err = url.Parse(qc.BaseURL); err != nil {
-		return
-	}
-	lastCommit = agent.RepoResponseReposLastCommit{
-		Message:   lastCommitSource.Message,
-		URL:       u.Scheme + "://" + u.Hostname() + "/" + repo.Name + "/commit/" + lastCommitSource.ID,
-		CommitSha: lastCommitSource.ID,
-		CommitID:  ids.CodeCommit(qc.CustomerID, qc.RefType, repo.RefID, lastCommitSource.ID),
-	}
-
-	authorLastCommit := agent.RepoResponseReposLastCommitAuthor{
-		Name:  lastCommitSource.AuthorName,
-		Email: lastCommitSource.AuthorEmail,
-	}
-
-	lastCommit.Author = authorLastCommit
-
-	date.ConvertToModel(lastCommitSource.CreatedAt, &lastCommit.CreatedDate)
-
-	return
 }
 
 func repoLanguage(qc QueryContext, repoID string) (maxLanguage string, err error) {

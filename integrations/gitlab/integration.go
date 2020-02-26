@@ -174,15 +174,15 @@ func (s *Integration) setIntegrationConfig(data rpcdef.IntegrationConfig) error 
 	if err := structmarshal.MapToStruct(data.Config, &conf); err != nil {
 		return err
 	}
-	if token, ok := data.Config["access_token"].(string); ok && token != "" {
-		conf.APIKey = token
+	if conf.AccessToken == "" {
+		if conf.APIKey == "" {
+			return rerr("api_key are missing")
+		}
+		if conf.URL == "" {
+			return rerr("url missing")
+		}
+	} else {
 		conf.URL = "https://gitlab.com"
-	}
-	if conf.APIKey == "" {
-		return rerr("api_key are missing")
-	}
-	if conf.URL == "" {
-		return rerr("url missing")
 	}
 	if conf.URL == "https://www.gitlab.com" {
 		conf.URL = "https://gitlab.com"
