@@ -254,17 +254,24 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (parts
 		return
 	}
 
-	s.logger.Info("export finished, running upload")
+	s.logger.Info("export finished")
 
-	partsCount, fileSize, err = cmdupload.Run(context.Background(), s.logger, s.opts.PinpointRoot, *data.UploadURL, data.JobID, s.conf.APIKey, logFile)
-	if err != nil {
-		if err == cmdupload.ErrNoFilesFound {
-			s.logger.Info("skipping upload, no files generated")
-			// do not return errors when no files to upload, which is ok for incremental
-		} else {
-			rerr = err
-			return
+	if s.conf.Channel != "dev" {
+
+		s.logger.Info("running upload")
+
+		partsCount, fileSize, err = cmdupload.Run(context.Background(), s.logger, s.opts.PinpointRoot, *data.UploadURL, data.JobID, s.conf.APIKey, logFile)
+		if err != nil {
+			if err == cmdupload.ErrNoFilesFound {
+				s.logger.Info("skipping upload, no files generated")
+				// do not return errors when no files to upload, which is ok for incremental
+			} else {
+				rerr = err
+				return
+			}
 		}
+	} else {
+		s.logger.Info("skipped upload")
 	}
 
 	err = s.deleteBackupStateDir()
