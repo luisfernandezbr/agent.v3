@@ -91,6 +91,7 @@ func (s *export) runExport() (data interface{}, _ error) {
 	ctx := context.Background()
 	client := s.integration.ILoader.RPCClient()
 
+	start := time.Now()
 	res, err := client.OnboardExport(ctx, s.Opts.ExportType, s.integration.ExportConfig)
 	if err != nil {
 		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
@@ -99,6 +100,7 @@ func (s *export) runExport() (data interface{}, _ error) {
 	if res.Error != nil {
 		return nil, fmt.Errorf("could not retrive data for onboard type: %v integration: %v err: %v", s.Opts.ExportType, s.integration.Export.String(), res.Error.Error())
 	}
+	s.Logger.Info("integration OnboardExport completed", "duration", time.Since(start))
 
 	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
 	if err != nil {
