@@ -159,7 +159,6 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 }
 
 func (s *Integration) initConfig(ctx context.Context, config rpcdef.ExportConfig) (err error) {
-
 	err = structmarshal.StructToStruct(config.Integration.Config, &s.Creds)
 	if err != nil {
 		return err

@@ -150,6 +150,7 @@ func (api *API) doRequest(method, endPoint string, params stringmap, reader io.R
 		b = append(b, ']')
 	}
 	defer res.Body.Close()
+	//api.logger.Debug("response data", "b", string(b))
 	if res.StatusCode == http.StatusOK {
 		err := json.Unmarshal(b, &out)
 		if err != nil {
@@ -157,13 +158,13 @@ func (api *API) doRequest(method, endPoint string, params stringmap, reader io.R
 			var r []interface{}
 			err = json.Unmarshal(b, &r)
 			if err != nil {
-				return fmt.Errorf("response code: %v request url: %v", res.StatusCode, res.Request.URL)
+				return fmt.Errorf("invalid json: response code: %v request url: %v %v", res.StatusCode, res.Request.URL, err)
 			}
-			return fmt.Errorf("response code: %v request url: %v\npayload: %v err: %v", res.StatusCode, res.Request.URL, stringify(r), rerr)
+			return fmt.Errorf("invalid json object: response code: %v request url: %v\npayload: %v err: %v", res.StatusCode, res.Request.URL, stringify(r), rerr)
 		}
 		return nil
 	}
-	return fmt.Errorf("response code: %v request url: %v", res.StatusCode, res.Request.URL)
+	return fmt.Errorf("invalid response code: %v request url: %v", res.StatusCode, res.Request.URL)
 }
 
 // some util functions
