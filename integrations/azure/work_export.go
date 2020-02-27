@@ -12,7 +12,7 @@ import (
 )
 
 func (s *Integration) exportWork() (exportResults []rpcdef.ExportProject, rerr error) {
-
+	s.logger.Info("exporting work")
 	var orgname string
 	if s.Creds.Organization != "" {
 		orgname = s.Creds.Organization

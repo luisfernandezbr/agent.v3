@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
+	"golang.org/x/exp/errors/fmt"
 
 	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 	"github.com/pinpt/agent/rpcdef"
@@ -13,7 +14,7 @@ import (
 )
 
 func (s *Integration) exportCode() (exportResults []rpcdef.ExportProject, rerr error) {
-
+	s.logger.Info("exporting code")
 	projectids, exportResults, err := s.processRepos()
 	if err != nil {
 		rerr = err
@@ -47,12 +48,13 @@ func (s *Integration) processRepos() (
 	projectIDs []string,
 	exportResults []rpcdef.ExportProject,
 	rerr error) {
-
+	s.logger.Info("processing repos, fetching all repos")
 	ids, reposDetails, err := s.api.FetchAllRepos(s.Repos, s.ExcludedRepoIDs, s.IncludedRepoIDs)
 	if err != nil {
-		rerr = err
+		rerr = fmt.Errorf("error fetching repos: %v", err)
 		return
 	}
+	s.logger.Info("done fetching all repos")
 	projectIDs = ids
 
 	var orgname string
