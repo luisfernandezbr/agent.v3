@@ -2,6 +2,7 @@ package process
 
 import (
 	"errors"
+	"strings"
 	"sync"
 
 	"github.com/pinpt/go-common/hash"
@@ -31,6 +32,10 @@ func (s *CommitUsers) Transform(data map[string]interface{}) (_ map[string]inter
 	if email == "" {
 		return nil, errors.New("email is required")
 	}
+
+	// always convert email to lowercase
+	email = strings.ToLower(email)
+
 	name, _ := data["name"].(string)
 	if name == "" {
 		return nil, errors.New("name is required")
