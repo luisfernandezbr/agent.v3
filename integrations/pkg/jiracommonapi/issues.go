@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/date"
-	"github.com/pinpt/agent/pkg/ids"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/go-common/datetime"
 	pstrings "github.com/pinpt/go-common/strings"
@@ -496,10 +495,10 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 			case "assignee":
 				item.Field = work.IssueChangeLogFieldAssigneeRefID
 				if data.From != "" {
-					item.From = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.From)
+					item.From = data.From
 				}
 				if data.To != "" {
-					item.To = ids.WorkUserAssociatedRefID(qc.CustomerID, "jira", data.To)
+					item.To = data.To
 				}
 			case "reporter":
 				item.Field = work.IssueChangeLogFieldReporterRefID
