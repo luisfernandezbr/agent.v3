@@ -554,18 +554,18 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 			case "parent":
 				item.Field = work.IssueChangeLogFieldParentID
 				if data.From != "" {
-					item.From = work.NewIssueID(qc.CustomerID, "jira", data.From)
+					item.From = work.NewIssueID(qc.CustomerID, data.From, "jira")
 				}
 				if data.To != "" {
-					item.To = work.NewIssueID(qc.CustomerID, "jira", data.To)
+					item.To = work.NewIssueID(qc.CustomerID, data.To, "jira")
 				}
 			case "epic link":
 				item.Field = work.IssueChangeLogFieldEpicID
 				if data.From != "" {
-					item.From = work.NewIssueID(qc.CustomerID, "jira", data.From)
+					item.From = work.NewIssueID(qc.CustomerID, data.From, "jira")
 				}
 				if data.To != "" {
-					item.To = work.NewIssueID(qc.CustomerID, "jira", data.To)
+					item.To = work.NewIssueID(qc.CustomerID, data.To, "jira")
 				}
 			default:
 				// Ignore other change types
