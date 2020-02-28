@@ -167,10 +167,11 @@ func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
 type exportResult struct {
 	UploadPartsCount int
 	UploadFileSize   int64
-	Integrations     []exportResultIntegration
+	Integrations     map[string]exportResultIntegration
 }
 
 type exportResultIntegration struct {
+	ID           string
 	Incremental  bool
 	Error        string
 	Duration     time.Duration
@@ -185,8 +186,10 @@ func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (res ex
 	}
 	res.UploadPartsCount = partsCount
 	res.UploadFileSize = fileSize
+	res.Integrations = map[string]exportResultIntegration{}
 	for _, in0 := range res0.Integrations {
 		in := exportResultIntegration{}
+		in.ID = in0.ID
 		in.Incremental = in0.Incremental
 		in.Error = in0.Error
 		in.Duration = in0.Duration
@@ -202,7 +205,7 @@ func (s *Exporter) doExport(data *agent.ExportRequest, messageID string) (res ex
 			}
 			in.EntityErrors = append(in.EntityErrors, pr)
 		}
-		res.Integrations = append(res.Integrations, in)
+		res.Integrations[in.ID] = in
 	}
 	return
 }

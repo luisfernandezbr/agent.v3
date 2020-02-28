@@ -58,17 +58,19 @@ func (s *Exporter) sendSuccessEvent(jobID string, started time.Time, res exportR
 	if len(res.Integrations) == 0 {
 		return fmt.Errorf("could not get export result for integration, requested %v integration, but no integrations in result", len(requestedInts))
 	}
-	if len(res.Integrations) != len(requestedInts) {
-		return fmt.Errorf("number of integrations requests, and number of integrations in results does not match, requested: %v, got: %v", len(requestedInts), len(res.Integrations))
-	}
 
-	for i, reqIn := range requestedInts {
+	for _, reqIn := range requestedInts {
 		v := agent.ExportResponseIntegrations{
 			IntegrationID: reqIn.ID,
 			Name:          reqIn.Name,
 			SystemType:    agent.ExportResponseIntegrationsSystemType(reqIn.SystemType),
 		}
-		in := res.Integrations[i]
+		in, ok := res.Integrations[reqIn.ID]
+		if !ok {
+			v.ExportType = agent.ExportResponseIntegrationsExportTypeIncremental
+			data.Integrations = append(data.Integrations, v)
+			continue
+		}
 		if in.Incremental {
 			v.ExportType = agent.ExportResponseIntegrationsExportTypeIncremental
 		} else {
@@ -80,7 +82,6 @@ func (s *Exporter) sendSuccessEvent(jobID string, started time.Time, res exportR
 		v.EntityErrors = in.EntityErrors
 		data.Integrations = append(data.Integrations, v)
 	}
-
 	err := s.sendExportEvent(jobID, data)
 	if err != nil {
 		return err
