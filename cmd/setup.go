@@ -207,11 +207,8 @@ func integrationCommandOpts(cmd *cobra.Command) (hclog.Logger, cmdintegration.Op
 		integrationsJSON, _ = cmd.Flags().GetString("integrations-json")
 	}
 
-	if integrationsJSON != "" {
-		err := json.Unmarshal([]byte(integrationsJSON), &opts.Integrations)
-		if err != nil {
-			exitWithErr(logger, fmt.Errorf("integrations-json is not valid: %v", err))
-		}
+	if integrationsJSON == "" {
+		exitWithErr(logger, errors.New("missing integrations-file or integrations-json"))
 	}
 
 	var testingType []struct {
@@ -262,7 +259,7 @@ func integrationCommandOpts(cmd *cobra.Command) (hclog.Logger, cmdintegration.Op
 	}
 
 	if len(opts.Integrations) == 0 {
-		exitWithErr(logger, errors.New("missing integrations-json"))
+		exitWithErr(logger, errors.New("missing integrations"))
 	}
 
 	logWriter, err := pinpointLogWriter(opts.AgentConfig.PinpointRoot)
