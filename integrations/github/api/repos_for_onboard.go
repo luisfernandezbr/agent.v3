@@ -98,12 +98,12 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 		}
 
 		repo := &agent.RepoResponseRepos{}
-
 		repo.RefType = qc.RefType
 		repo.RefID = data.ID
 		repo.Name = data.NameWithOwner
 		repo.Description = data.Description
 		repo.Language = data.PrimaryLanguage.Name
+		repo.Active = !data.IsFork && !data.IsArchived
 
 		date.ConvertToModel(data.CreatedAt, &repo.CreatedDate)
 
