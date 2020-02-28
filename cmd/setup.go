@@ -8,11 +8,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/cmd/cmdintegration"
+	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/cmd/pkg/cmdlogger"
 
 	"github.com/pinpt/agent/pkg/filelog"
@@ -190,24 +192,73 @@ func integrationCommandOpts(cmd *cobra.Command) (hclog.Logger, cmdintegration.Op
 		}
 	}
 
+	var integrationsJSON string
 	integrationsFile, _ := cmd.Flags().GetString("integrations-file")
 	if integrationsFile != "" {
 		b, err := ioutil.ReadFile(integrationsFile)
 		if err != nil {
 			exitWithErr(logger, fmt.Errorf("integrations-file does not point to a correct file, err %v", err))
 		}
-		err = json.Unmarshal(b, &opts.Integrations)
-		if err != nil {
-			exitWithErr(logger, fmt.Errorf("integrations-file contains invalid json: %v", err))
-		}
+
+		integrationsJSON = string(b)
 	}
 
-	integrationsJSON, _ := cmd.Flags().GetString("integrations-json")
+	if integrationsJSON == "" {
+		integrationsJSON, _ = cmd.Flags().GetString("integrations-json")
+	}
+
 	if integrationsJSON != "" {
 		err := json.Unmarshal([]byte(integrationsJSON), &opts.Integrations)
 		if err != nil {
 			exitWithErr(logger, fmt.Errorf("integrations-json is not valid: %v", err))
 		}
+	}
+
+	var testingType []struct {
+		inconfig.Integration
+		Type interface{} `json:"type"` // sourcecode or work
+	}
+
+	if err := json.Unmarshal([]byte(integrationsJSON), &testingType); err != nil {
+		exitWithErr(logger, fmt.Errorf("1 integrations-file contains invalid json: %v", err))
+	}
+
+	var withStringTypes []inconfig.Integration
+	for _, each := range testingType {
+		switch val := each.Type.(type) {
+		case string:
+			switch strings.ToUpper(val) {
+			case inconfig.IntegrationTypeWork.String():
+				each.Integration.Type = inconfig.IntegrationTypeWork
+			case inconfig.IntegrationTypeSourcecode.String():
+				each.Integration.Type = inconfig.IntegrationTypeSourcecode
+			case inconfig.IntegrationTypeUser.String():
+				each.Integration.Type = inconfig.IntegrationTypeUser
+			case inconfig.IntegrationTypeCodequality.String():
+				each.Integration.Type = inconfig.IntegrationTypeCodequality
+			}
+		case float32:
+			each.Integration.Type = inconfig.IntegrationType(val)
+		case float64:
+			each.Integration.Type = inconfig.IntegrationType(val)
+		case int32:
+			each.Integration.Type = inconfig.IntegrationType(val)
+		case int64:
+			each.Integration.Type = inconfig.IntegrationType(val)
+		default:
+			exitWithErr(logger, fmt.Errorf("2 integrations-file contains invalid json: %v", reflect.TypeOf(each.Type)))
+		}
+		withStringTypes = append(withStringTypes, each.Integration)
+	}
+
+	b, err := json.Marshal(withStringTypes)
+	if err != nil {
+		exitWithErr(logger, fmt.Errorf("3 integrations-file contains invalid json: %v", err))
+	}
+
+	err = json.Unmarshal(b, &opts.Integrations)
+	if err != nil {
+		exitWithErr(logger, fmt.Errorf("4 integrations-file contains invalid json: %v", err))
 	}
 
 	if len(opts.Integrations) == 0 {
