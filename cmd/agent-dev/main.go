@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/agent/cmd/agent-dev/cmddownloadexports"
 	"github.com/pinpt/agent/cmd/agent-dev/cmddownloadlogs"
 
 	"github.com/pinpt/agent/cmd/agent-dev/cmdbuild"
@@ -289,6 +290,30 @@ func init() {
 	cmd.Flags().String("customer-id", "", "Customer ID")
 	cmd.Flags().Int("max-records", 10000, "Max log records to fetch")
 	cmd.Flags().String("no-format", "", "Do not format resulting json (useful to see the exact data returned)")
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdDownloadExports = &cobra.Command{
+	Use:   "download-exports",
+	Short: "Downloads exports from S3",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		channel, _ := cmd.Flags().GetString("channel")
+		customerID, _ := cmd.Flags().GetString("customer-id")
+		outputDir, _ := cmd.Flags().GetString("output-dir")
+		cmddownloadexports.Run(cmddownloadexports.Opts{
+			Channel:    channel,
+			CustomerID: customerID,
+			OutputDir:  outputDir,
+		})
+	},
+}
+
+func init() {
+	cmd := cmdDownloadExports
+	cmd.Flags().String("channel", "edge", "Channel")
+	cmd.Flags().String("customer-id", "", "Customer ID")
+	cmd.Flags().String("output-dir", "", "Output dir")
 	cmdRoot.AddCommand(cmd)
 }
 
