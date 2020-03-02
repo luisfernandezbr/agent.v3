@@ -27,8 +27,8 @@ func (s *Integration) exportRepoMetadataOrg(logger hclog.Logger, sender *objsend
 		shouldInclude[repo.NameWithOwner] = true
 	}
 
-	err := api.PaginateNewerThan(sender.LastProcessedTime(), func(query string, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, repos, _, err := api.ReposPage(s.qc.WithLogger(logger), org, query, stopOnUpdatedAt)
+	err := api.PaginateRegular(func(query string) (api.PageInfo, error) {
+		pi, repos, _, err := api.ReposPage(s.qc.WithLogger(logger), org, query, time.Time{})
 		if err != nil {
 			return pi, err
 		}
