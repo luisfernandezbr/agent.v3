@@ -40,7 +40,7 @@ func PullRequestCommentsPage(
 						repository {
 							id
 						}						
-						bodyText
+						bodyHTML
 						createdAt
 						author {
 							login
@@ -68,8 +68,7 @@ func PullRequestCommentsPage(
 						Repository struct {
 							ID string `json:"id"`
 						} `json:"repository"`
-						//Body string `json:body`
-						BodyText  string    `json:"bodyText"`
+						BodyHTML  string    `json:"bodyHTML"`
 						CreatedAt time.Time `json:"createdAt"`
 						Author    struct {
 							Login string `json:"login"`
@@ -98,7 +97,7 @@ func PullRequestCommentsPage(
 		date.ConvertToModel(data.UpdatedAt, &item.UpdatedDate)
 		item.RepoID = qc.RepoID(data.Repository.ID)
 		item.PullRequestID = qc.PullRequestID(item.RepoID, data.PullRequest.ID)
-		item.Body = data.BodyText
+		item.Body = `<div class="source-github">` + data.BodyHTML + `</div>`
 		date.ConvertToModel(data.CreatedAt, &item.CreatedDate)
 
 		{

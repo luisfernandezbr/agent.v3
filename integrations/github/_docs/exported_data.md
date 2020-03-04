@@ -77,7 +77,7 @@ id
 repository { id }
 headRefName
 title
-bodyText
+bodyHTML
 url
 createdAt
 mergedAt
@@ -114,7 +114,7 @@ pullRequest {
 repository {
     id
 }						
-bodyText
+bodyHTML
 createdAt
 author {
     login

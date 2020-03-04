@@ -68,7 +68,7 @@ func PullRequestsPage(
 						}
 						headRefName
 						title
-						bodyText
+						bodyHTML
 						url
 						createdAt
 						mergedAt
@@ -114,7 +114,7 @@ func PullRequestsPage(
 						Number      int       `json:"number"`
 						HeadRefName string    `json:"headRefName"`
 						Title       string    `json:"title"`
-						BodyText    string    `json:"bodyText"`
+						BodyHTML    string    `json:"bodyHTML"`
 						URL         string    `json:"url"`
 						CreatedAt   time.Time `json:"createdAt"`
 						MergedAt    time.Time `json:"mergedAt"`
@@ -178,7 +178,7 @@ func PullRequestsPage(
 		pr.RepoID = qc.RepoID(repoRefID)
 		pr.BranchName = data.HeadRefName
 		pr.Title = data.Title
-		pr.Description = data.BodyText
+		pr.Description = `<div class="source-github">` + data.BodyHTML + `</div>`
 		pr.URL = data.URL
 		pr.Identifier = fmt.Sprintf("%s#%d", data.Repository.Name, data.Number) // such as pinpt/datamodel#123 which is the display format GH uses
 		date.ConvertToModel(data.CreatedAt, &pr.CreatedDate)
