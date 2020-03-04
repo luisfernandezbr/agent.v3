@@ -66,6 +66,7 @@ func (s *Users) ExportUser(user jiracommonapi.User) error {
 	u.Username = user.Name
 	u.AvatarURL = &user.Avatars.Large
 	u.Email = &user.EmailAddress
+	u.Member = user.Active
 	if user.Name != "" {
 		v := ids.WorkUserAssociatedRefID(customerID, "jira", user.Name)
 		u.AssociatedRefID = &v
