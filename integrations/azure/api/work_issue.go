@@ -139,18 +139,21 @@ func azureIssueToPinpointIssue(item WorkItemResponse, projid string, customerid 
 		URL:           item.Links.HTML.HREF,
 		SprintIds:     []string{idgen.WorkSprintID(fields.IterationPath)},
 	}
-	for _, rel := range item.Relations {
-		if rel.Rel == "ArtifactLink" {
-			matches := pullRequestFromIssue.FindAllStringSubmatch(rel.URL, 1)
-			if len(matches) > 0 {
-				// proj := matches[0][1]
-				repo := matches[0][2]
-				refid := matches[0][3]
-				prid := idgen.CodePullRequest(repo, refid)
-				issue.PullRequestIds = append(issue.PullRequestIds, prid)
+	/*
+		TODO: check if we can remove it from item.Relation as well
+		for _, rel := range item.Relations {
+			if rel.Rel == "ArtifactLink" {
+				matches := pullRequestFromIssue.FindAllStringSubmatch(rel.URL, 1)
+				if len(matches) > 0 {
+					// proj := matches[0][1]
+					repo := matches[0][2]
+					refid := matches[0][3]
+					prid := idgen.CodePullRequest(repo, refid)
+					issue.PullRequestIds = append(issue.PullRequestIds, prid)
+				}
 			}
 		}
-	}
+	*/
 	date.ConvertToModel(fields.CreatedDate, &issue.CreatedDate)
 	date.ConvertToModel(fields.DueDate, &issue.DueDate)
 	return issue, nil
