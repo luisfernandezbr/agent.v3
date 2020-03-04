@@ -191,6 +191,7 @@ func IssuesAndChangelogsPage(
 }
 
 // BUG: returned data will have missing start and end date, because we don't pass fieldsByID here
+// Will also be missing story points and epic link
 func IssueByID(qc QueryContext, issueIDOrKey string) (_ IssueWithCustomFields, rerr error) {
 	// https://developer.atlassian.com/cloud/jira/platform/rest/v3/#api-rest-api-3-issue-issueIdOrKey-get
 
@@ -218,6 +219,25 @@ func IssueByID(qc QueryContext, issueIDOrKey string) (_ IssueWithCustomFields, r
 	}
 
 	return res, nil
+}
+
+func IssueRefIDFromKey(qc QueryContext, key string) (refID string, rerr error) {
+	// https://developer.atlassian.com/cloud/jira/platform/rest/v3/#api-rest-api-3-issue-issueIdOrKey-get
+
+	objectPath := "issue/" + key
+
+	params := url.Values{}
+	qc.Logger.Debug("issue request to get ref id", "key", key)
+
+	var rr issueSource
+
+	err := qc.Req.Get(objectPath, params, &rr)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	return rr.ID, nil
 }
 
 func ParsePlannedDate(ts string) (time.Time, error) {

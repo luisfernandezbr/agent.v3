@@ -37,7 +37,7 @@ func New(opts Opts) (*JiraCommon, error) {
 
 func (s *JiraCommon) SetupUsers() error {
 	var err error
-	s.users, err = NewUsers(s.opts.CustomerID, s.opts.Agent, s.opts.WebsiteURL)
+	s.users, err = NewUsers(s.opts.Logger, s.opts.CustomerID, s.opts.Agent, s.opts.WebsiteURL)
 	return err
 }
 
