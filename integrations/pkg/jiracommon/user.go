@@ -3,6 +3,7 @@ package jiracommon
 import (
 	"sync"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/pkg/ids"
@@ -12,6 +13,7 @@ import (
 )
 
 type Users struct {
+	logger     hclog.Logger
 	sender     *objsender.Session
 	exported   map[string]bool
 	exportedMu sync.Mutex
@@ -19,8 +21,9 @@ type Users struct {
 	websiteURL string
 }
 
-func NewUsers(customerID string, agent rpcdef.Agent, websiteURL string) (_ *Users, rerr error) {
+func NewUsers(logger hclog.Logger, customerID string, agent rpcdef.Agent, websiteURL string) (_ *Users, rerr error) {
 	s := &Users{}
+	s.logger = logger
 	s.customerID = customerID
 	var err error
 	s.sender, err = objsender.Root(agent, work.UserModelName.String())
@@ -55,6 +58,7 @@ func (s *Users) ExportUser(user jiracommonapi.User) error {
 	s.exportedMu.Unlock()
 
 	u := &work.User{}
+
 	u.RefType = "jira"
 	u.RefID = pk
 	u.CustomerID = customerID

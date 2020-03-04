@@ -123,34 +123,97 @@ func (s *JiraCommon) IssuesAndChangelogs(
 
 }
 
+type CustomFieldIDs struct {
+	StoryPoints string
+	Epic        string
+}
+
+func (s CustomFieldIDs) missing() (res []string) {
+	if s.StoryPoints == "" {
+		res = append(res, "StoryPoints")
+	}
+	if s.Epic == "" {
+		res = append(res, "Epic")
+	}
+	return
+}
+
+type issueResolver struct {
+	qc    jiracommonapi.QueryContext
+	cache map[string]string
+}
+
+func newIssueResolver(qc jiracommonapi.QueryContext) *issueResolver {
+	s := &issueResolver{}
+	s.qc = qc
+	s.cache = map[string]string{}
+	return s
+}
+
+func (s *issueResolver) IssueRefIDFromKey(key string) (refID string, rerr error) {
+	if s.cache[key] != "" {
+		return s.cache[key], nil
+	}
+	res, err := s.issueRefIDFromKeyNoCache(key)
+	if err != nil {
+		rerr = err
+		return
+	}
+	s.cache[key] = res
+	return res, nil
+}
+
+func (s *issueResolver) issueRefIDFromKeyNoCache(key string) (refID string, rerr error) {
+	refID, err := jiracommonapi.IssueRefIDFromKey(s.qc, key)
+	if err != nil {
+		rerr = fmt.Errorf("could not query issue: %v", err)
+		return
+	}
+	return refID, nil
+}
+
 func (s *JiraCommon) issuesAndChangelogsForProject(
 	ctx *repoprojects.ProjectCtx,
 	project Project,
 	fieldByID map[string]jiracommonapi.CustomField,
 	sprints *Sprints) error {
 
-	s.opts.Logger.Info("processing issues and changelogs for project", "project", project.Key)
+	logger := s.opts.Logger
+
+	logger.Info("processing issues and changelogs for project", "project", project.Key)
+
+	qc := s.CommonQC()
+	issueResolver := newIssueResolver(qc)
 
 	senderIssues, err := ctx.Session(work.IssueModelName)
 	if err != nil {
 		return err
 	}
 
-	// find the custom_id field id for Story Points
-	var storyPointCustomFieldID *string
+	customFieldIDs := CustomFieldIDs{}
+
 	for key, val := range fieldByID {
-		if val.Name == "Story Points" {
-			storyPointCustomFieldID = &key
-			break
+		switch val.Name {
+		case "Story Points":
+			customFieldIDs.StoryPoints = key
+		case "Epic Link":
+			customFieldIDs.Epic = key
 		}
 	}
 
+	if len(customFieldIDs.missing()) == 0 {
+		logger.Debug("found all custom field ids")
+	} else {
+		logger.Warn("some custom field ids were not found", "missing", customFieldIDs.missing())
+	}
+
 	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
-		pi, resIssues, err := jiracommonapi.IssuesAndChangelogsPage(s.CommonQC(), project.Project, fieldByID, senderIssues.LastProcessedTime(), paginationParams)
+		pi, resIssues, err := jiracommonapi.IssuesAndChangelogsPage(qc, project.Project, fieldByID, senderIssues.LastProcessedTime(), paginationParams)
 		if err != nil {
 			rerr = err
 			return
 		}
+
 		for _, issue := range resIssues {
 			for _, f := range issue.CustomFields {
 				if f.Name == "Sprint" {
@@ -159,24 +222,34 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 					}
 					err := sprints.processIssueSprint(issue.RefID, f.Value)
 					if err != nil {
-						s.opts.Logger.Error("could not process Sprint field value", "v", f.Value, "err", err, "key", issue.Identifier)
+						logger.Error("could not process Sprint field value", "v", f.Value, "err", err, "key", issue.Identifier)
 					}
 					continue
 				}
-				// check and see if this custom field is a story point custom field and if so, extract
-				// the current story point value.
-				if storyPointCustomFieldID != nil && f.ID == *storyPointCustomFieldID {
-					// story point value can be NULL indicating we didn't set it which is different
-					// than a 0 value
-					if f.Value != "" {
-						// story points can be expressed as fractions or whole numbers so convert it to a float
-						sp, err := strconv.ParseFloat(f.Value, 32)
-						if err != nil {
-							s.opts.Logger.Error("error parsing Story Point value", "v", f.Value, "err", err, "key", issue.Identifier)
-						} else {
-							issue.StoryPoints = &sp
-						}
+
+				if f.ID == "" || f.Value == "" {
+					continue
+				}
+
+				// TODO: BUG: These fields would not be set when returning updated issues after writing to jira, or when returning updated objects from hooks
+				// we can't easily move those to convertIssue, since this requires querying custom fields first
+				switch f.ID {
+				case customFieldIDs.StoryPoints:
+					// story points can be expressed as fractions or whole numbers so convert it to a float
+					sp, err := strconv.ParseFloat(f.Value, 32)
+					if err != nil {
+						logger.Error("error parsing Story Point value", "v", f.Value, "err", err, "key", issue.Identifier)
+					} else {
+						issue.StoryPoints = &sp
 					}
+				case customFieldIDs.Epic:
+					refID, err := issueResolver.IssueRefIDFromKey(f.Value)
+					if err != nil {
+						logger.Error("could not convert epic key to ref id", "v", f.Value, "err", err)
+						continue
+					}
+					epicID := qc.IssueID(refID)
+					issue.EpicID = &epicID
 				}
 			}
 		}
