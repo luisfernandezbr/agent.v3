@@ -1,4 +1,4 @@
-Test
+Test 2
 
 <div align="center">
 	<img width="500" src="_docs/logo.svg" alt="pinpt-logo">
