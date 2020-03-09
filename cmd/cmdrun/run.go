@@ -53,8 +53,8 @@ func (s *runner) Run(cancel chan bool) error {
 
 	s.logger.Info("starting service-run-with-restarts", "pinpoint-root", s.opts.PinpointRoot, "integration-dir", s.opts.IntegrationsDir)
 
-	delay := pservice.ExpRetryDelayFn(15*time.Second, 3*time.Hour, 2)
-	resetFailuresAfter := 6 * time.Hour
+	delay := pservice.ExpRetryDelayFn(15*time.Second, 1*time.Hour, 2)
+	resetFailuresAfter := 3 * time.Hour
 	done, cancelPservice := pservice.AsyncRunBg(pservice.Retrying(s.logger, s.runService, delay, resetFailuresAfter))
 
 	return s.CaptureShutdown(cancelPservice, cancel, done)
