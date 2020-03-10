@@ -139,13 +139,16 @@ var cmdExportRepo = &cobra.Command{
 
 		commitUsers := process.NewCommitUsers()
 
+		repoID, _ := cmd.Flags().GetString("repo-id")
+		customerID, _ := cmd.Flags().GetString("customer-id")
+
 		opts := exportrepo.Opts{
 			Logger:            logger,
 			RepoAccess:        gitclone.AccessDetails{URL: url},
 			Sessions:          sessions,
-			RepoID:            "r1",
-			UniqueName:        "repo1",
-			CustomerID:        "c1",
+			RepoID:            repoID,
+			UniqueName:        dummyRepo.GetReadableID(),
+			CustomerID:        customerID,
 			LastProcessed:     lastProcessed,
 			CommitURLTemplate: commiturl.CommitURLTemplate(dummyRepo, url),
 			BranchURLTemplate: commiturl.BranchURLTemplate(dummyRepo, url),
@@ -175,6 +178,8 @@ func init() {
 	cmdExportRepo.Flags().String("pinpoint-root", "", "pinpoint-root")
 	cmdExportRepo.Flags().String("ref-type", "git", "ref-type")
 	cmdExportRepo.Flags().String("repo-name", "", "repo-name")
+	cmdExportRepo.Flags().String("repo-id", "repo1", "repo-id")
+	cmdExportRepo.Flags().String("customer-id", "cus1", "customer-id")
 	cmdRoot.AddCommand(cmdExportRepo)
 }
 
