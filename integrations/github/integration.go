@@ -39,6 +39,7 @@ type Integration struct {
 	config Config
 
 	requestConcurrencyChan chan bool
+	requestsMadeAtomic     *int64
 
 	refType string
 
@@ -211,6 +212,8 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	}
 
 	s.requestConcurrencyChan = make(chan bool, s.config.Concurrency)
+	requestsMade := int64(-1) // start with -1 to check quotas before 1 request
+	s.requestsMadeAtomic = &requestsMade
 
 	s.qc.APIURL3 = s.config.APIURL3
 	s.qc.AuthToken = s.config.Token

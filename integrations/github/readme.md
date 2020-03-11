@@ -66,6 +66,51 @@ github.PullRequestComment does not include comments created from review, these g
 
 It takes ~?m on pinpoint organization for initial export and ~?m for incremental immediately after. Using ?% of github.com hourly quota.
 
+## Concurrency, throttling and request limits
+
+Each user is allocated a certain number of requests, once this limit is exceeded API returns the following error:
+
+```
+{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}"
+```
+
+When this happens we normally sleep for 30m.
+
+If we use more than 1 concurrent request, we get another error from time to time.
+
+```
+{
+  "documentation_url": "https://developer.github.com/v3/#abuse-rate-limits",
+  "message": "You have triggered an abuse detection mechanism. Please wait a few minutes before you try again."
+}
+```
+
+We should only sleep for 5m in that case. We get this error after a few minutes when running 5 concurrent exports.
+
+### Are limits shared by org user, or completely separate.
+
+We have tested exporting one organization using two users. If one of them runs out of hourly quota, the other user can still export. So the normal RATE_LIMIT applies per user, not the organization.
+
+### Checking currect limits
+
+The following graphql query can be used to check your current rate limit.
+
+https://developer.github.com/v4/explorer
+
+```
+query {
+  viewer {
+    login
+  }
+  rateLimit {
+    limit
+    cost
+    remaining
+    resetAt
+  }
+}
+```
+
 ## How to support incremental exports?
 Since graphql doesn't support since parameter on all objects, we iterate backwards using updated at timestamp, when we get to the object which was updated before last run we stop.
 

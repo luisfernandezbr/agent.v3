@@ -8,10 +8,21 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
+const checkRateLimitEveryNRequest = 100
+
 func (s *Integration) makeRequest(query string, res interface{}) error {
+	v := atomic.AddInt64(s.requestsMadeAtomic, 1)
+	if v%checkRateLimitEveryNRequest == 0 {
+		err := s.checkRateLimitAndSleepIfNecessary()
+		if err != nil {
+			s.logger.Error("could not check available rate limit quota, issuing request as normal", "err", err)
+		}
+	}
+
 	data := map[string]string{
 		"query": query,
 	}
@@ -32,6 +43,91 @@ type request struct {
 	URL    string
 	Method string
 	Body   []byte
+}
+
+const keepRequestBuffer = 0.2
+const minWaitTime = 5 * time.Minute
+const maxWaitTime = 30 * time.Minute
+
+func (s *Integration) checkRateLimitAndSleepIfNecessary() error {
+	s.logger.Info("making request to check rate limit quota")
+
+	query := `
+	query {
+		rateLimit {
+			limit
+			remaining
+			resetAt
+		}
+	}
+	`
+
+	var res struct {
+		Data struct {
+			RateLimit struct {
+				Limit     int       `json:"limit"`
+				Remaining int       `json:"remaining"`
+				ResetAt   time.Time `json:"resetAt"`
+			} `json:"rateLimit"`
+		} `json:"data"`
+	}
+
+	data := map[string]string{
+		"query": query,
+	}
+
+	b, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("could not make request, marshaling of request data failed, err: %v", err)
+	}
+
+	u := s.config.APIURL
+	req := request{Method: "POST", URL: u, Body: b}
+
+	_, err = s.makeRequestRetryThrottled(req, &res, maxThrottledRetries)
+	if err != nil {
+		return err
+	}
+
+	rl := res.Data.RateLimit
+	if rl.Limit == 0 {
+		return fmt.Errorf("rateLimit returned invalid object, resulting data Limit is 0")
+	}
+
+	if float64(rl.Remaining)/float64(rl.Limit) > keepRequestBuffer {
+		// still more than buffer requests left in quota
+		return nil
+	}
+
+	s.logger.Warn("pausing due to used up request quota, keeping some buffer unused", "remaining", rl.Remaining, "limit", rl.Limit, "wanted_buffer", keepRequestBuffer, "reset_at", rl.ResetAt)
+
+	// used all up-to buffer, pause
+	waitTime := time.Now().Sub(rl.ResetAt)
+	s.pause(waitTime)
+	return nil
+}
+
+func (s *Integration) pause(waitTime time.Duration) {
+	if waitTime < minWaitTime {
+		waitTime = minWaitTime
+	}
+	if waitTime > maxWaitTime {
+		waitTime = maxWaitTime
+	}
+	paused := time.Now()
+	resumeDate := paused.Add(waitTime)
+
+	err := s.agent.SendPauseEvent("", resumeDate)
+	if err != nil {
+		s.logger.Error("could not send pause event", "err", err)
+	}
+
+	time.Sleep(waitTime)
+
+	err = s.agent.SendResumeEvent("")
+	if err != nil {
+		s.logger.Error("could not resume event", "err", err)
+	}
 }
 
 func (s *Integration) makeRequestThrottled(req request, res interface{}) error {
@@ -108,22 +204,9 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 			}
 		}
 
-		if waitTime < 5*time.Minute {
-			waitTime = 5 * time.Minute
-		}
-		if waitTime > 30*time.Minute {
-			waitTime = 30 * time.Minute
-		}
+		s.logger.Warn("api request failed due to throttling, will sleep and retry, this should only happen if hourly quota is used up, check here (https://developer.github.com/v4/guides/resource-limitations/#returning-a-calls-rate-limit-status)", "body", string(b), "retryThrottled", retryThrottled)
 
-		s.logger.Warn("api request failed due to throttling, will sleep and retry, this should only happen if hourly quota is used up, check here (https://developer.github.com/v4/guides/resource-limitations/#returning-a-calls-rate-limit-status)", "body", string(b), "retryThrottled", retryThrottled, "sleepTime", waitTime.String())
-
-		paused := time.Now()
-		resumeDate := paused.Add(waitTime)
-		s.agent.SendPauseEvent(fmt.Sprintf("github paused, will resume in %v", waitTime), resumeDate)
-
-		time.Sleep(waitTime)
-
-		s.agent.SendResumeEvent(fmt.Sprintf("github resumed, time elapsed %v", time.Since(paused)))
+		s.pause(waitTime)
 
 		return s.makeRequestRetryThrottled(reqDef, res, retryThrottled+1)
 
@@ -133,8 +216,10 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 
 	if resp.StatusCode != 200 {
 
-		if resp.StatusCode == 403 && strings.Contains(string(b), "wait") {
-			return rateLimited()
+		if resp.StatusCode == 403 && strings.Contains(string(b), "You have triggered an abuse detection mechanism. Please wait a few minutes before you try again.") {
+			s.logger.Warn("api request failed due to temporary throttling or concurrency being too high, pausing for 5m", "body", string(b), "retryThrottled", retryThrottled)
+			s.pause(5 * time.Minute)
+			return s.makeRequestRetryThrottled(reqDef, res, retryThrottled+1)
 		}
 
 		var errRes struct {
