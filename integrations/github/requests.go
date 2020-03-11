@@ -45,11 +45,15 @@ type request struct {
 	Body   []byte
 }
 
-const keepRequestBuffer = 0.2
+const exportRequestBuffer = 0.2
 const minWaitTime = 5 * time.Minute
 const maxWaitTime = 30 * time.Minute
 
 func (s *Integration) checkRateLimitAndSleepIfNecessary() error {
+	if s.requestsBuffer == 0 {
+		return nil
+	}
+
 	s.logger.Info("making request to check rate limit quota")
 
 	query := `
@@ -94,12 +98,12 @@ func (s *Integration) checkRateLimitAndSleepIfNecessary() error {
 		return fmt.Errorf("rateLimit returned invalid object, resulting data Limit is 0")
 	}
 
-	if float64(rl.Remaining)/float64(rl.Limit) > keepRequestBuffer {
+	if float64(rl.Remaining)/float64(rl.Limit) > s.requestsBuffer {
 		// still more than buffer requests left in quota
 		return nil
 	}
 
-	s.logger.Warn("pausing due to used up request quota, keeping some buffer unused", "remaining", rl.Remaining, "limit", rl.Limit, "wanted_buffer", keepRequestBuffer, "reset_at", rl.ResetAt)
+	s.logger.Warn("pausing due to used up request quota, keeping some buffer unused", "remaining", rl.Remaining, "limit", rl.Limit, "wanted_buffer", s.requestsBuffer, "reset_at", rl.ResetAt)
 
 	// used all up-to buffer, pause
 	waitTime := time.Now().Sub(rl.ResetAt)

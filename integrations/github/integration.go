@@ -40,6 +40,7 @@ type Integration struct {
 
 	requestConcurrencyChan chan bool
 	requestsMadeAtomic     *int64
+	requestsBuffer         float64
 
 	refType string
 
@@ -214,6 +215,7 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	s.requestConcurrencyChan = make(chan bool, s.config.Concurrency)
 	requestsMade := int64(-1) // start with -1 to check quotas before 1 request
 	s.requestsMadeAtomic = &requestsMade
+	s.requestsBuffer = 0
 
 	s.qc.APIURL3 = s.config.APIURL3
 	s.qc.AuthToken = s.config.Token
@@ -239,6 +241,8 @@ func (s *Integration) Export(ctx context.Context, exportConfig rpcdef.ExportConf
 	if err != nil {
 		return res, err
 	}
+	// we keep a request buffer for exports, but not onboarding or validation
+	s.requestsBuffer = exportRequestBuffer
 
 	projects, err := s.export(ctx)
 	if err != nil {
