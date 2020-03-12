@@ -286,11 +286,6 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (parts
 	return
 }
 
-func dedupInclusionsAndMergeUsers(integrations []inconfig.IntegrationAgent) (res []inconfig.IntegrationAgent) {
-	res = dedupInclusions(integrations)
-	return mergeUsers(res)
-}
-
 func dedupInclusions(integrations []inconfig.IntegrationAgent) (res []inconfig.IntegrationAgent) {
 	all := map[inconfig.IntegrationDef]map[string]bool{}
 	for _, in := range integrations {
@@ -315,44 +310,6 @@ func dedupInclusions(integrations []inconfig.IntegrationAgent) (res []inconfig.I
 		res = append(res, in)
 	}
 
-	return
-}
-
-func mergeUsers(integrations []inconfig.IntegrationAgent) (res []inconfig.IntegrationAgent) {
-	// map[inconfig.IntegrationDef]map[user_id][]inclusion
-	inclusions := map[inconfig.IntegrationDef]map[string][]string{}
-	for _, in := range integrations {
-		def := in.IntegrationDef()
-		if in.CreatedByUserID == "" {
-			panic("in.CreatedByUserID is a required field")
-		}
-		if _, ok := inclusions[def]; !ok {
-			inclusions[def] = map[string][]string{}
-		}
-		m := inclusions[def]
-		userID := in.CreatedByUserID
-		for _, inclusion := range in.Config.Inclusions {
-			m[userID] = append(m[userID], inclusion)
-		}
-	}
-	// map[inconfig.IntegrationDef]map[user_id]integration_seen
-	seen := map[inconfig.IntegrationDef]map[string]bool{}
-	for _, in := range integrations {
-		def := in.IntegrationDef()
-		if in.CreatedByUserID == "" {
-			panic("in.CreatedByUserID is a required field")
-		}
-		if _, ok := seen[def]; !ok {
-			seen[def] = map[string]bool{}
-		}
-		userID := in.CreatedByUserID
-		if seen[def][userID] {
-			continue
-		}
-		seen[def][userID] = true
-		in.Config.Inclusions = inclusions[def][userID]
-		res = append(res, in)
-	}
 	return
 }
 
