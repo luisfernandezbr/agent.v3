@@ -106,7 +106,7 @@ func (s *Integration) checkRateLimitAndSleepIfNecessary() error {
 	s.logger.Warn("pausing due to used up request quota, keeping some buffer unused", "remaining", rl.Remaining, "limit", rl.Limit, "wanted_buffer", s.requestsBuffer, "reset_at", rl.ResetAt)
 
 	// used all up-to buffer, pause
-	waitTime := time.Now().Sub(rl.ResetAt)
+	waitTime := rl.ResetAt.Sub(time.Now())
 	s.pause(waitTime)
 	return nil
 }
