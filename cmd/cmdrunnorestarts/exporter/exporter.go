@@ -245,7 +245,7 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (parts
 		return
 	}
 
-	integrations = dedupInclusions(integrations)
+	integrations = dedupInclusionsAndMergeUsers(integrations)
 
 	logFile := ""
 	res, logFile, err = s.execExport(integrations, data.ReprocessHistorical, messageID, data.JobID)
