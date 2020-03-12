@@ -18,6 +18,7 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 }
 
 func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.OnboardExportResult, _ error) {
+
 	err := s.initWithConfig(config)
 	if err != nil {
 		return res, err
