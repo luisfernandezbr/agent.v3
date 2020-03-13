@@ -68,7 +68,7 @@ func New(pinpointRoot string) Locs {
 	s.LogsIntegrations = j(s.Root, "logs/integrations")
 
 	s.RepoCache = j(s.Cache, "repos")
-	s.State = j(s.Root, "state")
+	s.State = j(s.Root, "state", "v1")
 	s.Uploads = j(s.State, "uploads")
 	s.UploadZips = j(s.State, "upload-zips")
 	s.Backup = j(s.State, "backup")
