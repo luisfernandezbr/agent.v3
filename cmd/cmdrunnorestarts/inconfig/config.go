@@ -66,10 +66,6 @@ func AuthFromEvent(data map[string]interface{}, encryptionKey string) (in Integr
 	in.ID = obj.ID
 	in.Name = obj.Name
 	in.CreatedByUserID = obj.CreatedByUserID
-	if in.CreatedByUserID == "" {
-		err = errors.New("integration definition is missing required field: created_by_user_id integration_id: " + in.ID)
-		return
-	}
 	in.Config.Inclusions = obj.Inclusions
 	in.Config.Exclusions = obj.Exclusions
 	err = ConvertEdgeCases(&in)
