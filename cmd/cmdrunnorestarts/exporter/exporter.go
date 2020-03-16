@@ -2,6 +2,7 @@ package exporter
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -118,9 +119,6 @@ func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
 	var in2 []agent.ExportRequestIntegrations
 	hasIntegrationsWithNoInclusions := false
 	for _, in := range data.Integrations {
-		if in.CreatedByUserID == nil {
-			s.logger.Info("passed integration does not have created_by_user_id set", "integration_id", in.ID)
-		}
 		if len(in.Inclusions) == 0 {
 			hasIntegrationsWithNoInclusions = true
 			s.logger.Warn("export request contains an integration with no inclusions, ignoring it")
@@ -248,7 +246,7 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (parts
 		return
 	}
 
-	integrations = dedupInclusionsAndMergeUsers(integrations)
+	integrations = dedupInclusionsAndMergeUsers(s.logger, integrations)
 
 	logFile := ""
 	res, logFile, err = s.execExport(integrations, data.ReprocessHistorical, messageID, data.JobID)
@@ -289,9 +287,9 @@ func (s *Exporter) doExport2(data *agent.ExportRequest, messageID string) (parts
 	return
 }
 
-func dedupInclusionsAndMergeUsers(integrations []inconfig.IntegrationAgent) (res []inconfig.IntegrationAgent) {
+func dedupInclusionsAndMergeUsers(logger hclog.Logger, integrations []inconfig.IntegrationAgent) (res []inconfig.IntegrationAgent) {
 	res = dedupInclusions(integrations)
-	return mergeUsers(res)
+	return mergeUsers(logger, res)
 }
 
 func dedupInclusions(integrations []inconfig.IntegrationAgent) (res []inconfig.IntegrationAgent) {
@@ -321,8 +319,22 @@ func dedupInclusions(integrations []inconfig.IntegrationAgent) (res []inconfig.I
 	return
 }
 
-func mergeUsers(integrations []inconfig.IntegrationAgent) (res []inconfig.IntegrationAgent) {
-	// map[inconfig.IntegrationDef]map[user_id][]inclusion
+func authToString(v inconfig.IntegrationConfigAgent) string {
+	// allow different access tokens, if refresh token is the same
+	if v.RefreshToken != "" {
+		v.AccessToken = ""
+	}
+	v.Inclusions = nil
+	v.Exclusions = nil
+	b, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
+
+func mergeUsers(logger hclog.Logger, integrations []inconfig.IntegrationAgent) (res []inconfig.IntegrationAgent) {
+	// map[inconfig.IntegrationDef]map[authFields][]inclusion
 	inclusions := map[inconfig.IntegrationDef]map[string][]string{}
 	for _, in := range integrations {
 		def := in.IntegrationDef()
@@ -330,13 +342,9 @@ func mergeUsers(integrations []inconfig.IntegrationAgent) (res []inconfig.Integr
 			inclusions[def] = map[string][]string{}
 		}
 		m := inclusions[def]
-		userID := in.CreatedByUserID
-		if userID == "" {
-			// don't touch integrations with no user set
-			continue
-		}
+		authString := authToString(in.Config)
 		for _, inclusion := range in.Config.Inclusions {
-			m[userID] = append(m[userID], inclusion)
+			m[authString] = append(m[authString], inclusion)
 		}
 	}
 	// map[inconfig.IntegrationDef]map[user_id]integration_seen
@@ -346,17 +354,13 @@ func mergeUsers(integrations []inconfig.IntegrationAgent) (res []inconfig.Integr
 		if _, ok := seen[def]; !ok {
 			seen[def] = map[string]bool{}
 		}
-		userID := in.CreatedByUserID
-		if userID == "" {
-			// don't touch integrations with no user set
-			res = append(res, in)
+		authString := authToString(in.Config)
+		if seen[def][authString] {
+			logger.Info("merging integration because auth config is the same", "integration_id", in.ID)
 			continue
 		}
-		if seen[def][userID] {
-			continue
-		}
-		seen[def][userID] = true
-		in.Config.Inclusions = inclusions[def][userID]
+		seen[def][authString] = true
+		in.Config.Inclusions = inclusions[def][authString]
 		res = append(res, in)
 	}
 	return

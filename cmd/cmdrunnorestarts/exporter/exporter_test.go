@@ -3,6 +3,7 @@ package exporter
 import (
 	"testing"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/stretchr/testify/assert"
 )
@@ -12,14 +13,12 @@ func TestDedupInclusions1(t *testing.T) {
 	in := inconfig.IntegrationAgent{}
 	in.ID = "id1"
 	in.Name = "azure"
-	in.CreatedByUserID = "user1"
 	in.Type = inconfig.IntegrationTypeSourcecode
 	in.Config.Inclusions = []string{"1", "2"}
 	ins = append(ins, in)
 	in = inconfig.IntegrationAgent{}
 	in.ID = "id2"
 	in.Name = "azure"
-	in.CreatedByUserID = "user2"
 	in.Type = inconfig.IntegrationTypeSourcecode
 	in.Config.Inclusions = []string{"2", "3"}
 	ins = append(ins, in)
@@ -37,14 +36,12 @@ func TestDedupInclusions2(t *testing.T) {
 	in := inconfig.IntegrationAgent{}
 	in.ID = "id2"
 	in.Name = "azure"
-	in.CreatedByUserID = "user1"
 	in.Type = inconfig.IntegrationTypeSourcecode
 	in.Config.Inclusions = []string{"1", "2"}
 	ins = append(ins, in)
 	in = inconfig.IntegrationAgent{}
 	in.ID = "id2"
 	in.Name = "azure"
-	in.CreatedByUserID = "user2"
 	in.Type = inconfig.IntegrationTypeWork
 	in.Config.Inclusions = []string{"2", "3"}
 	ins = append(ins, in)
@@ -58,12 +55,13 @@ func TestDedupInclusions2(t *testing.T) {
 }
 
 func TestDedupInclusionsAndMergeUsers1(t *testing.T) {
+	logger := hclog.New(hclog.DefaultOptions)
+
 	ins := []inconfig.IntegrationAgent{}
 	in := inconfig.IntegrationAgent{}
 	in.ID = "id1"
 	in.Name = "github"
 	in.Type = inconfig.IntegrationTypeSourcecode
-	in.CreatedByUserID = "user1"
 	in.Config.Inclusions = []string{"1", "2"}
 	ins = append(ins, in)
 
@@ -71,11 +69,10 @@ func TestDedupInclusionsAndMergeUsers1(t *testing.T) {
 	in.ID = "id2"
 	in.Name = "github"
 	in.Type = inconfig.IntegrationTypeSourcecode
-	in.CreatedByUserID = "user1"
 	in.Config.Inclusions = []string{"2", "3"}
 	ins = append(ins, in)
 
-	got := dedupInclusionsAndMergeUsers(ins)
+	got := dedupInclusionsAndMergeUsers(logger, ins)
 	if len(got) != 1 {
 		t.Fatal("we should merge integrations with the same name, type and user id")
 	}
@@ -84,11 +81,12 @@ func TestDedupInclusionsAndMergeUsers1(t *testing.T) {
 }
 
 func TestDedupInclusionsAndMergeUsers2(t *testing.T) {
+	logger := hclog.New(hclog.DefaultOptions)
+
 	ins := []inconfig.IntegrationAgent{}
 	in := inconfig.IntegrationAgent{}
 	in.ID = "id1"
 	in.Name = "github"
-	in.CreatedByUserID = "user1"
 	in.Type = inconfig.IntegrationTypeSourcecode
 	in.Config.Inclusions = []string{"1", "2"}
 	ins = append(ins, in)
@@ -96,12 +94,11 @@ func TestDedupInclusionsAndMergeUsers2(t *testing.T) {
 	in = inconfig.IntegrationAgent{}
 	in.ID = "id2"
 	in.Name = "github"
-	in.CreatedByUserID = "user1"
 	in.Type = inconfig.IntegrationTypeWork
 	in.Config.Inclusions = []string{"2", "3"}
 	ins = append(ins, in)
 
-	got := dedupInclusionsAndMergeUsers(ins)
+	got := dedupInclusionsAndMergeUsers(logger, ins)
 	if len(got) == 1 {
 		t.Fatal("should not merge integrations with different types")
 	}
@@ -114,13 +111,15 @@ func TestDedupInclusionsAndMergeUsers2(t *testing.T) {
 
 }
 
-func TestDedupInclusionsAndMergeUsersUserNotSet(t *testing.T) {
+func TestDedupInclusionsAndMergeUsers3(t *testing.T) {
+	logger := hclog.New(hclog.DefaultOptions)
+
 	ins := []inconfig.IntegrationAgent{}
 	in := inconfig.IntegrationAgent{}
 	in.ID = "id1"
 	in.Name = "github"
 	in.Type = inconfig.IntegrationTypeSourcecode
-	in.CreatedByUserID = "user1"
+	in.Config.RefreshToken = "x1"
 	in.Config.Inclusions = []string{"1", "2"}
 	ins = append(ins, in)
 
@@ -128,23 +127,54 @@ func TestDedupInclusionsAndMergeUsersUserNotSet(t *testing.T) {
 	in.ID = "id2"
 	in.Name = "github"
 	in.Type = inconfig.IntegrationTypeSourcecode
-	in.CreatedByUserID = ""
+	in.Config.RefreshToken = "x2"
 	in.Config.Inclusions = []string{"2", "3"}
 	ins = append(ins, in)
 
-	in = inconfig.IntegrationAgent{}
-	in.ID = "id3"
+	got := dedupInclusionsAndMergeUsers(logger, ins)
+	if len(got) != 2 {
+		t.Fatal("should not merge integrations with different configs")
+	}
+
+	var res []string
+	for _, in := range got {
+		res = append(res, in.Config.Inclusions...)
+	}
+	assert.Equal(t, []string{"1", "2", "3"}, res)
+
+}
+
+func TestDedupInclusionsAndMergeUsers4(t *testing.T) {
+	logger := hclog.New(hclog.DefaultOptions)
+
+	ins := []inconfig.IntegrationAgent{}
+	in := inconfig.IntegrationAgent{}
+	in.ID = "id1"
 	in.Name = "github"
 	in.Type = inconfig.IntegrationTypeSourcecode
-	in.CreatedByUserID = ""
-	in.Config.Inclusions = []string{"4"}
+	in.Config.AccessToken = "a1"
+	in.Config.RefreshToken = "x"
+	in.Config.Inclusions = []string{"1", "2"}
 	ins = append(ins, in)
 
-	got := dedupInclusionsAndMergeUsers(ins)
-	if len(got) != 3 {
-		t.Fatal("should not merge integrations with users not set")
+	in = inconfig.IntegrationAgent{}
+	in.ID = "id2"
+	in.Name = "github"
+	in.Type = inconfig.IntegrationTypeSourcecode
+	in.Config.AccessToken = "a2"
+	in.Config.RefreshToken = "x"
+	in.Config.Inclusions = []string{"2", "3"}
+	ins = append(ins, in)
+
+	got := dedupInclusionsAndMergeUsers(logger, ins)
+	if len(got) != 1 {
+		t.Fatal("should merge integrations if refreshtoken is same and accesskey is different")
 	}
-	assert.Equal(t, []string{"1", "2"}, got[0].Config.Inclusions)
-	assert.Equal(t, []string{"3"}, got[1].Config.Inclusions)
-	assert.Equal(t, []string{"4"}, got[2].Config.Inclusions)
+
+	var res []string
+	for _, in := range got {
+		res = append(res, in.Config.Inclusions...)
+	}
+	assert.Equal(t, []string{"1", "2", "3"}, res)
+
 }

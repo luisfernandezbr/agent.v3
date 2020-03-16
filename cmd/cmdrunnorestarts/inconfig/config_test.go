@@ -26,7 +26,6 @@ func TestAuthFromEvent(t *testing.T) {
 	e := agent.ExportRequestIntegrations{}
 	e.ID = "id1"
 	e.Name = "github"
-	e.CreatedByUserID = pstrings.Pointer("user1")
 	e.Authorization.Authorization = pstrings.Pointer(data)
 	e.Exclusions = []string{"e1"}
 	e.Inclusions = []string{"e1", "e2"}
@@ -40,7 +39,6 @@ func TestAuthFromEvent(t *testing.T) {
 	want := IntegrationAgent{}
 	want.ID = "id1"
 	want.Name = "github"
-	want.CreatedByUserID = "user1"
 	want.Config.Exclusions = []string{"e1"}
 	want.Config.Inclusions = []string{"e1", "e2"}
 	want.Config.APIKey = "t1"
