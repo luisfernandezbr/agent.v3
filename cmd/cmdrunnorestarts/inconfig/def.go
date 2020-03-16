@@ -29,8 +29,7 @@ type Integration struct {
 
 type IntegrationAgent struct {
 	IntegrationBase
-	CreatedByUserID string                 `json:"created_by_user_id"`
-	Config          IntegrationConfigAgent `json:"config"`
+	Config IntegrationConfigAgent `json:"config"`
 }
 
 type IntegrationType agent.IntegrationRequestIntegrationSystemType
