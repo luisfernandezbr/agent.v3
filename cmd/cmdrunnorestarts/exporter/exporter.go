@@ -119,7 +119,7 @@ func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
 	hasIntegrationsWithNoInclusions := false
 	for _, in := range data.Integrations {
 		if in.CreatedByUserID == nil {
-			handleError(fmt.Errorf("passed integration does not have created_by_user_id set, customer_id: %v integration_id: %v", data.CustomerID, in.ID))
+			s.logger.Warn("passed integration does not have created_by_user_id set", "integration_id", in.ID)
 			return
 		}
 		if len(in.Inclusions) == 0 {
@@ -327,14 +327,15 @@ func mergeUsers(integrations []inconfig.IntegrationAgent) (res []inconfig.Integr
 	inclusions := map[inconfig.IntegrationDef]map[string][]string{}
 	for _, in := range integrations {
 		def := in.IntegrationDef()
-		if in.CreatedByUserID == "" {
-			panic("in.CreatedByUserID is a required field")
-		}
 		if _, ok := inclusions[def]; !ok {
 			inclusions[def] = map[string][]string{}
 		}
 		m := inclusions[def]
 		userID := in.CreatedByUserID
+		if userID == "" {
+			// don't touch integrations with no user set
+			continue
+		}
 		for _, inclusion := range in.Config.Inclusions {
 			m[userID] = append(m[userID], inclusion)
 		}
@@ -343,13 +344,15 @@ func mergeUsers(integrations []inconfig.IntegrationAgent) (res []inconfig.Integr
 	seen := map[inconfig.IntegrationDef]map[string]bool{}
 	for _, in := range integrations {
 		def := in.IntegrationDef()
-		if in.CreatedByUserID == "" {
-			panic("in.CreatedByUserID is a required field")
-		}
 		if _, ok := seen[def]; !ok {
 			seen[def] = map[string]bool{}
 		}
 		userID := in.CreatedByUserID
+		if userID == "" {
+			// don't touch integrations with no user set
+			res = append(res, in)
+			continue
+		}
 		if seen[def][userID] {
 			continue
 		}
