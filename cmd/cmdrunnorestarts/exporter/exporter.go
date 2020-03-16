@@ -118,6 +118,10 @@ func (s *Exporter) export(data *agent.ExportRequest, messageID string) {
 	var in2 []agent.ExportRequestIntegrations
 	hasIntegrationsWithNoInclusions := false
 	for _, in := range data.Integrations {
+		if in.CreatedByUserID == nil {
+			handleError(fmt.Errorf("passed integration does not have created_by_user_id set, customer_id: %v integration_id: %v", data.CustomerID, in.ID))
+			return
+		}
 		if len(in.Inclusions) == 0 {
 			hasIntegrationsWithNoInclusions = true
 			s.logger.Warn("export request contains an integration with no inclusions, ignoring it")
