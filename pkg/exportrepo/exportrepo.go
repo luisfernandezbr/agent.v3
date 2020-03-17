@@ -15,6 +15,7 @@ import (
 
 	"github.com/pinpt/agent/cmd/cmdexport/process"
 	"github.com/pinpt/agent/pkg/commitusers"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	"github.com/pinpt/ripsrc/ripsrc/branchmeta"
 
@@ -439,7 +440,8 @@ func (s *Export) code(ctx context.Context) error {
 		}
 	}()
 
-	err := s.rip.CodeByCommit(ctx, res)
+	commitsSeen := s.getCommitsSeen()
+	err := s.rip.CodeByCommit2(ctx, commitsSeen, res)
 	if err != nil {
 		return err
 	}
@@ -452,10 +454,32 @@ func (s *Export) code(ctx context.Context) error {
 		}
 	}
 
+	s.setCommitsSeen(commitsSeen)
+
 	s.logger.Debug("code processing end", "duration", time.Since(started), "last_processed_new", lastProcessed)
 
 	return nil
 
+}
+
+func (s *Export) getCommitsSeen() map[plumbing.Hash]bool {
+	data := s.lastProcessedGet("commits_seen")
+	res := map[plumbing.Hash]bool{}
+	if data == nil {
+		return res
+	}
+	for k, v := range data.(map[string]bool) {
+		res[plumbing.NewHash(k)] = v
+	}
+	return res
+}
+
+func (s *Export) setCommitsSeen(data map[plumbing.Hash]bool) error {
+	res := map[string]bool{}
+	for k, v := range data {
+		res[k.String()] = v
+	}
+	return s.lastProcessedSet(res, "commits_seen")
 }
 
 func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA string, _ error) {
