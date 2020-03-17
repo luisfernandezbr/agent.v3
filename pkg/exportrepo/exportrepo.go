@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -20,7 +19,6 @@ import (
 	"github.com/pinpt/ripsrc/ripsrc/branchmeta"
 
 	"github.com/pinpt/go-common/datetime"
-	"github.com/pinpt/go-common/fileutil"
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 
@@ -269,9 +267,9 @@ func (s *Export) ripsrcSetup(repoDir string) {
 		opts.CommitFromIncl = lastCommit.(string)
 		opts.CommitFromMakeNonIncl = true
 
-		if !fileutil.FileExists(opts.CheckpointsDir) {
-			panic(fmt.Errorf("expecting to run incrementals, but ripsrc checkpoints dir does not exist for repo: %v", s.repoNameUsedInCacheDir))
-		}
+		//if !fileutil.FileExists(opts.CheckpointsDir) {
+		//	panic(fmt.Errorf("expecting to run incrementals, but ripsrc checkpoints dir does not exist for repo: %v", s.repoNameUsedInCacheDir))
+		//}
 	}
 
 	s.logger.Info("setting up ripsrc", "last_processed_old", lastCommit)
@@ -468,16 +466,16 @@ func (s *Export) getCommitsSeen() map[plumbing.Hash]bool {
 	if data == nil {
 		return res
 	}
-	for k, v := range data.(map[string]bool) {
-		res[plumbing.NewHash(k)] = v
+	for k, _ := range data.(map[string]interface{}) {
+		res[plumbing.NewHash(k)] = true
 	}
 	return res
 }
 
 func (s *Export) setCommitsSeen(data map[plumbing.Hash]bool) error {
 	res := map[string]bool{}
-	for k, v := range data {
-		res[k.String()] = v
+	for k, _ := range data {
+		res[k.String()] = true
 	}
 	return s.lastProcessedSet(res, "commits_seen")
 }
