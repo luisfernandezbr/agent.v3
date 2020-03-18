@@ -45,6 +45,24 @@ func (s *Integration) exportRepoMetadataOrg(logger hclog.Logger, sender *objsend
 		return pi, nil
 	})
 
+	err = api.PaginateRegular(func(query string) (api.PageInfo, error) {
+		pi, repos, _, err := api.ReposPage(s.qc.WithLogger(logger), api.Org{}, query, time.Time{})
+		if err != nil {
+			return pi, err
+		}
+		for _, repo := range repos {
+			// sourcecode.Repo.Name == api.Repo.NameWithOwner
+			if !shouldInclude[repo.Name] {
+				continue
+			}
+			err := sender.Send(repo)
+			if err != nil {
+				return pi, err
+			}
+		}
+		return pi, nil
+	})
+
 	if err != nil {
 		return err
 	}

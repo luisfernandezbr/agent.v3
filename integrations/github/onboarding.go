@@ -24,12 +24,22 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 		return res, err
 	}
 
+	var records []map[string]interface{}
+
+	// personal repos
+	repos, err := api.ReposForOnboardAll(s.qc, api.Org{})
+	if err != nil {
+		return res, err
+	}
+	for _, r := range repos {
+		records = append(records, r.ToMap())
+	}
+
 	orgs, err := s.getOrgs()
 	if err != nil {
 		return res, err
 	}
 
-	var records []map[string]interface{}
 	for _, org := range orgs {
 		repos, err := api.ReposForOnboardAll(s.qc, org)
 		if err != nil {

@@ -47,9 +47,17 @@ func ReposAllSlice(qc QueryContext, org Org) (sl []Repo, rerr error) {
 
 func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInfo, repos []Repo, _ error) {
 
+	var loginQuery string
+
+	if org.Login == "" {
+		loginQuery = "viewer{"
+	} else {
+		loginQuery = `organization(login:` + pjson.Stringify(org.Login) + `){`
+	}
+
 	query := `
 	query {
-		organization(login:` + pjson.Stringify(org.Login) + `){
+		` + loginQuery + `
 			repositories(` + queryParams + `) {
 				totalCount
 				pageInfo {
@@ -70,21 +78,26 @@ func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInf
 	}
 	`
 
+	type Repositories struct {
+		TotalCount int      `json:"totalCount"`
+		PageInfo   PageInfo `json:"pageInfo"`
+		Nodes      []struct {
+			ID               string `json:"id"`
+			NameWithOwner    string `json:"nameWithOwner"`
+			DefaultBranchRef struct {
+				Name string `json:"name"`
+			} `json:"defaultBranchRef"`
+		} `json:"nodes"`
+	}
+
 	var res struct {
 		Data struct {
 			Organization struct {
-				Repositories struct {
-					TotalCount int      `json:"totalCount"`
-					PageInfo   PageInfo `json:"pageInfo"`
-					Nodes      []struct {
-						ID               string `json:"id"`
-						NameWithOwner    string `json:"nameWithOwner"`
-						DefaultBranchRef struct {
-							Name string `json:"name"`
-						} `json:"defaultBranchRef"`
-					} `json:"nodes"`
-				} `json:"repositories"`
+				Repositories *Repositories `json:"repositories"`
 			} `json:"organization"`
+			Viewer struct {
+				Repositories *Repositories `json:"repositories"`
+			} `json:"viewer"`
 		} `json:"data"`
 	}
 
@@ -96,7 +109,14 @@ func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInf
 		return pi, repos, err
 	}
 
-	repositories := res.Data.Organization.Repositories
+	var repositories *Repositories
+
+	if res.Data.Organization.Repositories != nil {
+		repositories = res.Data.Organization.Repositories
+	} else {
+		repositories = res.Data.Viewer.Repositories
+	}
+
 	repoNodes := repositories.Nodes
 
 	if len(repoNodes) == 0 {
@@ -119,9 +139,17 @@ func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInf
 func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*sourcecode.Repo, totalCount int, rerr error) {
 	qc.Logger.Debug("repos request", "q", queryParams)
 
+	var loginQuery string
+
+	if org.Login == "" {
+		loginQuery = "viewer{"
+	} else {
+		loginQuery = `organization(login:` + pjson.Stringify(org.Login) + `){`
+	}
+
 	query := `
 	query {
-		organization(login:` + pjson.Stringify(org.Login) + `){
+		` + loginQuery + `
 			repositories(` + queryParams + `) {
 				totalCount
 				pageInfo {
@@ -146,25 +174,30 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 	}
 	`
 
+	type Repositories struct {
+		TotalCount int      `json:"totalCount"`
+		PageInfo   PageInfo `json:"pageInfo"`
+		Nodes      []struct {
+			UpdatedAt       time.Time `json:"updatedAt"`
+			ID              string    `json:"id"`
+			NameWithOwner   string    `json:"nameWithOwner"`
+			URL             string    `json:"url"`
+			Description     string    `json:"description"`
+			IsArchived      bool      `json:"isArchived"`
+			PrimaryLanguage struct {
+				Name string `json:"name"`
+			} `json:"primaryLanguage"`
+		} `json:"nodes"`
+	}
+
 	var res struct {
 		Data struct {
 			Organization struct {
-				Repositories struct {
-					TotalCount int      `json:"totalCount"`
-					PageInfo   PageInfo `json:"pageInfo"`
-					Nodes      []struct {
-						UpdatedAt       time.Time `json:"updatedAt"`
-						ID              string    `json:"id"`
-						NameWithOwner   string    `json:"nameWithOwner"`
-						URL             string    `json:"url"`
-						Description     string    `json:"description"`
-						IsArchived      bool      `json:"isArchived"`
-						PrimaryLanguage struct {
-							Name string `json:"name"`
-						} `json:"primaryLanguage"`
-					} `json:"nodes"`
-				} `json:"repositories"`
+				Repositories *Repositories  `json:"repositories"`
 			} `json:"organization"`
+			Viewer struct {
+				Repositories *Repositories `json:"repositories"`
+			} `json:"viewer"`
 		} `json:"data"`
 	}
 
@@ -174,7 +207,14 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 		return
 	}
 
-	repositories := res.Data.Organization.Repositories
+	var repositories *Repositories
+
+	if res.Data.Organization.Repositories != nil {
+		repositories = res.Data.Organization.Repositories
+	} else {
+		repositories = res.Data.Viewer.Repositories
+	}
+	
 	repoNodes := repositories.Nodes
 
 	if len(repoNodes) == 0 {
