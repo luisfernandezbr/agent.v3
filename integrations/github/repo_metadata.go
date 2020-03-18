@@ -16,6 +16,14 @@ func (s *Integration) exportRepoMetadata(sender *objsender.Session, orgs []api.O
 			return err
 		}
 	}
+
+	if len(orgs) == 0 {
+		err := s.exportRepoMetadataPersonal(s.logger, sender, onlyInclude)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -27,7 +35,7 @@ func (s *Integration) exportRepoMetadataOrg(logger hclog.Logger, sender *objsend
 		shouldInclude[repo.NameWithOwner] = true
 	}
 
-	err := api.PaginateRegular(func(query string) (api.PageInfo, error) {
+	return api.PaginateRegular(func(query string) (api.PageInfo, error) {
 		pi, repos, _, err := api.ReposPage(s.qc.WithLogger(logger), org, query, time.Time{})
 		if err != nil {
 			return pi, err
@@ -45,7 +53,17 @@ func (s *Integration) exportRepoMetadataOrg(logger hclog.Logger, sender *objsend
 		return pi, nil
 	})
 
-	err = api.PaginateRegular(func(query string) (api.PageInfo, error) {
+}
+
+func (s *Integration) exportRepoMetadataPersonal(logger hclog.Logger, sender *objsender.Session, onlyInclude []Repo) error {
+
+	// map[nameWithOwner]shouldInclude
+	shouldInclude := map[string]bool{}
+	for _, repo := range onlyInclude {
+		shouldInclude[repo.NameWithOwner] = true
+	}
+
+	err := api.PaginateRegular(func(query string) (api.PageInfo, error) {
 		pi, repos, _, err := api.ReposPage(s.qc.WithLogger(logger), api.Org{}, query, time.Time{})
 		if err != nil {
 			return pi, err

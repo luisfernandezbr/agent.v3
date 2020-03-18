@@ -271,9 +271,6 @@ func (s *Integration) getOrgs() (res []api.Org, _ error) {
 			return nil, err
 		}
 	}
-	if len(res) == 0 {
-		return nil, errors.New("no organizations found in account")
-	}
 	var names []string
 	for _, org := range res {
 		names = append(names, org.Login)
@@ -301,19 +298,18 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 	s.qc.UserLoginToRefID = s.users.LoginToRefID
 	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
 
-	unfilteredRepos, err := s.getAllOrgRepos(orgs)
-	if err != nil {
-		rerr = err
-		return
+	var unfilteredRepos []Repo
+	if len(orgs) > 0 {
+		unfilteredRepos, rerr = s.getAllOrgRepos(orgs)
+		if rerr != nil {
+			return
+		}
+	} else {
+		unfilteredRepos, rerr = s.getAllPersonalRepos(orgs)
+		if rerr != nil {
+			return
+		}
 	}
-
-	unfilteredPersonalRepos, err := s.getAllPersonalRepos(orgs)
-	if err != nil {
-		rerr = err
-		return
-	}
-
-	unfilteredRepos = append(unfilteredRepos, unfilteredPersonalRepos...)
 
 	var unfilteredReposIface []repoprojects.RepoProject
 	for _, r := range unfilteredRepos {

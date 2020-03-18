@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/pinpt/agent/pkg/requests"
@@ -49,15 +48,6 @@ func OrgsAll(qc QueryContext) (res []Org, rerr error) {
 
 	orgs := resp.Data.Viewer.Organizations
 	orgNodes := orgs.Nodes
-
-	if len(orgNodes) == 0 {
-		rerr = errors.New("no github organizations found in this account")
-		return
-	}
-
-	if orgs.TotalCount == 0 {
-		panic("missing field totalCount")
-	}
 
 	if orgs.TotalCount == 100 {
 		panic("this account has 100 or more organizations, only <100 supported at this time")
