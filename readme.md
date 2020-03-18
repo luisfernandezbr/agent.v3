@@ -3,7 +3,7 @@
 </div>
 
 <p align="center" color="#6a737d">
-	<strong>Agent is the software that collects and deliver performance details to the Pinpoint Cloud</strong>
+<strong>Agent is the software that collects and deliver performance details to the Pinpoint Cloud</strong>
 </p>
 
 - [Build from source](./_docs/build.md)

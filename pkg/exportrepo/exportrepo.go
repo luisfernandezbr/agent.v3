@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -15,11 +14,11 @@ import (
 
 	"github.com/pinpt/agent/cmd/cmdexport/process"
 	"github.com/pinpt/agent/pkg/commitusers"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	"github.com/pinpt/ripsrc/ripsrc/branchmeta"
 
 	"github.com/pinpt/go-common/datetime"
-	"github.com/pinpt/go-common/fileutil"
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 
@@ -268,9 +267,9 @@ func (s *Export) ripsrcSetup(repoDir string) {
 		opts.CommitFromIncl = lastCommit.(string)
 		opts.CommitFromMakeNonIncl = true
 
-		if !fileutil.FileExists(opts.CheckpointsDir) {
-			panic(fmt.Errorf("expecting to run incrementals, but ripsrc checkpoints dir does not exist for repo: %v", s.repoNameUsedInCacheDir))
-		}
+		//if !fileutil.FileExists(opts.CheckpointsDir) {
+		//	panic(fmt.Errorf("expecting to run incrementals, but ripsrc checkpoints dir does not exist for repo: %v", s.repoNameUsedInCacheDir))
+		//}
 	}
 
 	s.logger.Info("setting up ripsrc", "last_processed_old", lastCommit)
@@ -439,7 +438,8 @@ func (s *Export) code(ctx context.Context) error {
 		}
 	}()
 
-	err := s.rip.CodeByCommit(ctx, res)
+	commitsSeen := s.getCommitsSeen()
+	err := s.rip.CodeByCommit2(ctx, commitsSeen, res)
 	if err != nil {
 		return err
 	}
@@ -452,10 +452,32 @@ func (s *Export) code(ctx context.Context) error {
 		}
 	}
 
+	s.setCommitsSeen(commitsSeen)
+
 	s.logger.Debug("code processing end", "duration", time.Since(started), "last_processed_new", lastProcessed)
 
 	return nil
 
+}
+
+func (s *Export) getCommitsSeen() map[plumbing.Hash]bool {
+	data := s.lastProcessedGet("commits_seen")
+	res := map[plumbing.Hash]bool{}
+	if data == nil {
+		return res
+	}
+	for k, _ := range data.(map[string]interface{}) {
+		res[plumbing.NewHash(k)] = true
+	}
+	return res
+}
+
+func (s *Export) setCommitsSeen(data map[plumbing.Hash]bool) error {
+	res := map[string]bool{}
+	for k, _ := range data {
+		res[k.String()] = true
+	}
+	return s.lastProcessedSet(res, "commits_seen")
 }
 
 func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA string, _ error) {

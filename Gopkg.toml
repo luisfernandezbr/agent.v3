@@ -52,19 +52,20 @@
   
 [[constraint]]
   name = "github.com/pinpt/ripsrc"
-  revision = "33ce1d7bf6e818a220d58991a3b586b294084907"
+  branch = "slim"
+#  revision = "33ce1d7bf6e818a220d58991a3b586b294084907"
 
 # dependency of ripsrc
 
-[[override]]
-  name = "gopkg.in/src-d/go-license-detector.v2"
-  version = "=2.0.0"
+#[[override]]
+#  name = "gopkg.in/src-d/go-license-detector.v2"
+#  version = "=2.0.0"
 
 # dependencies of ripsrc, go-license-detector
 
-[[override]]
-  name = "gopkg.in/src-d/go-git.v4"
-  version = "=4.7.0"
+#[[override]]
+#  name = "gopkg.in/src-d/go-git.v4"
+#  version = "=4.7.0"
 
 [[constraint]]
   branch = "master"

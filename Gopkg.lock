@@ -109,22 +109,6 @@
   version = "v0.8.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:d7ed547b6b8cf0d3d1d756a3a02482fd7ddb0986b7f3ff4ddcfcd8ab7b1555fe"
-  name = "github.com/dgryski/go-minhash"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "ad340ca0307647c228c227cb844358a2c94d7f80"
-
-[[projects]]
-  branch = "master"
-  digest = "1:00b64053dbf169048d2546f52ff1fa6884223e1a9216bbef120a3ad8437a9371"
-  name = "github.com/ekzhu/minhash-lsh"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "5c06ee8586a1691fbfa230842170429e2b31cc05"
-
-[[projects]]
   digest = "1:fedb9266f624fa96090297c458ae0aa2207212adc0300cfb32fd71f6573102e9"
   name = "github.com/emirpasic/gods"
   packages = [
@@ -233,14 +217,6 @@
   revision = "2f1d1f20f75d5404f53b9edf6b53ed5505508675"
 
 [[projects]]
-  branch = "master"
-  digest = "1:c43b5f0db8e205d3bd83391dfb93f3c18238575b0230ceb07cc63d359ea49bd7"
-  name = "github.com/hhatto/gorst"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "ca9f730cac5bfc49bbf2983e170c072247a4c2ab"
-
-[[projects]]
   digest = "1:870d441fe217b8e689d7949fef6e43efbc787e50f200cb1e70dbca9204a1d6be"
   name = "github.com/inconshreveable/mousetrap"
   packages = ["."]
@@ -255,20 +231,6 @@
   packages = ["io"]
   pruneopts = "T"
   revision = "d14ea06fba99483203c19d92cfcd13ebe73135f4"
-
-[[projects]]
-  digest = "1:0771f686afc55b909fd62d8520db01aae2a3cb52df41feea97769f6077359850"
-  name = "github.com/jdkato/prose"
-  packages = [
-    "chunk",
-    "internal/model",
-    "internal/util",
-    "tag",
-    "tokenize",
-  ]
-  pruneopts = "T"
-  revision = "1210784048414eefa4a4deea118810f412981407"
-  version = "v1.1.1"
 
 [[projects]]
   digest = "1:b3f2dea8fe8eadb5833f7c8a2ef35dae07308bf7a4d0fee7f37774314e1964d3"
@@ -371,14 +333,6 @@
   revision = "38717d0a108ca0e5af632cd6845ca77d45b50729"
 
 [[projects]]
-  digest = "1:b961b11d83fdd8f661224c74edb3268286cb4db687291d64d7f0416faff81d78"
-  name = "github.com/montanaflynn/stats"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "63fbb2597b7a13043b453a4b819945badb8f8926"
-  version = "v0.5.0"
-
-[[projects]]
   digest = "1:9ec6cf1df5ad1d55cf41a43b6b1e7e118a91bade4f68ff4303379343e40c0e25"
   name = "github.com/oklog/run"
   packages = ["."]
@@ -475,7 +429,8 @@
   version = "v0.0.777"
 
 [[projects]]
-  digest = "1:14dae17b281493bd827f988698606c925f573460fe50e89cb7b1913b0b722715"
+  branch = "slim"
+  digest = "1:17fd9fe61e35f8c50f53f3316340aa4a70de96a4d5542900bb36f7841a45e858"
   name = "github.com/pinpt/ripsrc"
   packages = [
     "ripsrc",
@@ -496,7 +451,7 @@
     "ripsrc/pkg/logger",
   ]
   pruneopts = "T"
-  revision = "33ce1d7bf6e818a220d58991a3b586b294084907"
+  revision = "28953a932bfa83d084f67b72f2268a9c5d651c4b"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
@@ -520,22 +475,6 @@
   packages = ["diffmatchpatch"]
   pruneopts = "T"
   revision = "1744e2970ca51c86172c8190fadad617561ed6e7"
-  version = "v1.0.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:3b1701815d188c58243a63f43c807cd5bb7b7b7da167c183538d8f75d7a2e20d"
-  name = "github.com/shogo82148/go-shuffle"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "27e6095f230d6c769aafa7232db643a628bd87ad"
-
-[[projects]]
-  digest = "1:9421f6e9e28ef86933e824b5caff441366f2b69bb281085b9dca40e1f27a1602"
-  name = "github.com/shurcooL/sanitized_anchor_name"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "7bfe4c7ecddb3666a94b053b422cdd8f5aaa3615"
   version = "v1.0.0"
 
 [[projects]]
@@ -667,7 +606,6 @@
     "errors",
     "errors/fmt",
     "errors/internal",
-    "rand",
   ]
   pruneopts = "T"
   revision = "81c71964d733d2e3e2375a315c0e2fd4d162adc4"
@@ -678,13 +616,13 @@
   name = "golang.org/x/net"
   packages = [
     "context",
-    "html",
-    "html/atom",
     "http/httpguts",
     "http2",
     "http2/hpack",
     "idna",
+    "internal/socks",
     "internal/timeseries",
+    "proxy",
     "trace",
   ]
   pruneopts = "T"
@@ -728,7 +666,6 @@
     "language",
     "message",
     "message/catalog",
-    "runes",
     "secure/bidirule",
     "transform",
     "unicode/bidi",
@@ -739,37 +676,6 @@
   pruneopts = "T"
   revision = "342b2e1fbaa52c93f31447ad2c6abc048c63e475"
   version = "v0.3.2"
-
-[[projects]]
-  branch = "master"
-  digest = "1:57131bff5e79c39c6aa311bb891bb4fba7964b18a114290e4d4dc88d2179de56"
-  name = "gonum.org/v1/gonum"
-  packages = [
-    "blas",
-    "blas/blas64",
-    "blas/cblas128",
-    "blas/gonum",
-    "floats",
-    "internal/asm/c128",
-    "internal/asm/c64",
-    "internal/asm/f32",
-    "internal/asm/f64",
-    "internal/cmplx64",
-    "internal/math32",
-    "lapack",
-    "lapack/gonum",
-    "lapack/lapack64",
-    "mat",
-    "mathext",
-    "mathext/internal/amos",
-    "mathext/internal/cephes",
-    "mathext/internal/gonum",
-    "stat",
-    "stat/combin",
-    "stat/distuv",
-  ]
-  pruneopts = "T"
-  revision = "bcfb93e04962ee7bd8b0143e9728fc7d8b22ab63"
 
 [[projects]]
   branch = "master"
@@ -824,25 +730,6 @@
   version = "v1.23.1"
 
 [[projects]]
-  digest = "1:d6baca48f67f8a2f8a068d75f003da9eb1dc0cdf283049a2423a2d792174c15c"
-  name = "gopkg.in/neurosnap/sentences.v1"
-  packages = [
-    ".",
-    "data",
-  ]
-  pruneopts = "T"
-  revision = "a7f18ead1433a139742a8b42ce7a059cfb484d60"
-  version = "v1.0.6"
-
-[[projects]]
-  digest = "1:3dd8431d7cb4dd5badfbdf6a9c14fd670a4956c9a17f34e6ec98a59e82fb8de5"
-  name = "gopkg.in/russross/blackfriday.v2"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "d3b5b032dc8e8927d31a5071b56e14c89f045135"
-  version = "v2.0.1"
-
-[[projects]]
   digest = "1:e6542eee59c7a80e1cce5cdba97a493727c21b1704f5b803b401843851bb5ce4"
   name = "gopkg.in/src-d/enry.v1"
   packages = [
@@ -857,22 +744,12 @@
   version = "v1.7.3"
 
 [[projects]]
-  digest = "1:caa8ee2cd12e12545b661ccf08e280757e3613f149795e08e0be0b739ea516d3"
-  name = "gopkg.in/src-d/go-billy-siva.v4"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "3c94aa28aff3d189d59f6cf832e41739944a7cc6"
-  version = "v4.6.0"
-
-[[projects]]
   digest = "1:3e18b574bdf981761b8092326bbfca14b8d9108e3cc5b3cdf437c656a251f75c"
   name = "gopkg.in/src-d/go-billy.v4"
   packages = [
     ".",
     "helper/chroot",
-    "helper/mount",
     "helper/polyfill",
-    "memfs",
     "osfs",
     "util",
   ]
@@ -881,12 +758,13 @@
   version = "v4.3.2"
 
 [[projects]]
-  digest = "1:816be40391f6b550f431771e3591e12397d097f74a016f3c054f03af4cb89aff"
+  digest = "1:c865221e4d09f35284d21f7b53c24b3a97954efa665334d757eac3c8f7935e6a"
   name = "gopkg.in/src-d/go-git.v4"
   packages = [
     ".",
     "config",
     "internal/revision",
+    "internal/url",
     "plumbing",
     "plumbing/cache",
     "plumbing/filemode",
@@ -926,33 +804,8 @@
     "utils/merkletrie/noder",
   ]
   pruneopts = "T"
-  revision = "d3cec13ac0b195bfb897ed038a08b5130ab9969e"
-  version = "v4.7.0"
-
-[[projects]]
-  digest = "1:9baea1fa01e024150e1556dd349d7db0b2fa57e0b9f783a968b25ae2f2058265"
-  name = "gopkg.in/src-d/go-license-detector.v2"
-  packages = [
-    "licensedb",
-    "licensedb/filer",
-    "licensedb/internal",
-    "licensedb/internal/assets",
-    "licensedb/internal/fastlog",
-    "licensedb/internal/normalize",
-    "licensedb/internal/processors",
-    "licensedb/internal/wmh",
-  ]
-  pruneopts = "T"
-  revision = "da552ecf050b6440cf8bd0218a8c336213abeefa"
-  version = "v2"
-
-[[projects]]
-  digest = "1:8a23ef30fd32cdbe2c9f4aaa4617f1ec92e0e1fa781263c4ee0f9e27986a3498"
-  name = "gopkg.in/src-d/go-siva.v1"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "a73bed3f9039652fff58a8e989ec90305042b962"
-  version = "v1.7.0"
+  revision = "0d1a009cbb604db18be960db5f1525b99a55d727"
+  version = "v4.13.1"
 
 [[projects]]
   digest = "1:98e121dbd49eb03c58bd8ef3b76322b2fdc3676cf11fa0084bb17ff01b2aa704"
@@ -1028,6 +881,7 @@
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/status",
+    "gopkg.in/src-d/go-git.v4/plumbing",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
