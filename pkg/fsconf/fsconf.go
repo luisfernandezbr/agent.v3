@@ -40,6 +40,9 @@ type Locs struct {
 
 	// DedupFile contains hashes of all objects sent in incrementals to avoid sending the same objects multiple times
 	DedupFile string
+
+	// CleanupDirs are directories that will be removed on every run
+	CleanupDirs []string
 }
 
 func j(parts ...string) string {
@@ -63,12 +66,17 @@ func New(pinpointRoot string) Locs {
 	s := Locs{}
 	s.Root = pinpointRoot
 	s.Temp = j(s.Root, "temp")
+	s.CleanupDirs = append(s.CleanupDirs, s.Temp)
+
 	s.Cache = j(s.Root, "cache")
 	s.Logs = j(s.Root, "logs")
 	s.LogsIntegrations = j(s.Root, "logs/integrations")
 
 	s.RepoCache = j(s.Cache, "repos")
-	s.State = j(s.Root, "state", "v1")
+
+	s.CleanupDirs = append(s.CleanupDirs, j(s.Root, "state", "v1"))
+	s.State = j(s.Root, "state", "v2")
+
 	s.Uploads = j(s.State, "uploads")
 	s.UploadZips = j(s.State, "upload-zips")
 	s.Backup = j(s.State, "backup")
@@ -84,6 +92,5 @@ func New(pinpointRoot string) Locs {
 	s.LastProcessedFileBackup = j(s.Backup, "last_processed.json")
 	s.ExportQueueFile = j(s.State, "export_queue.json")
 	s.DedupFile = j(s.State, "dedup_v2.json")
-
 	return s
 }

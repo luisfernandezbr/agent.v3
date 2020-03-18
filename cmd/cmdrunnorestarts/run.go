@@ -88,10 +88,11 @@ func newRunner(opts Opts) (*runner, error) {
 
 	s.fsconf = fsconf.New(opts.PinpointRoot)
 
-	// cleanup temp files every time we start service
-	err := os.RemoveAll(s.fsconf.Temp)
-	if err != nil {
-		return nil, err
+	for _, dir := range s.fsconf.CleanupDirs {
+		err := os.RemoveAll(dir)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	s.conf = opts.AgentConf
