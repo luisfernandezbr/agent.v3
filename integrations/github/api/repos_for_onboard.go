@@ -5,7 +5,7 @@ import (
 
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/integration-sdk/agent"
-
+	
 	pjson "github.com/pinpt/go-common/json"
 )
 
@@ -29,9 +29,17 @@ func ReposForOnboardAll(qc QueryContext, org Org) (res []*agent.RepoResponseRepo
 func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt time.Time) (pi PageInfo, repos []*agent.RepoResponseRepos, _ error) {
 	qc.Logger.Debug("repos request", "q", queryParams, "org", org.Login)
 
+	var loginQuery string
+
+	if org.Login == "" {
+		loginQuery = "viewer{"
+	} else {
+		loginQuery = `organization(login:` + pjson.Stringify(org.Login) + `){`
+	}
+
 	query := `
 	query {
-		organization(login:` + pjson.Stringify(org.Login) + `){
+		` + loginQuery + `
 			repositories(` + queryParams + `) {
 				totalCount
 				pageInfo {
@@ -57,26 +65,31 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 	}
 	`
 
+	type Repositories struct {
+		TotalCount int      `json:"totalCount"`
+		PageInfo   PageInfo `json:"pageInfo"`
+		Nodes      []struct {
+			CreatedAt       time.Time `json:"createdAt"`
+			UpdatedAt       time.Time `json:"updatedAt"`
+			ID              string    `json:"id"`
+			NameWithOwner   string    `json:"nameWithOwner"`
+			Description     string    `json:"description"`
+			PrimaryLanguage struct {
+				Name string `json:"name"`
+			} `json:"primaryLanguage"`
+			IsFork     bool `json:"isFork"`
+			IsArchived bool `json:"isArchived"`
+		} `json:"nodes"`
+	}
+
 	var res struct {
 		Data struct {
 			Organization struct {
-				Repositories struct {
-					TotalCount int      `json:"totalCount"`
-					PageInfo   PageInfo `json:"pageInfo"`
-					Nodes      []struct {
-						CreatedAt       time.Time `json:"createdAt"`
-						UpdatedAt       time.Time `json:"updatedAt"`
-						ID              string    `json:"id"`
-						NameWithOwner   string    `json:"nameWithOwner"`
-						Description     string    `json:"description"`
-						PrimaryLanguage struct {
-							Name string `json:"name"`
-						} `json:"primaryLanguage"`
-						IsFork     bool `json:"isFork"`
-						IsArchived bool `json:"isArchived"`
-					} `json:"nodes"`
-				} `json:"repositories"`
+				Repositories *Repositories `json:"repositories"`
 			} `json:"organization"`
+			Viewer struct {
+				Repositories *Repositories `json:"repositories"`
+			} `json:"viewer"`
 		} `json:"data"`
 	}
 
@@ -85,7 +98,14 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 		return pi, repos, err
 	}
 
-	repositories := res.Data.Organization.Repositories
+	var repositories *Repositories
+
+	if res.Data.Organization.Repositories != nil {
+		repositories = res.Data.Organization.Repositories
+	} else {
+		repositories = res.Data.Viewer.Repositories
+	}
+
 	repoNodes := repositories.Nodes
 
 	if len(repoNodes) == 0 {

@@ -40,6 +40,17 @@ func (s *Integration) onboardExportRepos(ctx context.Context, config rpcdef.Expo
 		}
 	}
 
+	if len(orgs) == 0 {
+		// personal repos
+		repos, err := api.ReposForOnboardAll(s.qc, api.Org{})
+		if err != nil {
+			return res, err
+		}
+		for _, r := range repos {
+			records = append(records, r.ToMap())
+		}
+	}
+
 	res.Data = records
 
 	return res, nil

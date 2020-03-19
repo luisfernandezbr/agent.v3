@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 
@@ -91,7 +90,8 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 	}
 
 	if len(orgs) == 0 {
-		rerr(errors.New("no organizations found"))
+		// if no orgs available test user repo
+		orgs = []api.Org{{}}
 		return
 	}
 

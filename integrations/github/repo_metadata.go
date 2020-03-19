@@ -9,17 +9,26 @@ import (
 )
 
 func (s *Integration) exportRepoMetadata(sender *objsender.Session, orgs []api.Org, onlyInclude []Repo) error {
+
 	for _, org := range orgs {
 		logger := s.logger.With("org", org.Login)
-		err := s.exportRepoMetadataOrg(logger, sender, org, onlyInclude)
+		err := s.exportRepoMetadataPerOrgOrUser(logger, sender, org, onlyInclude)
 		if err != nil {
 			return err
 		}
 	}
+
+	if len(orgs) == 0 {
+		err := s.exportRepoMetadataPerOrgOrUser(s.logger, sender, api.Org{}, onlyInclude)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
-func (s *Integration) exportRepoMetadataOrg(logger hclog.Logger, sender *objsender.Session, org api.Org, onlyInclude []Repo) error {
+func (s *Integration) exportRepoMetadataPerOrgOrUser(logger hclog.Logger, sender *objsender.Session, org api.Org, onlyInclude []Repo) error {
 
 	// map[nameWithOwner]shouldInclude
 	shouldInclude := map[string]bool{}
@@ -27,7 +36,7 @@ func (s *Integration) exportRepoMetadataOrg(logger hclog.Logger, sender *objsend
 		shouldInclude[repo.NameWithOwner] = true
 	}
 
-	err := api.PaginateRegular(func(query string) (api.PageInfo, error) {
+	return api.PaginateRegular(func(query string) (api.PageInfo, error) {
 		pi, repos, _, err := api.ReposPage(s.qc.WithLogger(logger), org, query, time.Time{})
 		if err != nil {
 			return pi, err
@@ -45,9 +54,4 @@ func (s *Integration) exportRepoMetadataOrg(logger hclog.Logger, sender *objsend
 		return pi, nil
 	})
 
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

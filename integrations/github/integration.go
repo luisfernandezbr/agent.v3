@@ -271,9 +271,6 @@ func (s *Integration) getOrgs() (res []api.Org, _ error) {
 			return nil, err
 		}
 	}
-	if len(res) == 0 {
-		return nil, errors.New("no organizations found in account")
-	}
 	var names []string
 	for _, org := range res {
 		names = append(names, org.Login)
@@ -301,11 +298,19 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 	s.qc.UserLoginToRefID = s.users.LoginToRefID
 	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
 
-	unfilteredRepos, err := s.getAllRepos(orgs)
-	if err != nil {
-		rerr = err
-		return
+	var unfilteredRepos []Repo
+	if len(orgs) > 0 {
+		unfilteredRepos, rerr = s.getAllOrgRepos(orgs)
+		if rerr != nil {
+			return
+		}
+	} else {
+		unfilteredRepos, rerr = s.getAllPersonalRepos(orgs)
+		if rerr != nil {
+			return
+		}
 	}
+
 	var unfilteredReposIface []repoprojects.RepoProject
 	for _, r := range unfilteredRepos {
 		unfilteredReposIface = append(unfilteredReposIface, r)
@@ -394,7 +399,7 @@ func (s Repo) GetReadableID() string {
 	return s.Repo.NameWithOwner
 }
 
-func (s *Integration) getAllRepos(orgs []api.Org) (res []Repo, rerr error) {
+func (s *Integration) getAllOrgRepos(orgs []api.Org) (res []Repo, rerr error) {
 	s.logger.Info("getting a list of all repos")
 	for _, org := range orgs {
 		logger := s.logger.With("org", org.Login)
@@ -409,6 +414,22 @@ func (s *Integration) getAllRepos(orgs []api.Org) (res []Repo, rerr error) {
 		}
 	}
 	s.logger.Info("completed getting list of repos, total unfiltered", "c", len(res))
+	return
+}
+
+func (s *Integration) getAllPersonalRepos(orgs []api.Org) (res []Repo, rerr error) {
+	s.logger.Info("getting a list of all personal repos")
+
+	orgRepos, err := api.ReposAllSlice(s.qc.WithLogger(s.logger), api.Org{})
+	if err != nil {
+		rerr = err
+		return
+	}
+	for _, r := range orgRepos {
+		res = append(res, Repo{r})
+	}
+
+	s.logger.Info("completed getting list of personal repos, total unfiltered", "c", len(res))
 	return
 }
 
