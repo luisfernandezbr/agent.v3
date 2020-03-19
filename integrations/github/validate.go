@@ -90,20 +90,8 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 	}
 
 	if len(orgs) == 0 {
-		_, repos, err := api.ReposPageInternal(s.qc, api.Org{}, "first: 1")
-		if err != nil {
-			rerr(err)
-			return
-		}
-		if len(repos) > 0 {
-			repoURL, err := getRepoURL(s.config.RepoURLPrefix, url.UserPassword(s.config.Token, ""), repos[0].NameWithOwner)
-			if err != nil {
-				rerr(err)
-				return
-			}
-
-			res.RepoURL = repoURL
-		}
+		// if no orgs available test user repo
+		orgs = []api.Org{{}}
 		return
 	}
 
