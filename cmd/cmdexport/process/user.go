@@ -7,19 +7,16 @@ import (
 
 	"github.com/pinpt/go-common/hash"
 	"github.com/pinpt/integration-sdk/sourcecode"
-	"github.com/hashicorp/go-hclog"
 )
 
 type CommitUsers struct {
 	data map[string]bool
 	mu   sync.Mutex
-	logger hclog.Logger
 }
 
-func NewCommitUsers(logger hclog.Logger) *CommitUsers {
+func NewCommitUsers() *CommitUsers {
 	s := &CommitUsers{}
 	s.data = map[string]bool{}
-	s.logger = logger
 	return s
 }
 
@@ -32,19 +29,19 @@ func (s *CommitUsers) Transform(data map[string]interface{}) (_ map[string]inter
 		return nil, errors.New("customer_id is required")
 	}
 
+	email, _ := data["email"].(string)
+	if email == "" {
+		return nil, errors.New("email is required")
+	}
+
+	// always convert email to lowercase
+	email = strings.ToLower(email)
+
 	name, _ := data["name"].(string)
 	if name == "" {
 		return nil, errors.New("name is required")
 	}
 	sourceID, _ := data["source_id"].(string)
-
-	email, _ := data["email"].(string)
-	if email == "" {
-		s.logger.Warn("email is required","name",name)
-	}
-
-	// always convert email to lowercase
-	email = strings.ToLower(email)
 
 	// We only send the first name encountered. For this reason name is not present in hash.
 	// TODO: maybe support multiple names, needs design discussion about pipeline

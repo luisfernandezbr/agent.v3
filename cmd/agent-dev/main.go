@@ -137,7 +137,7 @@ var cmdExportRepo = &cobra.Command{
 		}
 		reftype, _ := cmd.Flags().GetString("ref-type")
 
-		commitUsers := process.NewCommitUsers(logger)
+		commitUsers := process.NewCommitUsers()
 
 		repoID, _ := cmd.Flags().GetString("repo-id")
 		customerID, _ := cmd.Flags().GetString("customer-id")

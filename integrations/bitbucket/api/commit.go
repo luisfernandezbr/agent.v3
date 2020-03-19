@@ -45,6 +45,9 @@ func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) 
 		user.Name = name
 		user.SourceID = c.Author.User.AccountID
 		_, user.Email = GetNameAndEmail(c.Author.Raw)
+		if user.Email == "" {
+			continue
+		}
 
 		users = append(users, user)
 	}

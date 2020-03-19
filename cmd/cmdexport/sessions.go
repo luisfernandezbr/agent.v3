@@ -34,7 +34,7 @@ func newSessions(logger hclog.Logger, export *export, trackProgress bool) (_ *se
 	s := &sessions{}
 	s.logger = logger
 	s.export = export
-	s.commitUsers = process.NewCommitUsers(logger)
+	s.commitUsers = process.NewCommitUsers()
 	s.trackProgress = trackProgress
 
 	if s.trackProgress {
