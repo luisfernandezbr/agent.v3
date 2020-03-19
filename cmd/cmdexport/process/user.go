@@ -28,6 +28,7 @@ func (s *CommitUsers) Transform(data map[string]interface{}) (_ map[string]inter
 	if customerID == "" {
 		return nil, errors.New("customer_id is required")
 	}
+
 	email, _ := data["email"].(string)
 	if email == "" {
 		return nil, errors.New("email is required")
