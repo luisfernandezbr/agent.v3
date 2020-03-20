@@ -35,8 +35,8 @@
 
 [[constraint]]
   name = "github.com/pinpt/integration-sdk"
-  #version = "0"
-  branch = "DE-2193"
+  version = "0"
+  #branch = "DE-2193"
 
 [[constraint]]
   name = "github.com/denisbrodbeck/machineid"
