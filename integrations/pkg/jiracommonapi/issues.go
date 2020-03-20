@@ -85,9 +85,11 @@ type issueFields struct {
 	Created  string `json:"created"`
 	Updated  string `json:"updated"`
 	Priority struct {
+		ID   string `json:"id"`
 		Name string `json:"name"`
 	} `json:"priority"`
 	IssueType struct {
+		ID   string `json:"id"`
 		Name string `json:"name"`
 	} `json:"issuetype"`
 	Status struct {
@@ -323,7 +325,9 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 	date.ConvertToModel(updated, &item.UpdatedDate)
 
 	item.Priority = fields.Priority.Name
+	item.PriorityID = work.NewIssuePriorityID(qc.CustomerID, "jira", fields.Priority.ID)
 	item.Type = fields.IssueType.Name
+	item.TypeID = work.NewIssueTypeID(qc.CustomerID, "jira", fields.IssueType.ID)
 	item.Status = fields.Status.Name
 	item.Resolution = fields.Resolution.Name
 
