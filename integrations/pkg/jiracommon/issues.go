@@ -269,7 +269,7 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 		}
 
 		for _, obj := range resIssues {
-			err := s.exportIssueComments(senderIssues, project, obj.RefID)
+			err := s.exportIssueComments(senderIssues, project, obj.RefID, obj.Identifier)
 			if err != nil {
 				rerr = err
 				return
@@ -288,7 +288,8 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 func (s *JiraCommon) exportIssueComments(
 	senderIssues *objsender.Session,
 	project Project,
-	issueRefID string) error {
+	issueRefID string,
+	issueKey string) error {
 	s.opts.Logger.Debug("exporting comments for issue", "project", project, "issue_ref_id", issueRefID)
 
 	senderComments, err := senderIssues.Session(work.IssueCommentModelName.String(), issueRefID, issueRefID)
@@ -297,7 +298,7 @@ func (s *JiraCommon) exportIssueComments(
 	}
 
 	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
-		pi, res, err := jiracommonapi.IssueComments(s.CommonQC(), project.Project, issueRefID, paginationParams)
+		pi, res, err := jiracommonapi.IssueComments(s.CommonQC(), project.Project, issueRefID, issueKey, paginationParams)
 		if err != nil {
 			rerr = err
 			return
@@ -316,4 +317,38 @@ func (s *JiraCommon) exportIssueComments(
 	}
 
 	return senderComments.Done()
+}
+
+func (s *JiraCommon) IssueTypes(sender *objsender.Session) error {
+	s.opts.Logger.Debug("exporting issue types")
+
+	res, err := jiracommonapi.IssueTypes(s.CommonQC())
+	if err != nil {
+		return err
+	}
+	for _, item := range res {
+		err := sender.Send(&item)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *JiraCommon) IssuePriorities(sender *objsender.Session) error {
+	s.opts.Logger.Debug("exporting issue priorities")
+
+	res, err := jiracommonapi.Priorities(s.CommonQC())
+	if err != nil {
+		return err
+	}
+	for _, item := range res {
+		err := sender.Send(&item)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

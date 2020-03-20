@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 
-	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/agent"
 )
 
@@ -35,13 +34,6 @@ const workConfigInProgressStatus = workConfigStatus("InProgress")
 const workConfigProposedStatus = workConfigStatus("Proposed")
 const workConfigRemovedStatus = workConfigStatus("Removed")
 const workConfigResolvedStatus = workConfigStatus("Resolved")
-
-const typeBug = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeBug
-const typeFeature = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeFeature
-const typeOther = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeOther
-const typeEnhancement = agent.WorkStatusResponseWorkConfigTypeRulesIssueTypeEnhancement
-const predFieldType = agent.WorkStatusResponseWorkConfigTypeRulesPredicatesFieldType
-const predEquals = agent.WorkStatusResponseWorkConfigTypeRulesPredicatesOperatorEquals
 
 func stringEquals(str string, vals ...string) bool {
 	for _, v := range vals {
@@ -118,74 +110,74 @@ func (api *API) FetchWorkConfig() (*agent.WorkStatusResponseWorkConfig, error) {
 					// Assigned to states that represent a solution has been implemented, but are not yet verified
 					ws.Statuses.InReviewStatus = appendString(ws.Statuses.InReviewStatus, name)
 				}
-				ws.AllStatuses = appendString(ws.AllStatuses, name)
+				// ws.AllStatuses = appendString(ws.AllStatuses, name)
 			}
 
-			url2 := fmt.Sprintf(`%s/_apis/wit/workitemtypes/%s/fields`, project.RefID, r.ReferenceName)
-			var resres []resolutionRes
-			if err := api.getRequest(url2, stringmap{"$expand": "allowedValues"}, &resres); err != nil {
-				return nil, err
-			}
-			var reasons []string
-			var hasResolution bool
-			for _, g := range resres {
-				if len(g.AllowedValues) > 0 {
-					if g.ReferenceName == "Microsoft.VSTS.Common.ResolvedReason" {
-						for _, n := range g.AllowedValues {
-							ws.AllResolutions = appendString(ws.AllResolutions, itemStateName(n, r.Name))
-							hasResolution = true
-						}
-						continue
-					}
-					if g.ReferenceName == "System.Reason" {
-						for _, n := range g.AllowedValues {
-							reasons = appendString(reasons, itemStateName(n, r.Name))
-						}
-						continue
-					}
-				}
-			}
-			if !hasResolution {
-				for _, re := range reasons {
-					ws.AllResolutions = appendString(ws.AllResolutions, itemStateName(re, r.Name))
-				}
-			}
+			// url2 := fmt.Sprintf(`%s/_apis/wit/workitemtypes/%s/fields`, project.RefID, r.ReferenceName)
+			// var resres []resolutionRes
+			// if err := api.getRequest(url2, stringmap{"$expand": "allowedValues"}, &resres); err != nil {
+			// 	return nil, err
+			// }
+			// var reasons []string
+			// var hasResolution bool
+			// for _, g := range resres {
+			// 	if len(g.AllowedValues) > 0 {
+			// 		if g.ReferenceName == "Microsoft.VSTS.Common.ResolvedReason" {
+			// 			for _, n := range g.AllowedValues {
+			// 				ws.AllResolutions = appendString(ws.AllResolutions, itemStateName(n, r.Name))
+			// 				hasResolution = true
+			// 			}
+			// 			continue
+			// 		}
+			// 		if g.ReferenceName == "System.Reason" {
+			// 			for _, n := range g.AllowedValues {
+			// 				reasons = appendString(reasons, itemStateName(n, r.Name))
+			// 			}
+			// 			continue
+			// 		}
+			// 	}
+			// }
+			// if !hasResolution {
+			// 	for _, re := range reasons {
+			// 		ws.AllResolutions = appendString(ws.AllResolutions, itemStateName(re, r.Name))
+			// 	}
+			// }
 
-			predicate := agent.WorkStatusResponseWorkConfigTypeRulesPredicates{
-				Field:    predFieldType,
-				Operator: predEquals,
-				Value:    pstrings.Pointer(r.Name),
-			}
-			if stringEquals(r.ReferenceName,
-				"Microsoft.VSTS.WorkItemTypes.Issue",
-				"Microsoft.VSTS.WorkItemTypes.Bug",
-				"Issue", "Bug") {
-				ws.TypeRules = append(ws.TypeRules, agent.WorkStatusResponseWorkConfigTypeRules{
-					IssueType:  typeBug,
-					Predicates: []agent.WorkStatusResponseWorkConfigTypeRulesPredicates{predicate},
-				})
-			} else if stringEquals(r.ReferenceName,
-				"Microsoft.VSTS.WorkItemTypes.Task",
-				"Task") {
-				ws.TypeRules = append(ws.TypeRules, agent.WorkStatusResponseWorkConfigTypeRules{
-					IssueType:  typeEnhancement,
-					Predicates: []agent.WorkStatusResponseWorkConfigTypeRulesPredicates{predicate},
-				})
-			} else if stringEquals(r.ReferenceName,
-				"Microsoft.VSTS.WorkItemTypes.FeedbackRequest",
-				"Microsoft.VSTS.WorkItemTypes.Feature",
-				"Feature", "Feedback Request") {
-				ws.TypeRules = append(ws.TypeRules, agent.WorkStatusResponseWorkConfigTypeRules{
-					IssueType:  typeFeature,
-					Predicates: []agent.WorkStatusResponseWorkConfigTypeRulesPredicates{predicate},
-				})
-			} else {
-				ws.TypeRules = append(ws.TypeRules, agent.WorkStatusResponseWorkConfigTypeRules{
-					IssueType:  typeOther,
-					Predicates: []agent.WorkStatusResponseWorkConfigTypeRulesPredicates{predicate},
-				})
-			}
-			ws.Types = append(ws.Types, r.Name)
+			// predicate := agent.WorkStatusResponseWorkConfigTypeRulesPredicates{
+			// 	Field:    predFieldType,
+			// 	Operator: predEquals,
+			// 	Value:    pstrings.Pointer(r.Name),
+			// }
+			// if stringEquals(r.ReferenceName,
+			// 	"Microsoft.VSTS.WorkItemTypes.Issue",
+			// 	"Microsoft.VSTS.WorkItemTypes.Bug",
+			// 	"Issue", "Bug") {
+			// 	ws.TypeRules = append(ws.TypeRules, agent.WorkStatusResponseWorkConfigTypeRules{
+			// 		IssueType:  typeBug,
+			// 		Predicates: []agent.WorkStatusResponseWorkConfigTypeRulesPredicates{predicate},
+			// 	})
+			// } else if stringEquals(r.ReferenceName,
+			// 	"Microsoft.VSTS.WorkItemTypes.Task",
+			// 	"Task") {
+			// 	ws.TypeRules = append(ws.TypeRules, agent.WorkStatusResponseWorkConfigTypeRules{
+			// 		IssueType:  typeEnhancement,
+			// 		Predicates: []agent.WorkStatusResponseWorkConfigTypeRulesPredicates{predicate},
+			// 	})
+			// } else if stringEquals(r.ReferenceName,
+			// 	"Microsoft.VSTS.WorkItemTypes.FeedbackRequest",
+			// 	"Microsoft.VSTS.WorkItemTypes.Feature",
+			// 	"Feature", "Feedback Request") {
+			// 	ws.TypeRules = append(ws.TypeRules, agent.WorkStatusResponseWorkConfigTypeRules{
+			// 		IssueType:  typeFeature,
+			// 		Predicates: []agent.WorkStatusResponseWorkConfigTypeRulesPredicates{predicate},
+			// 	})
+			// } else {
+			// 	ws.TypeRules = append(ws.TypeRules, agent.WorkStatusResponseWorkConfigTypeRules{
+			// 		IssueType:  typeOther,
+			// 		Predicates: []agent.WorkStatusResponseWorkConfigTypeRulesPredicates{predicate},
+			// 	})
+			// }
+			// ws.Types = append(ws.Types, r.Name)
 		}
 	}
 	return ws, err
@@ -274,7 +266,7 @@ func (api *API) fetchColumnsForStatuses(projid string, ws *agent.WorkStatusRespo
 					break
 				}
 			}
-			ws.AllStatuses = appendString(ws.AllStatuses, e.Name)
+			// ws.AllStatuses = appendString(ws.AllStatuses, e.Name)
 		}
 	}
 }

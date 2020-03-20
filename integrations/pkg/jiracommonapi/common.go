@@ -1,6 +1,8 @@
 package jiracommonapi
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/pinpt/agent/pkg/ids"
@@ -27,6 +29,11 @@ func (s QueryContext) ProjectURL(projectKey string) string {
 
 func (s QueryContext) IssueURL(issueKey string) string {
 	return pstrings.JoinURL(s.WebsiteURL, "browse", issueKey)
+}
+
+func (s QueryContext) IssueCommentURL(issueKey string, commentID string) string {
+	// looks like: https://pinpt-hq.atlassian.net/browse/DE-2194?focusedCommentId=17692&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-17692
+	return pstrings.JoinURL(s.WebsiteURL, "browse", issueKey+fmt.Sprintf("?focusedCommentId=%s&page=com.atlassian.jira.plugin.system.issuetabpanels%%3Acomment-tabpanel#comment-%s", commentID, commentID))
 }
 
 func (s QueryContext) ProjectID(refID string) string {

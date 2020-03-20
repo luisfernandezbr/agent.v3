@@ -1,11 +1,17 @@
 package jiracommonapi
 
-func Priorities(qc QueryContext) (res []string, rerr error) {
+import "github.com/pinpt/integration-sdk/work"
+
+func Priorities(qc QueryContext) (res []work.IssuePriority, rerr error) {
 
 	objectPath := "priority"
 
 	var rawPriorities []struct {
-		Name string `json:"name"`
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Color       string `json:"statusColor"`
+		Icon        string `json:"iconUrl"`
 	}
 
 	err := qc.Req.Get(objectPath, nil, &rawPriorities)
@@ -14,8 +20,22 @@ func Priorities(qc QueryContext) (res []string, rerr error) {
 		return
 	}
 
-	for _, priority := range rawPriorities {
-		res = append(res, priority.Name)
+	// the result comes back in priority order from HIGH (0) to LOW (length-1)
+	// so we iterate backwards to make the highest first and the lowest last
+
+	for order := len(rawPriorities) - 1; order >= 0; order-- {
+		priority := rawPriorities[order]
+		res = append(res, work.IssuePriority{
+			ID:          work.NewIssuePriorityID(qc.CustomerID, "jira", priority.ID),
+			CustomerID:  qc.CustomerID,
+			Name:        priority.Name,
+			Description: &priority.Description,
+			IconURL:     &priority.Icon,
+			Color:       &priority.Color,
+			Order:       int64(1 + order), // we use 0 for no order so offset by one to make the last != 0
+			RefType:     "jira",
+			RefID:       priority.ID,
+		})
 	}
 
 	return
