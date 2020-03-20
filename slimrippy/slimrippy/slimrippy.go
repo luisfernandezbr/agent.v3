@@ -26,6 +26,9 @@ type Opts struct {
 
 	CommitCallback func(commits.Commit) error
 	BranchCallback func(branches.Branch) error
+
+	// for tests only
+	BranchOpts *branches.Opts
 }
 
 func CommitsAndBranches(ctx context.Context, opts Opts) (_ State, rerr error) {
@@ -52,9 +55,11 @@ func CommitsAndBranches(ctx context.Context, opts Opts) (_ State, rerr error) {
 		go func() {
 			for c := range commitsChan {
 				commitsForParents <- c
-				err := opts.CommitCallback(commits.Convert(c))
-				if err != nil {
-					panic(err)
+				if opts.CommitCallback != nil {
+					err := opts.CommitCallback(commits.Convert(c))
+					if err != nil {
+						panic(err)
+					}
 				}
 			}
 			close(commitsForParents)
@@ -106,9 +111,12 @@ func CommitsAndBranches(ctx context.Context, opts Opts) (_ State, rerr error) {
 			done <- true
 		}()
 		bopts := branches.Opts{}
+		if opts.BranchOpts != nil {
+			bopts = *opts.BranchOpts
+		} else {
+			bopts.IncludeDefaultBranch = true
+		}
 		bopts.CommitGraph = graph
-		bopts.IncludeDefaultBranch = true
-		bopts.PullRequestSHAs = opts.PullRequestSHAs
 		bopts.RepoDir = opts.RepoDir
 		b := branches.New(bopts)
 		err := b.Run(ctx, res)
