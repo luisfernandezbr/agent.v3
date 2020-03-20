@@ -23,12 +23,11 @@ type AccessDetails struct {
 
 type Dirs struct {
 	CacheRoot string
-	Checkout  string
 }
 
 type CloneResults struct {
-	//DefaultBranch string
 	CacheDir string
+	Checkout string
 }
 
 func RepoNameUsedInCacheDir(repoName, repoID string) string {
@@ -80,9 +79,6 @@ func cloneWithCacheNoRetries(ctx context.Context, logger hclog.Logger, access Ac
 	if dirs.CacheRoot == "" {
 		panic("provide CacheRoot")
 	}
-	if dirs.Checkout == "" {
-		panic("provide Checkout")
-	}
 	if cacheDirName == "" {
 		panic("provide cacheDirName")
 	}
@@ -117,12 +113,7 @@ func cloneWithCacheNoRetries(ctx context.Context, logger hclog.Logger, access Ac
 			return
 		}
 	}
-
-	res, err := checkoutCopy(ctx, logger, dirs, cacheDirName)
-	if err != nil {
-		rerr = err
-		return
-	}
+	res.Checkout = cacheDir
 	return
 }
 
@@ -198,44 +189,6 @@ func updateClonedRepo(ctx context.Context, logger hclog.Logger, access AccessDet
 	}
 
 	return nil
-}
-
-func checkoutCopy(ctx context.Context, logger hclog.Logger, dirs Dirs, cacheDirName string) (res CloneResults, _ error) {
-	cacheDir := filepath.Join(dirs.CacheRoot, cacheDirName)
-	checkout := dirs.Checkout
-
-	os.RemoveAll(checkout)
-
-	cmd := exec.CommandContext(ctx, "git", "clone", "--no-tags", "-n", "-q", "-c", "core.longpaths=true", "--shared", "--local", cacheDir, checkout)
-	err := runGitCommand(ctx, logger, cmd)
-	if err != nil {
-		return res, err
-	}
-	res.CacheDir = cacheDir
-	return res, nil
-
-	/*
-			var out bytes.Buffer
-			c := exec.CommandContext(ctx, "git", "symbolic-ref", "HEAD")
-			c.Dir = checkout
-			c.Stderr = os.Stderr
-			c.Stdout = &out
-			if err := c.Run(); err != nil {
-				return res, fmt.Errorf("error determing the default branch. %v", err)
-			}
-
-			for _, line := range strings.Split(out.String(), "\n") {
-				if strings.Contains(line, "refs/heads/") {
-					tok := strings.Split(line, "/")
-					res.DefaultBranch = strings.Join(tok[2:], "/")
-					return res, nil
-				}
-			}
-
-
-		return res, fmt.Errorf("couldn't determine the default branch")
-	*/
-
 }
 
 func gitRunGCForLongClone(ctx context.Context, logger hclog.Logger, dir string) error {

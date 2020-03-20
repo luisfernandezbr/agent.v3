@@ -49,10 +49,14 @@
 [[constraint]]
   branch = "master"
   name = "github.com/songgao/stacktraces"
-  
-[[constraint]]
-  name = "github.com/pinpt/ripsrc"
-  branch = "slim"
+
+[[override]]
+  name = "gopkg.in/src-d/go-git.v4"
+  revision = "1a7db85bca7027d90afdb5ce711622aaac9feaed"
+
+#[[constraint]]
+#  name = "github.com/pinpt/ripsrc"
+#  branch = "slim"
 #  revision = "33ce1d7bf6e818a220d58991a3b586b294084907"
 
 # dependency of ripsrc

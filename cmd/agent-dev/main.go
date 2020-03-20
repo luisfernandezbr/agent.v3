@@ -79,12 +79,10 @@ var cmdCloneRepo = &cobra.Command{
 		ctx := context.Background()
 		url, _ := cmd.Flags().GetString("url")
 		cacheDir, _ := cmd.Flags().GetString("cache-dir")
-		checkoutDir, _ := cmd.Flags().GetString("checkout-dir")
 		res, err := gitclone.CloneWithCache(ctx, logger, gitclone.AccessDetails{
 			URL: url,
 		}, gitclone.Dirs{
 			CacheRoot: cacheDir,
-			Checkout:  checkoutDir,
 		}, "1", "main-repo")
 		fmt.Println("res", res)
 		if err != nil {
@@ -96,7 +94,6 @@ var cmdCloneRepo = &cobra.Command{
 func init() {
 	cmdCloneRepo.Flags().String("url", "", "repo url")
 	cmdCloneRepo.Flags().String("cache-dir", "", "cache-dir for repos")
-	cmdCloneRepo.Flags().String("checkout-dir", "", "checkout-dir")
 	cmdRoot.AddCommand(cmdCloneRepo)
 }
 
@@ -141,10 +138,12 @@ var cmdExportRepo = &cobra.Command{
 
 		repoID, _ := cmd.Flags().GetString("repo-id")
 		customerID, _ := cmd.Flags().GetString("customer-id")
+		localRepo, _ := cmd.Flags().GetString("local-repo")
 
 		opts := exportrepo.Opts{
 			Logger:            logger,
 			RepoAccess:        gitclone.AccessDetails{URL: url},
+			LocalRepo:         localRepo,
 			Sessions:          sessions,
 			RepoID:            repoID,
 			UniqueName:        dummyRepo.GetReadableID(),
@@ -159,10 +158,10 @@ var cmdExportRepo = &cobra.Command{
 		exp := exportrepo.New(opts, locs)
 		res := exp.Run(ctx)
 		if res.SessionErr != nil {
-			exitWithErr(logger, fmt.Errorf("session err: %v", err))
+			exitWithErr(logger, fmt.Errorf("export failed session err: %v", res.SessionErr))
 		}
 		if res.OtherErr != nil {
-			exitWithErr(logger, fmt.Errorf("other err: %v", err))
+			exitWithErr(logger, fmt.Errorf("export failed not session err (other err): %v", res.OtherErr))
 		}
 		if err := lastProcessed.Save(); err != nil {
 			exitWithErr(logger, err)
@@ -175,6 +174,7 @@ var cmdExportRepo = &cobra.Command{
 
 func init() {
 	cmdExportRepo.Flags().String("url", "", "repo url")
+	cmdExportRepo.Flags().String("local-repo", "", "local repo path for testing instead of url")
 	cmdExportRepo.Flags().String("pinpoint-root", "", "pinpoint-root")
 	cmdExportRepo.Flags().String("ref-type", "git", "ref-type")
 	cmdExportRepo.Flags().String("repo-name", "", "repo-name")
@@ -329,7 +329,6 @@ var cmdDecrypt = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		key, _ := cmd.Flags().GetString("key")
 		message, _ := cmd.Flags().GetString("message")
-
 		decr, err := encrypt.DecryptString(message, key)
 		if err != nil {
 			fmt.Println(err)
