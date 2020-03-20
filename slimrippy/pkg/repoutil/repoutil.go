@@ -9,7 +9,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
-func RepoAllBranchIter(repo *git.Repository, useOrigin bool) (res []*plumbing.Reference, rerr error) {
+func RepoAllBranchIter(repo *git.Repository) (res []*plumbing.Reference, rerr error) {
 	refIter, err := repo.Storer.IterReferences()
 	if err != nil {
 		rerr = err
@@ -54,7 +54,7 @@ func startsWith(b string, prefix string) bool {
 	return string(b[:len(prefix)]) == prefix
 }
 
-func RepoAllCommits(repo *git.Repository, useOrigin bool, seenExternal map[plumbing.Hash]bool, cb func(*object.Commit) error) (rerr error) {
+func RepoAllCommits(repo *git.Repository, seenExternal map[plumbing.Hash]bool, cb func(*object.Commit) error) (rerr error) {
 	ret := func(err error) {
 		rerr = fmt.Errorf("RepoAllCommits failed: %v", err)
 	}
@@ -62,7 +62,7 @@ func RepoAllCommits(repo *git.Repository, useOrigin bool, seenExternal map[plumb
 	// The following does not work, missing some commits running on kubernetes/kops repo.
 	// Looks like a bug in go-git.v4.
 	//	iter, err := repo.Log(&git.LogOptions{ All:   true, })
-	refs, err := RepoAllBranchIter(repo, useOrigin)
+	refs, err := RepoAllBranchIter(repo)
 	if err != nil {
 		ret(err)
 		return

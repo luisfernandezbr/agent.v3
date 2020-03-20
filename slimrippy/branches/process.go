@@ -76,8 +76,6 @@ type Opts struct {
 	RepoDir string
 	// CommitGraph is the full graph of commits.
 	CommitGraph *parentsgraph.Graph
-	// UseOrigin set to true to use branches with origin/ prefix instead of default.
-	UseOrigin bool
 	// PullRequestSHAs is a list of custom sha references to process similar to branches returned from the repo.
 	PullRequestSHAs []string
 	// PullRequestsOnly skips branch data output, only using passed PullRequestSHAs
