@@ -132,7 +132,7 @@ func (s *Export) Run(ctx context.Context) (res Result) {
 		s.repoNameUsedInCacheDir = filepath.Base(s.opts.LocalRepo)
 	}
 	s.logger = s.logger.With("repo", s.repoNameUsedInCacheDir)
-	s.lastProcessedKey = []string{"ripsrc-v2", s.repoNameUsedInCacheDir}
+	s.lastProcessedKey = []string{"ripsrc-v3", s.repoNameUsedInCacheDir}
 
 	s.sessions = newSessions(s.opts.Sessions, s.opts.SessionRootID, s.repoNameUsedInCacheDir)
 

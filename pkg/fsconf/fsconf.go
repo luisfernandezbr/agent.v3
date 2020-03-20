@@ -81,8 +81,8 @@ func New(pinpointRoot string) Locs {
 	s.UploadZips = j(s.State, "upload-zips")
 	s.Backup = j(s.State, "backup")
 
-	s.RipsrcCheckpoints = j(s.State, "ripsrc_checkpoints/v2")
-	s.RipsrcCheckpointsBackup = j(s.Backup, "ripsrc_checkpoints/v2")
+	s.RipsrcCheckpoints = j(s.State, "ripsrc_checkpoints/v3")
+	s.RipsrcCheckpointsBackup = j(s.Backup, "ripsrc_checkpoints/v3")
 
 	s.ServiceRunCrashes = j(s.Logs, "service-run-crashes")
 
