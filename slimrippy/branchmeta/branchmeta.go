@@ -12,7 +12,6 @@ import (
 type Opts struct {
 	//Logger         logger.Logger
 	RepoDir        string
-	UseOrigin      bool
 	IncludeDefault bool
 }
 
@@ -29,17 +28,13 @@ func Get(ctx context.Context, opts Opts) (res []BranchWithCommitTime, rerr error
 		return
 	}
 
-	//prefix := "refs/remotes/origin/"
-	//if !opts.UseOrigin {
-	//	prefix = "refs/heads/"
-	//}
 	defaultHeadRef, err := repo.Reference(plumbing.HEAD, true)
 	if err != nil {
 		rerr = err
 		return
 	}
 	defaultHead := defaultHeadRef.Name().String()
-	branches, err := repoutil.RepoAllBranchIter(repo, opts.UseOrigin)
+	branches, err := repoutil.RepoAllBranchIter(repo)
 	//iter, err := repo.Storer.IterReferences()
 	if err != nil {
 		rerr = err

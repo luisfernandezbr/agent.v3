@@ -19,7 +19,7 @@ import (
 	"github.com/pinpt/agent/slimrippy/branches"
 	"github.com/pinpt/agent/slimrippy/branchmeta"
 	"github.com/pinpt/agent/slimrippy/commits"
-	"github.com/pinpt/agent/slimrippy/parentsgraph"
+	"github.com/pinpt/agent/slimrippy/slimrippy"
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 
@@ -87,8 +87,10 @@ type Export struct {
 
 	sessions *sessions
 
-	state state
+	state slimrippy.State
 	store filestore.Store
+
+	prs map[string]PR
 }
 
 func New(opts Opts, locs fsconf.Locs) *Export {
@@ -130,7 +132,7 @@ func (s *Export) Run(ctx context.Context) (res Result) {
 		s.repoNameUsedInCacheDir = filepath.Base(s.opts.LocalRepo)
 	}
 	s.logger = s.logger.With("repo", s.repoNameUsedInCacheDir)
-	s.lastProcessedKey = []string{"ripsrc-v2", s.repoNameUsedInCacheDir}
+	s.lastProcessedKey = []string{"ripsrc-v3", s.repoNameUsedInCacheDir}
 
 	s.sessions = newSessions(s.opts.Sessions, s.opts.SessionRootID, s.repoNameUsedInCacheDir)
 
@@ -151,18 +153,9 @@ func (s *Export) Run(ctx context.Context) (res Result) {
 	return
 }
 
-type state struct {
-	Commits commits.State
-}
-
 func (s *Export) loadState() error {
 	s.store = filestore.New(s.locs.RipsrcCheckpoints)
-	err := s.store.Get(s.opts.RepoID, &s.state)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("state commits", len(s.state.Commits.CommitsSeen))
-	return nil
+	return s.store.Get(s.opts.RepoID, &s.state)
 }
 
 func (s *Export) saveState() error {
@@ -218,24 +211,27 @@ func (s *Export) run(ctx context.Context) (duration ExportDuration, rerr error) 
 		return
 	}
 
-	branchesStarted := time.Now()
-	s.logger.Info("processing branches")
-	if err = s.branches(ctx, repoDir); err != nil {
-		rerr = fmt.Errorf("branch processing failed: %v", err)
-		return
+	ripsrcStarted := time.Now()
+	opts := slimrippy.Opts{}
+	opts.Logger = s.logger
+	opts.RepoDir = repoDir
+	opts.State = s.state
+	s.prs = map[string]PR{}
+	prsStr := []string{}
+	for _, pr := range s.opts.PRs {
+		s.prs[pr.LastCommitSHA] = pr
+		prsStr = append(prsStr, pr.LastCommitSHA)
 	}
-	s.logger.Info("processing branches done", "d", time.Since(branchesStarted))
-
-	codeStarted := time.Now()
-	s.logger.Info("processing code")
-	err = s.code(ctx, repoDir)
+	opts.PullRequestSHAs = prsStr
+	opts.BranchCallback = s.branch
+	opts.CommitCallback = s.commit
+	state, err := slimrippy.CommitsAndBranches(ctx, opts)
 	if err != nil {
-		rerr = fmt.Errorf("code processing failed: %v", err)
+		rerr = fmt.Errorf("slimrippy failed: %v", err)
 		return
 	}
-	s.logger.Info("processing code done", "d", time.Since(codeStarted))
-
-	duration.Ripsrc = time.Since(branchesStarted)
+	s.state = state
+	duration.Ripsrc = time.Since(ripsrcStarted)
 	s.logger.Info("ripsrc finished", "duration", duration.Ripsrc, "repo", s.opts.UniqueName)
 
 	err = s.saveState()
@@ -270,16 +266,10 @@ func (s *Export) clone(ctx context.Context) (
 
 	uniqueName := s.opts.RefType + "-" + s.opts.UniqueName
 
-	/*
-		tempDir, err := ioutil.TempDir(s.locs.Temp, "exportrepo")
-		if err != nil {
-			return "", err
-		}*/
-
 	dirs := gitclone.Dirs{
 		CacheRoot: s.locs.RepoCache,
-		//Checkout:  tempDir,
 	}
+
 	res, err := gitclone.CloneWithCache(ctx, s.logger, s.opts.RepoAccess, dirs, s.opts.RepoID, uniqueName)
 
 	if err != nil {
@@ -300,7 +290,6 @@ func (s *Export) skipRipsrc(ctx context.Context, checkoutdir string) (bool, map[
 	}
 	opts := branchmeta.Opts{
 		RepoDir:        checkoutdir,
-		UseOrigin:      true,
 		IncludeDefault: true,
 	}
 	br, err := branchmeta.Get(ctx, opts)
@@ -320,128 +309,78 @@ func (s *Export) skipRipsrc(ctx context.Context, checkoutdir string) (bool, map[
 	return skip, remotebranches, nil
 }
 
-func (s *Export) branches(ctx context.Context, checkoutdir string) error {
+func (s *Export) branch(data branches.Branch) error {
 	sessions := s.opts.Sessions
 
-	res := make(chan branches.Branch)
-	done := make(chan error)
-
-	prs := map[string]PR{}
-	for _, pr := range s.opts.PRs {
-		prs[pr.LastCommitSHA] = pr
+	if len(data.Commits) == 0 {
+		// we do not export branches with no commits, especially since branch id depends on first commit
+		return nil
 	}
 
-	go func() {
+	commitIDs := s.commitIDs(data.Commits)
+	var pr PR
+	isPr := data.IsPullRequest
 
-		for data := range res {
-			if len(data.Commits) == 0 {
-				// we do not export branches with no commits, especially since branch id depends on first commit
-				continue
-			}
-
-			commitIDs := s.commitIDs(data.Commits)
-			var pr PR
-			isPr := data.IsPullRequest
-
-			if isPr {
-				var ok bool
-				pr, ok = prs[data.HeadSHA]
-				if !ok {
-					s.logger.Error("could not find pr by sha")
-					continue
-				}
-				obj := sourcecode.PullRequestBranch{
-					PullRequestID:          pr.ID,
-					RefID:                  pr.RefID,
-					Name:                   pr.BranchName,
-					URL:                    pr.URL,
-					RefType:                s.opts.RefType,
-					CustomerID:             s.opts.CustomerID,
-					Default:                data.IsDefault,
-					Merged:                 data.IsMerged,
-					MergeCommitSha:         data.MergeCommit,
-					MergeCommitID:          s.commitID(data.MergeCommit),
-					BranchedFromCommitShas: data.BranchedFromCommits,
-					BranchedFromCommitIds:  s.commitIDs(data.BranchedFromCommits),
-					CommitShas:             data.Commits,
-					CommitIds:              commitIDs,
-					BehindDefaultCount:     int64(data.BehindDefaultCount),
-					AheadDefaultCount:      int64(data.AheadDefaultCount),
-					RepoID:                 s.opts.RepoID,
-				}
-				err := sessions.Write(s.sessions.PRBranch, []map[string]interface{}{
-					obj.ToMap(),
-				})
-				if err != nil {
-					done <- err
-					return
-				}
-			} else {
-				obj := sourcecode.Branch{
-					RefID:                  data.Name,
-					Name:                   data.Name,
-					URL:                    branchURL(s.opts.BranchURLTemplate, data.Name),
-					RefType:                s.opts.RefType,
-					CustomerID:             s.opts.CustomerID,
-					Default:                data.IsDefault,
-					Merged:                 data.IsMerged,
-					MergeCommitSha:         data.MergeCommit,
-					MergeCommitID:          s.commitID(data.MergeCommit),
-					BranchedFromCommitShas: data.BranchedFromCommits,
-					BranchedFromCommitIds:  s.commitIDs(data.BranchedFromCommits),
-					CommitShas:             data.Commits,
-					CommitIds:              commitIDs,
-					FirstCommitSha:         data.FirstCommit,
-					FirstCommitID:          s.commitID(data.FirstCommit),
-					BehindDefaultCount:     int64(data.BehindDefaultCount),
-					AheadDefaultCount:      int64(data.AheadDefaultCount),
-					RepoID:                 s.opts.RepoID,
-				}
-				err := sessions.Write(s.sessions.Branch, []map[string]interface{}{
-					obj.ToMap(),
-				})
-				if err != nil {
-					done <- err
-					return
-				}
-			}
+	if isPr {
+		var ok bool
+		pr, ok = s.prs[data.HeadSHA]
+		if !ok {
+			s.logger.Error("could not find pr by sha")
+			return nil
 		}
-		done <- nil
-	}()
-
-	commitGraph := parentsgraph.New(parentsgraph.Opts{
-		RepoDir:     checkoutdir,
-		AllBranches: true,
-		UseOrigin:   true,
-	})
-
-	err := commitGraph.Read()
-	if err != nil {
-		return err
+		obj := sourcecode.PullRequestBranch{
+			PullRequestID:          pr.ID,
+			RefID:                  pr.RefID,
+			Name:                   pr.BranchName,
+			URL:                    pr.URL,
+			RefType:                s.opts.RefType,
+			CustomerID:             s.opts.CustomerID,
+			Default:                data.IsDefault,
+			Merged:                 data.IsMerged,
+			MergeCommitSha:         data.MergeCommit,
+			MergeCommitID:          s.commitID(data.MergeCommit),
+			BranchedFromCommitShas: data.BranchedFromCommits,
+			BranchedFromCommitIds:  s.commitIDs(data.BranchedFromCommits),
+			CommitShas:             data.Commits,
+			CommitIds:              commitIDs,
+			BehindDefaultCount:     int64(data.BehindDefaultCount),
+			AheadDefaultCount:      int64(data.AheadDefaultCount),
+			RepoID:                 s.opts.RepoID,
+		}
+		err := sessions.Write(s.sessions.PRBranch, []map[string]interface{}{
+			obj.ToMap(),
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+		obj := sourcecode.Branch{
+			RefID:                  data.Name,
+			Name:                   data.Name,
+			URL:                    branchURL(s.opts.BranchURLTemplate, data.Name),
+			RefType:                s.opts.RefType,
+			CustomerID:             s.opts.CustomerID,
+			Default:                data.IsDefault,
+			Merged:                 data.IsMerged,
+			MergeCommitSha:         data.MergeCommit,
+			MergeCommitID:          s.commitID(data.MergeCommit),
+			BranchedFromCommitShas: data.BranchedFromCommits,
+			BranchedFromCommitIds:  s.commitIDs(data.BranchedFromCommits),
+			CommitShas:             data.Commits,
+			CommitIds:              commitIDs,
+			FirstCommitSha:         data.FirstCommit,
+			FirstCommitID:          s.commitID(data.FirstCommit),
+			BehindDefaultCount:     int64(data.BehindDefaultCount),
+			AheadDefaultCount:      int64(data.AheadDefaultCount),
+			RepoID:                 s.opts.RepoID,
+		}
+		err := sessions.Write(s.sessions.Branch, []map[string]interface{}{
+			obj.ToMap(),
+		})
+		if err != nil {
+			return err
+		}
 	}
-
-	opts := branches.Opts{}
-	opts.UseOrigin = true
-	opts.CommitGraph = commitGraph
-	opts.RepoDir = checkoutdir
-	opts.IncludeDefaultBranch = true
-	var prSHAs []string
-	for _, pr := range s.opts.PRs {
-		prSHAs = append(prSHAs, pr.LastCommitSHA)
-	}
-	opts.PullRequestSHAs = prSHAs
-	pr := branches.New(opts)
-	err = pr.Run(ctx, res)
-	err2 := <-done
-
-	if err != nil {
-		return err
-	}
-
-	if err2 != nil {
-		return err2
-	}
-
 	return nil
 }
 
@@ -458,39 +397,7 @@ func (s *Export) commitIDs(shas []string) (res []string) {
 
 const lpCommit = "commit"
 
-func (s *Export) code(ctx context.Context, checkoutDir string) error {
-	started := time.Now()
-
-	res := make(chan commits.Commit)
-	done := make(chan bool)
-	go func() {
-		defer func() { done <- true }()
-		err := s.processCode(res)
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	opts := commits.Opts{}
-	opts.State = s.state.Commits
-	opts.RepoDir = checkoutDir
-	opts.UseOrigin = true
-	state, err := commits.Commits(ctx, opts, res)
-	if err != nil {
-		return err
-	}
-
-	<-done
-
-	s.state.Commits = state
-
-	s.logger.Debug("code processing end", "duration", time.Since(started))
-
-	return nil
-
-}
-
-func (s *Export) processCode(commits chan commits.Commit) error {
+func (s *Export) commit(commit commits.Commit) error {
 	sessions := s.opts.Sessions
 
 	writeCommit := func(obj sourcecode.Commit) error {
@@ -517,48 +424,45 @@ func (s *Export) processCode(commits chan commits.Commit) error {
 
 	repoID := s.opts.RepoID
 
-	for commit := range commits {
-		c := sourcecode.Commit{
-			RefID:          commit.SHA,
-			RefType:        s.opts.RefType,
-			CustomerID:     customerID,
-			RepoID:         repoID,
-			Sha:            commit.SHA,
-			Message:        commit.Message,
-			URL:            commitURL(s.opts.CommitURLTemplate, commit.SHA),
-			AuthorRefID:    ids.CodeCommitEmail(customerID, commit.Authored.Email),
-			CommitterRefID: ids.CodeCommitEmail(customerID, commit.Committed.Email),
-		}
+	c := sourcecode.Commit{
+		RefID:          commit.SHA,
+		RefType:        s.opts.RefType,
+		CustomerID:     customerID,
+		RepoID:         repoID,
+		Sha:            commit.SHA,
+		Message:        commit.Message,
+		URL:            commitURL(s.opts.CommitURLTemplate, commit.SHA),
+		AuthorRefID:    ids.CodeCommitEmail(customerID, commit.Authored.Email),
+		CommitterRefID: ids.CodeCommitEmail(customerID, commit.Committed.Email),
+	}
 
-		date.ConvertToModel(commit.Committed.Date, &c.CreatedDate)
+	date.ConvertToModel(commit.Committed.Date, &c.CreatedDate)
 
-		err := writeCommit(c)
+	err := writeCommit(c)
+	if err != nil {
+		return err
+	}
+
+	if commit.Authored.Email != "" {
+		author := commitusers.CommitUser{}
+		author.CustomerID = customerID
+		author.Email = commit.Authored.Email
+		author.Name = commit.Authored.Name
+		err := writeCommitUser(author)
 		if err != nil {
 			return err
 		}
+	}
 
-		if commit.Authored.Email != "" {
-			author := commitusers.CommitUser{}
-			author.CustomerID = customerID
-			author.Email = commit.Authored.Email
-			author.Name = commit.Authored.Name
-			err := writeCommitUser(author)
-			if err != nil {
-				return err
-			}
+	if commit.Committed.Email != "" {
+		author := commitusers.CommitUser{}
+		author.CustomerID = customerID
+		author.Email = commit.Committed.Email
+		author.Name = commit.Committed.Name
+		err := writeCommitUser(author)
+		if err != nil {
+			return err
 		}
-
-		if commit.Committed.Email != "" {
-			author := commitusers.CommitUser{}
-			author.CustomerID = customerID
-			author.Email = commit.Committed.Email
-			author.Name = commit.Committed.Name
-			err := writeCommitUser(author)
-			if err != nil {
-				return err
-			}
-		}
-
 	}
 
 	return nil

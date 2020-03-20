@@ -30,7 +30,6 @@ func (s *Process) getNamesAndHashes() (res namesAndHashes, _ error) {
 	opts := branchmeta.Opts{}
 	//opts.Logger = s.opts.Logger
 	opts.RepoDir = s.opts.RepoDir
-	opts.UseOrigin = s.opts.UseOrigin
 	res0, err := branchmeta.Get(context.Background(), opts)
 	if err != nil {
 		return res, err

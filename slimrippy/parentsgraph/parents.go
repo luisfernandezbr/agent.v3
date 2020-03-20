@@ -3,8 +3,6 @@ package parentsgraph
 import (
 	"sort"
 
-	"github.com/pinpt/agent/slimrippy/pkg/repoutil"
-	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
@@ -15,16 +13,34 @@ type Graph struct {
 }
 
 type Opts struct {
-	RepoDir     string
-	AllBranches bool
-	UseOrigin   bool
+	//RepoDir     string
+	//AllBranches bool
+	State   State
+	Commits chan *object.Commit
 	//Logger      logger.Logger
 }
 
-func New(opts Opts) *Graph {
+type State struct {
+	Parents map[string][]string
+}
+
+func New(opts Opts) (*Graph, State) {
 	s := &Graph{}
 	s.opts = opts
-	return s
+	if len(opts.State.Parents) != 0 {
+		s.Parents = opts.State.Parents
+	} else {
+		s.Parents = map[string][]string{}
+	}
+	for c := range opts.Commits {
+		var parents []string
+		for _, p := range c.ParentHashes {
+			parents = append(parents, p.String())
+		}
+		s.Parents[c.Hash.String()] = parents
+	}
+	s.childrenFromParents()
+	return s, State{Parents: s.Parents}
 }
 
 func NewFromMap(parents map[string][]string) *Graph {
@@ -32,20 +48,6 @@ func NewFromMap(parents map[string][]string) *Graph {
 	s.Parents = parents
 	s.childrenFromParents()
 	return s
-}
-
-func (s *Graph) Read() error {
-	//start := time.Now()
-	//s.opts.Logger.Info("parentsgraph: starting reading")
-	//defer func() {
-	//s.opts.Logger.Info("parentsgraph: completed reading", "d", time.Since(start))
-	//}()
-	err := s.retrieveParents()
-	if err != nil {
-		return err
-	}
-	s.childrenFromParents()
-	return nil
 }
 
 func (s *Graph) childrenFromParents() {
@@ -62,21 +64,4 @@ func (s *Graph) childrenFromParents() {
 	for _, data := range s.Children {
 		sort.Strings(data)
 	}
-}
-
-func (s *Graph) retrieveParents() (rerr error) {
-	s.Parents = map[string][]string{}
-	repo, err := git.PlainOpen(s.opts.RepoDir)
-	if err != nil {
-		rerr = err
-		return
-	}
-	return repoutil.RepoAllCommits(repo, s.opts.UseOrigin, nil, func(c *object.Commit) error {
-		var parents []string
-		for _, p := range c.ParentHashes {
-			parents = append(parents, p.String())
-		}
-		s.Parents[c.Hash.String()] = parents
-		return nil
-	})
 }
