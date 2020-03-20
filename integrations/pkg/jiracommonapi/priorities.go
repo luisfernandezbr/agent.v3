@@ -32,7 +32,7 @@ func Priorities(qc QueryContext) (res []work.IssuePriority, rerr error) {
 			Description: &priority.Description,
 			IconURL:     &priority.Icon,
 			Color:       &priority.Color,
-			Order:       int64(order),
+			Order:       int64(1 + order), // we use 0 for no order so offset by one to make the last != 0
 			RefType:     "jira",
 			RefID:       priority.ID,
 		})
