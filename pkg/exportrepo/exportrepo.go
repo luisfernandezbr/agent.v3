@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,13 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/agent/pkg/filestore"
+
 	"github.com/pinpt/agent/cmd/cmdexport/process"
 	"github.com/pinpt/agent/pkg/commitusers"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-
-	"github.com/pinpt/ripsrc/ripsrc/branchmeta"
-
-	"github.com/pinpt/go-common/datetime"
+	"github.com/pinpt/agent/slimrippy/branches"
+	"github.com/pinpt/agent/slimrippy/branchmeta"
+	"github.com/pinpt/agent/slimrippy/commits"
+	"github.com/pinpt/agent/slimrippy/parentsgraph"
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 
@@ -29,7 +30,6 @@ import (
 	"github.com/pinpt/agent/pkg/ids"
 	"github.com/pinpt/agent/pkg/jsonstore"
 	"github.com/pinpt/agent/pkg/structmarshal"
-	"github.com/pinpt/ripsrc/ripsrc"
 
 	"github.com/hashicorp/go-hclog"
 )
@@ -49,6 +49,9 @@ type Opts struct {
 
 	LastProcessed *jsonstore.Store
 	RepoAccess    gitclone.AccessDetails
+
+	// LocalRepo is a path to local repo for easier testing with agent-dev export-repo
+	LocalRepo string
 
 	// CommitURLTemplate is a template for building commit url
 	// https://example.com/repo1/@@@sha@@@
@@ -78,18 +81,18 @@ type Export struct {
 	opts   Opts
 	locs   fsconf.Locs
 	logger hclog.Logger
-	//defaultBranch string
 
 	repoNameUsedInCacheDir string
 	lastProcessedKey       []string
 
-	rip *ripsrc.Ripsrc
-
 	sessions *sessions
+
+	state state
+	store filestore.Store
 }
 
 func New(opts Opts, locs fsconf.Locs) *Export {
-	if opts.Logger == nil || opts.CustomerID == "" || opts.RepoID == "" || opts.RefType == "" || opts.Sessions == nil || opts.LastProcessed == nil || opts.RepoAccess.URL == "" || opts.CommitURLTemplate == "" || opts.BranchURLTemplate == "" || opts.CommitUsers == nil {
+	if opts.Logger == nil || opts.CustomerID == "" || opts.RepoID == "" || opts.RefType == "" || opts.Sessions == nil || opts.LastProcessed == nil || opts.CommitURLTemplate == "" || opts.BranchURLTemplate == "" || opts.CommitUsers == nil {
 		panic("provide all params")
 	}
 	s := &Export{}
@@ -121,9 +124,13 @@ type Result struct {
 }
 
 func (s *Export) Run(ctx context.Context) (res Result) {
-	s.repoNameUsedInCacheDir = gitclone.RepoNameUsedInCacheDir(s.opts.UniqueName, s.opts.RepoID)
+	if s.opts.LocalRepo == "" {
+		s.repoNameUsedInCacheDir = gitclone.RepoNameUsedInCacheDir(s.opts.UniqueName, s.opts.RepoID)
+	} else {
+		s.repoNameUsedInCacheDir = filepath.Base(s.opts.LocalRepo)
+	}
 	s.logger = s.logger.With("repo", s.repoNameUsedInCacheDir)
-	s.lastProcessedKey = []string{"ripsrc", s.repoNameUsedInCacheDir}
+	s.lastProcessedKey = []string{"ripsrc-v2", s.repoNameUsedInCacheDir}
 
 	s.sessions = newSessions(s.opts.Sessions, s.opts.SessionRootID, s.repoNameUsedInCacheDir)
 
@@ -142,6 +149,24 @@ func (s *Export) Run(ctx context.Context) (res Result) {
 	}
 
 	return
+}
+
+type state struct {
+	Commits commits.State
+}
+
+func (s *Export) loadState() error {
+	s.store = filestore.New(s.locs.RipsrcCheckpoints)
+	err := s.store.Get(s.opts.RepoID, &s.state)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("state commits", len(s.state.Commits.CommitsSeen))
+	return nil
+}
+
+func (s *Export) saveState() error {
+	return s.store.Set(s.opts.RepoID, s.state)
 }
 
 func (s *Export) lastProcessedGet(keyLocal ...string) interface{} {
@@ -164,23 +189,20 @@ func (s *Export) run(ctx context.Context) (duration ExportDuration, rerr error) 
 	}
 	s.logger.Debug("git clone started", "repo", s.opts.UniqueName)
 	clonestarted := time.Now()
-	tempCheckoutDir, _, err := s.clone(ctx)
+	repoDir, err := s.clone(ctx)
 	if err != nil {
 		rerr = err
 		return
 	}
-	defer os.RemoveAll(tempCheckoutDir)
 
 	duration.Clone = time.Since(clonestarted)
 	s.logger.Debug("git clone finished", "duration", duration.Clone.String(), "repo", s.opts.UniqueName)
-	if !hasHeadCommit(ctx, tempCheckoutDir) {
+	if !hasHeadCommit(ctx, repoDir) {
 		rerr = ErrRevParseFailed
 		return
 	}
 
-	s.ripsrcSetup(tempCheckoutDir)
-
-	skipsrc, remotebranches, err := s.skipRipsrc(ctx, tempCheckoutDir)
+	skipsrc, remotebranches, err := s.skipRipsrc(ctx, repoDir)
 	if err != nil {
 		rerr = err
 		return
@@ -190,21 +212,37 @@ func (s *Export) run(ctx context.Context) (duration ExportDuration, rerr error) 
 		return
 	}
 
-	ripsrcStarted := time.Now()
-	s.logger.Info("ripsrc started", "repo", s.opts.UniqueName)
-	if err = s.branches(ctx); err != nil {
-		rerr = err
-		return
-	}
-	err = s.code(ctx)
+	err = s.loadState()
 	if err != nil {
 		rerr = err
 		return
 	}
 
-	duration.Ripsrc = time.Since(ripsrcStarted)
+	branchesStarted := time.Now()
+	s.logger.Info("processing branches")
+	if err = s.branches(ctx, repoDir); err != nil {
+		rerr = fmt.Errorf("branch processing failed: %v", err)
+		return
+	}
+	s.logger.Info("processing branches done", "d", time.Since(branchesStarted))
+
+	codeStarted := time.Now()
+	s.logger.Info("processing code")
+	err = s.code(ctx, repoDir)
+	if err != nil {
+		rerr = fmt.Errorf("code processing failed: %v", err)
+		return
+	}
+	s.logger.Info("processing code done", "d", time.Since(codeStarted))
+
+	duration.Ripsrc = time.Since(branchesStarted)
 	s.logger.Info("ripsrc finished", "duration", duration.Ripsrc, "repo", s.opts.UniqueName)
 
+	err = s.saveState()
+	if err != nil {
+		rerr = err
+		return
+	}
 	rerr = s.lastProcessedSet(remotebranches, lpBranches)
 	return
 }
@@ -224,57 +262,31 @@ func hasHeadCommit(ctx context.Context, repoDir string) bool {
 
 func (s *Export) clone(ctx context.Context) (
 	tempCheckoutDir string,
-	cacheDir string,
 	_ error) {
+
+	if s.opts.LocalRepo != "" {
+		return s.opts.LocalRepo, nil
+	}
 
 	uniqueName := s.opts.RefType + "-" + s.opts.UniqueName
 
-	tempDir, err := ioutil.TempDir(s.locs.Temp, "exportrepo")
-	if err != nil {
-		return "", "", err
-	}
+	/*
+		tempDir, err := ioutil.TempDir(s.locs.Temp, "exportrepo")
+		if err != nil {
+			return "", err
+		}*/
 
 	dirs := gitclone.Dirs{
 		CacheRoot: s.locs.RepoCache,
-		Checkout:  tempDir,
+		//Checkout:  tempDir,
 	}
 	res, err := gitclone.CloneWithCache(ctx, s.logger, s.opts.RepoAccess, dirs, s.opts.RepoID, uniqueName)
 
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 
-	return tempDir, res.CacheDir, nil
-}
-
-func (s *Export) ripsrcSetup(repoDir string) {
-
-	opts := ripsrc.Opts{}
-	opts.Logger = s.logger.Named("ripsrc")
-	opts.RepoDir = repoDir
-	opts.AllBranches = true
-	opts.BranchesUseOrigin = true
-	opts.CheckpointsDir = filepath.Join(s.locs.RipsrcCheckpoints, s.repoNameUsedInCacheDir)
-	var prSHAs []string
-	for _, pr := range s.opts.PRs {
-		prSHAs = append(prSHAs, pr.LastCommitSHA)
-	}
-	opts.PullRequestSHAs = prSHAs
-	s.logger.Info("requested pull request shas from ripsrc", "l", len(prSHAs))
-
-	lastCommit := s.lastProcessedGet(lpCommit)
-	if lastCommit != nil {
-		opts.CommitFromIncl = lastCommit.(string)
-		opts.CommitFromMakeNonIncl = true
-
-		//if !fileutil.FileExists(opts.CheckpointsDir) {
-		//	panic(fmt.Errorf("expecting to run incrementals, but ripsrc checkpoints dir does not exist for repo: %v", s.repoNameUsedInCacheDir))
-		//}
-	}
-
-	s.logger.Info("setting up ripsrc", "last_processed_old", lastCommit)
-
-	s.rip = ripsrc.New(opts)
+	return res.Checkout, nil
 }
 
 func (s *Export) skipRipsrc(ctx context.Context, checkoutdir string) (bool, map[string]branchmeta.Branch, error) {
@@ -287,14 +299,13 @@ func (s *Export) skipRipsrc(ctx context.Context, checkoutdir string) (bool, map[
 		}
 	}
 	opts := branchmeta.Opts{
-		Logger:         s.logger,
 		RepoDir:        checkoutdir,
 		UseOrigin:      true,
 		IncludeDefault: true,
 	}
 	br, err := branchmeta.Get(ctx, opts)
 	if err != nil {
-		return true, nil, err
+		return true, nil, fmt.Errorf("branchmeta.Get %v", err)
 	}
 	for _, b := range br {
 		remotebranches[b.Name] = branchmeta.Branch{
@@ -302,14 +313,17 @@ func (s *Export) skipRipsrc(ctx context.Context, checkoutdir string) (bool, map[
 			Commit: b.Commit,
 		}
 	}
+	if len(remotebranches) == 0 {
+		return false, remotebranches, nil
+	}
 	skip := reflect.DeepEqual(cachedbranches, remotebranches)
 	return skip, remotebranches, nil
 }
 
-func (s *Export) branches(ctx context.Context) error {
+func (s *Export) branches(ctx context.Context, checkoutdir string) error {
 	sessions := s.opts.Sessions
 
-	res := make(chan ripsrc.Branch)
+	res := make(chan branches.Branch)
 	done := make(chan error)
 
 	prs := map[string]PR{}
@@ -395,7 +409,29 @@ func (s *Export) branches(ctx context.Context) error {
 		done <- nil
 	}()
 
-	err := s.rip.Branches(ctx, res)
+	commitGraph := parentsgraph.New(parentsgraph.Opts{
+		RepoDir:     checkoutdir,
+		AllBranches: true,
+		UseOrigin:   true,
+	})
+
+	err := commitGraph.Read()
+	if err != nil {
+		return err
+	}
+
+	opts := branches.Opts{}
+	opts.UseOrigin = true
+	opts.CommitGraph = commitGraph
+	opts.RepoDir = checkoutdir
+	opts.IncludeDefaultBranch = true
+	var prSHAs []string
+	for _, pr := range s.opts.PRs {
+		prSHAs = append(prSHAs, pr.LastCommitSHA)
+	}
+	opts.PullRequestSHAs = prSHAs
+	pr := branches.New(opts)
+	err = pr.Run(ctx, res)
 	err2 := <-done
 
 	if err != nil {
@@ -422,72 +458,41 @@ func (s *Export) commitIDs(shas []string) (res []string) {
 
 const lpCommit = "commit"
 
-func (s *Export) code(ctx context.Context) error {
+func (s *Export) code(ctx context.Context, checkoutDir string) error {
 	started := time.Now()
 
-	res := make(chan ripsrc.CommitCode, 100)
+	res := make(chan commits.Commit)
 	done := make(chan bool)
-
-	lastProcessed := ""
 	go func() {
 		defer func() { done <- true }()
-		var err error
-		lastProcessed, err = s.processCode(res)
+		err := s.processCode(res)
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	commitsSeen := s.getCommitsSeen()
-	err := s.rip.CodeByCommit2(ctx, commitsSeen, res)
+	opts := commits.Opts{}
+	opts.State = s.state.Commits
+	opts.RepoDir = checkoutDir
+	opts.UseOrigin = true
+	state, err := commits.Commits(ctx, opts, res)
 	if err != nil {
 		return err
 	}
+
 	<-done
 
-	if lastProcessed != "" {
-		err := s.lastProcessedSet(lastProcessed, lpCommit)
-		if err != nil {
-			return err
-		}
-	}
+	s.state.Commits = state
 
-	s.setCommitsSeen(commitsSeen)
-
-	s.logger.Debug("code processing end", "duration", time.Since(started), "last_processed_new", lastProcessed)
+	s.logger.Debug("code processing end", "duration", time.Since(started))
 
 	return nil
 
 }
 
-func (s *Export) getCommitsSeen() map[plumbing.Hash]bool {
-	data := s.lastProcessedGet("commits_seen")
-	res := map[plumbing.Hash]bool{}
-	if data == nil {
-		return res
-	}
-	for k, _ := range data.(map[string]interface{}) {
-		res[plumbing.NewHash(k)] = true
-	}
-	return res
-}
-
-func (s *Export) setCommitsSeen(data map[plumbing.Hash]bool) error {
-	res := map[string]bool{}
-	for k, _ := range data {
-		res[k.String()] = true
-	}
-	return s.lastProcessedSet(res, "commits_seen")
-}
-
-func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA string, _ error) {
+func (s *Export) processCode(commits chan commits.Commit) error {
 	sessions := s.opts.Sessions
 
-	writeBlame := func(obj sourcecode.Blame) error {
-		return sessions.Write(s.sessions.Blame, []map[string]interface{}{
-			obj.ToMap(),
-		})
-	}
 	writeCommit := func(obj sourcecode.Commit) error {
 		return sessions.Write(s.sessions.Commit, []map[string]interface{}{
 			obj.ToMap(),
@@ -503,7 +508,6 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 		if obj2 == nil {
 			return nil
 		}
-
 		return sessions.Write(s.sessions.CommitUser, []map[string]interface{}{
 			obj2,
 		})
@@ -514,149 +518,6 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 	repoID := s.opts.RepoID
 
 	for commit := range commits {
-		lastProcessedSHA = commit.SHA
-
-		var commitAdditions int64
-		var commitDeletions int64
-		var commitCommentsCount int64
-		var commitFilesCount int64
-		var commitSlocCount int64
-		var commitLocCount int64
-		var commitBlanksCount int64
-		var commitSize int64
-		var commitComplexityCount int64
-
-		ordinal := datetime.EpochNow()
-		commitFiles := []sourcecode.CommitFiles{}
-		var excludedFilesCount int64
-		for blame := range commit.Blames {
-			//var license string
-			var licenseConfidence float32
-			if blame.License != nil {
-				//license = fmt.Sprintf("%v (%.0f%%)", blame.License.Name, 100*blame.License.Confidence)
-				licenseConfidence = blame.License.Confidence
-			}
-			lines := []sourcecode.BlameLines{}
-			var sloc, loc, comments, blanks int64
-			for _, line := range blame.Lines {
-				lines = append(lines, sourcecode.BlameLines{
-					Sha:         line.SHA,
-					AuthorRefID: line.Email,
-					Date:        line.Date.Format("2006-01-02T15:04:05.000000Z-07:00"),
-					Comment:     line.Comment,
-					Code:        line.Code,
-					Blank:       line.Blank,
-				})
-				loc++
-				if line.Code {
-					sloc++ // safety check below
-				}
-				if line.Comment {
-					comments++
-				}
-				if line.Blank {
-					blanks++
-				}
-			} // safety check
-			if blame.Sloc != sloc {
-				panic("logic problem: sloc didn't match")
-			}
-
-			commitCommentsCount += comments
-			commitSlocCount += sloc
-			commitLocCount += loc
-			commitBlanksCount += blanks
-
-			cf := commit.Files[blame.Filename]
-			if blame.Language == "" {
-				blame.Language = unknownLanguage
-			}
-			excluded := blame.Skipped != ""
-
-			if excluded {
-				excludedFilesCount++
-			}
-			commitAdditions += int64(cf.Additions)
-			commitDeletions += int64(cf.Deletions)
-			var lic string
-			if blame.License != nil {
-				lic = blame.License.Name
-			}
-
-			{
-				file := sourcecode.CommitFiles{
-					CommitID:          s.commitID(commit.SHA),
-					RepoID:            repoID,
-					Status:            string(cf.Status),
-					Ordinal:           ordinal,
-					Filename:          cf.Filename,
-					Language:          blame.Language,
-					Renamed:           cf.Renamed,
-					RenamedFrom:       cf.RenamedFrom,
-					RenamedTo:         cf.RenamedTo,
-					Additions:         int64(cf.Additions),
-					Deletions:         int64(cf.Deletions),
-					Binary:            cf.Binary,
-					Excluded:          blame.Skipped != "",
-					ExcludedReason:    blame.Skipped,
-					License:           lic,
-					LicenseConfidence: float64(licenseConfidence),
-					Size:              blame.Size,
-					Loc:               blame.Loc,
-					Sloc:              blame.Sloc,
-					Comments:          blame.Comments,
-					Blanks:            blame.Blanks,
-					Complexity:        blame.Complexity,
-				}
-				date.ConvertToModel(commit.Date, &file.CreatedDate)
-				commitFiles = append(commitFiles, file)
-			}
-
-			commitComplexityCount += blame.Complexity
-			commitSize += blame.Size
-			commitFilesCount++
-			// if exclude but not deleted, we don't need to write to commit activity
-			// we need to write to commit_activity for deleted so we can track the last
-			// deleted commit so sloc will add correctly to reflect the deleted sloc
-			if excluded && cf.Status != ripsrc.GitFileCommitStatusRemoved {
-				continue
-			}
-
-			// pipeline does not need sourcecode.Blame data at the moment
-			// skip writing it
-			if false {
-				bl := sourcecode.Blame{
-					Status:         statusFromRipsrc(blame.Status),
-					License:        &lic,
-					Excluded:       blame.Skipped != "",
-					ExcludedReason: blame.Skipped,
-					CommitID:       s.commitID(commit.SHA),
-					RefID:          commit.SHA,
-					RefType:        s.opts.RefType,
-					CustomerID:     customerID,
-					Hashcode:       "",
-					Size:           blame.Size,
-					Loc:            int64(loc),
-					Sloc:           int64(sloc),
-					Blanks:         int64(blanks),
-					Comments:       int64(comments),
-					Filename:       blame.Filename,
-					Language:       blame.Language,
-					Sha:            commit.SHA,
-					RepoID:         repoID,
-					Complexity:     blame.Complexity,
-					Lines:          lines,
-				}
-				date.ConvertToModel(commit.Date, &bl.ChangeDate)
-				err := writeBlame(bl)
-				if err != nil {
-					return "", err
-				}
-			}
-
-			ordinal++
-		}
-
 		c := sourcecode.Commit{
 			RefID:          commit.SHA,
 			RefType:        s.opts.RefType,
@@ -665,71 +526,42 @@ func (s *Export) processCode(commits chan ripsrc.CommitCode) (lastProcessedSHA s
 			Sha:            commit.SHA,
 			Message:        commit.Message,
 			URL:            commitURL(s.opts.CommitURLTemplate, commit.SHA),
-			Additions:      commitAdditions,
-			Deletions:      commitDeletions,
-			FilesChanged:   commitFilesCount,
-			AuthorRefID:    ids.CodeCommitEmail(customerID, commit.AuthorEmail),
-			CommitterRefID: ids.CodeCommitEmail(customerID, commit.CommitterEmail),
-			Ordinal:        commit.Ordinal,
-			Loc:            commitLocCount,
-			Sloc:           commitSlocCount,
-			Comments:       commitCommentsCount,
-			Blanks:         commitBlanksCount,
-			Size:           commitSize,
-			Complexity:     commitComplexityCount,
-			Excluded:       excludedFilesCount == commitFilesCount,
-			Files:          commitFiles,
+			AuthorRefID:    ids.CodeCommitEmail(customerID, commit.Authored.Email),
+			CommitterRefID: ids.CodeCommitEmail(customerID, commit.Committed.Email),
 		}
 
-		date.ConvertToModel(commit.Date, &c.CreatedDate)
+		date.ConvertToModel(commit.Committed.Date, &c.CreatedDate)
 
 		err := writeCommit(c)
 		if err != nil {
-			return "", err
+			return err
 		}
 
-		if commit.AuthorEmail != "" {
+		if commit.Authored.Email != "" {
 			author := commitusers.CommitUser{}
 			author.CustomerID = customerID
-			author.Email = commit.AuthorEmail
-			author.Name = commit.AuthorName
+			author.Email = commit.Authored.Email
+			author.Name = commit.Authored.Name
 			err := writeCommitUser(author)
 			if err != nil {
-				return "", err
+				return err
 			}
 		}
 
-		if commit.CommitterEmail != "" {
+		if commit.Committed.Email != "" {
 			author := commitusers.CommitUser{}
 			author.CustomerID = customerID
-			author.Email = commit.CommitterEmail
-			author.Name = commit.CommitterName
+			author.Email = commit.Committed.Email
+			author.Name = commit.Committed.Name
 			err := writeCommitUser(author)
 			if err != nil {
-				return "", err
+				return err
 			}
 		}
 
 	}
 
-	return
-}
-
-const (
-	unknownUser     = "unknown-deleter"
-	unknownLanguage = "unknown"
-)
-
-func statusFromRipsrc(status ripsrc.CommitStatus) sourcecode.BlameStatus {
-	switch status {
-	case ripsrc.GitFileCommitStatusAdded:
-		return sourcecode.BlameStatusAdded
-	case ripsrc.GitFileCommitStatusModified:
-		return sourcecode.BlameStatusModified
-	case ripsrc.GitFileCommitStatusRemoved:
-		return sourcecode.BlameStatusRemoved
-	}
-	return 0
+	return nil
 }
 
 func commitURL(commitURLTemplate, sha string) string {
