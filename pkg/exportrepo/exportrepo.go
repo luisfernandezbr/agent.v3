@@ -157,7 +157,12 @@ type state struct {
 
 func (s *Export) loadState() error {
 	s.store = filestore.New(s.locs.RipsrcCheckpoints)
-	return s.store.Get(s.opts.RepoID, &s.state)
+	err := s.store.Get(s.opts.RepoID, &s.state)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("state commits", len(s.state.Commits.CommitsSeen))
+	return nil
 }
 
 func (s *Export) saveState() error {

@@ -41,7 +41,7 @@ func (s *FileStore) Set(k string, data interface{}) error {
 }
 
 func (s *FileStore) Get(k string, obj interface{}) error {
-	b, err := ioutil.ReadFile(k)
+	b, err := ioutil.ReadFile(s.keyToPath(k))
 	if os.IsNotExist(err) {
 		return nil
 	}

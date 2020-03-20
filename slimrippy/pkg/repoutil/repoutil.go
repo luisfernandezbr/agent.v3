@@ -68,6 +68,9 @@ func RepoAllCommits(repo *git.Repository, useOrigin bool, seenExternal map[plumb
 		return
 	}
 	seen := map[plumbing.Hash]bool{}
+	for k := range seenExternal {
+		seen[k] = true
+	}
 	iter := func(c *object.Commit) object.CommitIter {
 		return object.NewCommitPreorderIter(c, seen, nil)
 	}
