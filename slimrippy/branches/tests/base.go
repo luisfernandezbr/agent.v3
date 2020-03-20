@@ -4,11 +4,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/pinpt/agent/slimrippy/branches"
-	"github.com/pinpt/agent/slimrippy/parentsgraph"
 	"github.com/pinpt/agent/slimrippy/pkg/testutil"
+	"github.com/pinpt/agent/slimrippy/slimrippy"
 )
 
 type Test struct {
@@ -36,27 +38,21 @@ func (s *Test) run() []branches.Branch {
 
 	ctx := context.Background()
 	repoDir := dirs.RepoDir
-	//log := logger.NewDefaultLogger(os.Stdout)
 
-	commitGraph := parentsgraph.New(parentsgraph.Opts{
-		RepoDir:     repoDir,
-		AllBranches: true,
-		//Logger:      log,
-	})
-	err := commitGraph.Read()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	opts := branches.Opts{}
-	if s.opts != nil {
-		opts = *s.opts
-	}
-	//opts.Logger = logger.NewDefaultLogger(os.Stdout)
-	opts.Concurrency = 1
+	res := []branches.Branch{}
+	opts := slimrippy.Opts{}
+	opts.Logger = hclog.NewNullLogger()
 	opts.RepoDir = repoDir
-	opts.CommitGraph = commitGraph
-	res, err := branches.New(opts).RunSlice(ctx)
+	if s.opts != nil {
+		opts.BranchOpts = s.opts
+	} else {
+		opts.BranchOpts = &branches.Opts{}
+	}
+	opts.BranchCallback = func(b branches.Branch) error {
+		res = append(res, b)
+		return nil
+	}
+	_, err := slimrippy.CommitsAndBranches(ctx, opts)
 	if err != nil {
 		t.Fatal(err)
 	}
