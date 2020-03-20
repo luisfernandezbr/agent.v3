@@ -207,6 +207,30 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		return
 	}
 
+	issueTypesSender, err := objsender.Root(s.agent, work.IssueTypeModelName.String())
+	err = s.common.IssueTypes(issueTypesSender)
+	if err != nil {
+		rerr = err
+		return
+	}
+	err = issueTypesSender.Done()
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	issuePrioritiesSender, err := objsender.Root(s.agent, work.IssuePriorityModelName.String())
+	err = s.common.IssuePriorities(issuePrioritiesSender)
+	if err != nil {
+		rerr = err
+		return
+	}
+	err = issuePrioritiesSender.Done()
+	if err != nil {
+		rerr = err
+		return
+	}
+
 	err = s.common.ExportDone()
 	if err != nil {
 		rerr = err

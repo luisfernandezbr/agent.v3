@@ -11,6 +11,7 @@ func IssueComments(
 	qc QueryContext,
 	project Project,
 	issueRefID string,
+	issueKey string,
 	paginationParams url.Values) (pi PageInfo, resIssueComments []*work.IssueComment, rerr error) {
 
 	objectPath := "issue/" + issueRefID + "/comment"
@@ -81,7 +82,7 @@ func IssueComments(
 		item.UserRefID = authorID
 		item.Body = adjustRenderedHTML(qc.WebsiteURL, data.RenderedBody)
 
-		item.URL = data.Self
+		item.URL = qc.IssueCommentURL(issueKey, data.ID)
 
 		resIssueComments = append(resIssueComments, item)
 	}
