@@ -26,8 +26,9 @@ func Priorities(qc QueryContext) (res []work.IssuePriority, rerr error) {
 	// the result comes back in priority order from HIGH (0) to LOW (length-1)
 	// so we iterate backwards to make the highest first and the lowest last
 
-	for order := len(rawPriorities) - 1; order >= 0; order-- {
-		priority := rawPriorities[order]
+	var order int64
+	for i := len(rawPriorities) - 1; i >= 0; i-- {
+		priority := rawPriorities[i]
 		res = append(res, work.IssuePriority{
 			ID:          work.NewIssuePriorityID(qc.CustomerID, "jira", priority.ID),
 			CustomerID:  qc.CustomerID,
@@ -39,6 +40,7 @@ func Priorities(qc QueryContext) (res []work.IssuePriority, rerr error) {
 			RefType:     "jira",
 			RefID:       priority.ID,
 		})
+		order++
 	}
 
 	return

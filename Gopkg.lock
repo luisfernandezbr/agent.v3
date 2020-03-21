@@ -58,14 +58,6 @@
   version = "v3.6.1"
 
 [[projects]]
-  digest = "1:d1fe4f79a99ebe0558a1636207d8d5631a1f0757b03a5294ab8d0bee0d4fae52"
-  name = "github.com/boyter/scc"
-  packages = ["processor"]
-  pruneopts = "T"
-  revision = "20c82a1e689782c6a4d7b7b82095cf4f72cee71c"
-  version = "v2.8.0"
-
-[[projects]]
   digest = "1:c952f10089bb57d6e6d56d8880bcbb4d444b1d40b091354cb25b10a6c23b211a"
   name = "github.com/bxcodec/faker"
   packages = [
@@ -91,14 +83,6 @@
   pruneopts = "T"
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
   version = "v1.1.1"
-
-[[projects]]
-  digest = "1:9f92b4cbae6fe3764af82dae6585830f0e3557943db2aba92bd464b738e49e64"
-  name = "github.com/dbaggerman/cuba"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "28ed7f38430bad0643e20fed1bd875e3ddf2da30"
-  version = "v0.2.0"
 
 [[projects]]
   digest = "1:c9bf36533eae0865e0660d55387eb5105a359a466cf834e9983f1ed1d3e3bb9f"
@@ -293,14 +277,6 @@
   version = "v0.0.9"
 
 [[projects]]
-  branch = "master"
-  digest = "1:130cefe87d7eeefc824978dcb78e35672d4c49a11f25c153fbf0cfd952756fa3"
-  name = "github.com/minio/blake2b-simd"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "3f5f724cb5b182a5c278d6d3d55b40e7f8c2efb4"
-
-[[projects]]
   digest = "1:5d231480e1c64a726869bc4142d270184c419749d34f167646baa21008eb0a79"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
@@ -323,14 +299,6 @@
   pruneopts = "T"
   revision = "6d0b8010fcc857872e42fc6c931227569016843c"
   version = "v1.0.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:e7a1af77ee190b4c4558142e769a6ab5df14e9f5768119f630128cff9060df54"
-  name = "github.com/monochromegane/go-gitignore"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "38717d0a108ca0e5af632cd6845ca77d45b50729"
 
 [[projects]]
   digest = "1:9ec6cf1df5ad1d55cf41a43b6b1e7e118a91bade4f68ff4303379343e40c0e25"
@@ -369,14 +337,6 @@
   revision = "974d429e7ae40c89e7dcd41cfcc22a0bfbe42510"
 
 [[projects]]
-  digest = "1:5e73b34a27d827212102605789de00bd411b2e434812133c83935fe9897c75e1"
-  name = "github.com/philhofer/fwd"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "bb6d471dc95d4fe11e432687f8b70ff496cf3136"
-  version = "v1.0.0"
-
-[[projects]]
   digest = "1:33e491400e9a6a601c9a3a9fcc846736eb1b2b0246c0cf6e190356891fdef75e"
   name = "github.com/pinpt/go-common"
   packages = [
@@ -413,7 +373,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:2a19a6eacea6c8a47890c828b60e51ba1316606a0e91b4deeb400b418481cd76"
+  digest = "1:c0bf461bb23f16ec7ef4eedb76a0be84c90170b8688158e38ceae636845ed9c6"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -425,30 +385,19 @@
     "work",
   ]
   pruneopts = "T"
-  revision = "16491d04740339a61d97666738b0425d6ea9c62a"
-  version = "v0.0.793"
+  revision = "5aa5b847590434a039759778581bec9624353b19"
+  version = "v0.0.798"
 
 [[projects]]
   branch = "slim"
   digest = "1:17fd9fe61e35f8c50f53f3316340aa4a70de96a4d5542900bb36f7841a45e858"
   name = "github.com/pinpt/ripsrc"
   packages = [
-    "ripsrc",
-    "ripsrc/branches2",
-    "ripsrc/branchmeta",
-    "ripsrc/commitmeta",
-    "ripsrc/fileinfo",
-    "ripsrc/gitblame2",
     "ripsrc/gitexec",
-    "ripsrc/gittime",
-    "ripsrc/history3/incblame",
-    "ripsrc/history3/process",
-    "ripsrc/history3/process/parser",
-    "ripsrc/history3/process/repo",
-    "ripsrc/history3/process/repo/disk",
     "ripsrc/parentsgraph",
     "ripsrc/parentsgraph/parentsp",
     "ripsrc/pkg/logger",
+    "ripsrc/pkg/testutil",
   ]
   pruneopts = "T"
   revision = "28953a932bfa83d084f67b72f2268a9c5d651c4b"
@@ -518,36 +467,12 @@
   version = "v1.4.0"
 
 [[projects]]
-  digest = "1:023a84fdb93c34a143959a899180452531c5cc852ba0b8f3bfd79118c2708cfa"
-  name = "github.com/src-d/go-oniguruma"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "304256cb638a6afd1cc7d6810be34447abc398bf"
-  version = "v1.1.0"
-
-[[projects]]
   digest = "1:1d6f160431ac08b6e39b374f2ae9e00c9780cd604d65a5364d7304cd939efd0c"
   name = "github.com/stretchr/testify"
   packages = ["assert"]
   pruneopts = "T"
   revision = "221dbe5ed46703ee255b1da0dec05086f5035f62"
   version = "v1.4.0"
-
-[[projects]]
-  digest = "1:4b8aca632b0cbe5c0d66319f925fa3905b1667e2555f1d641379bc0d9f5be67c"
-  name = "github.com/tinylib/msgp"
-  packages = ["msgp"]
-  pruneopts = "T"
-  revision = "af6442a0fcf6e2a1b824f70dd0c734f01e817751"
-  version = "v1.1.0"
-
-[[projects]]
-  digest = "1:5a732e85cb3ccd95056ac8885ccb4ce646354c9030df90c0f0b23cae23b4121a"
-  name = "github.com/toqueteos/trie"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "683ae57f27ac5c2afec902631ed8b9cda1d0f481"
-  version = "v1.0.0"
 
 [[projects]]
   digest = "1:172f94a6b3644a8f9e6b5e5b7fc9fe1e42d424f52a0300b2e7ab1e57db73f85d"
@@ -650,22 +575,14 @@
   packages = [
     "collate",
     "collate/build",
-    "feature/plural",
-    "internal",
-    "internal/catmsg",
     "internal/colltab",
-    "internal/format",
     "internal/gen",
     "internal/language",
     "internal/language/compact",
-    "internal/number",
-    "internal/stringset",
     "internal/tag",
     "internal/triegen",
     "internal/ucd",
     "language",
-    "message",
-    "message/catalog",
     "secure/bidirule",
     "transform",
     "unicode/bidi",
@@ -730,20 +647,6 @@
   version = "v1.23.1"
 
 [[projects]]
-  digest = "1:e6542eee59c7a80e1cce5cdba97a493727c21b1704f5b803b401843851bb5ce4"
-  name = "gopkg.in/src-d/enry.v1"
-  packages = [
-    ".",
-    "data",
-    "data/rule",
-    "internal/tokenizer",
-    "regex",
-  ]
-  pruneopts = "T"
-  revision = "ab3c26b46dfaf8281bf78f2e998111e6a40829bf"
-  version = "v1.7.3"
-
-[[projects]]
   digest = "1:3e18b574bdf981761b8092326bbfca14b8d9108e3cc5b3cdf437c656a251f75c"
   name = "gopkg.in/src-d/go-billy.v4"
   packages = [
@@ -758,7 +661,7 @@
   version = "v4.3.2"
 
 [[projects]]
-  digest = "1:c865221e4d09f35284d21f7b53c24b3a97954efa665334d757eac3c8f7935e6a"
+  digest = "1:aac2c8dcc0cd7117c055bd889c188408b23784d936cc68be8ac46d454d15dec9"
   name = "gopkg.in/src-d/go-git.v4"
   packages = [
     ".",
@@ -804,16 +707,7 @@
     "utils/merkletrie/noder",
   ]
   pruneopts = "T"
-  revision = "0d1a009cbb604db18be960db5f1525b99a55d727"
-  version = "v4.13.1"
-
-[[projects]]
-  digest = "1:98e121dbd49eb03c58bd8ef3b76322b2fdc3676cf11fa0084bb17ff01b2aa704"
-  name = "gopkg.in/toqueteos/substring.v1"
-  packages = ["."]
-  pruneopts = "T"
-  revision = "c5f61671513240ddf5563635cc4a90e9f3ae4710"
-  version = "v1.0.2"
+  revision = "1a7db85bca7027d90afdb5ce711622aaac9feaed"
 
 [[projects]]
   digest = "1:78d374b493e747afa9fbb2119687e3740a7fb8d0ebabddfef0a012593aaecbb3"
@@ -872,8 +766,10 @@
     "github.com/pinpt/integration-sdk/customer",
     "github.com/pinpt/integration-sdk/sourcecode",
     "github.com/pinpt/integration-sdk/work",
-    "github.com/pinpt/ripsrc/ripsrc",
-    "github.com/pinpt/ripsrc/ripsrc/branchmeta",
+    "github.com/pinpt/ripsrc/ripsrc/gitexec",
+    "github.com/pinpt/ripsrc/ripsrc/parentsgraph",
+    "github.com/pinpt/ripsrc/ripsrc/pkg/logger",
+    "github.com/pinpt/ripsrc/ripsrc/pkg/testutil",
     "github.com/songgao/stacktraces/on/SIGUSR2",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
@@ -881,7 +777,9 @@
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/status",
+    "gopkg.in/src-d/go-git.v4",
     "gopkg.in/src-d/go-git.v4/plumbing",
+    "gopkg.in/src-d/go-git.v4/plumbing/object",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
