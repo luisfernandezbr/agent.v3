@@ -1,6 +1,9 @@
 package jiracommonapi
 
-import "github.com/pinpt/integration-sdk/work"
+import (
+	ps "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/integration-sdk/work"
+)
 
 func Priorities(qc QueryContext) (res []work.IssuePriority, rerr error) {
 
@@ -29,9 +32,9 @@ func Priorities(qc QueryContext) (res []work.IssuePriority, rerr error) {
 			ID:          work.NewIssuePriorityID(qc.CustomerID, "jira", priority.ID),
 			CustomerID:  qc.CustomerID,
 			Name:        priority.Name,
-			Description: &priority.Description,
-			IconURL:     &priority.Icon,
-			Color:       &priority.Color,
+			Description: ps.Pointer(priority.Description),
+			IconURL:     ps.Pointer(priority.Icon),
+			Color:       ps.Pointer(priority.Color),
 			Order:       int64(1 + order), // we use 0 for no order so offset by one to make the last != 0
 			RefType:     "jira",
 			RefID:       priority.ID,

@@ -1,6 +1,9 @@
 package jiracommonapi
 
-import "github.com/pinpt/integration-sdk/work"
+import (
+	ps "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/integration-sdk/work"
+)
 
 func getMappedIssueType(name string, subtask bool) work.IssueTypeMappedType {
 	if subtask {
@@ -53,8 +56,8 @@ func IssueTypes(qc QueryContext) (res []work.IssueType, rerr error) {
 				ID:          work.NewIssueTypeID(qc.CustomerID, "jira", val.ID),
 				CustomerID:  qc.CustomerID,
 				Name:        val.Name,
-				Description: &val.Description,
-				IconURL:     &val.Icon,
+				Description: ps.Pointer(val.Description),
+				IconURL:     ps.Pointer(val.Icon),
 				MappedType:  getMappedIssueType(val.Name, val.Subtask),
 				RefType:     "jira",
 				RefID:       val.ID,
