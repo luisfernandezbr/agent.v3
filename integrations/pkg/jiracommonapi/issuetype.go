@@ -47,22 +47,17 @@ func IssueTypes(qc QueryContext) (res []work.IssueType, rerr error) {
 		return
 	}
 
-	found := make(map[string]bool)
-
 	for _, val := range issueTypes {
-		if !found[val.Name] {
-			found[val.Name] = true // can have duplicates scoped by project id which we might want to support in the future
-			res = append(res, work.IssueType{
-				ID:          work.NewIssueTypeID(qc.CustomerID, "jira", val.ID),
-				CustomerID:  qc.CustomerID,
-				Name:        val.Name,
-				Description: ps.Pointer(val.Description),
-				IconURL:     ps.Pointer(val.Icon),
-				MappedType:  getMappedIssueType(val.Name, val.Subtask),
-				RefType:     "jira",
-				RefID:       val.ID,
-			})
-		}
+		res = append(res, work.IssueType{
+			ID:          work.NewIssueTypeID(qc.CustomerID, "jira", val.ID),
+			CustomerID:  qc.CustomerID,
+			Name:        val.Name,
+			Description: ps.Pointer(val.Description),
+			IconURL:     ps.Pointer(val.Icon),
+			MappedType:  getMappedIssueType(val.Name, val.Subtask),
+			RefType:     "jira",
+			RefID:       val.ID,
+		})
 	}
 
 	return
