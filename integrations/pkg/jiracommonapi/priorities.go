@@ -1,6 +1,9 @@
 package jiracommonapi
 
-import "github.com/pinpt/integration-sdk/work"
+import (
+	ps "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/integration-sdk/work"
+)
 
 func Priorities(qc QueryContext) (res []work.IssuePriority, rerr error) {
 
@@ -23,19 +26,21 @@ func Priorities(qc QueryContext) (res []work.IssuePriority, rerr error) {
 	// the result comes back in priority order from HIGH (0) to LOW (length-1)
 	// so we iterate backwards to make the highest first and the lowest last
 
-	for order := len(rawPriorities) - 1; order >= 0; order-- {
-		priority := rawPriorities[order]
+	var order int64
+	for i := len(rawPriorities) - 1; i >= 0; i-- {
+		priority := rawPriorities[i]
 		res = append(res, work.IssuePriority{
 			ID:          work.NewIssuePriorityID(qc.CustomerID, "jira", priority.ID),
 			CustomerID:  qc.CustomerID,
 			Name:        priority.Name,
-			Description: &priority.Description,
-			IconURL:     &priority.Icon,
-			Color:       &priority.Color,
+			Description: ps.Pointer(priority.Description),
+			IconURL:     ps.Pointer(priority.Icon),
+			Color:       ps.Pointer(priority.Color),
 			Order:       int64(1 + order), // we use 0 for no order so offset by one to make the last != 0
 			RefType:     "jira",
 			RefID:       priority.ID,
 		})
+		order++
 	}
 
 	return
