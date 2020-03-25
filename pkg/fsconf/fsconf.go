@@ -74,8 +74,8 @@ func New(pinpointRoot string) Locs {
 
 	s.RepoCache = j(s.Cache, "repos")
 
-	s.CleanupDirs = append(s.CleanupDirs, j(s.Root, "state", "v1"))
-	s.State = j(s.Root, "state", "v2")
+	s.CleanupDirs = append(s.CleanupDirs, j(s.Root, "state", "v1"), j(s.Root, "state", "v2"))
+	s.State = j(s.Root, "state", "v3")
 
 	s.Uploads = j(s.State, "uploads")
 	s.UploadZips = j(s.State, "upload-zips")
