@@ -76,7 +76,7 @@ func New(pinpointRoot string) Locs {
 
 	stateVer := 4
 	for i := 1; i< stateVer; i++ {
-		s.CleanupDirs = append(s.CleanupDirs, j(s.Root, "state", "v" + strconv.Itoa(i)),
+		s.CleanupDirs = append(s.CleanupDirs, j(s.Root, "state", "v" + strconv.Itoa(i))
 	}
 	s.State = j(s.Root, "state", "v" + strconv.Itoa(stateVer))
 
