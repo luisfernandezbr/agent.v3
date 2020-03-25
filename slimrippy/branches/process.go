@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"runtime"
 	"strings"
 	"sync"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/slimrippy/branchmeta"
 
 	"github.com/pinpt/agent/slimrippy/parentsgraph"
@@ -66,6 +68,7 @@ type Branch struct {
 }
 
 type Opts struct {
+	Logger hclog.Logger
 	// Logger outputs logs.
 	//Logger logger.Logger
 	// IncludeDefaultBranch if default branch should be included in results.
@@ -121,13 +124,22 @@ func (s *Process) Run(ctx context.Context, res chan Branch) error {
 		if err != nil {
 			return err
 		}
-		res <- Branch{
-			BranchID:    branchID(s.defaultBranch.Name, nil),
-			Name:        s.defaultBranch.Name,
-			HeadSHA:     s.defaultBranch.Commit,
-			IsDefault:   true,
-			Commits:     getAllCommits(s.opts.CommitGraph, s.defaultBranch.Commit),
-			FirstCommit: firstCommit,
+		commits, err := getAllCommits(s.opts.CommitGraph, s.defaultBranch.Commit)
+		if err != nil {
+			if s.opts.Logger != nil {
+				s.opts.Logger.Error("could not get all commits for default branch", "name", s.defaultBranch.Name, "err", err)
+			} else {
+				return fmt.Errorf("could not get all commits for default branch, name: %v err: %v", s.defaultBranch.Name, err)
+			}
+		} else {
+			res <- Branch{
+				BranchID:    branchID(s.defaultBranch.Name, nil),
+				Name:        s.defaultBranch.Name,
+				HeadSHA:     s.defaultBranch.Commit,
+				IsDefault:   true,
+				Commits:     commits,
+				FirstCommit: firstCommit,
+			}
 		}
 	}
 
@@ -185,7 +197,7 @@ func uniqueStrings(arr1 []string) (res []string) {
 	return
 }
 
-func getAllCommits(gr *parentsgraph.Graph, head string) (res []string) {
+func getAllCommits(gr *parentsgraph.Graph, head string) (res []string, rerr error) {
 	done := map[string]bool{}
 	var rec func(string)
 	rec = func(h string) {
@@ -196,7 +208,8 @@ func getAllCommits(gr *parentsgraph.Graph, head string) (res []string) {
 		res = append(res, h)
 		par, ok := gr.Parents[h]
 		if !ok {
-			panic("commit not found in tree: " + h)
+			rerr = fmt.Errorf("commit not found in tree: %v", h)
+			return
 		}
 		// reverse order for better result ordering
 		for i := len(par) - 1; i >= 0; i-- {
