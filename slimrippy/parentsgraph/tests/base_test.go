@@ -1,18 +1,16 @@
 package tests
 
+/*
 import (
 	"context"
-	"os"
 	"reflect"
 	"sort"
 	"testing"
 
-	"github.com/pinpt/ripsrc/ripsrc/pkg/logger"
+	"github.com/pinpt/agent/slimrippy/branches"
+	"github.com/pinpt/agent/slimrippy/parentsgraph"
 
-	"github.com/pinpt/ripsrc/ripsrc/parentsgraph"
-
-	"github.com/pinpt/ripsrc/ripsrc/gitexec"
-	"github.com/pinpt/ripsrc/ripsrc/pkg/testutil"
+	"github.com/pinpt/agent/slimrippy/pkg/testutil"
 )
 
 type Test struct {
@@ -35,15 +33,14 @@ func (s *Test) Run() *parentsgraph.Graph {
 	defer dirs.Remove()
 
 	ctx := context.Background()
-	err := gitexec.Prepare(ctx, "git", dirs.RepoDir)
-	if err != nil {
-		t.Fatal(err)
-	}
 	opts := s.opts
 	if opts == nil {
 		opts = &parentsgraph.Opts{}
 	}
-	opts.Logger = logger.NewDefaultLogger(os.Stdout)
+	repoDir := dirs.RepoDir
+
+	res := []branches.Branch{}
+
 	opts.RepoDir = dirs.RepoDir
 	pg := parentsgraph.New(*opts)
 	err = pg.Read()
@@ -68,3 +65,4 @@ func assertEqualMaps(t *testing.T, wantMap, gotMap map[string][]string, label st
 		t.Errorf("invalid map %v\ngot\n%v\nwanted\n%v", label, gotMap, wantMap)
 	}
 }
+*/

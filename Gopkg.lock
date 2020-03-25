@@ -389,20 +389,6 @@
   version = "v0.0.801"
 
 [[projects]]
-  branch = "slim"
-  digest = "1:17fd9fe61e35f8c50f53f3316340aa4a70de96a4d5542900bb36f7841a45e858"
-  name = "github.com/pinpt/ripsrc"
-  packages = [
-    "ripsrc/gitexec",
-    "ripsrc/parentsgraph",
-    "ripsrc/parentsgraph/parentsp",
-    "ripsrc/pkg/logger",
-    "ripsrc/pkg/testutil",
-  ]
-  pruneopts = "T"
-  revision = "28953a932bfa83d084f67b72f2268a9c5d651c4b"
-
-[[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -766,10 +752,6 @@
     "github.com/pinpt/integration-sdk/customer",
     "github.com/pinpt/integration-sdk/sourcecode",
     "github.com/pinpt/integration-sdk/work",
-    "github.com/pinpt/ripsrc/ripsrc/gitexec",
-    "github.com/pinpt/ripsrc/ripsrc/parentsgraph",
-    "github.com/pinpt/ripsrc/ripsrc/pkg/logger",
-    "github.com/pinpt/ripsrc/ripsrc/pkg/testutil",
     "github.com/songgao/stacktraces/on/SIGUSR2",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",

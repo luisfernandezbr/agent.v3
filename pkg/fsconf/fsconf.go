@@ -2,6 +2,7 @@ package fsconf
 
 import (
 	"path/filepath"
+	"strconv"
 
 	homedir "github.com/mitchellh/go-homedir"
 )
@@ -74,8 +75,11 @@ func New(pinpointRoot string) Locs {
 
 	s.RepoCache = j(s.Cache, "repos")
 
-	s.CleanupDirs = append(s.CleanupDirs, j(s.Root, "state", "v1"), j(s.Root, "state", "v2"))
-	s.State = j(s.Root, "state", "v3")
+	stateVer := 4
+	for i := 1; i < stateVer; i++ {
+		s.CleanupDirs = append(s.CleanupDirs, j(s.Root, "state", "v"+strconv.Itoa(i)))
+	}
+	s.State = j(s.Root, "state", "v"+strconv.Itoa(stateVer))
 
 	s.Uploads = j(s.State, "uploads")
 	s.UploadZips = j(s.State, "upload-zips")

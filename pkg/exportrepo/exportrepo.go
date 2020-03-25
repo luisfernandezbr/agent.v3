@@ -232,7 +232,7 @@ func (s *Export) run(ctx context.Context) (duration ExportDuration, rerr error) 
 	}
 	s.state = state
 	duration.Ripsrc = time.Since(ripsrcStarted)
-	s.logger.Info("ripsrc finished", "duration", duration.Ripsrc, "repo", s.opts.UniqueName)
+	s.logger.Info("ripsrc finished", "duration", duration.Ripsrc.String(), "repo", s.opts.UniqueName)
 
 	err = s.saveState()
 	if err != nil {

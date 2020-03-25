@@ -3,6 +3,7 @@ package expsessions
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -42,6 +43,46 @@ func (s *MockWriter) Close() error {
 
 func (s *MockWriter) Rollback() error {
 	return nil
+}
+
+type MockWriters struct {
+	wr map[string]*MockWriter
+	mu sync.Mutex
+}
+
+func NewMockWriters() *MockWriters {
+	return &MockWriters{
+		wr: map[string]*MockWriter{},
+	}
+}
+
+func (s *MockWriters) NewWriter(modelName string, id ID) Writer {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.wr[modelName]; !ok {
+		s.wr[modelName] = NewMockWriter()
+	}
+	return s.wr[modelName]
+}
+
+func (s *MockWriters) DataByModel(modelName string) (res []map[string]interface{}) {
+	for _, m := range s.wr[modelName].Data {
+		res = append(res, m)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		a := res[i]["id"].(string)
+		b := res[j]["id"].(string)
+		return a < b
+	})
+	return
+}
+
+func (s *MockWriters) Data() map[string][]map[string]interface{} {
+	res := map[string][]map[string]interface{}{}
+	for modelName := range s.wr {
+		res[modelName] = s.DataByModel(modelName)
+	}
+	return res
 }
 
 type FileWriter struct {
