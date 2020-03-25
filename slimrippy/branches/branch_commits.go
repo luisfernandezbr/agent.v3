@@ -1,6 +1,7 @@
 package branches
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/pinpt/agent/slimrippy/parentsgraph"
@@ -33,7 +34,7 @@ func branchCommits(
 	gr *parentsgraph.Graph,
 	defaultHead string,
 	reachableFromHead reachableFromHead,
-	branchHead string) (commits []string, branchedFrom []string) {
+	branchHead string) (commits []string, branchedFrom []string, rerr error) {
 
 	if reachableFromHead[branchHead] {
 		// this is a merged commit, we would need to recreate reachableFromHead without merge commit
@@ -54,7 +55,8 @@ func branchCommits(
 			}
 			par, ok := gr.Parents[hash]
 			if !ok {
-				panic("commit not found in tree")
+				rerr = fmt.Errorf("commit not found in tree: %v", hash)
+				return
 			}
 			for _, p := range par {
 				rec(p)
@@ -75,7 +77,8 @@ func branchCommits(
 
 		par, ok := gr.Parents[hash]
 		if !ok {
-			panic("commit not found in tree: " + hash)
+			rerr = fmt.Errorf("commit not found in tree: %v", hash)
+			return
 		}
 		// reverse order for better result ordering (see tests)
 		for i := len(par) - 1; i >= 0; i-- {

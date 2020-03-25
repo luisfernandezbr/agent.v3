@@ -20,7 +20,10 @@ func TestProcessBranchBasic1(t *testing.T) {
 		"b1": []string{"m1"},
 	})
 	cache := newReachableFromHead(gr, "m1")
-	got, branchedFrom := branchCommits(gr, "m1", cache, "b1")
+	got, branchedFrom, err := branchCommits(gr, "m1", cache, "b1")
+	if err != nil {
+		t.Fatal(err)
+	}
 	assertCommits(t, got, []string{"b1"})
 	assertCommits(t, branchedFrom, []string{"m1"})
 }
@@ -33,7 +36,10 @@ func TestProcessBranchMerged1(t *testing.T) {
 		"m2": []string{"m1", "b2"},
 	})
 	cache := newReachableFromHead(gr, "m2")
-	got, branchedFrom := branchCommits(gr, "m2", cache, "b2")
+	got, branchedFrom, err := branchCommits(gr, "m2", cache, "b2")
+	if err != nil {
+		t.Fatal(err)
+	}
 	assertCommits(t, got, []string{"b1", "b2"})
 	assertCommits(t, branchedFrom, []string{"m1"})
 }
@@ -65,7 +71,10 @@ func TestProcessBranchMultipleFromMaster(t *testing.T) {
 		"b2": []string{"b1", "m2"},
 	})
 	cache := newReachableFromHead(gr, "m2")
-	got, branchedFrom := branchCommits(gr, "m2", cache, "b2")
+	got, branchedFrom, err := branchCommits(gr, "m2", cache, "b2")
+	if err != nil {
+		t.Fatal(err)
+	}
 	assertCommits(t, got, []string{"b1", "b2"})
 	// the result should not contain m2, because we also depend on m1 which is before m2
 	assertCommits(t, branchedFrom, []string{"m1"})
@@ -78,7 +87,10 @@ func TestProcessBranchSeparateRoot(t *testing.T) {
 		"b2": []string{"b1"},
 	})
 	cache := newReachableFromHead(gr, "m1")
-	got, branchedFrom := branchCommits(gr, "m1", cache, "b2")
+	got, branchedFrom, err := branchCommits(gr, "m1", cache, "b2")
+	if err != nil {
+		t.Fatal(err)
+	}
 	assertCommits(t, got, []string{"b1", "b2"})
 	assertCommits(t, branchedFrom, nil)
 }
@@ -113,7 +125,10 @@ func TestProcessBranchMultiBranch(t *testing.T) {
 		"d1": []string{"b1", "c1"},
 	})
 	cache := newReachableFromHead(gr, "m1")
-	got, branchedFrom := branchCommits(gr, "m1", cache, "d1")
+	got, branchedFrom, err := branchCommits(gr, "m1", cache, "d1")
+	if err != nil {
+		t.Fatal(err)
+	}
 	assertCommits(t, got, []string{"b1", "c1", "d1"})
 	assertCommits(t, branchedFrom, []string{"m1"})
 }
@@ -127,7 +142,10 @@ func TestProcessBranchMultiSource(t *testing.T) {
 		"b1": []string{"m2", "m3"},
 	})
 	cache := newReachableFromHead(gr, "m4")
-	got, branchedFrom := branchCommits(gr, "m4", cache, "b1")
+	got, branchedFrom, err := branchCommits(gr, "m4", cache, "b1")
+	if err != nil {
+		t.Fatal(err)
+	}
 	assertCommits(t, got, []string{"b1"})
 	assertCommits(t, branchedFrom, []string{"m2", "m3"})
 }
@@ -141,7 +159,10 @@ func TestProcessBranchDups(t *testing.T) {
 		"b4": []string{"b2", "b3"},
 	})
 	cache := newReachableFromHead(gr, "m1")
-	got, branchedFrom := branchCommits(gr, "m1", cache, "b4")
+	got, branchedFrom, err := branchCommits(gr, "m1", cache, "b4")
+	if err != nil {
+		t.Fatal(err)
+	}
 	assertCommits(t, got, []string{"b2", "b1", "b3", "b4"})
 	assertCommits(t, branchedFrom, []string{"m1"})
 }

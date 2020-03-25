@@ -13,7 +13,10 @@ func TestGetMergeCommit1(t *testing.T) {
 		"m2": []string{"m1", "b1"},
 	})
 	cache := newReachableFromHead(gr, "m2")
-	got := getMergeCommit(gr, cache, "b1")
+	got, err := getMergeCommit(gr, cache, "b1")
+	if err != nil {
+		t.Fatal(err)
+	}
 	want := "m2"
 	if got != want {
 		t.Errorf("wanted %v got %v", want, got)
@@ -27,7 +30,10 @@ func TestGetMergeCommit2(t *testing.T) {
 		"m2": []string{"m1", "b1"},
 	})
 	cache := newReachableFromHead(gr, "m1")
-	got := getMergeCommit(gr, cache, "b1")
+	got, err := getMergeCommit(gr, cache, "b1")
+	if err != nil {
+		t.Fatal(err)
+	}
 	want := ""
 	if got != want {
 		t.Errorf("wanted %v got %v", want, got)
@@ -43,7 +49,10 @@ func TestGetMergeCommit3(t *testing.T) {
 		"m4": []string{"m2", "m3"},
 	})
 	cache := newReachableFromHead(gr, "m4")
-	got := getMergeCommit(gr, cache, "b1")
+	got, err := getMergeCommit(gr, cache, "b1")
+	if err != nil {
+		t.Fatal(err)
+	}
 	want := "m2"
 	if got != want {
 		t.Errorf("wanted %v got %v", want, got)
