@@ -118,6 +118,7 @@ func CommitsAndBranches(ctx context.Context, opts Opts) (_ State, rerr error) {
 		}
 		bopts.CommitGraph = graph
 		bopts.RepoDir = opts.RepoDir
+		bopts.PullRequestSHAs = opts.PullRequestSHAs
 		b := branches.New(bopts)
 		err := b.Run(ctx, res)
 		<-done
