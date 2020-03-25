@@ -175,9 +175,13 @@ func (s *Process) Run(ctx context.Context, res chan Branch) error {
 				}
 				err = s.processBranch(ctx, nameAndHash, res)
 				if err != nil {
-					lastErrMu.Lock()
-					lastErr = err
-					lastErrMu.Unlock()
+					if s.opts.Logger != nil {
+						s.opts.Logger.Error("failed processing branch", "name", nameAndHash.Name, "h", nameAndHash.Commit)
+					} else {
+						lastErrMu.Lock()
+						lastErr = err
+						lastErrMu.Unlock()
+					}
 				}
 			}
 		}()
@@ -256,13 +260,20 @@ func (s *Process) processBranch(ctx context.Context, nameAndHash nameAndHash, re
 	res.HeadSHA = nameAndHash.Commit
 	res.Name = name
 	defaultHead := s.defaultBranch.Commit
-	res.Commits, res.BranchedFromCommits = branchCommits(gr, defaultHead, s.reachableFromHead, nameAndHash.Commit)
+	var err error
+	res.Commits, res.BranchedFromCommits, err = branchCommits(gr, defaultHead, s.reachableFromHead, nameAndHash.Commit)
+	if err != nil {
+		return err
+	}
 	if name != "" {
 		res.BranchID = branchID(res.Name, res.BranchedFromCommits)
 	}
 	if s.reachableFromHead[nameAndHash.Commit] {
 		res.IsMerged = true
-		res.MergeCommit = getMergeCommit(gr, s.reachableFromHead, nameAndHash.Commit)
+		res.MergeCommit, err = getMergeCommit(gr, s.reachableFromHead, nameAndHash.Commit)
+		if err != nil {
+			return err
+		}
 	} else {
 		if len(res.BranchedFromCommits) >= 1 {
 			res.BehindDefaultCount = behindBranch(gr, s.reachableFromHead, nameAndHash.Commit, defaultHead)
