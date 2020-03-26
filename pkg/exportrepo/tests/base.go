@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 
@@ -132,6 +133,7 @@ func (s *Test) Run(want map[string]interface{}) {
 			wantObj := want[i]
 			gotObj := got[i]
 			if !reflect.DeepEqual(gotObj, wantObj) {
+				t.Error("failed on", k)
 				t.Error("wanted ref_ids")
 				for _, obj := range want {
 					t.Error(obj["ref_id"])
@@ -159,19 +161,11 @@ type Model interface {
 	ToMap() map[string]interface{}
 }
 
-/*
-func assertResult(t *testing.T, want, got []branches.Branch) {
-	t.Helper()
-	if len(want) != len(got) {
-		t.Fatalf("invalid result count, wanted %v, got %v", len(want), len(got))
+func parseGitDate(s string) time.Time {
+	//Tue Nov 27 21:55:36 2018 +0100
+	r, err := time.Parse("Mon Jan 2 15:04:05 2006 -0700", s)
+	if err != nil {
+		panic(err)
 	}
-	gotCopy := make([]branches.Branch, len(got))
-	copy(gotCopy, got)
-
-	for i := range want {
-		g := gotCopy[i]
-		g.BranchID = "" // do not compare id
-		assert.Equal(t, want[i], g)
-	}
+	return r
 }
-*/

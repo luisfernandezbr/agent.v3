@@ -33,5 +33,3 @@ func TestBasic(t *testing.T) {
 
 	assertResult(t, []Commit{c2, c1}, got)
 }
-
-// TODO: func TestIncremental(t *testing.T)
