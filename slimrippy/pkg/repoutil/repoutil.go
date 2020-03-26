@@ -15,20 +15,7 @@ func RepoAllBranchIter(repo *git.Repository) (res []*plumbing.Reference, rerr er
 		rerr = err
 		return
 	}
-	hasRemotes := false
-	refIter.ForEach(func(r *plumbing.Reference) error {
-		name := string(r.Name())
-		if startsWith(name, "refs/remotes/origin/") {
-			hasRemotes = true
-		}
-		return nil
-	})
-	prefix := ""
-	if hasRemotes {
-		prefix = "refs/remotes/origin/"
-	} else {
-		prefix = "refs/heads/"
-	}
+	prefix := "refs/heads/"
 	refIter, err = repo.Storer.IterReferences()
 	if err != nil {
 		rerr = err

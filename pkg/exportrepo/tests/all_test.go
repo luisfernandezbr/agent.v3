@@ -10,7 +10,7 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func CommitCreatedDate(s string) (res sourcecode.CommitCreatedDate) {
+func CommitCreatedDateStr(s string) (res sourcecode.CommitCreatedDate) {
 	d, err := time.Parse(time.RFC3339, s)
 	if err != nil {
 		panic(err)
@@ -19,18 +19,23 @@ func CommitCreatedDate(s string) (res sourcecode.CommitCreatedDate) {
 	return
 }
 
+func CommitCreatedDate(d time.Time) (res sourcecode.CommitCreatedDate) {
+	date.ConvertToModel(d, &res)
+	return
+}
+
 func strp(v string) *string {
 	return &v
 }
 
-func TestBasic1(t *testing.T) {
+func TestExportRepoBasic1(t *testing.T) {
 	want := map[string]interface{}{}
 
 	want["sourcecode.Commit"] = []sourcecode.Commit{
 		{
 			AuthorRefID:    "562d0daa5e0b4946",
 			CommitterRefID: "562d0daa5e0b4946",
-			CreatedDate:    CommitCreatedDate("2019-02-07T20:17:18+01:00"),
+			CreatedDate:    CommitCreatedDateStr("2019-02-07T20:17:18+01:00"),
 			CustomerID:     "c1",
 			Message:        "c1",
 			RefID:          "33e223d1fd8393dc98596727d370e51e7b3b7fba",
@@ -42,7 +47,7 @@ func TestBasic1(t *testing.T) {
 		{
 			AuthorRefID:    "562d0daa5e0b4946",
 			CommitterRefID: "562d0daa5e0b4946",
-			CreatedDate:    CommitCreatedDate("2019-02-07T20:17:34+01:00"),
+			CreatedDate:    CommitCreatedDateStr("2019-02-07T20:17:34+01:00"),
 			CustomerID:     "c1",
 			Message:        "c2",
 			RefID:          "9b39087654af70197f68d0b3d196a4a20d987cd6",
@@ -110,7 +115,7 @@ func TestBasic1(t *testing.T) {
 	NewTest(t, "basic1", nil).Run(want)
 }
 
-func TestPullRequestBranches(t *testing.T) {
+func TestExportRepoPullRequestBranches(t *testing.T) {
 	pr1 := exportrepo.PR{
 		ID:            "prid",
 		RefID:         "prrefid",
@@ -127,7 +132,7 @@ func TestPullRequestBranches(t *testing.T) {
 		{
 			AuthorRefID:    "562d0daa5e0b4946",
 			CommitterRefID: "562d0daa5e0b4946",
-			CreatedDate:    CommitCreatedDate("2019-02-07T20:17:18+01:00"),
+			CreatedDate:    CommitCreatedDateStr("2019-02-07T20:17:18+01:00"),
 			CustomerID:     "c1",
 			Message:        "c1",
 			RefID:          "33e223d1fd8393dc98596727d370e51e7b3b7fba",
@@ -139,7 +144,7 @@ func TestPullRequestBranches(t *testing.T) {
 		{
 			AuthorRefID:    "562d0daa5e0b4946",
 			CommitterRefID: "562d0daa5e0b4946",
-			CreatedDate:    CommitCreatedDate("2019-02-07T20:17:34+01:00"),
+			CreatedDate:    CommitCreatedDateStr("2019-02-07T20:17:34+01:00"),
 			CustomerID:     "c1",
 			Message:        "c2",
 			RefID:          "9b39087654af70197f68d0b3d196a4a20d987cd6",
@@ -227,4 +232,72 @@ func TestPullRequestBranches(t *testing.T) {
 	}
 
 	NewTest(t, "basic1", opts).Run(want)
+}
+
+// The cloned repo here has remote set, make sure we don't export the remote branches of cloned repo
+func TestExportRemoteHasRemote(t *testing.T) {
+	want := map[string]interface{}{}
+
+	want["sourcecode.Commit"] = []sourcecode.Commit{
+		{
+			AuthorRefID:    "562d0daa5e0b4946",
+			CommitterRefID: "562d0daa5e0b4946",
+			CreatedDate:    CommitCreatedDate(parseGitDate("Thu Mar 26 15:08:20 2020 +0100")),
+			CustomerID:     "c1",
+			Message:        "m1",
+			RefID:          "63d8e58c077905aa51538184feb66852f02e2856",
+			RefType:        "git",
+			RepoID:         "r1",
+			Sha:            "63d8e58c077905aa51538184feb66852f02e2856",
+			URL:            "/commit/63d8e58c077905aa51538184feb66852f02e2856",
+		},
+		{
+			AuthorRefID:    "562d0daa5e0b4946",
+			CommitterRefID: "562d0daa5e0b4946",
+			CreatedDate:    CommitCreatedDate(parseGitDate("Thu Mar 26 15:09:24 2020 +0100")),
+			CustomerID:     "c1",
+			Message:        "m2",
+			RefID:          "0557506be087faa32994bf07ef7a559cf64123c9",
+			RefType:        "git",
+			RepoID:         "r1",
+			Sha:            "0557506be087faa32994bf07ef7a559cf64123c9",
+			URL:            "/commit/0557506be087faa32994bf07ef7a559cf64123c9",
+		},
+	}
+
+	want["sourcecode.Branch"] = []sourcecode.Branch{
+		{
+			AheadDefaultCount:      0,
+			BehindDefaultCount:     0,
+			BranchedFromCommitIds:  nil,
+			BranchedFromCommitShas: nil,
+			CommitIds:              []string{"5686481d1ab7515a", "7eda1448ad486ee0"},
+			CommitShas:             []string{"63d8e58c077905aa51538184feb66852f02e2856", "0557506be087faa32994bf07ef7a559cf64123c9"},
+			CustomerID:             "c1",
+			Default:                true,
+			FirstCommitID:          "5686481d1ab7515a",
+			FirstCommitSha:         "63d8e58c077905aa51538184feb66852f02e2856",
+			MergeCommitID:          "",
+			MergeCommitSha:         "",
+			Merged:                 false,
+			Name:                   "master",
+			RefID:                  "master",
+			RefType:                "git",
+			RepoID:                 "r1",
+			URL:                    "/branch/master",
+		},
+	}
+
+	want["sourcecode.CommitUser"] = []sourcecode.User{
+		{
+			ID:         "3272aa1f3e23245f",
+			RefID:      "562d0daa5e0b4946",
+			RefType:    "git",
+			CustomerID: "c1",
+			Email:      strp("none"),
+			Name:       "none",
+		},
+	}
+
+	NewTest(t, "remote-has-remote", nil).Run(want)
 }
