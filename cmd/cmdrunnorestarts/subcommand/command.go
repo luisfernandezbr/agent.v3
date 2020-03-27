@@ -171,7 +171,12 @@ func (c *Command) RunKeepLogFile(ctx context.Context, cmdname string, messageID 
 
 	cmd := exec.CommandContext(ctx, os.Args[0], flags...)
 	if messageID != "" {
-		ls := logsender.New(c.logger, c.agentConfig, cmdname, messageID)
+		opts := logsender.Opts{}
+		opts.Logger = c.logger
+		opts.Conf = c.agentConfig
+		opts.CmdName = cmdname
+		opts.MessageID = messageID
+		ls := logsender.New(opts)
 		defer func() {
 			err := ls.Close()
 			if err != nil {
