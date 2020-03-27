@@ -158,6 +158,9 @@ func (s *Sender) upload() {
 
 	var toSend2 [][]byte
 	for _, v := range toSend {
+		if len(v) == 0 {
+			continue
+		}
 		v2, err := s.opts.JSONLineConvert(v)
 		if err != nil {
 			s.logger.Error("could not convert keys for log message", "err", err, "v", string(v))
