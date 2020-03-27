@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"time"
 
+	ps "github.com/pinpt/go-common/strings"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/go-common/api"
@@ -130,7 +132,7 @@ func (s *Sender) upload() {
 		url = s.opts.URL
 	}
 
-	url += "/log/agent/" + s.opts.Conf.DeviceID + "/" + s.opts.MessageID
+	url = ps.JoinURL(url, "log/agent/"+s.opts.Conf.DeviceID+"/"+s.opts.MessageID)
 
 	//s.logger.Debug("uploading log", "size", len(s.buf), "url", url)
 
@@ -158,20 +160,31 @@ func (s *Sender) upload() {
 
 	var toSend2 [][]byte
 	for _, v := range toSend {
+		if len(v) == 0 {
+			continue
+		}
 		v2, err := s.opts.JSONLineConvert(v)
 		if err != nil {
-			s.logger.Error("could not convert keys for log message", "err", err)
+			s.logger.Error("could not convert keys for log message", "err", err, "v", string(v))
 			continue
 		}
 		toSend2 = append(toSend2, v2)
 	}
 	toSend = toSend2
 
+	if len(toSend) == 0 {
+		s.logger.Debug("nothing to send, all errors converting log message")
+		return
+	}
+
 	// gzip the bytes before sending
 	buf := &bytes.Buffer{}
 	gw := gzip.NewWriter(buf)
 
-	_, err := gw.Write(bytes.Join(toSend, nl))
+	reqData := bytes.Join(toSend, nl)
+	reqData = append(reqData, nl...)
+
+	_, err := gw.Write(reqData)
 	if err != nil {
 		perr(err)
 		return
@@ -202,7 +215,7 @@ func (s *Sender) upload() {
 
 	if resp.StatusCode != http.StatusAccepted {
 		buf, _ := ioutil.ReadAll(resp.Body)
-		s.logger.Error("error sending log", "err", err, "response", string(buf))
+		s.logger.Error("error sending log", "err", err, "response", string(buf), "req", string(reqData))
 		resp.Body.Close()
 		return
 	}
