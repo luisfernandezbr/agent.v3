@@ -160,12 +160,17 @@ func (s *Sender) upload() {
 	for _, v := range toSend {
 		v2, err := s.opts.JSONLineConvert(v)
 		if err != nil {
-			s.logger.Error("could not convert keys for log message", "err", err)
+			s.logger.Error("could not convert keys for log message", "err", err, "v", string(v))
 			continue
 		}
 		toSend2 = append(toSend2, v2)
 	}
 	toSend = toSend2
+
+	if len(toSend) == 0 {
+		s.logger.Debug("nothing to send, all errors converting log message")
+		return
+	}
 
 	// gzip the bytes before sending
 	buf := &bytes.Buffer{}
