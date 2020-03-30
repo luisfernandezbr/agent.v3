@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/pinpt/agent/pkg/gitclone"
@@ -22,7 +21,6 @@ type Opts struct {
 type AgentConfig = cmdintegration.AgentConfig
 
 func Run(opts Opts) error {
-	fmt.Println("validate config called", os.Args)
 	exp, err := newValidator(opts)
 	if err != nil {
 		return err
