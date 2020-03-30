@@ -7,8 +7,8 @@ import (
 	"github.com/pinpt/agent/pkg/expin"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent/pkg/exportrepo"
 	"github.com/pinpt/agent/rpcdef"
+	"github.com/pinpt/agent/slimrippy/exportrepo"
 )
 
 type Result struct {

@@ -1,4 +1,5 @@
 ## Performance
+Running using the following repo as example:
 https://github.com/kubernetes/kops
 Size: ~10k commits
 Initial: time to clone + 922ms processing
