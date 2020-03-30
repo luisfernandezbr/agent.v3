@@ -664,7 +664,12 @@
   branch = "master"
   digest = "1:36764e1761cf906c1320efccf9f6f8d8630e454d8021bb4077d2d6bb22f77e5b"
   name = "golang.org/x/exp"
-  packages = ["rand"]
+  packages = [
+    "errors",
+    "errors/fmt",
+    "errors/internal",
+    "rand",
+  ]
   pruneopts = "T"
   revision = "81c71964d733d2e3e2375a315c0e2fd4d162adc4"
 
@@ -1019,6 +1024,7 @@
     "github.com/songgao/stacktraces/on/SIGUSR2",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
+    "golang.org/x/exp/errors/fmt",
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/status",
