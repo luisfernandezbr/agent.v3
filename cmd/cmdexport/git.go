@@ -7,9 +7,9 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/expin"
-	"github.com/pinpt/agent/pkg/exportrepo"
 	"github.com/pinpt/agent/pkg/expsessions"
 	"github.com/pinpt/agent/pkg/gitclone"
+	"github.com/pinpt/agent/slimrippy/exportrepo"
 )
 
 func (s *export) gitSession(logger hclog.Logger, exp expin.Export) (_ expsessions.ID, rerr error) {

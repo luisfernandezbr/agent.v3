@@ -5,13 +5,26 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pinpt/agent/slimrippy/branches"
+	"github.com/pinpt/agent/slimrippy/internal/branchmeta"
+
+	"github.com/pinpt/agent/slimrippy/internal/branches"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent/slimrippy/commits"
-	"github.com/pinpt/agent/slimrippy/parentsgraph"
+	"github.com/pinpt/agent/slimrippy/internal/commits"
+	"github.com/pinpt/agent/slimrippy/internal/parentsgraph"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
+
+type Branch = branches.Branch
+type Commit = commits.Commit
+
+type BranchLastCommit = branchmeta.Branch
+
+func GetBranchesWithLastCommit(ctx context.Context, repoDir string) ([]BranchLastCommit, error) {
+	// internal interface has optional bool to skip default branch
+	// don't expose it to exportrepo
+	return branchmeta.GetAll(ctx, repoDir, true)
+}
 
 type State struct {
 	Commits commits.State
@@ -26,9 +39,6 @@ type Opts struct {
 
 	CommitCallback func(commits.Commit) error
 	BranchCallback func(branches.Branch) error
-
-	// for tests only
-	BranchOpts *branches.Opts
 }
 
 func CommitsAndBranches(ctx context.Context, opts Opts) (_ State, rerr error) {
@@ -111,12 +121,8 @@ func CommitsAndBranches(ctx context.Context, opts Opts) (_ State, rerr error) {
 			done <- true
 		}()
 		bopts := branches.Opts{}
-		if opts.BranchOpts != nil {
-			bopts = *opts.BranchOpts
-		} else {
-			bopts.IncludeDefaultBranch = true
-			bopts.PullRequestSHAs = opts.PullRequestSHAs
-		}
+		bopts.IncludeDefaultBranch = true
+		bopts.PullRequestSHAs = opts.PullRequestSHAs
 		bopts.Logger = opts.Logger
 		bopts.CommitGraph = graph
 		bopts.RepoDir = opts.RepoDir

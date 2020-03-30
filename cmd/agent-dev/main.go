@@ -22,8 +22,8 @@ import (
 	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/agent/pkg/jsonstore"
 
-	"github.com/pinpt/agent/pkg/exportrepo"
 	"github.com/pinpt/agent/pkg/gitclone"
+	"github.com/pinpt/agent/slimrippy/exportrepo"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/hash"
