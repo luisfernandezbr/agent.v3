@@ -48,7 +48,7 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 			return
 		}
 		err = api.AddComment(s.qc, obj.IssueRefID, obj.Body)
-		if err == nil {
+		if err != nil {
 			rerr = err
 			return
 		}

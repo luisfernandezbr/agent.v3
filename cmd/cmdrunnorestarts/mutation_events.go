@@ -60,17 +60,19 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 			return sendError(fmt.Errorf("error parsing header. err %v", err))
 		}
 
-		data := map[string]interface{}{
-			"name": req.IntegrationName,
-			"authorization": map[string]interface{}{
-				"authorization": req.Authorization.RefreshToken,
-			},
+		conf := inconfig.IntegrationAgent{}
+		//conf.ID  not setting id
+		conf.Name = req.IntegrationName
+		conf.Config.RefreshToken = req.Authorization.RefreshToken
+		if req.Authorization.URL != nil {
+			fmt.Println("not nil")
+			conf.Config.URL = *req.Authorization.URL
 		}
-
-		conf, err := inconfig.AuthFromEvent(data, s.conf.PPEncryptionKey)
+		fmt.Println("conf received", conf.Config.URL)
 		conf.Type = inconfig.IntegrationType(req.SystemType)
+		err = inconfig.ConvertEdgeCases(&conf)
 		if err != nil {
-			return sendError(err)
+			return sendError(fmt.Errorf("could not convert jira: %v", err))
 		}
 
 		var mutationData interface{}

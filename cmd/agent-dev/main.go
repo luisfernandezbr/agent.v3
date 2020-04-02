@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/pinpt/go-common/datetime"
 
 	"github.com/pinpt/agent/cmd/agent-dev/cmddownloadexports"
 	"github.com/pinpt/agent/cmd/agent-dev/cmddownloadlogs"
@@ -342,6 +345,24 @@ func init() {
 	cmd := cmdDecrypt
 	cmd.Flags().String("key", "", "Key")
 	cmd.Flags().String("message", "", "Message")
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdDate = &cobra.Command{
+	Use:   "date",
+	Short: "Print current date in a our format as sson",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		b, err := json.Marshal(datetime.NewDateNow())
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(b))
+	},
+}
+
+func init() {
+	cmd := cmdDate
 	cmdRoot.AddCommand(cmd)
 }
 
