@@ -387,12 +387,15 @@ func (s *Export) commitIDs(shas []string) (res []string) {
 
 const lpCommit = "commit"
 
+// CommitIdentifier creates the unique identifier as a combination of the unique repo name and a short sha for display purposes
+func CommitIdentifier(repoUniqueName string, sha string) string {
+	return repoUniqueName + "#" + sha[0:7]
+}
+
 func (s *Export) commit(commit slimrippy.Commit) error {
 	sessions := s.opts.Sessions
 
 	writeCommit := func(obj sourcecode.Commit) error {
-		// create the unique identifier as a combination of the unique repo name and a short sha for display purposes
-		obj.Identifier = s.opts.UniqueName + "#" + obj.Sha[0:7]
 		return sessions.Write(s.sessions.Commit, []map[string]interface{}{
 			obj.ToMap(),
 		})
@@ -426,6 +429,7 @@ func (s *Export) commit(commit slimrippy.Commit) error {
 		URL:            commitURL(s.opts.CommitURLTemplate, commit.SHA),
 		AuthorRefID:    ids.CodeCommitEmail(customerID, commit.Authored.Email),
 		CommitterRefID: ids.CodeCommitEmail(customerID, commit.Committed.Email),
+		Identifier:     CommitIdentifier(s.opts.UniqueName, commit.SHA),
 	}
 
 	date.ConvertToModel(commit.Committed.Date, &c.CreatedDate)

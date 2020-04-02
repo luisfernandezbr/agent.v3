@@ -24,10 +24,11 @@ import (
 )
 
 type Opts struct {
-	T        *testing.T
-	RepoName string
-	Export   *exportrepo.Opts
-	Want     map[string]interface{}
+	T              *testing.T
+	RepoName       string
+	RepoUniqueName string // if not set same as reponame used to get the zip file
+	Export         *exportrepo.Opts
+	Want           map[string]interface{}
 
 	IncrementalStep1 bool
 	Dirs             *TestDirs
@@ -75,6 +76,9 @@ func Run(opts Opts) *TestDirs {
 	eo.Sessions = sessions
 	eo.RepoID = "r1"
 	eo.UniqueName = repoName
+	if opts.RepoUniqueName != "" {
+		eo.UniqueName = opts.RepoUniqueName
+	}
 	eo.CustomerID = "c1"
 	eo.LastProcessed = lastProcessed
 	eo.CommitURLTemplate = "/commit/@@@sha@@@"

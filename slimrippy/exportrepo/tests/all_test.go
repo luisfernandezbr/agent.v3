@@ -31,6 +31,12 @@ func strp(v string) *string {
 func TestExportRepoBasic1(t *testing.T) {
 	want := map[string]interface{}{}
 
+	repoName := "basic1"
+
+	commitIdentifier := func(sha string) string {
+		return exportrepo.CommitIdentifier(repoName, sha)
+	}
+
 	want["sourcecode.Commit"] = []sourcecode.Commit{
 		{
 			AuthorRefID:    "562d0daa5e0b4946",
@@ -43,6 +49,7 @@ func TestExportRepoBasic1(t *testing.T) {
 			RepoID:         "r1",
 			Sha:            "33e223d1fd8393dc98596727d370e51e7b3b7fba",
 			URL:            "/commit/33e223d1fd8393dc98596727d370e51e7b3b7fba",
+			Identifier:     commitIdentifier("33e223d1fd8393dc98596727d370e51e7b3b7fba"),
 		},
 		{
 			AuthorRefID:    "562d0daa5e0b4946",
@@ -55,6 +62,7 @@ func TestExportRepoBasic1(t *testing.T) {
 			RepoID:         "r1",
 			Sha:            "9b39087654af70197f68d0b3d196a4a20d987cd6",
 			URL:            "/commit/9b39087654af70197f68d0b3d196a4a20d987cd6",
+			Identifier:     commitIdentifier("9b39087654af70197f68d0b3d196a4a20d987cd6"),
 		},
 	}
 
@@ -114,12 +122,19 @@ func TestExportRepoBasic1(t *testing.T) {
 
 	opts := Opts{}
 	opts.T = t
-	opts.RepoName = "basic1"
+	opts.RepoName = repoName
 	opts.Want = want
 	Run(opts)
 }
 
 func TestExportRepoPullRequestBranches(t *testing.T) {
+
+	repoName := "basic1"
+
+	commitIdentifier := func(sha string) string {
+		return exportrepo.CommitIdentifier(repoName, sha)
+	}
+
 	pr1 := exportrepo.PR{
 		ID:            "prid",
 		RefID:         "prrefid",
@@ -144,6 +159,7 @@ func TestExportRepoPullRequestBranches(t *testing.T) {
 			RepoID:         "r1",
 			Sha:            "33e223d1fd8393dc98596727d370e51e7b3b7fba",
 			URL:            "/commit/33e223d1fd8393dc98596727d370e51e7b3b7fba",
+			Identifier:     commitIdentifier("33e223d1fd8393dc98596727d370e51e7b3b7fba"),
 		},
 		{
 			AuthorRefID:    "562d0daa5e0b4946",
@@ -156,6 +172,7 @@ func TestExportRepoPullRequestBranches(t *testing.T) {
 			RepoID:         "r1",
 			Sha:            "9b39087654af70197f68d0b3d196a4a20d987cd6",
 			URL:            "/commit/9b39087654af70197f68d0b3d196a4a20d987cd6",
+			Identifier:     commitIdentifier("9b39087654af70197f68d0b3d196a4a20d987cd6"),
 		},
 	}
 
@@ -237,7 +254,7 @@ func TestExportRepoPullRequestBranches(t *testing.T) {
 
 	opts := Opts{}
 	opts.T = t
-	opts.RepoName = "basic1"
+	opts.RepoName = repoName
 	opts.Want = want
 	opts.Export = exportOpts
 	Run(opts)
@@ -245,6 +262,13 @@ func TestExportRepoPullRequestBranches(t *testing.T) {
 
 // The cloned repo here has remote set, make sure we don't export the remote branches of cloned repo
 func TestExportRemoteHasRemote(t *testing.T) {
+
+	repoName := "remote-has-remote"
+
+	commitIdentifier := func(sha string) string {
+		return exportrepo.CommitIdentifier(repoName, sha)
+	}
+
 	want := map[string]interface{}{}
 
 	want["sourcecode.Commit"] = []sourcecode.Commit{
@@ -259,6 +283,7 @@ func TestExportRemoteHasRemote(t *testing.T) {
 			RepoID:         "r1",
 			Sha:            "63d8e58c077905aa51538184feb66852f02e2856",
 			URL:            "/commit/63d8e58c077905aa51538184feb66852f02e2856",
+			Identifier:     commitIdentifier("63d8e58c077905aa51538184feb66852f02e2856"),
 		},
 		{
 			AuthorRefID:    "562d0daa5e0b4946",
@@ -271,6 +296,7 @@ func TestExportRemoteHasRemote(t *testing.T) {
 			RepoID:         "r1",
 			Sha:            "0557506be087faa32994bf07ef7a559cf64123c9",
 			URL:            "/commit/0557506be087faa32994bf07ef7a559cf64123c9",
+			Identifier:     commitIdentifier("0557506be087faa32994bf07ef7a559cf64123c9"),
 		},
 	}
 
@@ -310,12 +336,19 @@ func TestExportRemoteHasRemote(t *testing.T) {
 
 	opts := Opts{}
 	opts.T = t
-	opts.RepoName = "remote-has-remote"
+	opts.RepoName = repoName
 	opts.Want = want
 	Run(opts)
 }
 
 func TestExportRepoIncremental1(t *testing.T) {
+
+	repoName := "basic-incremental1"
+
+	commitIdentifier := func(sha string) string {
+		return exportrepo.CommitIdentifier(repoName, sha)
+	}
+
 	opts := Opts{}
 	opts.T = t
 	opts.RepoName = "basic1"
@@ -336,6 +369,7 @@ func TestExportRepoIncremental1(t *testing.T) {
 			RepoID:         "r1",
 			Sha:            "63b0ac79015985fe248ba0ea3e34fa464fae1b7a",
 			URL:            "/commit/63b0ac79015985fe248ba0ea3e34fa464fae1b7a",
+			Identifier:     commitIdentifier("63b0ac79015985fe248ba0ea3e34fa464fae1b7a"),
 		},
 	}
 
@@ -400,7 +434,7 @@ func TestExportRepoIncremental1(t *testing.T) {
 
 	opts = Opts{}
 	opts.T = t
-	opts.RepoName = "basic-incremental1"
+	opts.RepoName = repoName
 	opts.Dirs = dirs
 	opts.Want = want
 
@@ -408,6 +442,13 @@ func TestExportRepoIncremental1(t *testing.T) {
 }
 
 func TestExportRepoIncrementalPullRequests1(t *testing.T) {
+
+	repoName := "basic1"
+
+	commitIdentifier := func(sha string) string {
+		return exportrepo.CommitIdentifier(repoName, sha)
+	}
+
 	opts := Opts{}
 	opts.T = t
 	opts.RepoName = "basic1"
@@ -439,6 +480,7 @@ func TestExportRepoIncrementalPullRequests1(t *testing.T) {
 			RepoID:         "r1",
 			Sha:            "63b0ac79015985fe248ba0ea3e34fa464fae1b7a",
 			URL:            "/commit/63b0ac79015985fe248ba0ea3e34fa464fae1b7a",
+			Identifier:     commitIdentifier("63b0ac79015985fe248ba0ea3e34fa464fae1b7a"),
 		},
 	}
 
@@ -526,6 +568,7 @@ func TestExportRepoIncrementalPullRequests1(t *testing.T) {
 	opts = Opts{}
 	opts.T = t
 	opts.RepoName = "basic-incremental1"
+	opts.RepoUniqueName = repoName
 	opts.Dirs = dirs
 	opts.Want = want
 	opts.Export = exportOpts
