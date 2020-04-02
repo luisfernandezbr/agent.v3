@@ -65,10 +65,8 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 		conf.Name = req.IntegrationName
 		conf.Config.RefreshToken = req.Authorization.RefreshToken
 		if req.Authorization.URL != nil {
-			fmt.Println("not nil")
 			conf.Config.URL = *req.Authorization.URL
 		}
-		fmt.Println("conf received", conf.Config.URL)
 		conf.Type = inconfig.IntegrationType(req.SystemType)
 		err = inconfig.ConvertEdgeCases(&conf)
 		if err != nil {
