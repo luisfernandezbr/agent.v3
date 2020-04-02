@@ -67,8 +67,6 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 
 	action := unmarshalAction(fn)
 
-	s.logger.Info("action received", "a", action, "fn", fn)
-
 	err = action.UnmarshalJSON([]byte(fn))
 	if err != nil {
 		rerr = err
