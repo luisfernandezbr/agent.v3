@@ -7,6 +7,8 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 )
 
+const stateVer = 5 // changing this value forces a new historical
+
 type Locs struct {
 	// Dirs
 
@@ -75,7 +77,6 @@ func New(pinpointRoot string) Locs {
 
 	s.RepoCache = j(s.Cache, "repos")
 
-	stateVer := 4
 	for i := 1; i < stateVer; i++ {
 		s.CleanupDirs = append(s.CleanupDirs, j(s.Root, "state", "v"+strconv.Itoa(i)))
 	}
