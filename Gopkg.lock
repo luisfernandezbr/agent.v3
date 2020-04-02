@@ -348,6 +348,7 @@
     "event/action",
     "eventing",
     "fileutil",
+    "graphql",
     "hash",
     "httpdefaults",
     "io",
@@ -373,7 +374,8 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:b499b5a29fd0f72f40480bc78d5495861a4bf65e938e8f720243a72118bee13c"
+  branch = "TIGR-37"
+  digest = "1:0defde78e548359785c6d4096e2faa8c9bcb585b00f30bccdb575aad2787fa4a"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -385,8 +387,7 @@
     "work",
   ]
   pruneopts = "T"
-  revision = "64db56c95d1d6ca6400d0cde59aea9c699b3449f"
-  version = "v0.0.808"
+  revision = "96e41cbb49b027abc4cf0cd2839b3278d2cf2f8b"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"

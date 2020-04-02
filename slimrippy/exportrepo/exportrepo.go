@@ -391,6 +391,8 @@ func (s *Export) commit(commit slimrippy.Commit) error {
 	sessions := s.opts.Sessions
 
 	writeCommit := func(obj sourcecode.Commit) error {
+		// create the unique identifier as a combination of the unique repo name and a short sha for display purposes
+		obj.Identifier = s.opts.UniqueName + "#" + obj.Sha[0:7]
 		return sessions.Write(s.sessions.Commit, []map[string]interface{}{
 			obj.ToMap(),
 		})
