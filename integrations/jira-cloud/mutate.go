@@ -50,7 +50,6 @@ func (s *Integration) returnUpdatedIssue(issueRefID string) (_ rpcdef.MutatedObj
 	m := issue.ToMap()
 	delete(m, "planned_start_date")
 	delete(m, "planned_end_date")
-	delete(m, "planned_end_date")
 	delete(m, "epic_id")
 	delete(m, "story_points")
 	res[work.IssueModelName.String()] = []interface{}{m}
