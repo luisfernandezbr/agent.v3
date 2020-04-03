@@ -8,7 +8,6 @@ import (
 
 	"github.com/pinpt/agent/integrations/jira-cloud/api"
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
-	"github.com/pinpt/agent/integrations/pkg/mutations"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/agent"
 	"github.com/pinpt/integration-sdk/work"
@@ -41,19 +40,20 @@ func unmarshalAction(fn string) (v agent.IntegrationMutationRequestAction) {
 	return
 }
 
-func (s *Integration) getIssueAndReturnFields(issueRefID string, fields ...string) (_ rpcdef.MutatedObjects, rerr error) {
+func (s *Integration) returnUpdatedIssue(issueRefID string) (_ rpcdef.MutatedObjects, rerr error) {
 	res := rpcdef.MutatedObjects{}
 	issue, err := jiracommonapi.IssueByID(s.qc.Common(), issueRefID)
 	if err != nil {
 		rerr = err
 		return
 	}
-	issueM, err := mutations.PluckFields(issue, fields...)
-	if err != nil {
-		rerr = err
-		return
-	}
-	res[work.IssueModelName.String()] = []interface{}{issueM}
+	m := issue.ToMap()
+	delete(m, "planned_start_date")
+	delete(m, "planned_end_date")
+	delete(m, "planned_end_date")
+	delete(m, "epic_id")
+	delete(m, "story_points")
+	res[work.IssueModelName.String()] = []interface{}{m}
 	return res, nil
 }
 
@@ -115,18 +115,7 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 			rerr = err
 			return
 		}
-		res := rpcdef.MutatedObjects{}
-		issue := &work.Issue{}
-		issue.RefType = "jira"
-		issue.RefID = obj.IssueID
-		issue.Title = obj.Title
-		issueM, err := mutations.PluckFields(issue, "title")
-		if err != nil {
-			rerr = err
-			return
-		}
-		res[work.IssueModelName.String()] = []interface{}{issueM}
-		return res, nil
+		return s.returnUpdatedIssue(obj.IssueID)
 	case agent.IntegrationMutationRequestActionIssueSetStatus:
 		var obj struct {
 			IssueID  string `json:"ref_id"`
@@ -142,7 +131,7 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 			rerr = err
 			return
 		}
-		return s.getIssueAndReturnFields(obj.IssueID, "status")
+		return s.returnUpdatedIssue(obj.IssueID)
 	case agent.IntegrationMutationRequestActionIssueSetPriority:
 		var obj struct {
 			IssueID    string `json:"ref_id"`
@@ -158,7 +147,7 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 			rerr = err
 			return
 		}
-		return s.getIssueAndReturnFields(obj.IssueID, "priority", "priority_id")
+		return s.returnUpdatedIssue(obj.IssueID)
 	case agent.IntegrationMutationRequestActionIssueSetAssignee:
 		var obj struct {
 			IssueID string `json:"ref_id"`
@@ -174,18 +163,7 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 			rerr = err
 			return
 		}
-		res := rpcdef.MutatedObjects{}
-		issue := &work.Issue{}
-		issue.RefType = "jira"
-		issue.RefID = obj.IssueID
-		issue.AssigneeRefID = obj.UserID
-		issueM, err := mutations.PluckFields(issue, "assignee_ref_id")
-		if err != nil {
-			rerr = err
-			return
-		}
-		res[work.IssueModelName.String()] = []interface{}{issueM}
-		return res, nil
+		return s.returnUpdatedIssue(obj.IssueID)
 	}
 
 	rerr = fmt.Errorf("mutate fn not supported: %v", fn)
