@@ -8,6 +8,20 @@
 
 ## [All exported data](./_docs/exported_data.md)
 
+## Permissions
+
+Users that was added to default Developer groups has sufficient permissions for export.
+
+Developers groups has the following permissions by default
+
+This group has the following repository access
+
+- Write access to new team repositories
+- Can create repositories for team
+- Can't update team settings or administer repositories
+
+![alt text](./_docs/user-groups.png)
+
 ## API call examples
 
 The password can be an app password (https://confluence.atlassian.com/bitbucket/app-passwords-828781300.html)
