@@ -38,10 +38,7 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 		start := time.Now()
 		sendEvent := func(resp *agent.IntegrationMutationResponse) (datamodel.ModelSendEvent, error) {
 			s.logger.Info("processed mutation req", "dur", time.Since(start).String())
-
-			//resp.RefType = integration.Name
-			//resp.RefID = integration.RefID
-			//resp.RequestID = req.ID
+			resp.JobID = req.JobID
 			date.ConvertToModel(time.Now(), &resp.EventDate)
 			s.deviceInfo.AppendCommonInfo(resp)
 			return datamodel.NewModelSendEvent(resp), nil
