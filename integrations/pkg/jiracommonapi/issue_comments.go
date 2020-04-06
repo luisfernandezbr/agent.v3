@@ -7,6 +7,8 @@ import (
 	"github.com/pinpt/integration-sdk/work"
 )
 
+const IssueCommentsExpandParam = "renderedBody"
+
 func IssueComments(
 	qc QueryContext,
 	project Project,
@@ -20,24 +22,14 @@ func IssueComments(
 	//params.Set("maxResults", "1") // for testing
 	params.Set("validateQuery", "strict")
 
-	params.Add("expand", "renderedBody")
+	params.Add("expand", IssueCommentsExpandParam)
 
 	qc.Logger.Debug("issue comments request", "project", project.Key, "issue", issueRefID, "params", params)
 
 	var rr struct {
-		Total      int `json:"total"`
-		MaxResults int `json:"maxResults"`
-		Comments   []struct {
-			Self   string `json:"self"`
-			ID     string `json:"id"`
-			Author struct {
-				Key       string `json:"key"`       // hosted,cloud
-				AccountID string `json:"accountID"` // cloud only
-			} `json:"author"`
-			RenderedBody string `json:"renderedBody"`
-			Created      string `json:"created"`
-			Updated      string `json:"updated"`
-		} `json:"comments"`
+		Total      int               `json:"total"`
+		MaxResults int               `json:"maxResults"`
+		Comments   []CommentResponse `json:"comments"`
 	}
 
 	err := qc.Req.Get(objectPath, params, &rr)
@@ -53,39 +45,77 @@ func IssueComments(
 	}
 
 	for _, data := range rr.Comments {
-		item := &work.IssueComment{}
-		item.CustomerID = qc.CustomerID
-		item.RefType = "jira"
-		item.RefID = data.ID
-
-		item.ProjectID = qc.ProjectID(project.JiraID)
-		item.IssueID = qc.IssueID(issueRefID)
-
-		created, err := ParseTime(data.Created)
+		item, err := ConvertComment(qc, data, "", &IssueKeys{
+			ProjectRefID: project.JiraID,
+			IssueRefID:   issueRefID,
+			IssueKey:     issueKey,
+		})
 		if err != nil {
 			rerr = err
 			return
 		}
-		date.ConvertToModel(created, &item.CreatedDate)
-		updated, err := ParseTime(data.Updated)
-		if err != nil {
-			rerr = err
-			return
-		}
-		date.ConvertToModel(updated, &item.UpdatedDate)
-
-		authorID := data.Author.AccountID // cloud jira
-		if authorID == "" {
-			authorID = data.Author.Key // hosted jira
-		}
-
-		item.UserRefID = authorID
-		item.Body = adjustRenderedHTML(qc.WebsiteURL, data.RenderedBody)
-
-		item.URL = qc.IssueCommentURL(issueKey, data.ID)
-
 		resIssueComments = append(resIssueComments, item)
 	}
 
 	return
+}
+
+type CommentResponse struct {
+	Self   string `json:"self"`
+	ID     string `json:"id"`
+	Author struct {
+		Key       string `json:"key"`       // hosted,cloud
+		AccountID string `json:"accountID"` // cloud only
+	} `json:"author"`
+	RenderedBody string `json:"renderedBody"`
+	Created      string `json:"created"`
+	Updated      string `json:"updated"`
+}
+
+func ConvertComment(qc QueryContext, data CommentResponse, issueIDOrKeyOptional string, issueKeysOptional *IssueKeys) (_ *work.IssueComment, rerr error) {
+
+	var issueKeys IssueKeys
+
+	if issueKeysOptional != nil {
+		issueKeys = *issueKeysOptional
+	} else {
+		var err error
+		issueKeys, err = GetIssueKeys(qc, issueIDOrKeyOptional)
+		if err != nil {
+			rerr = err
+			return
+		}
+	}
+
+	item := &work.IssueComment{}
+	item.CustomerID = qc.CustomerID
+	item.RefType = "jira"
+	item.RefID = data.ID
+
+	item.ProjectID = qc.ProjectID(issueKeys.ProjectRefID)
+	item.IssueID = qc.IssueID(issueKeys.IssueRefID)
+
+	created, err := ParseTime(data.Created)
+	if err != nil {
+		rerr = err
+		return
+	}
+	date.ConvertToModel(created, &item.CreatedDate)
+	updated, err := ParseTime(data.Updated)
+	if err != nil {
+		rerr = err
+		return
+	}
+	date.ConvertToModel(updated, &item.UpdatedDate)
+
+	authorID := data.Author.AccountID // cloud jira
+	if authorID == "" {
+		authorID = data.Author.Key // hosted jira
+	}
+
+	item.UserRefID = authorID
+	item.Body = adjustRenderedHTML(qc.WebsiteURL, data.RenderedBody)
+
+	item.URL = qc.IssueCommentURL(issueKeys.IssueKey, data.ID)
+	return item, nil
 }

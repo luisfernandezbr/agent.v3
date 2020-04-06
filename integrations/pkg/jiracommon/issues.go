@@ -164,11 +164,12 @@ func (s *issueResolver) IssueRefIDFromKey(key string) (refID string, rerr error)
 }
 
 func (s *issueResolver) issueRefIDFromKeyNoCache(key string) (refID string, rerr error) {
-	refID, err := jiracommonapi.IssueRefIDFromKey(s.qc, key)
+	keys, err := jiracommonapi.GetIssueKeys(s.qc, key)
 	if err != nil {
 		rerr = fmt.Errorf("could not query issue: %v", err)
 		return
 	}
+	refID = keys.IssueRefID
 	return refID, nil
 }
 

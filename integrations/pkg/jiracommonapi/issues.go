@@ -223,25 +223,6 @@ func IssueByID(qc QueryContext, issueIDOrKey string) (_ IssueWithCustomFields, r
 	return res, nil
 }
 
-func IssueRefIDFromKey(qc QueryContext, key string) (refID string, rerr error) {
-	// https://developer.atlassian.com/cloud/jira/platform/rest/v3/#api-rest-api-3-issue-issueIdOrKey-get
-
-	objectPath := "issue/" + key
-
-	params := url.Values{}
-	qc.Logger.Debug("issue request to get ref id", "key", key)
-
-	var rr issueSource
-
-	err := qc.Req.Get(objectPath, params, &rr)
-	if err != nil {
-		rerr = err
-		return
-	}
-
-	return rr.ID, nil
-}
-
 func ParsePlannedDate(ts string) (time.Time, error) {
 	return time.ParseInLocation("2006-01-02", ts, time.UTC)
 }
@@ -642,4 +623,41 @@ func adjustRenderedHTML(websiteURL, data string) string {
 	// we apply a special tag here to allow the front-end to handle integration specific data for the integration in
 	// case we need to do integration specific image handling
 	return `<div class="source-jira">` + strings.TrimSpace(data) + `</div>`
+}
+
+type IssueKeys struct {
+	ProjectRefID string
+	IssueRefID   string
+	IssueKey     string
+}
+
+func GetIssueKeys(qc QueryContext, issueIDOrKey string) (res IssueKeys, rerr error) {
+	objectPath := "issue/" + issueIDOrKey
+
+	params := url.Values{}
+	// don't return any fields
+	params.Add("expand", "project")
+
+	qc.Logger.Debug("issue request", "issue_id_or_key", issueIDOrKey)
+
+	var rr issueSource
+
+	err := qc.Req.Get(objectPath, params, &rr)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	fieldsByID := map[string]CustomField{}
+	full, err := convertIssue(qc, rr, fieldsByID)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	res.IssueKey = rr.Key
+	res.IssueRefID = rr.ID
+	res.ProjectRefID = full.ProjectID
+
+	return res, nil
 }

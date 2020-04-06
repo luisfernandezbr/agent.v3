@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/pinpt/agent/integrations/jira-cloud/api"
@@ -83,8 +82,6 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 
 	switch action {
 	case agent.IntegrationMutationRequestActionIssueAddComment:
-		rerr = errors.New("not implemented")
-		return
 		var obj struct {
 			IssueRefID string `json:"ref_id"`
 			Body       string `json:"body"`
@@ -94,11 +91,14 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 			rerr = err
 			return
 		}
-		err = api.AddComment(s.qc, obj.IssueRefID, obj.Body)
+		comment, err := api.AddComment(s.qc, obj.IssueRefID, obj.Body)
 		if err != nil {
 			rerr = err
 			return
 		}
+		res := rpcdef.MutatedObjects{}
+		res[work.IssueCommentModelName.String()] = []interface{}{comment.ToMap()}
+		return res, nil
 	case agent.IntegrationMutationRequestActionIssueSetTitle:
 		var obj struct {
 			IssueID string `json:"ref_id"`
