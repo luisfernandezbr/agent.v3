@@ -3,8 +3,11 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 
+	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/pkg/requests2"
+	"github.com/pinpt/integration-sdk/work"
 )
 
 // AddComment adds a comment to issueID
@@ -12,7 +15,7 @@ import (
 // to support formatting need to use Atlassian Document Format
 // haven't found a way to pass text with atlassian tags, such as {code}
 // https://developer.atlassian.com/cloud/jira/platform/apis/document/structure/
-func AddComment(qc QueryContext, issueID, body string) (rerr error) {
+func AddComment(qc QueryContext, issueID, body string) (_ *work.IssueComment, rerr error) {
 	qc.Logger.Info("adding comment", "issue", issueID, "body", body)
 
 	content := []map[string]interface{}{
@@ -42,16 +45,29 @@ func AddComment(qc QueryContext, issueID, body string) (rerr error) {
 			Content: content,
 		},
 	}
-	var res struct {
-		ID string `json:"id"`
+
+	params := url.Values{}
+	params.Add("expand", jiracommonapi.IssueCommentsExpandParam)
+
+	var res jiracommonapi.CommentResponse
+
+	req := requests2.Request{}
+	req.Method = "POST"
+	req.URL = qc.Req.URL("issue/" + issueID + "/comment")
+	req.Query = params
+	var err error
+	req.Body, err = json.Marshal(reqObj)
+	if err != nil {
+		rerr = err
+		return
 	}
-	err := mutJSONReq(qc, "POST", "issue/"+issueID+"/comment", reqObj, &res)
+	_, err = qc.Req.JSON(req, &res)
 	if err != nil {
 		rerr = err
 		return
 	}
 
-	return nil
+	return jiracommonapi.ConvertComment(qc.Common(), res, issueID, nil)
 }
 
 func mutJSONReq(qc QueryContext, method string, uri string, body interface{}, res interface{}) error {
@@ -154,7 +170,7 @@ func AssignUser(qc QueryContext, issueID, accountID string) error {
 	qc.Logger.Info("change issue assignee", "issue", issueID, "account_id", accountID)
 
 	reqObj := struct {
-		AccountID string `json:"accountId"`
+		AccountID string `json:"accountId,omitempty"`
 	}{}
 	reqObj.AccountID = accountID
 
