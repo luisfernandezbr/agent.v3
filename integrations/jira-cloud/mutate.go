@@ -126,23 +126,23 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 			return
 		}
 		return s.returnUpdatedIssue(obj.IssueID)
-	/*case agent.IntegrationMutationRequestActionIssueSetStatus:
-	var obj struct {
-		IssueID      string            `json:"ref_id"`
-		TransitionID string            `json:"transition_id"`
-		Fields       map[string]string `json:"fields"`
-	}
-	err := json.Unmarshal([]byte(data), &obj)
-	if err != nil {
-		rerr = err
-		return
-	}
-	err = api.EditStatus(s.qc, obj.IssueID, obj.TransitionID, obj.Fields)
-	if err != nil {
-		rerr = err
-		return
-	}
-	return s.returnUpdatedIssue(obj.IssueID)*/
+	case agent.IntegrationMutationRequestActionIssueSetStatus:
+		var obj struct {
+			IssueID      string            `json:"ref_id"`
+			TransitionID string            `json:"transition_id"`
+			Fields       map[string]string `json:"fields"`
+		}
+		err := json.Unmarshal([]byte(data), &obj)
+		if err != nil {
+			rerr = err
+			return
+		}
+		err = api.EditStatus(s.qc, obj.IssueID, obj.TransitionID, obj.Fields)
+		if err != nil {
+			rerr = err
+			return
+		}
+		return s.returnUpdatedIssue(obj.IssueID)
 	case agent.IntegrationMutationRequestActionIssueSetPriority:
 		var obj struct {
 			IssueID    string `json:"ref_id"`
@@ -175,7 +175,7 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 			return
 		}
 		return s.returnUpdatedIssue(obj.IssueID)
-	case agent.IntegrationMutationRequestActionIssueSetStatus:
+	case agent.IntegrationMutationRequestActionIssueGetTransitions:
 		var obj struct {
 			IssueID string `json:"ref_id"`
 		}

@@ -60,7 +60,7 @@ The list of possible priorities is available as work.IssuePriority. This list sh
 
 #### Set issue status
 
-Get the list of possible transition_id and fields using the quire below.
+Before issuing this query you would need to get the list of possible status transitions and required fields using 'Get issue transitions' ISSUE_GET_TRANSITIONS.
 
 ```
 {
@@ -82,6 +82,19 @@ Get the list of possible transition_id and fields using the quire below.
 Returns the list of possible status transitions.
 
 ```
+Request
+{
+    "integration_name": "jira",
+    "system_type": "work",
+    "action": "ISSUE_GET_TRANSITIONS",
+    "data": {
+        "ref_id": "TES-79"
+    }
+}
+```
+
+```
+Response
 [
 { "fields": null, "id": "11", "name": "To Do" },
 { "fields": null, "id": "21", "name": "In Progress" },

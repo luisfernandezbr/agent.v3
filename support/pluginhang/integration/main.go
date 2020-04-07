@@ -49,7 +49,7 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 	return
 }
 
-func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef.ExportConfig) (res rpcdef.MutatedObjects, rerr error) {
+func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef.ExportConfig) (res rpcdef.MutateResult, rerr error) {
 	rerr = errors.New("mutate not supported")
 	return
 }
