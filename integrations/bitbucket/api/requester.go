@@ -143,9 +143,9 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 		if resp.StatusCode == http.StatusTooManyRequests {
 			waitTime := time.Minute // according to docs there is quota available every minute
 			paused := time.Now()
-			e.opts.Agent.SendPauseEvent(fmt.Sprintf("bitbucket rate limit hit, will resume in %v ", waitTime), paused.Add(waitTime))
+			e.opts.Agent.SendPauseEvent("", paused.Add(waitTime))
 			time.Sleep(waitTime)
-			e.opts.Agent.SendResumeEvent(fmt.Sprintf("bitbucket resumed, time elapsed %v", time.Since(paused)))
+			e.opts.Agent.SendResumeEvent("")
 			return true, pi, fmt.Errorf("rate limit hit")
 		}
 

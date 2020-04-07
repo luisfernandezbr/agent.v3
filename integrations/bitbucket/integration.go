@@ -172,6 +172,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.UseOAuth = s.UseOAuth
 		opts.OAuth = oauth
 		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
+		opts.Agent = s.agent
 		requester := api.NewRequester(opts)
 
 		s.qc.Request = requester.Request
