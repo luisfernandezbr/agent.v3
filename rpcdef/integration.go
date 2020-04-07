@@ -25,10 +25,15 @@ type Integration interface {
 	OnboardExport(ctx context.Context, objectType OnboardExportType, config ExportConfig) (OnboardExportResult, error)
 
 	// Mutate changes integration data
-	Mutate(ctx context.Context, fn string, data string, config ExportConfig) (MutatedObjects, error)
+	Mutate(ctx context.Context, fn string, data string, config ExportConfig) (MutateResult, error)
 }
 
 type MutatedObjects map[string][]interface{}
+
+type MutateResult struct {
+	MutatedObjects MutatedObjects
+	WebappResponse interface{}
+}
 
 type IntegrationConfig inconfig.Integration
 type ExportConfig struct {
@@ -228,7 +233,7 @@ func (s *IntegrationClient) OnboardExport(ctx context.Context, objectType Onboar
 	return res, nil
 }
 
-func (s *IntegrationClient) Mutate(ctx context.Context, mutateFn string, mutateData string, exportConfig ExportConfig) (res MutatedObjects, rerr error) {
+func (s *IntegrationClient) Mutate(ctx context.Context, mutateFn string, mutateData string, exportConfig ExportConfig) (res MutateResult, rerr error) {
 	args := &proto.IntegrationMutateReq{}
 	var err error
 	args.Config, err = exportConfig.proto()
@@ -243,7 +248,7 @@ func (s *IntegrationClient) Mutate(ctx context.Context, mutateFn string, mutateD
 		rerr = err
 		return
 	}
-	err = json.Unmarshal([]byte(resp.ObjectsJson), &res)
+	err = json.Unmarshal([]byte(resp.Json), &res)
 	if err != nil {
 		rerr = err
 		return
@@ -353,15 +358,15 @@ func (s *IntegrationServer) Mutate(ctx context.Context, req *proto.IntegrationMu
 		return res, err
 	}
 
-	objects, err := s.Impl.Mutate(ctx, req.MutateFn, req.MutateData, config)
+	res0, err := s.Impl.Mutate(ctx, req.MutateFn, req.MutateData, config)
 	if err != nil {
 		return res, err
 	}
-	objectsJSONBytes, err := json.Marshal(objects)
+	objectsJSONBytes, err := json.Marshal(res0)
 	if err != nil {
 		return res, err
 	}
-	res.ObjectsJson = string(objectsJSONBytes)
+	res.Json = string(objectsJSONBytes)
 	return res, nil
 }
 

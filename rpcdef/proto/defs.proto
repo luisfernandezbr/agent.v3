@@ -77,7 +77,7 @@ message IntegrationMutateReq {
 }
 
 message IntegrationMutateResp {
-    string objects_json = 1;
+    string json = 1;
 }
 
 service Agent {

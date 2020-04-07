@@ -2,10 +2,10 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/url"
 
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/pkg/mutate"
 	"github.com/pinpt/agent/pkg/requests2"
 	"github.com/pinpt/integration-sdk/work"
 )
@@ -118,13 +118,34 @@ type issueTransition struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
 	} `json:"to"`
+	Fields map[string]Field `json:"fields"`
 }
 
-func getTransitions(qc QueryContext, issueID string) (res []issueTransition, rerr error) {
+type Field struct {
+	Key           string         `json:"key"`
+	Name          string         `json:"name"`
+	Required      bool           `json:"required"`
+	AllowedValues []AllowedValue `json:"allowedValues"`
+}
+
+type AllowedValue struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+func getIssueTransitions(qc QueryContext, issueID string) (res []issueTransition, rerr error) {
 	var obj struct {
 		Transitions []issueTransition `json:"transitions"`
 	}
-	err := mutJSONReq(qc, "GET", "issue/"+issueID+"/transitions", nil, &obj)
+
+	params := url.Values{}
+	params.Add("expand", "transitions.fields")
+
+	req := requests2.Request{}
+	req.Method = "GET"
+	req.URL = qc.Req.URL("issue/" + issueID + "/transitions")
+	req.Query = params
+	_, err := qc.Req.JSON(req, &obj)
 	if err != nil {
 		rerr = err
 		return
@@ -132,12 +153,47 @@ func getTransitions(qc QueryContext, issueID string) (res []issueTransition, rer
 	return obj.Transitions, err
 }
 
+func GetIssueTransitions(qc QueryContext, issueID string) (res []mutate.IssueTransition, rerr error) {
+	res0, err := getIssueTransitions(qc, issueID)
+	if err != nil {
+		rerr = err
+		return
+	}
+	for _, iss0 := range res0 {
+		iss := mutate.IssueTransition{}
+		iss.ID = iss0.ID
+		iss.Name = iss0.To.Name
+		for _, f0 := range iss0.Fields {
+			if f0.Key != "resolution" {
+				if f0.Required {
+					qc.Logger.Warn("transition has a required field that is not resolution, we don't support that yet, transition will happen anyway, but field will not by filled", "k", f0.Key, "n", f0.Name)
+				}
+				continue
+			}
+			f := mutate.IssueTransitionField{}
+			f.ID = f0.Key
+			f.Name = f0.Name
+			f.Required = f0.Required
+			for _, av0 := range f0.AllowedValues {
+				av := mutate.AllowedValue{}
+				av.ID = av0.Name // jira uses name when setting value, not id, pass name as id here
+				av.Name = av0.Name
+				f.AllowedValues = append(f.AllowedValues, av)
+			}
+			iss.Fields = append(iss.Fields, f)
+		}
+		res = append(res, iss)
+	}
+	return
+}
+
+/*
 // EditStatus changes issue status to passed id.
 func EditStatus(qc QueryContext, issueID, statusID string) error {
 	qc.Logger.Info("editing issue status", "issue", issueID, "statusID", statusID)
 
 	// get transition ids first
-	transitions, err := getTransitions(qc, issueID)
+	transitions, err := getIssueTransitions(qc, issueID)
 	if err != nil {
 		return err
 	}
@@ -163,6 +219,29 @@ func EditStatus(qc QueryContext, issueID, statusID string) error {
 	}{}
 	reqObj.Transition.ID = transition.ID
 
+	return mutJSONReq(qc, "POST", "issue/"+issueID+"/transitions", reqObj, nil)
+}*/
+
+type transitionFieldValue struct {
+	Name string `json:"name"`
+}
+
+func EditStatus(qc QueryContext, issueID, transitionID string, fieldValues map[string]string) error {
+	qc.Logger.Info("editing issue status", "issue", issueID)
+
+	reqObj := struct {
+		Transition struct {
+			ID string `json:"id"`
+		} `json:"transition"`
+		Fields map[string]transitionFieldValue `json:"fields"`
+	}{}
+	reqObj.Transition.ID = transitionID
+	m := map[string]transitionFieldValue{}
+	for k, v := range fieldValues {
+		m[k] = transitionFieldValue{Name: v}
+	}
+	reqObj.Fields = m
+	qc.Logger.Info("seting obj", "v", reqObj)
 	return mutJSONReq(qc, "POST", "issue/"+issueID+"/transitions", reqObj, nil)
 }
 

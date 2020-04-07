@@ -60,7 +60,62 @@ The list of possible priorities is available as work.IssuePriority. This list sh
 
 #### Set issue status
 
-// TODO: needs some design changes
+Before issuing this query you would need to get the list of possible status transitions and required fields using 'Get issue transitions' ISSUE_GET_TRANSITIONS.
+
+```
+{
+    "integration_name": "jira",
+    "system_type": "work",
+    "action": "ISSUE_SET_STATUS",
+    "data": {
+        "ref_id": "TES-79",
+        "transition_id": "41",
+        "fields": {
+            "resolution":"Hardware failure"
+        }
+    }
+}
+```
+
+#### Get issue transitions
+
+Returns the list of possible status transitions.
+
+```
+Request
+{
+    "integration_name": "jira",
+    "system_type": "work",
+    "action": "ISSUE_GET_TRANSITIONS",
+    "data": {
+        "ref_id": "TES-79"
+    }
+}
+```
+
+```
+Response
+[
+{ "fields": null, "id": "11", "name": "To Do" },
+{ "fields": null, "id": "21", "name": "In Progress" },
+{    
+	"fields": [
+        {
+        "allowed_values": [
+            { "id": "10000", "name": "Done" },
+            { "id": "10001", "name": "Won't Do" },
+            { "id": "10200", "name": "Invalid" }
+        ],
+        "required": true,
+        "id": "resolution",
+        "name": "Resolution"
+        }
+    ],
+    "id": "41",
+    "name": "Closed"
+}
+]
+```
 
 #### Add comment to an issue
 

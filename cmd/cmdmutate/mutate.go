@@ -20,9 +20,10 @@ type Mutation struct {
 }
 
 type Result struct {
-	Objects rpcdef.MutatedObjects `json:"objects"`
-	Success bool                  `json:"success"`
-	Error   string                `json:"error"`
+	MutatedObjects rpcdef.MutatedObjects `json:"mutated_objects"`
+	WebappResponse interface{}           `json:"webapp_response"`
+	Success        bool                  `json:"success"`
+	Error          string                `json:"error"`
 }
 
 type Opts struct {
@@ -75,14 +76,15 @@ func newExport(opts Opts) (*export, error) {
 }
 
 func (s *export) runAndPrint() error {
-	objects, err := s.run()
+	res0, err := s.run()
 
 	res := Result{}
 	if err != nil {
 		res.Error = err.Error()
 	} else {
 		res.Success = true
-		res.Objects = objects
+		res.MutatedObjects = res0.MutatedObjects
+		res.WebappResponse = res0.WebappResponse
 	}
 
 	b, err := json.Marshal(res)
@@ -101,7 +103,7 @@ func (s *export) runAndPrint() error {
 	return nil
 }
 
-func (s *export) run() (_ rpcdef.MutatedObjects, rerr error) {
+func (s *export) run() (_ rpcdef.MutateResult, rerr error) {
 	ctx := context.Background()
 	client := s.integration.ILoader.RPCClient()
 
@@ -110,7 +112,7 @@ func (s *export) run() (_ rpcdef.MutatedObjects, rerr error) {
 		rerr = err
 		return
 	}
-	objects, err := client.Mutate(ctx, s.Opts.Mutation.Fn, string(data), s.integration.ExportConfig)
+	res, err := client.Mutate(ctx, s.Opts.Mutation.Fn, string(data), s.integration.ExportConfig)
 	if err != nil {
 		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
 		rerr = fmt.Errorf("could not execute mutation: %v %v err: %v", s.integration.Export.String(), s.Opts.Mutation.Fn, err)
@@ -121,7 +123,7 @@ func (s *export) run() (_ rpcdef.MutatedObjects, rerr error) {
 		rerr = fmt.Errorf("error closing integration, err: %v", err)
 		return
 	}
-	return objects, nil
+	return res, nil
 }
 
 func (s *export) Destroy() error {

@@ -88,11 +88,19 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 		}
 		resp := &agent.IntegrationMutationResponse{}
 		resp.Success = true
-		objects, err := json.Marshal(res.Objects)
+
+		mutatedObjectsJSON, err := json.Marshal(res.MutatedObjects)
 		if err != nil {
 			return sendError(err)
 		}
-		resp.UpdatedObjects = string(objects)
+		resp.UpdatedObjects = string(mutatedObjectsJSON)
+
+		webappResponseJSON, err := json.Marshal(res.WebappResponse)
+		if err != nil {
+			return sendError(err)
+		}
+		resp.WebappResponse = string(webappResponseJSON)
+
 		return sendEvent(resp)
 	}
 
