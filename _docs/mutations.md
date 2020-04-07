@@ -106,7 +106,7 @@ Response
             { "id": "10001", "name": "Won't Do" },
             { "id": "10200", "name": "Invalid" }
         ],
-        "bool": true,
+        "required": true,
         "id": "resolution",
         "name": "Resolution"
         }
