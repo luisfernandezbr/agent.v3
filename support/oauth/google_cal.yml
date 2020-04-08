@@ -1,0 +1,10 @@
+---
+version: "1.0"
+auth_uri: "https://accounts.google.com/o/oauth2/v2/auth"
+token_uri: "https://www.googleapis.com/oauth2/v4/token"
+scope: "https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.readonly"
+extra_values:
+  prompt: "consent"
+  include_granted_scopes: "false"
+  display: "page"
+  access_type: "offline"
