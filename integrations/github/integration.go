@@ -60,7 +60,6 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 
 	qc := api.QueryContext{}
 	qc.Logger = s.logger
-	qc.Request = s.makeRequest
 	qc.IsEnterprise = func() bool {
 		return s.config.Enterprise
 	}
@@ -217,6 +216,7 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	s.requestsMadeAtomic = &requestsMade
 	s.requestsBuffer = 0
 
+	s.qc.APIURL = s.config.APIURL
 	s.qc.APIURL3 = s.config.APIURL3
 	s.qc.AuthToken = s.config.Token
 	s.clientManager = reqstats.New(reqstats.Opts{
@@ -225,6 +225,7 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	})
 	s.clients = s.clientManager.Clients
 	s.qc.Clients = s.clients
+	s.qc.Request = s.makeRequest
 
 	if s.config.Enterprise {
 		err := s.checkEnterpriseVersion()
@@ -289,7 +290,12 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 	}
 
 	// export all users in all organization, and when later encountering new users continue export
-	s.users, err = NewUsers(s, orgs)
+	s.users, err = NewUsers(s)
+	if err != nil {
+		rerr = err
+		return
+	}
+	err = s.users.ExportAllOrgUsers(orgs)
 	if err != nil {
 		rerr = err
 		return

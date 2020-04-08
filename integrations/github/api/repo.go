@@ -101,7 +101,7 @@ func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInf
 		} `json:"data"`
 	}
 
-	err := qc.Request(query, &res)
+	err := qc.Request(query, nil, &res)
 	if err != nil {
 		if strings.Contains(err.Error(), "Resource protected by organization SAML enforcement") {
 			err = fmt.Errorf("The organization %s has SAML authentication enabled. You must grant your personal token access to your organization", org.Login)
@@ -193,7 +193,7 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 	var res struct {
 		Data struct {
 			Organization struct {
-				Repositories *Repositories  `json:"repositories"`
+				Repositories *Repositories `json:"repositories"`
 			} `json:"organization"`
 			Viewer struct {
 				Repositories *Repositories `json:"repositories"`
@@ -201,7 +201,7 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 		} `json:"data"`
 	}
 
-	err := qc.Request(query, &res)
+	err := qc.Request(query, nil, &res)
 	if err != nil {
 		rerr = err
 		return
@@ -214,7 +214,7 @@ func ReposPage(qc QueryContext, org Org, queryParams string, stopOnUpdatedAt tim
 	} else {
 		repositories = res.Data.Viewer.Repositories
 	}
-	
+
 	repoNodes := repositories.Nodes
 
 	if len(repoNodes) == 0 {

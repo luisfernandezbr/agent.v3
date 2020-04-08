@@ -4,47 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 
 	"github.com/pinpt/agent/integrations/jira-cloud/api"
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/integrations/pkg/mutate"
-	"github.com/pinpt/agent/pkg/requests2"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/integration-sdk/agent"
 	"github.com/pinpt/integration-sdk/work"
-	"golang.org/x/exp/errors"
 )
-
-func unmarshalAction(fn string) (v agent.IntegrationMutationRequestAction) {
-	/*
-		This doesn't work due to bug in schemagen
-		var action agent.IntegrationMutationRequestAction
-		err = action.UnmarshalJSON([]byte("ISSUE_SET_TITLE"))
-		if err != nil {
-			panic(err)
-		}
-		//fmt.Println(action)
-	*/
-	switch fn {
-	case "ISSUE_ADD_COMMENT":
-		v = 0
-	case "ISSUE_SET_TITLE":
-		v = 1
-	case "ISSUE_SET_STATUS":
-		v = 2
-	case "ISSUE_SET_PRIORITY":
-		v = 3
-	case "ISSUE_SET_ASSIGNEE":
-		v = 4
-	case "ISSUE_GET_TRANSITIONS":
-		v = 5
-	default:
-		panic("unsupported action: " + fn)
-	}
-	return
-}
 
 func (s *Integration) returnUpdatedIssue(issueRefID string) (res rpcdef.MutateResult, rerr error) {
 	issue, err := jiracommonapi.IssueByID(s.qc.Common(), issueRefID)
@@ -77,11 +45,7 @@ func (s *Integration) mutationResult(modelName datamodel.ModelNameType, obj Mode
 func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef.ExportConfig) (res rpcdef.MutateResult, _ error) {
 
 	rerr := func(err error) {
-		var e requests2.StatusCodeError
-		if errors.As(err, &e) && e.Got == http.StatusNotFound {
-			res.ErrorCode = mutate.ErrNotFound
-		}
-		res.Error = err.Error()
+		res = mutate.ResultFromError(err)
 	}
 
 	err := s.initWithConfig(config, false)
@@ -90,22 +54,7 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 		return
 	}
 
-	action := unmarshalAction(fn)
-
-	err = action.UnmarshalJSON([]byte(fn))
-	if err != nil {
-		rerr(err)
-		return
-	}
-
-	var common struct {
-		IssueID string `json:"ref_id"`
-	}
-	err = json.Unmarshal([]byte(data), &common)
-	if err != nil {
-		rerr(err)
-		return
-	}
+	action := mutate.UnmarshalAction(fn)
 
 	switch action {
 	case agent.IntegrationMutationRequestActionIssueAddComment:

@@ -16,9 +16,11 @@ type PageInfo struct {
 type IDs []string
 
 type QueryContext struct {
-	Logger  hclog.Logger
-	Request func(query string, res interface{}) error
+	Logger hclog.Logger
 
+	Request func(query string, vars map[string]interface{}, res interface{}) error
+
+	APIURL  string
 	APIURL3 string
 
 	CustomerID string

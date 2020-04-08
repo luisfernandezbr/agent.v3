@@ -55,7 +55,7 @@ func User(qc QueryContext, login string, orgMember bool) (
 		} `json:"data"`
 	}
 
-	err := qc.Request(query, &res)
+	err := qc.Request(query, nil, &res)
 	if err != nil {
 		return user, err
 	}
@@ -116,7 +116,7 @@ func UsersPage(qc QueryContext, org Org, queryParams string) (pi PageInfo, users
 		} `json:"data"`
 	}
 
-	err := qc.Request(query, &res)
+	err := qc.Request(query, nil, &res)
 	if err != nil {
 		return pi, users, err
 	}
@@ -175,7 +175,7 @@ func UsersEnterprisePage(qc QueryContext, queryParams string) (pi PageInfo, user
 		} `json:"data"`
 	}
 
-	err := qc.Request(query, &res)
+	err := qc.Request(query, nil, &res)
 	if err != nil {
 		return pi, users, err
 	}

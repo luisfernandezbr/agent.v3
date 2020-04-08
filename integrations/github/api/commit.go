@@ -96,7 +96,7 @@ func CommitsPage(
 		} `json:"data"`
 	}
 
-	err := qc.Request(query, &requestRes)
+	err := qc.Request(query, nil, &requestRes)
 	if err != nil {
 		rerr = err
 		return
