@@ -374,7 +374,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:29c8cb254b78cac2eca34d97a2bc7408c4528b66172efc48d19287d234db75b5"
+  digest = "1:cee14dd7444b38ffd6327fd99b6bd632bba1794fd497a0ee2709ee4703d19e65"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -386,8 +386,8 @@
     "work",
   ]
   pruneopts = "T"
-  revision = "b8d22f9be65409a0e135cd58486df7641e913888"
-  version = "v0.0.830"
+  revision = "6ea5575f79f1a98c2af65a06531d60adfb337e4a"
+  version = "v0.0.833"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
@@ -756,6 +756,7 @@
     "github.com/songgao/stacktraces/on/SIGUSR2",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
+    "golang.org/x/exp/errors",
     "golang.org/x/exp/errors/fmt",
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",

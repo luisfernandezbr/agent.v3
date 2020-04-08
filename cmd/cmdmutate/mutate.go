@@ -24,6 +24,7 @@ type Result struct {
 	WebappResponse interface{}           `json:"webapp_response"`
 	Success        bool                  `json:"success"`
 	Error          string                `json:"error"`
+	ErrorCode      string                `json:"error_code"`
 }
 
 type Opts struct {
@@ -81,6 +82,14 @@ func (s *export) runAndPrint() error {
 	res := Result{}
 	if err != nil {
 		res.Error = err.Error()
+	} else if res0.ErrorCode != "" {
+		res.ErrorCode = res0.ErrorCode
+		res.Error = res0.Error
+		if res.Error == "" {
+			res.Error = "Full error message not provided for status code: " + res.ErrorCode + ". This is a bug, we should always provide full error message."
+		}
+	} else if res0.Error != "" {
+		res.Error = res0.Error
 	} else {
 		res.Success = true
 		res.MutatedObjects = res0.MutatedObjects
