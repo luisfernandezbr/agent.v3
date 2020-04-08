@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pinpt/agent/integrations/pkg/mutate"
+
 	"github.com/pinpt/agent/cmd/cmdmutate"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/subcommand"
@@ -44,17 +46,21 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 			return datamodel.NewModelSendEvent(resp), nil
 		}
 
-		sendError := func(err error) (datamodel.ModelSendEvent, error) {
+		sendError := func(errorCode string, err error) (datamodel.ModelSendEvent, error) {
 			s.logger.Info("mutation failed", "err", err)
 			resp := &agent.IntegrationMutationResponse{}
 			errStr := err.Error()
 			resp.Error = &errStr
+			switch errorCode {
+			case mutate.ErrNotFound:
+				resp.ErrorCode = agent.IntegrationMutationResponseErrorCodeNotFound
+			}
 			return sendEvent(resp)
 		}
 
 		header, err := parseHeader(instance.Message().Headers)
 		if err != nil {
-			return sendError(fmt.Errorf("error parsing header. err %v", err))
+			return sendError("", fmt.Errorf("error parsing header. err %v", err))
 		}
 
 		conf := inconfig.IntegrationAgent{}
@@ -67,13 +73,13 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 		conf.Type = inconfig.IntegrationType(req.SystemType)
 		err = inconfig.ConvertEdgeCases(&conf)
 		if err != nil {
-			return sendError(fmt.Errorf("could not convert jira: %v", err))
+			return sendError("", fmt.Errorf("could not convert jira: %v", err))
 		}
 
 		var mutationData interface{}
 		err = json.Unmarshal([]byte(req.Data), &mutationData)
 		if err != nil {
-			return sendError(fmt.Errorf("mutation data is not valid json: %v", err))
+			return sendError("", fmt.Errorf("mutation data is not valid json: %v", err))
 		}
 
 		mutation := cmdmutate.Mutation{}
@@ -81,23 +87,24 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 		mutation.Data = mutationData
 		res, err := s.execMutate(context.Background(), conf, header.MessageID, mutation)
 		if err != nil {
-			return sendError(err)
+			return sendError("", err)
 		}
-		if res.Error != "" {
-			return sendError(errors.New(res.Error))
+		if res.Error != "" || res.ErrorCode != "" {
+			return sendError(res.ErrorCode, errors.New(res.Error))
 		}
+
 		resp := &agent.IntegrationMutationResponse{}
 		resp.Success = true
 
 		mutatedObjectsJSON, err := json.Marshal(res.MutatedObjects)
 		if err != nil {
-			return sendError(err)
+			return sendError("", err)
 		}
 		resp.UpdatedObjects = string(mutatedObjectsJSON)
 
 		webappResponseJSON, err := json.Marshal(res.WebappResponse)
 		if err != nil {
-			return sendError(err)
+			return sendError("", err)
 		}
 		resp.WebappResponse = string(webappResponseJSON)
 

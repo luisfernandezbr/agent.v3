@@ -223,9 +223,26 @@ func (opts Requests) Do(ctx context.Context, req Request) (res Result, rerr erro
 		}
 		url := req2.URL.String()
 		logger.Debug("error processing response", "err", err.Error(), "url", url, "response_code", resp.StatusCode, "request_body", string(reqBody), "response_body", string(respBody))
-		return fmt.Errorf("request failed url: %v err: %v", url, err)
+		return fmt.Errorf("request failed url: %v err: %w", url, err)
 	}
 	return
+}
+
+type StatusCodeError struct {
+	WantStart int
+	WantEnd   int
+	Got       int
+}
+
+func (s StatusCodeError) Error() string {
+	return fmt.Sprintf(`wanted status code %v..%v, got %v`, s.WantStart, s.WantEnd, s.Got)
+}
+
+func assertStatusCode(code int, wantStart, wantEnd int) error {
+	if !(code >= wantStart && code <= wantEnd) {
+		return StatusCodeError{WantStart: wantStart, WantEnd: wantEnd, Got: code}
+	}
+	return nil
 }
 
 // JSON makes http request and unmarshals resulting json. Returns errors on StatusCode != 200. Logs request and response body on errors.
@@ -246,8 +263,9 @@ func (opts Requests) JSON(
 		return
 	}
 	resp2 := resp.Resp
-	if !(resp2.StatusCode >= 200 && resp2.StatusCode < 300) {
-		rerr = resp.ErrorContext(fmt.Errorf(`wanted status code 200..299, got %v`, resp2.StatusCode))
+	err = assertStatusCode(resp2.StatusCode, 200, 299)
+	if err != nil {
+		rerr = resp.ErrorContext(err)
 		return
 	}
 	b, err := ioutil.ReadAll(resp2.Body)

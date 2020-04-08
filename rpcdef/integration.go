@@ -33,6 +33,8 @@ type MutatedObjects map[string][]interface{}
 type MutateResult struct {
 	MutatedObjects MutatedObjects
 	WebappResponse interface{}
+	Error          string
+	ErrorCode      string
 }
 
 type IntegrationConfig inconfig.Integration

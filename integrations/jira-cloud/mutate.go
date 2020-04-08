@@ -4,13 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/pinpt/agent/integrations/jira-cloud/api"
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/pkg/mutate"
+	"github.com/pinpt/agent/pkg/requests2"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/integration-sdk/agent"
 	"github.com/pinpt/integration-sdk/work"
+	"golang.org/x/exp/errors"
 )
 
 func unmarshalAction(fn string) (v agent.IntegrationMutationRequestAction) {
@@ -68,11 +72,19 @@ func (s *Integration) mutationResult(modelName datamodel.ModelNameType, obj Mode
 	return
 }
 
-func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef.ExportConfig) (res rpcdef.MutateResult, rerr error) {
+func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef.ExportConfig) (res rpcdef.MutateResult, _ error) {
+
+	rerr := func(err error) {
+		var e requests2.StatusCodeError
+		if errors.As(err, &e) && e.Got == http.StatusNotFound {
+			res.ErrorCode = mutate.ErrNotFound
+		}
+		res.Error = err.Error()
+	}
 
 	err := s.initWithConfig(config, false)
 	if err != nil {
-		rerr = err
+		rerr(err)
 		return
 	}
 
@@ -80,7 +92,7 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 
 	err = action.UnmarshalJSON([]byte(fn))
 	if err != nil {
-		rerr = err
+		rerr(err)
 		return
 	}
 
@@ -89,7 +101,7 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 	}
 	err = json.Unmarshal([]byte(data), &common)
 	if err != nil {
-		rerr = err
+		rerr(err)
 		return
 	}
 
@@ -101,12 +113,12 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 		}
 		err := json.Unmarshal([]byte(data), &obj)
 		if err != nil {
-			rerr = err
+			rerr(err)
 			return
 		}
 		comment, err := api.AddComment(s.qc, obj.IssueRefID, obj.Body)
 		if err != nil {
-			rerr = err
+			rerr(err)
 			return
 		}
 		return s.mutationResult(work.IssueCommentModelName, comment)
@@ -117,12 +129,12 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 		}
 		err := json.Unmarshal([]byte(data), &obj)
 		if err != nil {
-			rerr = err
+			rerr(err)
 			return
 		}
 		err = api.EditTitle(s.qc, obj.IssueID, obj.Title)
 		if err != nil {
-			rerr = err
+			rerr(err)
 			return
 		}
 		return s.returnUpdatedIssue(obj.IssueID)
@@ -134,12 +146,12 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 		}
 		err := json.Unmarshal([]byte(data), &obj)
 		if err != nil {
-			rerr = err
+			rerr(err)
 			return
 		}
 		err = api.EditStatus(s.qc, obj.IssueID, obj.TransitionID, obj.Fields)
 		if err != nil {
-			rerr = err
+			rerr(err)
 			return
 		}
 		return s.returnUpdatedIssue(obj.IssueID)
@@ -150,12 +162,12 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 		}
 		err := json.Unmarshal([]byte(data), &obj)
 		if err != nil {
-			rerr = err
+			rerr(err)
 			return
 		}
 		err = api.EditPriority(s.qc, obj.IssueID, obj.PriorityID)
 		if err != nil {
-			rerr = err
+			rerr(err)
 			return
 		}
 		return s.returnUpdatedIssue(obj.IssueID)
@@ -166,12 +178,12 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 		}
 		err := json.Unmarshal([]byte(data), &obj)
 		if err != nil {
-			rerr = err
+			rerr(err)
 			return
 		}
 		err = api.AssignUser(s.qc, obj.IssueID, obj.UserID)
 		if err != nil {
-			rerr = err
+			rerr(err)
 			return
 		}
 		return s.returnUpdatedIssue(obj.IssueID)
@@ -181,18 +193,18 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 		}
 		err := json.Unmarshal([]byte(data), &obj)
 		if err != nil {
-			rerr = err
+			rerr(err)
 			return
 		}
 		transitions, err := api.GetIssueTransitions(s.qc, obj.IssueID)
 		if err != nil {
-			rerr = err
+			rerr(err)
 			return
 		}
 		res.WebappResponse = transitions
 		return
 	}
 
-	rerr = fmt.Errorf("mutate fn not supported: %v", fn)
+	rerr(fmt.Errorf("mutate fn not supported: %v", fn))
 	return
 }
