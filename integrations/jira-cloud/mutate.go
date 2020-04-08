@@ -38,6 +38,8 @@ func unmarshalAction(fn string) (v agent.IntegrationMutationRequestAction) {
 		v = 3
 	case "ISSUE_SET_ASSIGNEE":
 		v = 4
+	case "ISSUE_GET_TRANSITIONS":
+		v = 5
 	default:
 		panic("unsupported action: " + fn)
 	}
