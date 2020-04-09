@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/pinpt/agent/rpcdef"
@@ -95,6 +96,10 @@ func (s *export) runAndPrint() error {
 		res.MutatedObjects = res0.MutatedObjects
 		res.WebappResponse = res0.WebappResponse
 	}
+	// add more context
+	if res.Error != "" {
+		res.Error = fmt.Sprintf("%v (%v/%v)", res.Error, s.integration.Export.IntegrationDef.Name, strings.ToLower(s.Opts.Mutation.Fn))
+	}
 
 	b, err := json.Marshal(res)
 	if err != nil {
@@ -124,7 +129,7 @@ func (s *export) run() (_ rpcdef.MutateResult, rerr error) {
 	res, err := client.Mutate(ctx, s.Opts.Mutation.Fn, string(data), s.integration.ExportConfig)
 	if err != nil {
 		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
-		rerr = fmt.Errorf("could not execute mutation: %v %v err: %v", s.integration.Export.String(), s.Opts.Mutation.Fn, err)
+		rerr = err
 		return
 	}
 	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)

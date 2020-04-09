@@ -27,7 +27,7 @@ func BranchDefault(qc QueryContext, repoID string) (string, error) {
 		} `json:"data"`
 	}
 
-	err := qc.Request(query, &reqRes)
+	err := qc.Request(query, nil, &reqRes)
 	if err != nil {
 		return "", err
 	}
@@ -93,7 +93,7 @@ func BranchNamesPage(qc QueryContext, repoID, queryParams string) (pi PageInfo, 
 		} `json:"data"`
 	}
 
-	err := qc.Request(query, &reqRes)
+	err := qc.Request(query, nil, &reqRes)
 	if err != nil {
 		return pi, res, err
 	}

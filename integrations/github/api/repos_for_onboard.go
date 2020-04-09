@@ -5,7 +5,7 @@ import (
 
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/integration-sdk/agent"
-	
+
 	pjson "github.com/pinpt/go-common/json"
 )
 
@@ -93,7 +93,7 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 		} `json:"data"`
 	}
 
-	err := qc.Request(query, &res)
+	err := qc.Request(query, nil, &res)
 	if err != nil {
 		return pi, repos, err
 	}

@@ -40,7 +40,7 @@ func OrgsAll(qc QueryContext) (res []Org, rerr error) {
 		} `json:"data"`
 	}
 
-	err := qc.Request(query, &resp)
+	err := qc.Request(query, nil, &resp)
 	if err != nil {
 		rerr = err
 		return

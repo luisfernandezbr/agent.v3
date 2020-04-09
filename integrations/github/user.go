@@ -23,7 +23,7 @@ type Users struct {
 	mu sync.Mutex
 }
 
-func NewUsers(integration *Integration, orgs []api.Org) (*Users, error) {
+func NewUsers(integration *Integration) (*Users, error) {
 	s := &Users{}
 	s.integration = integration
 	var err error
@@ -33,30 +33,33 @@ func NewUsers(integration *Integration, orgs []api.Org) (*Users, error) {
 	}
 	s.loginToID = map[string]string{}
 
-	err = s.createGhost()
+	return s, nil
+}
+
+func (s *Users) ExportAllOrgUsers(orgs []api.Org) error {
+	err := s.createGhost()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	err = s.createGithubNoReply()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if integration.config.Enterprise {
+	if s.integration.config.Enterprise {
 		err = s.exportInstanceUsers()
 		if err != nil {
-			return nil, err
+			return err
 		}
 	} else {
 		for _, org := range orgs {
 			err = s.exportOrganizationUsers(org)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
-
-	return s, nil
+	return nil
 }
 
 func (s *Users) createGhost() error {

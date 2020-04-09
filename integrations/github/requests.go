@@ -10,11 +10,13 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/pinpt/agent/pkg/requests2"
 )
 
 const checkRateLimitEveryNRequest = 100
 
-func (s *Integration) makeRequest(query string, res interface{}) error {
+func (s *Integration) makeRequest(query string, vars map[string]interface{}, res interface{}) error {
 	v := atomic.AddInt64(s.requestsMadeAtomic, 1)
 	if v%checkRateLimitEveryNRequest == 0 {
 		err := s.checkRateLimitAndSleepIfNecessary()
@@ -23,8 +25,9 @@ func (s *Integration) makeRequest(query string, res interface{}) error {
 		}
 	}
 
-	data := map[string]string{
-		"query": query,
+	data := map[string]interface{}{
+		"query":     query,
+		"variables": vars,
 	}
 
 	b, err := json.Marshal(data)
@@ -37,6 +40,25 @@ func (s *Integration) makeRequest(query string, res interface{}) error {
 	req := request{Method: "POST", URL: u, Body: b}
 
 	return s.makeRequestThrottled(req, res)
+}
+
+func (s *Integration) makeRequestNoRetries(query string, vars map[string]interface{}, res interface{}) error {
+	data := map[string]interface{}{
+		"query":     query,
+		"variables": vars,
+	}
+	dataJSON, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	req := requests2.Request{}
+	req.Method = "POST"
+	req.URL = s.config.APIURL
+	req.Body = dataJSON
+	req.Header = http.Header{}
+	req.Header.Set("Authorization", "bearer "+s.config.Token)
+	_, err = requests2.New(s.logger, s.clients.TLSInsecure).JSON(req, res)
+	return err
 }
 
 type request struct {

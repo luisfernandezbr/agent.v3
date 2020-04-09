@@ -132,3 +132,19 @@ This only allows adding simple text comments without formatting.
     }
 }
 ```
+
+### GitHub
+
+#### Set pull request title
+
+```
+{
+    "integration_name": "github",
+    "system_type": "sourcecode",
+    "action": "ISSUE_SET_TITLE", // TODO: add another action for this
+    {
+        "ref_id": "MDExOlB1bGxSZXF1ZXN0MzQzNTAzOTM0",
+        "title": "New PR title"
+    }
+}
+```
