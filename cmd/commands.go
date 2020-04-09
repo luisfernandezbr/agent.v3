@@ -22,7 +22,6 @@ import (
 	"github.com/pinpt/agent/pkg/service"
 	"github.com/pinpt/agent/rpcdef"
 	pos "github.com/pinpt/go-common/os"
-	_ "github.com/songgao/stacktraces/on/SIGUSR2"
 	"github.com/spf13/cobra"
 )
 
