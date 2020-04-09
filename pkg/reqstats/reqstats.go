@@ -82,7 +82,11 @@ func (s *ClientManager) wrapRoundTripper(rt http.RoundTripper) http.RoundTripper
 	fn := func(req *http.Request) (*http.Response, error) {
 		start := time.Now()
 		l := s.logger.With("url", req.URL.String())
-		atomic.AddInt64(s.totalRequests, 1)
+		requestsCount := atomic.AddInt64(s.totalRequests, 1)
+		if requestsCount%1000 == 0 {
+			// log every 1000 requests
+			l.Info("HTTP Request stats", "count", requestsCount)
+		}
 		//l.Debug("req start")
 		res, err := rt.RoundTrip(req)
 		sec := fmt.Sprintf("%.1f", time.Since(start).Seconds())

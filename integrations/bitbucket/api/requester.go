@@ -1,7 +1,6 @@
 package api
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,19 +12,18 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/oauthtoken"
 	"github.com/pinpt/agent/rpcdef"
-	"github.com/pinpt/go-common/httpdefaults"
 	pstrings "github.com/pinpt/go-common/strings"
 )
 
 type RequesterOpts struct {
-	Logger             hclog.Logger
-	APIURL             string
-	Username           string
-	Password           string
-	UseOAuth           bool
-	OAuth              *oauthtoken.Manager
-	InsecureSkipVerify bool
-	Agent              rpcdef.Agent
+	Logger     hclog.Logger
+	APIURL     string
+	Username   string
+	Password   string
+	UseOAuth   bool
+	OAuth      *oauthtoken.Manager
+	Agent      rpcdef.Agent
+	HTTPClient *http.Client
 }
 
 type internalRequest struct {
@@ -40,15 +38,7 @@ func NewRequester(opts RequesterOpts) *Requester {
 	s := &Requester{}
 	s.opts = opts
 	s.logger = opts.Logger
-
-	{
-		c := &http.Client{}
-		transport := httpdefaults.DefaultTransport()
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: opts.InsecureSkipVerify}
-		c.Transport = transport
-		s.httpClient = c
-	}
-
+	s.httpClient = opts.HTTPClient
 	return s
 }
 
@@ -141,7 +131,8 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 		}
 
 		if resp.StatusCode == http.StatusTooManyRequests {
-			waitTime := time.Minute // according to docs there is quota available every minute
+			// 1 minute wait time was causing constant throttles, try sleeping for longer and see if that helps
+			waitTime := 15 * time.Minute
 			paused := time.Now()
 			e.opts.Agent.SendPauseEvent("", paused.Add(waitTime))
 			time.Sleep(waitTime)
