@@ -388,7 +388,7 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 		return
 	}
 
-	s.logger.Debug(s.clientManager.PrintStats())
+	s.logger.Info(s.clientManager.PrintStats())
 
 	return exportResult, nil
 }

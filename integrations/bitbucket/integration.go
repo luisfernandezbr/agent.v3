@@ -23,6 +23,7 @@ import (
 	"github.com/pinpt/agent/pkg/commitusers"
 	"github.com/pinpt/agent/pkg/ids2"
 	"github.com/pinpt/agent/pkg/oauthtoken"
+	"github.com/pinpt/agent/pkg/reqstats"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/agent/rpcdef"
 )
@@ -62,6 +63,8 @@ type Integration struct {
 	refType  string
 	UseOAuth bool
 	oauth    *oauthtoken.Manager
+
+	clientManager *reqstats.ClientManager
 }
 
 func (s *Integration) Init(agent rpcdef.Agent) error {
@@ -163,6 +166,11 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		s.oauth = oauth
 	}
 
+	s.clientManager = reqstats.New(reqstats.Opts{
+		Logger:                s.logger,
+		TLSInsecureSkipVerify: s.config.InsecureSkipVerify,
+	})
+
 	{
 		opts := api.RequesterOpts{}
 		opts.Logger = s.logger
@@ -171,8 +179,8 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		opts.Password = s.config.Password
 		opts.UseOAuth = s.UseOAuth
 		opts.OAuth = oauth
-		opts.InsecureSkipVerify = s.config.InsecureSkipVerify
 		opts.Agent = s.agent
+		opts.HTTPClient = s.clientManager.Clients.TLSInsecure
 		requester := api.NewRequester(opts)
 
 		s.qc.Request = requester.Request
@@ -247,6 +255,8 @@ func (s *Integration) export(ctx context.Context) (exportResults []rpcdef.Export
 		rerr = err
 		return
 	}
+
+	s.logger.Info(s.clientManager.PrintStats())
 
 	return
 }
