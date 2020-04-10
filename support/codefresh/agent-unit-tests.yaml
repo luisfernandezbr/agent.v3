@@ -11,10 +11,17 @@ steps:
     repo: "pinpt/agent"
     revision: "${{CF_BRANCH}}"
     stage: "clone"
-  build:
+  build_alpine:
     title: "Building Docker Image"
     type: "build"
     image_name: "pinpt/agent"
     tag: "${{CF_BRANCH_TAG_NORMALIZED}}"
     dockerfile: "docker/unittests/Dockerfile"
     stage: "build"
+  my_unit_tests:
+    title: Unit tests
+    stage: test
+    image: '${{build_alpine}}'
+    commands:
+      - GOPATH=/codefresh/volume/go dep ensure -v -vendor-only
+      - GOPATH=/codefresh/volume/go CGO_ENABLED=0 go test -v ./... -timeout 1m
