@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 
 	"github.com/pinpt/agent/pkg/date"
@@ -60,14 +59,6 @@ func PullRequestCommitsPage(
 		item.URL = url.Scheme + "://" + strings.TrimPrefix(url.Hostname(), "api.") + "/" + repo.NameWithOwner + "/commits/" + rcommit.Hash
 		date.ConvertToModel(rcommit.Date, &item.CreatedDate)
 
-		adds, dels, err := commitStats(qc, repo.NameWithOwner, rcommit.Hash)
-		if err != nil {
-			return pi, res, err
-		}
-
-		item.Additions = adds
-		item.Deletions = dels
-
 		_, authorEmail := GetNameAndEmail(rcommit.Author.Raw)
 
 		item.AuthorRefID = ids.CodeCommitEmail(qc.CustomerID, authorEmail)
@@ -76,60 +67,5 @@ func PullRequestCommitsPage(
 		res = append(res, item)
 	}
 
-	return
-}
-
-type stats struct {
-	Additions int64
-	Deletions int64
-}
-
-func CommitStatsPage(
-	qc QueryContext,
-	repoName string,
-	commitID string,
-	params url.Values) (pi PageInfo, res []stats, err error) {
-
-	qc.Logger.Debug("commit stat", "repo", repoName, "commit", commitID)
-
-	objectPath := pstrings.JoinURL("repositories", repoName, "diffstat", commitID)
-
-	var rfiles []struct {
-		LinesRemoved int64 `json:"lines_removed"`
-		LinesAdded   int64 `json:"lines_added"`
-	}
-
-	params.Set("pagelen", "100")
-
-	pi, err = qc.Request(objectPath, params, true, &rfiles)
-	if err != nil {
-		return
-	}
-
-	for _, rfile := range rfiles {
-		item := stats{
-			Additions: rfile.LinesAdded,
-			Deletions: rfile.LinesRemoved,
-		}
-
-		res = append(res, item)
-	}
-
-	return
-}
-
-func commitStats(qc QueryContext, repoName string, commitID string) (adds, dels int64, err error) {
-	Paginate(qc.Logger, func(log hclog.Logger, paginationParams url.Values) (page PageInfo, _ error) {
-		pi, res, err := CommitStatsPage(qc, repoName, commitID, paginationParams)
-		if err != nil {
-			return pi, err
-		}
-
-		for _, obj := range res {
-			adds += obj.Additions
-			dels += obj.Deletions
-		}
-		return pi, nil
-	})
 	return
 }

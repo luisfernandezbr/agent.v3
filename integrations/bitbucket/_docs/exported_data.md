@@ -152,17 +152,6 @@ author{
 
 ### Commit stats
 
-#### List commit details
-
-https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/pullrequests/%7Bpull_request_id%7D/diffstat
-
-#### Fields used
-
-```
-lines_removed
-lines_added
-```
-
 ### Users and onboard users
 
 #### List team users
