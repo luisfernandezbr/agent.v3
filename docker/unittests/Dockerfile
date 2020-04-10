@@ -1,5 +1,6 @@
 FROM golang:alpine
 RUN apk add make dep git
+ENV GOPATH=/codefresh/volume/go
 WORKDIR /codefresh/volume/go/src/github.com/pinpt/agent
 
 # Do not require rebuilding container if dependencies are the same
