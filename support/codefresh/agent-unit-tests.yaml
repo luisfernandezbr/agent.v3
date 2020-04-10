@@ -4,6 +4,7 @@ version: "1.0"
 stages:
   - "clone"
   - "build"
+  - "test"
 steps:
   main_clone:
     type: "git-clone"
