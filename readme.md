@@ -1,5 +1,5 @@
 <div align="center">
-<img width="500" src="_docs/logo.svg" alt="pinpt-logo">
+	<img width="500" src="_docs/logo.svg" alt="pinpt-logo">
 </div>
 
 <p align="center" color="#6a737d">
