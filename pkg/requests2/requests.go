@@ -238,7 +238,7 @@ func (s StatusCodeError) Error() string {
 	return fmt.Sprintf(`wanted status code %v..%v, got %v`, s.WantStart, s.WantEnd, s.Got)
 }
 
-func assertStatusCode(code int, wantStart, wantEnd int) error {
+func AssertStatusCode(code int, wantStart, wantEnd int) error {
 	if !(code >= wantStart && code <= wantEnd) {
 		return StatusCodeError{WantStart: wantStart, WantEnd: wantEnd, Got: code}
 	}
@@ -263,7 +263,7 @@ func (opts Requests) JSON(
 		return
 	}
 	resp2 := resp.Resp
-	err = assertStatusCode(resp2.StatusCode, 200, 299)
+	err = AssertStatusCode(resp2.StatusCode, 200, 299)
 	if err != nil {
 		rerr = resp.ErrorContext(err)
 		return

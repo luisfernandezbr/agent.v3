@@ -141,10 +141,24 @@ This only allows adding simple text comments without formatting.
 {
     "integration_name": "github",
     "system_type": "sourcecode",
-    "action": "ISSUE_SET_TITLE", // TODO: add another action for this
+    "action": "PR_SET_TITLE",
     {
         "ref_id": "MDExOlB1bGxSZXF1ZXN0MzQzNTAzOTM0",
         "title": "New PR title"
+    }
+}
+```
+
+#### Set pull request description
+
+```
+{
+    "integration_name": "github",
+    "system_type": "sourcecode",
+    "action": "PR_SET_DESCRIPTION",
+    {
+        "ref_id": "MDExOlB1bGxSZXF1ZXN0MzQzNTAzOTM0",
+        "body_markdown": "# Title"
     }
 }
 ```

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -57,8 +58,40 @@ func (s *Integration) makeRequestNoRetries(query string, vars map[string]interfa
 	req.Body = dataJSON
 	req.Header = http.Header{}
 	req.Header.Set("Authorization", "bearer "+s.config.Token)
-	_, err = requests2.New(s.logger, s.clients.TLSInsecure).JSON(req, res)
-	return err
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := requests2.New(s.logger, s.clients.TLSInsecure).Do(context.Background(), req)
+	if err != nil {
+		return err
+	}
+	err = requests2.AssertStatusCode(resp.Resp.StatusCode, 200, 299)
+	if err != nil {
+		return resp.ErrorContext(err)
+	}
+	b, err := ioutil.ReadAll(resp.Resp.Body)
+	if err != nil {
+		return resp.ErrorContext(err)
+	}
+
+	var errRes struct {
+		Errors []struct {
+			Type    string `json:"type"`
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+	json.Unmarshal(b, &errRes)
+	if len(errRes.Errors) != 0 {
+		err1 := errRes.Errors[0]
+		err := fmt.Errorf("api request failed: type: %v message %v", err1.Type, err1.Message)
+		return resp.ErrorContext(err)
+	}
+
+	err = json.Unmarshal(b, &res)
+	if err != nil {
+		return resp.ErrorContext(err)
+	}
+	return nil
 }
 
 type request struct {
