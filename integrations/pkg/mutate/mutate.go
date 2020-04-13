@@ -30,6 +30,7 @@ type AllowedValue struct {
 const ErrNotFound = "not_found"
 
 func UnmarshalAction(fn string) (v agent.IntegrationMutationRequestAction) {
+
 	/*
 		Below example doesn't work due to bug in schemagen
 		var action agent.IntegrationMutationRequestAction
@@ -52,6 +53,10 @@ func UnmarshalAction(fn string) (v agent.IntegrationMutationRequestAction) {
 		v = 4
 	case "ISSUE_GET_TRANSITIONS":
 		v = 5
+	case "PR_SET_TITLE":
+		v = 6
+	case "PR_SET_DESCRIPTION":
+		v = 7
 	default:
 		panic("unsupported action: " + fn)
 	}

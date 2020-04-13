@@ -20,3 +20,24 @@ func PREditTitle(qc QueryContext, id, title string) error {
 	var res interface{}
 	return qc.Request(query, vars, &res)
 }
+
+func PREditBody(qc QueryContext, id, body string) error {
+	qc.Logger.Info("editing pr body", "pr", id, "body", body)
+
+	query := `
+	mutation($id:ID! $body:String!) {
+		updatePullRequest(input:{
+			pullRequestId: $id,
+			body: $body
+		}) {
+			clientMutationId
+		}
+	}
+	`
+	vars := map[string]interface{}{
+		"id":   id,
+		"body": body,
+	}
+	var res interface{}
+	return qc.Request(query, vars, &res)
+}
