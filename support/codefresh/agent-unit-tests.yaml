@@ -24,9 +24,5 @@ steps:
     stage: test
     image: '${{build_alpine}}'
     commands:
-      - rm -rf /codefresh/volume/go/src/github.com/pinpt/agent
-      - mkdir -p /codefresh/volume/go/src/github.com/pinpt
-      - cp -r /codefresh/volume/agent /codefresh/volume/go/src/github.com/pinpt/agent
-      - cd /codefresh/volume/go/src/github.com/pinpt/agent
-      - GOPATH=/codefresh/volume/go dep ensure -v -vendor-only
-      - GOPATH=/codefresh/volume/go CGO_ENABLED=0 go test -v ./... -timeout 1m
+      - dep ensure -v -vendor-only
+      - CGO_ENABLED=0 go test -v ./... -timeout 1m
