@@ -13,6 +13,7 @@ import (
 
 	"github.com/pinpt/agent/cmd/agent-dev/cmddownloadexports"
 	"github.com/pinpt/agent/cmd/agent-dev/cmddownloadlogs"
+	"github.com/pinpt/agent/cmd/agent-dev/cmdmutperf"
 
 	"github.com/pinpt/agent/cmd/agent-dev/cmdbuild"
 	"github.com/pinpt/agent/cmd/cmdexport/process"
@@ -286,6 +287,27 @@ var cmdDownloadLogs = &cobra.Command{
 			NoFormat:   noFormat,
 			MaxRecords: maxRecords,
 		})
+	},
+}
+
+func init() {
+	cmd := cmdDownloadLogs
+	cmd.Flags().String("user", "", "User")
+	cmd.Flags().String("password", "", "Password")
+	cmd.Flags().String("url", "", "Elastic search URL")
+	cmd.Flags().String("agent-uuid", "", "Agent UUID")
+	cmd.Flags().String("customer-id", "", "Customer ID")
+	cmd.Flags().Int("max-records", 10000, "Max log records to fetch")
+	cmd.Flags().String("no-format", "", "Do not format resulting json (useful to see the exact data returned)")
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdMutationPerf = &cobra.Command{
+	Use:   "mutation-perf",
+	Short: "Process logs from an agent to see perf stats for mutations",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		cmdmutperf.Run()
 	},
 }
 

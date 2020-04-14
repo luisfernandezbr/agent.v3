@@ -38,7 +38,16 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 		req := instance.Object().(*agent.IntegrationMutationRequest)
 		s.logger.Info("received mutation request", "id", req.ID)
 		start := time.Now()
+
+		setTiming := func(resp *agent.IntegrationMutationResponse) {
+			resp.WebappRequestDate = agent.IntegrationMutationResponseWebappRequestDate(req.WebappRequestDate)
+			resp.AgentRequestSentDate = agent.IntegrationMutationResponseAgentRequestSentDate(req.AgentRequestSentDate)
+			date.ConvertToModel(start, &resp.AgentReceivedRequestDate)
+			date.ConvertToModel(time.Now(), &resp.AgentResponseSentDate)
+		}
+
 		sendEvent := func(resp *agent.IntegrationMutationResponse) (datamodel.ModelSendEvent, error) {
+			setTiming(resp)
 			s.logger.Info("processed mutation req", "dur", time.Since(start).String())
 			resp.JobID = req.JobID
 			date.ConvertToModel(time.Now(), &resp.EventDate)
