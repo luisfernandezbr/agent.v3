@@ -76,6 +76,7 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 		//conf.ID  not setting id
 		conf.Name = req.IntegrationName
 		conf.Config.RefreshToken = req.Authorization.RefreshToken
+		conf.Config.AccessToken = req.Authorization.AccessToken
 		if req.Authorization.URL != nil {
 			conf.Config.URL = *req.Authorization.URL
 		}
