@@ -47,7 +47,7 @@ func CommitsAndBranches(ctx context.Context, opts Opts) (_ State, rerr error) {
 
 	started := time.Now()
 	defer func() {
-		logger.Debug("commitsAndBranches done", "duration", time.Since(started))
+		logger.Debug("commitsAndBranches done", "duration", time.Since(started).String())
 	}()
 
 	commitsForParents := make(chan *object.Commit)
@@ -92,7 +92,7 @@ func CommitsAndBranches(ctx context.Context, opts Opts) (_ State, rerr error) {
 		defer wg.Done()
 		started := time.Now()
 		defer func() {
-			logger.Debug("parents done", "duration", time.Since(started))
+			logger.Debug("parents done", "duration", time.Since(started).String())
 		}()
 		popts := parentsgraph.Opts{}
 		popts.State = state.Parents
@@ -107,7 +107,7 @@ func CommitsAndBranches(ctx context.Context, opts Opts) (_ State, rerr error) {
 	{
 		started := time.Now()
 		defer func() {
-			logger.Debug("branches done", "duration", time.Since(started))
+			logger.Debug("branches done", "duration", time.Since(started).String())
 		}()
 		res := make(chan branches.Branch)
 		done := make(chan bool)
