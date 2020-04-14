@@ -312,14 +312,7 @@ var cmdMutationPerf = &cobra.Command{
 }
 
 func init() {
-	cmd := cmdDownloadLogs
-	cmd.Flags().String("user", "", "User")
-	cmd.Flags().String("password", "", "Password")
-	cmd.Flags().String("url", "", "Elastic search URL")
-	cmd.Flags().String("agent-uuid", "", "Agent UUID")
-	cmd.Flags().String("customer-id", "", "Customer ID")
-	cmd.Flags().Int("max-records", 10000, "Max log records to fetch")
-	cmd.Flags().String("no-format", "", "Do not format resulting json (useful to see the exact data returned)")
+	cmd := cmdMutationPerf
 	cmdRoot.AddCommand(cmd)
 }
 
