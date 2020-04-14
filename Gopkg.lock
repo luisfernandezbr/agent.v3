@@ -374,11 +374,12 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:7d42509ce35b55472fda025a170225fa6a141ae7f036d45282edcd4b60a07b9c"
+  digest = "1:092467aeeba84037e59ebbfba343030c98de88374d3a4bdb87211eb0bd5f420e"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
     "agent",
+    "calendar",
     "cicd",
     "codequality",
     "customer",
@@ -386,8 +387,8 @@
     "work",
   ]
   pruneopts = "T"
-  revision = "6c1384649221b1d0cce7c5f973f225919a753480"
-  version = "v0.0.843"
+  revision = "abe60f38e984bd4d0158efa4365ac646f9a72803"
+  version = "v0.0.855"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
