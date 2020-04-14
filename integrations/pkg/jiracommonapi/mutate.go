@@ -1,22 +1,28 @@
-package api
+package jiracommonapi
 
 import (
 	"encoding/json"
 	"net/url"
 
-	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/integrations/pkg/mutate"
 	"github.com/pinpt/agent/pkg/requests2"
 	"github.com/pinpt/integration-sdk/work"
 )
+
+func AddComment(qc QueryContext, issueID, body string) (_ *work.IssueComment, rerr error) {
+	if qc.IsOnPremise {
+		return addCommentOnPremise(qc, issueID, body)
+	}
+	return addCommentCloud(qc, issueID, body)
+}
 
 // AddComment adds a comment to issueID
 // currently adding body as simple unformatted text
 // to support formatting need to use Atlassian Document Format
 // haven't found a way to pass text with atlassian tags, such as {code}
 // https://developer.atlassian.com/cloud/jira/platform/apis/document/structure/
-func AddComment(qc QueryContext, issueID, body string) (_ *work.IssueComment, rerr error) {
-	qc.Logger.Info("adding comment", "issue", issueID, "body", body)
+func addCommentCloud(qc QueryContext, issueID, body string) (_ *work.IssueComment, rerr error) {
+	qc.Logger.Info("adding comment (cloud)", "issue", issueID, "body", body)
 
 	content := []map[string]interface{}{
 		{
@@ -47,9 +53,9 @@ func AddComment(qc QueryContext, issueID, body string) (_ *work.IssueComment, re
 	}
 
 	params := url.Values{}
-	params.Add("expand", jiracommonapi.IssueCommentsExpandParam)
+	params.Add("expand", IssueCommentsExpandParam)
 
-	var res jiracommonapi.CommentResponse
+	var res CommentResponse
 
 	req := requests2.Request{}
 	req.Method = "POST"
@@ -67,7 +73,40 @@ func AddComment(qc QueryContext, issueID, body string) (_ *work.IssueComment, re
 		return
 	}
 
-	return jiracommonapi.ConvertComment(qc.Common(), res, issueID, nil)
+	return ConvertComment(qc, res, issueID, nil)
+}
+
+func addCommentOnPremise(qc QueryContext, issueID, body string) (_ *work.IssueComment, rerr error) {
+	qc.Logger.Info("adding comment (on_premise)", "issue", issueID, "body", body)
+
+	reqObj := struct {
+		Body string `json:"body"`
+	}{
+		Body: body,
+	}
+
+	params := url.Values{}
+	params.Add("expand", IssueCommentsExpandParam)
+
+	var res CommentResponse
+
+	req := requests2.Request{}
+	req.Method = "POST"
+	req.URL = qc.Req.URL("issue/" + issueID + "/comment")
+	req.Query = params
+	var err error
+	req.Body, err = json.Marshal(reqObj)
+	if err != nil {
+		rerr = err
+		return
+	}
+	_, err = qc.Req.JSON(req, &res)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	return ConvertComment(qc, res, issueID, nil)
 }
 
 func mutJSONReq(qc QueryContext, method string, uri string, body interface{}, res interface{}) error {
@@ -187,41 +226,6 @@ func GetIssueTransitions(qc QueryContext, issueID string) (res []mutate.IssueTra
 	return
 }
 
-/*
-// EditStatus changes issue status to passed id.
-func EditStatus(qc QueryContext, issueID, statusID string) error {
-	qc.Logger.Info("editing issue status", "issue", issueID, "statusID", statusID)
-
-	// get transition ids first
-	transitions, err := getIssueTransitions(qc, issueID)
-	if err != nil {
-		return err
-	}
-	var transition issueTransition
-	for _, tr := range transitions {
-		if tr.To.ID == statusID {
-			transition = tr
-			break
-		}
-	}
-	if transition.ID == "" {
-		statuses := []string{}
-		for _, tr := range transitions {
-			statuses = append(statuses, fmt.Sprintf("%+v", tr.To))
-		}
-		return fmt.Errorf("could not change issue status: invalid status id: %v options: %v", statusID, statuses)
-	}
-
-	reqObj := struct {
-		Transition struct {
-			ID string `json:"id"`
-		} `json:"transition"`
-	}{}
-	reqObj.Transition.ID = transition.ID
-
-	return mutJSONReq(qc, "POST", "issue/"+issueID+"/transitions", reqObj, nil)
-}*/
-
 type transitionFieldValue struct {
 	Name string `json:"name"`
 }
@@ -246,7 +250,14 @@ func EditStatus(qc QueryContext, issueID, transitionID string, fieldValues map[s
 }
 
 func AssignUser(qc QueryContext, issueID, accountID string) error {
-	qc.Logger.Info("change issue assignee", "issue", issueID, "account_id", accountID)
+	if qc.IsOnPremise {
+		return assignUserOnPremise(qc, issueID, accountID)
+	}
+	return assignUserCloud(qc, issueID, accountID)
+}
+
+func assignUserCloud(qc QueryContext, issueID, accountID string) error {
+	qc.Logger.Info("change issue assignee (cloud)", "issue", issueID, "account_id", accountID)
 
 	reqObj := struct {
 		AccountID string `json:"accountId,omitempty"`
@@ -254,4 +265,36 @@ func AssignUser(qc QueryContext, issueID, accountID string) error {
 	reqObj.AccountID = accountID
 
 	return mutJSONReq(qc, "PUT", "issue/"+issueID+"/assignee", reqObj, nil)
+}
+
+func assignUserOnPremise(qc QueryContext, issueID, accountKey string) error {
+	qc.Logger.Info("change issue assignee (on_premise)", "issue", issueID, "account_key", accountKey)
+	name := ""
+	if accountKey != "" {
+		var err error
+		name, err = getUsernameByKey(qc, accountKey)
+		if err != nil {
+			return err
+		}
+	}
+	reqObj := struct {
+		Name string `json:"name,omitempty"`
+	}{}
+	reqObj.Name = name
+
+	return mutJSONReq(qc, "PUT", "issue/"+issueID+"/assignee", reqObj, nil)
+}
+
+func getUsernameByKey(qc QueryContext, key string) (username string, rerr error) {
+	q := url.Values{}
+	q.Set("key", key)
+	var res struct {
+		Name string `json:"name"`
+	}
+	err := qc.Req.Get("user", q, &res)
+	if err != nil {
+		rerr = err
+		return
+	}
+	return res.Name, nil
 }

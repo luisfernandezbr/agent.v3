@@ -81,9 +81,27 @@ func (s *Requester) get(objPath string, params url.Values, res interface{}) (sta
 }
 
 func (s *Requester) JSON(req requests2.Request, res interface{}) (resp requests2.Result, rerr error) {
-	panic("not implemented")
+	var reqs requests2.Requests
+	if s.opts.RetryRequests {
+		reqs = requests2.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
+	} else {
+		reqs = requests2.New(s.logger, s.opts.Clients.TLSInsecure)
+	}
+
+	req.BasicAuthUser = s.opts.Username
+	req.BasicAuthPassword = s.opts.Password
+
+	var err error
+	resp, err = reqs.JSON(req, res)
+
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	return
 }
 
 func (s *Requester) URL(objPath string) string {
-	panic("not implemented")
+	return pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
 }

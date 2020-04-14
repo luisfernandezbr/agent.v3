@@ -10,11 +10,12 @@ import (
 )
 
 type QueryContext struct {
-	WebsiteURL string
-	Logger     hclog.Logger
-	CustomerID string
-	ExportUser func(user User) error
-	Req        Requester
+	WebsiteURL  string
+	Logger      hclog.Logger
+	CustomerID  string
+	ExportUser  func(user User) error
+	Req         Requester
+	IsOnPremise bool
 }
 
 func (s QueryContext) Validate() {

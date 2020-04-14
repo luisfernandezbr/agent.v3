@@ -16,7 +16,8 @@ type Opts struct {
 	ExcludedProjects []string
 	IncludedProjects []string
 	// Projects only process these projects by key.
-	Projects []string
+	Projects    []string
+	IsOnPremise bool
 }
 
 type JiraCommon struct {
@@ -46,8 +47,11 @@ func (s *JiraCommon) CommonQC() jiracommonapi.QueryContext {
 	res.WebsiteURL = s.opts.WebsiteURL
 	res.CustomerID = s.opts.CustomerID
 	res.Logger = s.opts.Logger
-	res.ExportUser = s.users.ExportUser
+	if s.users != nil {
+		res.ExportUser = s.users.ExportUser
+	}
 	res.Req = s.opts.Req
+	res.IsOnPremise = s.opts.IsOnPremise
 	res.Validate()
 	return res
 }

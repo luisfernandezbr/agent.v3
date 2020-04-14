@@ -113,6 +113,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 		ExcludedProjects: s.config.Exclusions,
 		IncludedProjects: s.config.Inclusions,
 		Projects:         s.config.Projects,
+		IsOnPremise:      true,
 	})
 	if err != nil {
 		return err
