@@ -116,10 +116,19 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 		if len(sites) == 0 {
 			return errors.New("no accessible-resources resources found for oauth token")
 		}
-		if len(sites) > 1 {
-			return errors.New("more than 1 site accessible with oauth token, this is not supported")
+		var site api.Site
+		for _, item := range sites {
+			if item.URL == s.qc.WebsiteURL {
+				site = item
+			}
 		}
-		site := sites[0]
+		if site.URL == "" {
+			var authed []string
+			for _, item := range sites {
+				authed = append(authed, item.URL)
+			}
+			return fmt.Errorf("This account is not authorized for jira with the following url: %v, it can only access the following instances: %v", s.qc.WebsiteURL, authed)
+		}
 		apiBaseURL = "https://api.atlassian.com/ex/jira/" + site.ID
 
 	} else {
