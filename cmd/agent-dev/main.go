@@ -276,7 +276,7 @@ var cmdDownloadLogs = &cobra.Command{
 		url, _ := cmd.Flags().GetString("url")
 		agentUUID, _ := cmd.Flags().GetString("agent-uuid")
 		customerID, _ := cmd.Flags().GetString("customer-id")
-		noFormat, _ := cmd.Flags().GetBool("no-format")
+		format, _ := cmd.Flags().GetString("format")
 		maxRecords, _ := cmd.Flags().GetInt("max-records")
 		cmddownloadlogs.Run(cmddownloadlogs.Opts{
 			User:       user,
@@ -284,7 +284,7 @@ var cmdDownloadLogs = &cobra.Command{
 			URL:        url,
 			AgentUUID:  agentUUID,
 			CustomerID: customerID,
-			NoFormat:   noFormat,
+			Format:     format,
 			MaxRecords: maxRecords,
 		})
 	},
@@ -298,7 +298,7 @@ func init() {
 	cmd.Flags().String("agent-uuid", "", "Agent UUID")
 	cmd.Flags().String("customer-id", "", "Customer ID")
 	cmd.Flags().Int("max-records", 10000, "Max log records to fetch")
-	cmd.Flags().String("no-format", "", "Do not format resulting json (useful to see the exact data returned)")
+	cmd.Flags().String("format", "log", "Output format: source or json or log")
 	cmdRoot.AddCommand(cmd)
 }
 

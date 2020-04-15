@@ -19,7 +19,7 @@ type Opts struct {
 	AgentUUID  string
 	CustomerID string
 
-	NoFormat bool
+	Format string
 
 	MaxRecords int
 }
@@ -99,7 +99,7 @@ func getData(opts Opts) {
 				},
 			},
 			"sort": []jm{
-				{"fields.@timestamp": jm{"order": "desc"}},
+				{"fields.timestamp": jm{"order": "desc"}},
 			},
 		}
 
@@ -132,7 +132,7 @@ func getData(opts Opts) {
 			panic(err)
 		}
 
-		if opts.NoFormat {
+		if opts.Format == "source" {
 			fmt.Println(string(b))
 			return
 		}
@@ -141,7 +141,9 @@ func getData(opts Opts) {
 			Hits struct {
 				Hits []struct {
 					Source struct {
-						Fields map[string]interface{} `json:"fields"`
+						Severity string                 `json:"severity"`
+						Message  string                 `json:"message"`
+						Fields   map[string]interface{} `json:"fields"`
 					} `json:"_source"`
 					Sort []int `json:"sort"`
 				} `json:"hits"`
@@ -154,14 +156,21 @@ func getData(opts Opts) {
 		}
 
 		for _, hit := range res.Hits.Hits {
+			if opts.Format == "json" {
+				b, err := json.Marshal(hit.Source)
+				if err != nil {
+					panic(err)
+				}
+				fmt.Println(string(b))
+				continue
+			}
+
 			fields := hit.Source.Fields
-			lvl := fields["@level"]
-			msg := fields["@message"]
-			ts := fields["@timestamp"]
+			lvl := hit.Source.Severity
+			msg := hit.Source.Message
+			ts := fields["timestamp"]
 			fmt.Print(lvl, " ", ts, " ", msg, " ")
-			delete(fields, "@level")
-			delete(fields, "@message")
-			delete(fields, "@timestamp")
+			delete(fields, "timestamp")
 
 			delete(fields, "message_id")
 			delete(fields, "customer_id")
