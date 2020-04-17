@@ -13,10 +13,11 @@ import (
 )
 
 type ProcessOpts struct {
-	Logger      hclog.Logger
-	ProjectFn   ProjectFn
-	Concurrency int
-	Projects    []RepoProject
+	Logger               hclog.Logger
+	ProjectFn            ProjectFn
+	ProjectLastProcessFn ProjectLastProcessFn
+	Concurrency          int
+	Projects             []RepoProject
 
 	IntegrationType inconfig.IntegrationType
 	CustomerID      string
@@ -26,13 +27,14 @@ type ProcessOpts struct {
 }
 
 type ProjectFn func(ctx *ProjectCtx) error
+type ProjectLastProcessFn func(ctx *ProjectCtx) (string, error)
 
 type Process struct {
 	opts ProcessOpts
 }
 
 func NewProcess(opts ProcessOpts) *Process {
-	if opts.Logger == nil || opts.ProjectFn == nil || opts.Concurrency == 0 || opts.IntegrationType.String() == "unset" || opts.CustomerID == "" || opts.RefType == "" || opts.Sender == nil {
+	if opts.Logger == nil || (opts.ProjectFn == nil && opts.ProjectLastProcessFn == nil) || opts.Concurrency == 0 || opts.IntegrationType.String() == "unset" || opts.CustomerID == "" || opts.RefType == "" || opts.Sender == nil {
 		panic("provide all args")
 	}
 	s := &Process{}
@@ -47,6 +49,8 @@ func (s *Process) projectID(project RepoProject) string {
 		return ids.CodeRepo(project.GetID())
 	case inconfig.IntegrationTypeWork:
 		return ids.WorkProject(project.GetID())
+	case inconfig.IntegrationTypeCalendar:
+		return ids.CalendarCalendar(project.GetID())
 	default:
 		panic(fmt.Errorf("not supported IntegrationType: %v", s.opts.IntegrationType))
 	}
@@ -92,7 +96,13 @@ func (s *Process) Run() (allRes []rpcdef.ExportProject, rerr error) {
 				ctx := newProjectCtx(logger, p, s.opts.Sender)
 
 				logger.Info("starting processing repo/project")
-				projectErr := s.opts.ProjectFn(ctx)
+				var lastProcess string
+				var projectErr error
+				if s.opts.ProjectFn != nil {
+					projectErr = s.opts.ProjectFn(ctx)
+				} else {
+					lastProcess, projectErr = s.opts.ProjectLastProcessFn(ctx)
+				}
 				logger.Info("completed processing repo/project", "err", projectErr)
 
 				err := s.opts.Sender.IncProgress()
@@ -124,8 +134,11 @@ func (s *Process) Run() (allRes []rpcdef.ExportProject, rerr error) {
 					}
 					return
 				}
-
-				err = ctx.done()
+				if lastProcess != "" {
+					err = ctx.doneLastProcess(lastProcess)
+				} else {
+					err = ctx.done()
+				}
 				if err != nil {
 					rerr(err)
 					return
@@ -194,6 +207,15 @@ func (s *ProjectCtx) Session(modelName datamodel.ModelNameType) (_ *objsender.Se
 func (s *ProjectCtx) done() error {
 	for _, sender := range s.senders {
 		err := sender.Done()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *ProjectCtx) doneLastProcess(token string) error {
+	for _, sender := range s.senders {
+		err := sender.DoneLastProcessed(token)
 		if err != nil {
 			return err
 		}

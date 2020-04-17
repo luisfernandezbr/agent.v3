@@ -119,6 +119,7 @@ type Result struct {
 type DataRepos []map[string]interface{}
 type DataProjects []map[string]interface{}
 type DataWorkConfig map[string]interface{}
+type DataCalendars []map[string]interface{}
 
 type DataUsers struct {
 	Users []map[string]interface{} `json:"users"`

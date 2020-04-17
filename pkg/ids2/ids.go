@@ -2,6 +2,7 @@ package ids2
 
 import (
 	"github.com/pinpt/go-common/hash"
+	"github.com/pinpt/integration-sdk/calendar"
 	"github.com/pinpt/integration-sdk/sourcecode"
 	"github.com/pinpt/integration-sdk/work"
 )
@@ -104,4 +105,18 @@ func (s Gen) WorkSprintID(refID string) string {
 		return ""
 	}
 	return work.NewSprintID(s.customerID, refID, s.refType)
+}
+
+func (s Gen) CalendarCalendar(refID string) string {
+	if refID == "" {
+		return ""
+	}
+	return calendar.NewCalendarID(s.customerID, s.refType, refID)
+}
+
+func (s Gen) CalendarEvent(refID string) string {
+	if refID == "" {
+		return ""
+	}
+	return calendar.NewEventID(s.customerID, s.refType, refID)
 }

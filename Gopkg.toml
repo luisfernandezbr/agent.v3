@@ -36,7 +36,6 @@
 [[constraint]]
   name = "github.com/pinpt/integration-sdk"
   version = "0"
-  #branch = "TIGR-37"
 
 [[constraint]]
   name = "github.com/denisbrodbeck/machineid"

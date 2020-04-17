@@ -100,6 +100,7 @@ const (
 	OnboardExportTypeRepos                        = "repos"
 	OnboardExportTypeProjects                     = "projects"
 	OnboardExportTypeWorkConfig                   = "workconfig"
+	OnboardExportTypeCalendar                     = "calendars"
 )
 
 func onboardExportTypeFromProto(k proto.IntegrationOnboardExportReq_Kind) (res OnboardExportType) {
@@ -112,6 +113,8 @@ func onboardExportTypeFromProto(k proto.IntegrationOnboardExportReq_Kind) (res O
 		return OnboardExportTypeProjects
 	case proto.IntegrationOnboardExportReq_WORKCONFIG:
 		return OnboardExportTypeWorkConfig
+	case proto.IntegrationOnboardExportReq_CALENDARS:
+		return OnboardExportTypeCalendar
 	default:
 		panic(fmt.Errorf("unsupported object type: %v", k))
 	}
@@ -127,6 +130,8 @@ func (s OnboardExportType) proto() proto.IntegrationOnboardExportReq_Kind {
 		return proto.IntegrationOnboardExportReq_PROJECTS
 	case OnboardExportTypeWorkConfig:
 		return proto.IntegrationOnboardExportReq_WORKCONFIG
+	case OnboardExportTypeCalendar:
+		return proto.IntegrationOnboardExportReq_CALENDARS
 	default:
 		panic(fmt.Errorf("unsupported object type: %v", s))
 	}

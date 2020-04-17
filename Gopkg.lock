@@ -751,6 +751,7 @@
     "github.com/pinpt/httpclient",
     "github.com/pinpt/integration-sdk",
     "github.com/pinpt/integration-sdk/agent",
+    "github.com/pinpt/integration-sdk/calendar",
     "github.com/pinpt/integration-sdk/codequality",
     "github.com/pinpt/integration-sdk/customer",
     "github.com/pinpt/integration-sdk/sourcecode",

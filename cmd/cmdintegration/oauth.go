@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/pinpt/agent/pkg/expin"
 	"github.com/pinpt/agent/pkg/requests"
@@ -16,6 +17,8 @@ func oauthIntegrationNameToBackend(name string) string {
 		return "jira"
 	case "bitbucket":
 		return name
+	case "gcal":
+		return "gsuite"
 	default:
 		panic(fmt.Errorf("oauth is not supported for integration: %v", name))
 	}
@@ -36,7 +39,7 @@ func (s *Command) OAuthNewAccessToken(exp expin.Export) (accessToken string, _ e
 	authAPIBase := api.BackendURL(api.AuthService, s.EnrollConf.Channel)
 
 	// need oauth integration name
-	url := authAPIBase + "oauth/" + oauthIntegrationNameToBackend(integrationName) + "/refresh/" + refresh
+	url := authAPIBase + "oauth/" + oauthIntegrationNameToBackend(integrationName) + "/refresh/" + url.PathEscape(refresh)
 
 	s.Logger.Debug("requesting new oauth token from", "url", url)
 

@@ -44,10 +44,7 @@ func stringify(i interface{}) string {
 	return pjson.Stringify(i)
 }
 
-func (s *Integration) processRepos() (
-	projectIDs []string,
-	exportResults []rpcdef.ExportProject,
-	rerr error) {
+func (s *Integration) processRepos() (projectIDs []string, exportResults []rpcdef.ExportProject, rerr error) {
 	s.logger.Info("processing repos, fetching all repos")
 	ids, reposDetails, err := s.api.FetchAllRepos(s.Repos, s.ExcludedRepoIDs, s.IncludedRepoIDs)
 	if err != nil {

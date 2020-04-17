@@ -179,6 +179,16 @@ func (s *Session) LastProcessedTime() time.Time {
 	}
 	return res
 }
+func (s *Session) LastProcessed() string {
+	if s.lastProcessed == nil {
+		return ""
+	}
+	str, ok := s.lastProcessed.(string)
+	if !ok {
+		panic(fmt.Errorf("attempted to get last processed time as string, but have different type stored %v %T", s.lastProcessed, s.lastProcessed))
+	}
+	return str
+}
 
 func (s *Session) Done() error {
 	err := s.batch.Flush()
@@ -186,6 +196,15 @@ func (s *Session) Done() error {
 		return err
 	}
 	s.agent.ExportDone(strconv.Itoa(s.sessionID), s.startTime.Format(time.RFC3339))
+	return nil
+}
+
+func (s *Session) DoneLastProcessed(lastProcess string) error {
+	err := s.batch.Flush()
+	if err != nil {
+		return err
+	}
+	s.agent.ExportDone(strconv.Itoa(s.sessionID), lastProcess)
 	return nil
 }
 

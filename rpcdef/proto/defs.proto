@@ -57,6 +57,7 @@ message IntegrationOnboardExportReq {
         REPOS = 1;
         PROJECTS = 2;
         WORKCONFIG = 3;
+        CALENDARS = 4;
     }
     Kind kind = 2;
 }

@@ -162,7 +162,6 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		if err != nil {
 			return err
 		}
-
 		s.oauth = oauth
 	}
 

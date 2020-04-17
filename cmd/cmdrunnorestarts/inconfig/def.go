@@ -38,6 +38,7 @@ const IntegrationTypeWork = IntegrationType(agent.IntegrationRequestIntegrationS
 const IntegrationTypeSourcecode = IntegrationType(agent.IntegrationRequestIntegrationSystemTypeSourcecode)
 const IntegrationTypeCodequality = IntegrationType(agent.IntegrationRequestIntegrationSystemTypeCodequality)
 const IntegrationTypeUser = IntegrationType(agent.IntegrationRequestIntegrationSystemTypeUser)
+const IntegrationTypeCalendar = IntegrationType(agent.IntegrationRequestIntegrationSystemTypeCalendar)
 
 func (in IntegrationType) String() string {
 	return agent.IntegrationRequestIntegrationSystemType(in).String()
@@ -103,6 +104,8 @@ func TypeFromString(t string) (IntegrationType, error) {
 		return IntegrationType(agent.IntegrationRequestIntegrationSystemTypeCodequality), nil
 	case "USER":
 		return IntegrationType(agent.IntegrationRequestIntegrationSystemTypeUser), nil
+	case "CALENDAR":
+		return IntegrationType(agent.IntegrationRequestIntegrationSystemTypeCalendar), nil
 	}
 	return IntegrationType(-1), fmt.Errorf("invalid integration id type: %v", t)
 }
