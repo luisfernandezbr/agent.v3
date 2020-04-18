@@ -25,6 +25,7 @@ var integrationBinaries = []string{
 	"jira-hosted",
 	"mock",
 	"sonarqube",
+	"gcal",
 }
 
 type Platform struct {
