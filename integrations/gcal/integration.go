@@ -139,15 +139,13 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 		}
 	}
 
+	userchan := make(chan map[string]*calendar.User, 1)
+
 	processOpts := repoprojects.ProcessOpts{}
 	processOpts.Logger = s.logger
 	processOpts.ProjectLastProcessFn = func(ctx *repoprojects.ProjectCtx) (string, error) {
 		proj := ctx.Project.(Calendar)
 		eventSender, err := ctx.Session(calendar.EventModelName)
-		if err != nil {
-			return "", err
-		}
-		userSender, err := ctx.Session(calendar.UserModelName)
 		if err != nil {
 			return "", err
 		}
@@ -159,12 +157,30 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 		for _, evt := range events {
 			eventSender.Send(evt)
 		}
-		for _, user := range users {
-			userSender.Send(user)
-		}
+
+		userchan <- users
 		return nextToken, err
 	}
-
+	rerr := make(chan error, 1)
+	go func() {
+		allusers := make(map[string]*calendar.User)
+		for usrs := range userchan {
+			for k, v := range usrs {
+				allusers[k] = v
+			}
+		}
+		userSender, err := objsender.Root(s.agent, calendar.UserModelName.String())
+		if err != nil {
+			rerr <- err
+			return
+		}
+		for _, user := range allusers {
+			userSender.Send(user)
+		}
+		if err := userSender.Done(); err != nil {
+			rerr <- err
+		}
+	}()
 	processOpts.Concurrency = 10
 	processOpts.Projects = projectsIface
 	processOpts.IntegrationType = inconfig.IntegrationTypeSourcecode
@@ -175,7 +191,11 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 	processor := repoprojects.NewProcess(processOpts)
 	res.Projects, err = processor.Run()
 	if err != nil {
-		panic(err)
+		return res, err
+	}
+	close(userchan)
+	if len(rerr) > 0 {
+		return res, <-rerr
 	}
 	err = session.Done()
 	return

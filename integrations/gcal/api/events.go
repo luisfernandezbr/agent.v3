@@ -8,7 +8,7 @@ import (
 )
 
 // GetCalendar returns all the events from a specifc calendar
-func (s *api) GetEventAndUsers(calid string, syncToken string) (res []*calendar.Event, usrs []*calendar.User, newToken string, err error) {
+func (s *api) GetEventAndUsers(calid string, syncToken string) (res []*calendar.Event, allUsers map[string]*calendar.User, newToken string, err error) {
 
 	params := queryParams{
 		"maxResults": "2500",
@@ -23,7 +23,7 @@ func (s *api) GetEventAndUsers(calid string, syncToken string) (res []*calendar.
 	}
 	refType := s.refType
 
-	allUsers := make(map[string]*calendar.User)
+	allUsers = make(map[string]*calendar.User)
 	for _, each := range events {
 		newToken = each.NextSyncToken
 		for _, evt := range each.Items {
@@ -96,9 +96,7 @@ func (s *api) GetEventAndUsers(calid string, syncToken string) (res []*calendar.
 			res = append(res, newEvent)
 		}
 	}
-	for _, user := range allUsers {
-		usrs = append(usrs, user)
-	}
+
 	return
 }
 
