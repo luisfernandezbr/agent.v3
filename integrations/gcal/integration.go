@@ -95,14 +95,10 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 		s.logger.Error("error creating calendar session", "err", err)
 		return res, err
 	}
+	defer session.Done()
 	session.SetNoAutoProgress(true)
 	var projectsIface []repoprojects.RepoProject
 	if len(s.config.Inclusions) > 0 {
-		if err := session.SetTotal(len(s.config.Inclusions)); err != nil {
-			s.logger.Error("error setting total projects on exportAll", "err", err)
-			return res, err
-		}
-
 		for _, each := range s.config.Inclusions {
 			cal, err := s.api.GetCalendar(url.QueryEscape(each))
 			if err != nil {
@@ -174,11 +170,9 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 			rerr <- err
 			return
 		}
+		defer userSender.Done()
 		for _, user := range allusers {
 			userSender.Send(user)
-		}
-		if err := userSender.Done(); err != nil {
-			rerr <- err
 		}
 	}()
 	processOpts.Concurrency = 10
@@ -197,7 +191,6 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 	if len(rerr) > 0 {
 		return res, <-rerr
 	}
-	err = session.Done()
 	return
 }
 
