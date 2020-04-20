@@ -139,25 +139,48 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 		}
 	}
 
+	userchan := make(chan map[string]*calendar.User, len(projectsIface))
+
 	processOpts := repoprojects.ProcessOpts{}
 	processOpts.Logger = s.logger
 	processOpts.ProjectLastProcessFn = func(ctx *repoprojects.ProjectCtx) (string, error) {
 		proj := ctx.Project.(Calendar)
-		sender, err := ctx.Session(calendar.EventModelName)
+		eventSender, err := ctx.Session(calendar.EventModelName)
 		if err != nil {
 			return "", err
 		}
-		events, nextToken, err := s.api.GetEvents(url.QueryEscape(proj.RefID), sender.LastProcessed())
+		events, users, nextToken, err := s.api.GetEventAndUsers(url.QueryEscape(proj.RefID), eventSender.LastProcessed())
 		if err != nil {
 			s.logger.Error("error fetching events for user_id, skipping", "err", err, "user_id", proj.RefID)
 			return "", err
 		}
 		for _, evt := range events {
-			sender.Send(evt)
+			eventSender.Send(evt)
 		}
+
+		userchan <- users
 		return nextToken, err
 	}
-
+	rerr := make(chan error, 1)
+	go func() {
+		allusers := make(map[string]*calendar.User)
+		for usrs := range userchan {
+			for k, v := range usrs {
+				allusers[k] = v
+			}
+		}
+		userSender, err := objsender.Root(s.agent, calendar.UserModelName.String())
+		if err != nil {
+			rerr <- err
+			return
+		}
+		for _, user := range allusers {
+			userSender.Send(user)
+		}
+		if err := userSender.Done(); err != nil {
+			rerr <- err
+		}
+	}()
 	processOpts.Concurrency = 10
 	processOpts.Projects = projectsIface
 	processOpts.IntegrationType = inconfig.IntegrationTypeSourcecode
@@ -168,7 +191,11 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 	processor := repoprojects.NewProcess(processOpts)
 	res.Projects, err = processor.Run()
 	if err != nil {
-		panic(err)
+		return res, err
+	}
+	close(userchan)
+	if len(rerr) > 0 {
+		return res, <-rerr
 	}
 	err = session.Done()
 	return

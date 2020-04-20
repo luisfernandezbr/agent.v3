@@ -120,3 +120,16 @@ func (s Gen) CalendarEvent(refID string) string {
 	}
 	return calendar.NewEventID(s.customerID, s.refType, refID)
 }
+func (s Gen) CalendarUser(refID string) string {
+	if refID == "" {
+		return ""
+	}
+	return calendar.NewUserID(s.customerID, refID, s.refType)
+}
+
+func (s Gen) CalendarUserID(email string) string {
+	if email == "" {
+		return ""
+	}
+	return hash.Values(s.customerID, email)
+}

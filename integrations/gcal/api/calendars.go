@@ -25,6 +25,7 @@ func (s *api) GetCalendars() (res []*calendar.Calendar, err error) {
 				Description: item.ID, // use the email (which is id) for description
 				RefType:     s.refType,
 				RefID:       item.ID,
+				UserRefID:   s.ids.CalendarUserID(item.ID),
 			})
 		}
 	}

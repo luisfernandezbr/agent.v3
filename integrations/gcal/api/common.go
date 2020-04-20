@@ -20,9 +20,9 @@ import (
 )
 
 type API interface {
-	GetEvents(calid string, syncToken string) (res []*calendar.Event, newToken string, err error)
-	GetCalendar(calID string) (res *calendar.Calendar, err error)
-	GetCalendars() (res []*calendar.Calendar, err error)
+	GetEventAndUsers(string, string) ([]*calendar.Event, map[string]*calendar.User, string, error)
+	GetCalendar(calID string) (*calendar.Calendar, error)
+	GetCalendars() ([]*calendar.Calendar, error)
 	Validate() error
 }
 

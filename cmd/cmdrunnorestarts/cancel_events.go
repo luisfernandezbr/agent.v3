@@ -32,11 +32,11 @@ func (s *runner) handleCancelEvents(ctx context.Context) (closefunc, error) {
 
 		var cmdname string
 		switch ev.Command {
-		case agent.CancelRequestCommandEXPORT:
+		case agent.CancelRequestCommandExport:
 			cmdname = "export"
-		case agent.CancelRequestCommandONBOARD:
+		case agent.CancelRequestCommandOnboard:
 			cmdname = "export-onboard-data"
-		case agent.CancelRequestCommandINTEGRATION:
+		case agent.CancelRequestCommandIntegration:
 			cmdname = "validate-config"
 		}
 		resp := &agent.CancelResponse{}
