@@ -139,7 +139,7 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 		}
 	}
 
-	userchan := make(chan map[string]*calendar.User, 1)
+	userchan := make(chan map[string]*calendar.User, len(projectsIface))
 
 	processOpts := repoprojects.ProcessOpts{}
 	processOpts.Logger = s.logger
