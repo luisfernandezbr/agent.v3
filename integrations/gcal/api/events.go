@@ -8,7 +8,7 @@ import (
 )
 
 // GetCalendar returns all the events from a specifc calendar
-func (s *api) GetEvents(calid string, syncToken string) (res []*calendar.Event, newToken string, err error) {
+func (s *api) GetEventAndUsers(calid string, syncToken string) (res []*calendar.Event, usrs []*calendar.User, newToken string, err error) {
 
 	params := queryParams{
 		"maxResults": "2500",
@@ -23,6 +23,7 @@ func (s *api) GetEvents(calid string, syncToken string) (res []*calendar.Event, 
 	}
 	refType := s.refType
 
+	allUsers := make(map[string]*calendar.User)
 	for _, each := range events {
 		newToken = each.NextSyncToken
 		for _, evt := range each.Items {
@@ -35,8 +36,7 @@ func (s *api) GetEvents(calid string, syncToken string) (res []*calendar.Event, 
 			newEvent.RefID = evt.ID
 			newEvent.CalendarID = s.ids.CalendarEvent(calid)
 			newEvent.Location.URL = evt.Location
-			newEvent.Owner.Email = evt.Organizer.Email
-			newEvent.Owner.Name = evt.Organizer.DisplayName
+			newEvent.OwnerRefID = s.ids.CalendarUserID(evt.Organizer.Email)
 			switch evt.Status {
 			case "confirmed":
 				newEvent.Status = calendar.EventStatusConfirmed
@@ -47,10 +47,10 @@ func (s *api) GetEvents(calid string, syncToken string) (res []*calendar.Event, 
 			}
 
 			for _, att := range evt.Attendees {
+				refid := s.ids.CalendarUserID(att.Email)
 				newEvent.Busy = att.ResponseStatus == "accepted"
+
 				var user calendar.EventParticipants
-				user.Name = att.DisplayName
-				user.Email = att.Email
 				switch att.ResponseStatus {
 				case "accepted":
 					user.Status = calendar.EventParticipantsStatusGoing
@@ -61,7 +61,16 @@ func (s *api) GetEvents(calid string, syncToken string) (res []*calendar.Event, 
 				case "needsAction":
 					user.Status = calendar.EventParticipantsStatusUnknown
 				}
+				user.UserRefID = refid
 				newEvent.Participants = append(newEvent.Participants, user)
+
+				allUsers[refid] = &calendar.User{
+					CustomerID: s.customerID,
+					Email:      att.Email,
+					Name:       att.DisplayName,
+					RefID:      refid,
+					RefType:    s.refType,
+				}
 			}
 
 			startDate := evt.Start.DateTime
@@ -87,7 +96,9 @@ func (s *api) GetEvents(calid string, syncToken string) (res []*calendar.Event, 
 			res = append(res, newEvent)
 		}
 	}
-
+	for _, user := range allUsers {
+		usrs = append(usrs, user)
+	}
 	return
 }
 
