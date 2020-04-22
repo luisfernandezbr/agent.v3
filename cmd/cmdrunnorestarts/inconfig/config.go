@@ -83,7 +83,7 @@ func ConvertEdgeCases(in *IntegrationAgent) error {
 			return fmt.Errorf("invalid jira url: %v", err)
 		}
 		in.Name = "jira-hosted"
-		if strings.HasSuffix(u.Host, ".atlassian.net") {
+		if strings.HasSuffix(u.Host, ".atlassian.net") || strings.HasSuffix(u.Host, ".jira.com") {
 			in.Name = "jira-cloud"
 		}
 	}
