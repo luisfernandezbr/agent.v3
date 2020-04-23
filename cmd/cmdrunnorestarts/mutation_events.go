@@ -40,7 +40,9 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 
 	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		req := instance.Object().(*agent.IntegrationMutationRequest)
-		s.logger.Info("received mutation request", "id", req.ID)
+		logger := s.logger.With("job_id", req.JobID, "action", req.Action, "in", req.IntegrationName, "webapp_request_date", req.WebappRequestDate.Rfc3339, "agent_request_sent_date", req.AgentRequestSentDate.Rfc3339)
+
+		logger.Info("received mutation request")
 		start := time.Now()
 
 		setTiming := func(resp *agent.IntegrationMutationResponse) {
@@ -52,7 +54,7 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 
 		sendEvent := func(resp *agent.IntegrationMutationResponse) (datamodel.ModelSendEvent, error) {
 			setTiming(resp)
-			s.logger.Info("processed mutation req", "dur", time.Since(start).String())
+			logger.Info("processed mutation req", "dur", time.Since(start).String())
 			resp.JobID = req.JobID
 			date.ConvertToModel(time.Now(), &resp.EventDate)
 			s.deviceInfo.AppendCommonInfo(resp)
@@ -60,7 +62,7 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 		}
 
 		sendError := func(errorCode string, err error) (datamodel.ModelSendEvent, error) {
-			s.logger.Info("mutation failed", "err", err)
+			logger.Info("mutation failed", "err", err)
 			resp := &agent.IntegrationMutationResponse{}
 			errStr := err.Error()
 			resp.Error = &errStr
