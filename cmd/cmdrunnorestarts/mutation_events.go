@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pinpt/go-common/datetime"
+
 	"github.com/pinpt/agent/integrations/pkg/mutate"
 
 	"github.com/pinpt/agent/cmd/cmdmutate"
@@ -18,6 +20,8 @@ import (
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/event/action"
 )
+
+const ignoreMutationRequestsFromOperatorOlderThan = 15 * time.Second
 
 func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for mutation requests")
@@ -70,6 +74,15 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 		header, err := parseHeader(instance.Message().Headers)
 		if err != nil {
 			return sendError("", fmt.Errorf("error parsing header. err %v", err))
+		}
+
+		agentRequestSentDate := datetime.DateFromEpoch(req.AgentRequestSentDate.Epoch)
+		age := time.Since(agentRequestSentDate)
+
+		if age > ignoreMutationRequestsFromOperatorOlderThan {
+			// since we process mutation requests single threaded, this can happen in case of higher concurrency
+			// could also happen in case of event delivery issues
+			return sendError("", fmt.Errorf("ignoring mutation request older than %v, actual: %v", ignoreMutationRequestsFromOperatorOlderThan, age))
 		}
 
 		conf := inconfig.IntegrationAgent{}
