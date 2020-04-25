@@ -145,13 +145,15 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 		if err != nil {
 			return "", err
 		}
-		events, users, nextToken, err := s.api.GetEventAndUsers(url.QueryEscape(proj.RefID), eventSender.LastProcessed())
+		events, users, nextToken, err := s.api.GetEventsAndUsers(url.QueryEscape(proj.RefID), eventSender.LastProcessed())
 		if err != nil {
 			s.logger.Error("error fetching events for user_id, skipping", "err", err, "user_id", proj.RefID)
 			return "", err
 		}
 		for _, evt := range events {
-			eventSender.Send(evt)
+			if err := eventSender.Send(evt); err != nil {
+				return "", err
+			}
 		}
 
 		userchan <- users
@@ -172,12 +174,16 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 		}
 		defer userSender.Done()
 		for _, user := range allusers {
-			userSender.Send(user)
+			if err := userSender.Send(user); err != nil {
+				rerr <- err
+				return
+			}
 		}
+		rerr <- nil
 	}()
 	processOpts.Concurrency = 10
 	processOpts.Projects = projectsIface
-	processOpts.IntegrationType = inconfig.IntegrationTypeSourcecode
+	processOpts.IntegrationType = inconfig.IntegrationTypeCalendar
 	processOpts.CustomerID = conf.Pinpoint.CustomerID
 	processOpts.RefType = s.refType
 	processOpts.Sender = session
@@ -188,9 +194,7 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 		return res, err
 	}
 	close(userchan)
-	if len(rerr) > 0 {
-		return res, <-rerr
-	}
+	err = <-rerr
 	return
 }
 

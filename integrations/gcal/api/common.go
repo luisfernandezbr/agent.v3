@@ -20,7 +20,7 @@ import (
 )
 
 type API interface {
-	GetEventAndUsers(string, string) ([]*calendar.Event, map[string]*calendar.User, string, error)
+	GetEventsAndUsers(string, string) ([]*calendar.Event, map[string]*calendar.User, string, error)
 	GetCalendar(calID string) (*calendar.Calendar, error)
 	GetCalendars() ([]*calendar.Calendar, error)
 	Validate() error

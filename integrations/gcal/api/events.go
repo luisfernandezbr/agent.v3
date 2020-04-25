@@ -8,7 +8,7 @@ import (
 )
 
 // GetCalendar returns all the events from a specifc calendar
-func (s *api) GetEventAndUsers(calid string, syncToken string) (res []*calendar.Event, allUsers map[string]*calendar.User, newToken string, err error) {
+func (s *api) GetEventsAndUsers(calid string, syncToken string) (res []*calendar.Event, allUsers map[string]*calendar.User, newToken string, err error) {
 
 	params := queryParams{
 		"maxResults": "2500",
@@ -29,7 +29,6 @@ func (s *api) GetEventAndUsers(calid string, syncToken string) (res []*calendar.
 		for _, evt := range each.Items {
 			newEvent := &calendar.Event{}
 			newEvent.CustomerID = s.customerID
-			newEvent.ID = evt.ID
 			newEvent.Name = evt.Summary
 			newEvent.Description = evt.Description
 			newEvent.RefType = refType
@@ -107,7 +106,7 @@ func dateStringToTime(d string, tz string) (time.Time, error) {
 	}
 	timezone, err := time.LoadLocation(tz)
 	if err == nil {
-		parsed.In(timezone)
+		parsed = parsed.In(timezone)
 	}
 	return parsed, nil
 }
