@@ -413,7 +413,7 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 
 		fd, ok := fieldByID[k]
 		if !ok {
-			qc.Logger.Error("when processing jira issues, could not find field definition by key", "project", project.Key, "key", k)
+			qc.Logger.Warn("when processing jira issues, could not find field definition by key", "project", project.Key, "key", k)
 			continue
 		}
 		v := ""

@@ -54,6 +54,8 @@ func newExport(opts Opts) (*export, error) {
 
 	s.integration = s.OnlyIntegration()
 
+	s.Logger = s.Logger.With("export-type", opts.ExportType)
+
 	err = s.runExportAndPrint()
 	if err != nil {
 		return nil, err
@@ -100,7 +102,7 @@ func (s *export) runExport() (data interface{}, _ error) {
 	if res.Error != nil {
 		return nil, fmt.Errorf("could not retrive data for onboard type: %v integration: %v err: %v", s.Opts.ExportType, s.integration.Export.String(), res.Error.Error())
 	}
-	s.Logger.Info("integration OnboardExport completed", "duration", time.Since(start))
+	s.Logger.Info("integration OnboardExport completed", "duration", time.Since(start).String())
 
 	err = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
 	if err != nil {

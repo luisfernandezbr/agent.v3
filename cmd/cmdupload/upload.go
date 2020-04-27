@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/pinpt/agent/pkg/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/pinpt/agent/pkg/fs"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/archive"
@@ -76,7 +77,7 @@ func Run(ctx context.Context,
 		return
 	}
 
-	logger.Info("zip file uploaded with no errors", "zip_path", zipPath, "size", size/1024)
+	logger.Info("zip file uploaded with no errors", "zip_path", zipPath, "size_kb", size/1024)
 	if err = os.RemoveAll(zipPath); err != nil {
 		rerr = fmt.Errorf("error deleting zip file %s", err)
 		return
