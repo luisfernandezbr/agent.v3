@@ -156,6 +156,12 @@ func getData(opts Opts) {
 		}
 
 		for _, hit := range res.Hits.Hits {
+			if len(hit.Sort) == 0 {
+				panic("no sort provided")
+			} else {
+				searchAfter = hit.Sort[0]
+			}
+
 			if opts.Format == "json" {
 				b, err := json.Marshal(hit.Source)
 				if err != nil {
@@ -179,11 +185,7 @@ func getData(opts Opts) {
 			if err != nil {
 				panic(err)
 			}
-			if len(hit.Sort) == 0 {
-				panic("no sort provided")
-			} else {
-				searchAfter = hit.Sort[0]
-			}
+
 			fmt.Println(string(b))
 		}
 
