@@ -146,7 +146,7 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 			return "", err
 		}
 		s.logger.Info("trying to get events for user_id", "user_id", proj.RefID, "name", proj.Name)
-		events, users, nextToken, err := s.api.GetEventsAndUsers(url.QueryEscape(proj.RefID), eventSender.LastProcessed())
+		events, users, nextToken, err := s.api.GetEventsAndUsers(proj.RefID, eventSender.LastProcessed())
 		if err != nil {
 			s.logger.Error("error fetching events for user_id, skipping", "err", err, "user_id", proj.RefID, "name", proj.Name)
 			return "", err

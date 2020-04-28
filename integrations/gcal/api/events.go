@@ -1,6 +1,7 @@
 package api
 
 import (
+	"net/url"
 	"time"
 
 	"github.com/pinpt/agent/pkg/date"
@@ -17,7 +18,7 @@ func (s *api) GetEventsAndUsers(calid string, syncToken string) (res []*calendar
 		params["syncToken"] = syncToken
 	}
 	var events []EventObjectRaw
-	err = s.get("calendars/"+calid+"/events", params, &events)
+	err = s.get("calendars/"+url.QueryEscape(calid)+"/events", params, &events)
 	if err != nil {
 		return
 	}
