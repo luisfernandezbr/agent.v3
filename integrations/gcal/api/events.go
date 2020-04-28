@@ -33,9 +33,9 @@ func (s *api) GetEventsAndUsers(calid string, syncToken string) (res []*calendar
 			newEvent.Description = evt.Description
 			newEvent.RefType = refType
 			newEvent.RefID = evt.ID
-			newEvent.CalendarID = s.ids.CalendarEvent(calid)
+			newEvent.CalendarID = s.ids.CalendarCalendar(calid)
 			newEvent.Location.URL = evt.Location
-			newEvent.OwnerRefID = s.ids.CalendarUserID(evt.Organizer.Email)
+			newEvent.OwnerRefID = s.ids.CalendarUserRefID(evt.Organizer.Email)
 			switch evt.Status {
 			case "confirmed":
 				newEvent.Status = calendar.EventStatusConfirmed
@@ -46,7 +46,7 @@ func (s *api) GetEventsAndUsers(calid string, syncToken string) (res []*calendar
 			}
 
 			for _, att := range evt.Attendees {
-				refid := s.ids.CalendarUserID(att.Email)
+				refid := s.ids.CalendarUserRefID(att.Email)
 				newEvent.Busy = att.ResponseStatus == "accepted"
 
 				var user calendar.EventParticipants
@@ -77,21 +77,27 @@ func (s *api) GetEventsAndUsers(calid string, syncToken string) (res []*calendar
 			if startDate.IsZero() && evt.Start.Date != "" {
 				startDate, err = dateStringToTime(evt.Start.Date, each.TimeZone)
 				if err != nil {
-					s.logger.Info("error getting start date", "err", err)
+					s.logger.Error("error getting start date, skipping event", "err", err)
+					continue
 				}
 			}
 			if endDate.IsZero() && evt.End.Date != "" {
 				endDate, err = dateStringToTime(evt.End.Date, each.TimeZone)
 				if err != nil {
-					s.logger.Info("error getting end date", "err", err)
+					s.logger.Error("error getting end date, skipping event", "err", err)
+					continue
 				}
 			}
-			if !startDate.IsZero() {
-				date.ConvertToModel(startDate, &newEvent.StartDate)
+			if startDate.IsZero() {
+				s.logger.Error("start date is zero, skipping event")
+				continue
 			}
-			if !endDate.IsZero() {
-				date.ConvertToModel(endDate, &newEvent.EndDate)
+			if endDate.IsZero() {
+				s.logger.Error("end date is zero, skipping event")
+				continue
 			}
+			date.ConvertToModel(startDate, &newEvent.StartDate)
+			date.ConvertToModel(endDate, &newEvent.EndDate)
 			res = append(res, newEvent)
 		}
 	}

@@ -127,9 +127,15 @@ func (s Gen) CalendarUser(refID string) string {
 	return calendar.NewUserID(s.customerID, refID, s.refType)
 }
 
-func (s Gen) CalendarUserID(email string) string {
+func (s Gen) CalendarUserRefID(email string) string {
 	if email == "" {
 		return ""
 	}
-	return hash.Values(s.customerID, email)
+	return hash.Values(s.customerID, "user", email)
+}
+func (s Gen) CalendarCalendarRefID(id string) string {
+	if id == "" {
+		return ""
+	}
+	return hash.Values(s.customerID, "calendar", id)
 }

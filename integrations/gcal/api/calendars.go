@@ -24,8 +24,8 @@ func (s *api) GetCalendars() (res []*calendar.Calendar, err error) {
 				Name:        item.Summary,
 				Description: item.ID, // use the email (which is id) for description
 				RefType:     s.refType,
-				RefID:       item.ID,
-				UserRefID:   s.ids.CalendarUserID(item.ID),
+				RefID:       s.ids.CalendarCalendarRefID(item.ID), // this is the email, so we need to hash it
+				UserRefID:   s.ids.CalendarUserRefID(item.ID),
 			})
 		}
 	}
@@ -44,8 +44,8 @@ func (s *api) GetCalendar(calID string) (res *calendar.Calendar, err error) {
 		Name:        raw[0].Summary,
 		Description: raw[0].ID, // use the email (which is id) for description
 		RefType:     s.refType,
-		RefID:       raw[0].ID,
-		UserRefID:   s.ids.CalendarUserID(raw[0].ID),
+		RefID:       s.ids.CalendarCalendarRefID(raw[0].ID),
+		UserRefID:   s.ids.CalendarUserRefID(raw[0].ID),
 	}
 	return
 }
