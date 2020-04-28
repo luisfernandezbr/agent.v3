@@ -10,6 +10,7 @@ import (
 	"github.com/pinpt/agent/cmd/cmdenroll"
 	"github.com/pinpt/agent/cmd/cmdexport"
 	"github.com/pinpt/agent/cmd/cmdexportonboarddata"
+	"github.com/pinpt/agent/cmd/cmdforcehistorical"
 	"github.com/pinpt/agent/cmd/cmdmutate"
 	"github.com/pinpt/agent/cmd/cmdrun"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts"
@@ -420,6 +421,32 @@ var cmdValidate = &cobra.Command{
 
 func init() {
 	cmd := cmdValidate
+	integrationCommandFlags(cmd)
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdForceHistorical = &cobra.Command{
+	Use:   "force_historical <integration_name>",
+	Short: "Removes integration state and enables a historical export on this integration",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+
+		logger := cmdlogger.NewLogger(cmd)
+		pinpointRoot, err := getPinpointRoot(cmd)
+		if err != nil {
+			logger.Error("error getting pinpoint root", "err", err)
+			return
+		}
+		fsconf := fsconf.New(pinpointRoot)
+		if err := cmdforcehistorical.Run(logger, args[0], fsconf.LastProcessedFile, fsconf.DedupFile); err != nil {
+			logger.Error("error cleaning integration", "err", err)
+			return
+		}
+	},
+}
+
+func init() {
+	cmd := cmdForceHistorical
 	integrationCommandFlags(cmd)
 	cmdRoot.AddCommand(cmd)
 }
