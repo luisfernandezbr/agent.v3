@@ -18,7 +18,6 @@ import (
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/subcommand"
 	"github.com/pinpt/agent/cmd/cmdwebhook"
-	"github.com/pinpt/agent/integrations/pkg/mutate"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/integration-sdk/agent"
 
@@ -38,8 +37,7 @@ func (s *runner) handleWebhookEvents(ctx context.Context) (closefunc, error) {
 		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
 		Channel: s.conf.Channel,
 		Factory: factory,
-		// TODO: switch to new event, similar to mutaions
-		Topic: agent.IntegrationMutationRequestModelName.String(),
+		Topic:   agent.WebhookRequestModelName.String(),
 		Headers: map[string]string{
 			"customer_id": s.conf.CustomerID,
 			"uuid":        s.conf.DeviceID,
@@ -47,14 +45,22 @@ func (s *runner) handleWebhookEvents(ctx context.Context) (closefunc, error) {
 	}
 
 	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
-		req := instance.Object().(*agent.IntegrationMutationRequest)
-		logger := s.logger.With("in", req.IntegrationName)
+		req := instance.Object().(*agent.WebhookRequest)
+		integrationName := "github" // TODO: req.IntegrationName
+		logger := s.logger.With("in", integrationName)
 
 		start := time.Now()
 		logger.Info("received webhook event")
 
-		sendEvent := func(resp *agent.IntegrationMutationResponse) (datamodel.ModelSendEvent, error) {
-			//setTiming(resp)
+		setTiming := func(resp *agent.WebhookResponse) {
+			resp.EventAPIReceivedDate = agent.WebhookResponseEventAPIReceivedDate(req.EventAPIReceivedDate)
+			resp.OperatorReceivedDate = agent.WebhookResponseOperatorReceivedDate(req.OperatorReceivedDate)
+			date.ConvertToModel(start, &resp.AgentReceivedDate)
+			date.ConvertToModel(time.Now(), &resp.AgentResponseSentDate)
+		}
+
+		sendEvent := func(resp *agent.WebhookResponse) (datamodel.ModelSendEvent, error) {
+			setTiming(resp)
 			logger.Info("processed webhook req", "dur", time.Since(start).String())
 			resp.JobID = req.JobID
 			date.ConvertToModel(time.Now(), &resp.EventDate)
@@ -64,13 +70,9 @@ func (s *runner) handleWebhookEvents(ctx context.Context) (closefunc, error) {
 
 		sendError := func(errorCode string, err error) (datamodel.ModelSendEvent, error) {
 			logger.Info("webhook failed", "err", err)
-			resp := &agent.IntegrationMutationResponse{}
+			resp := &agent.WebhookResponse{}
 			errStr := err.Error()
 			resp.Error = &errStr
-			switch errorCode {
-			case mutate.ErrNotFound:
-				resp.ErrorCode = agent.IntegrationMutationResponseErrorCodeNotFound
-			}
 			return sendEvent(resp)
 		}
 
@@ -79,7 +81,7 @@ func (s *runner) handleWebhookEvents(ctx context.Context) (closefunc, error) {
 			return sendError("", fmt.Errorf("error parsing header. err %v", err))
 		}
 
-		agentRequestSentDate := datetime.DateFromEpoch(req.AgentRequestSentDate.Epoch)
+		agentRequestSentDate := datetime.DateFromEpoch(req.EventAPIReceivedDate.Epoch)
 		age := time.Since(agentRequestSentDate)
 
 		if age > ignoreWebhookRequestsOlderThan {
@@ -88,9 +90,9 @@ func (s *runner) handleWebhookEvents(ctx context.Context) (closefunc, error) {
 
 		conf, err := inconfig.AuthFromEvent(map[string]interface{}{
 			"id":   "id1",
-			"name": req.IntegrationName,
+			"name": integrationName,
 			"authorization": map[string]interface{}{
-				"authorization": req.Authorization.AccessToken,
+				"authorization": req.EncryptedAuthorization,
 			},
 		}, s.conf.PPEncryptionKey)
 		if err != nil {
@@ -98,8 +100,9 @@ func (s *runner) handleWebhookEvents(ctx context.Context) (closefunc, error) {
 		}
 		conf.Type = inconfig.IntegrationType(req.SystemType)
 
-		var webhookData cmdwebhook.Data
-		err = json.Unmarshal([]byte(req.Data), &webhookData)
+		webhookData := cmdwebhook.Data{}
+		webhookData.Headers = req.Headers
+		err = json.Unmarshal([]byte(req.Data), &webhookData.Body)
 		if err != nil {
 			return sendError("", fmt.Errorf("webhook data is not valid json: %v", err))
 		}
@@ -112,7 +115,7 @@ func (s *runner) handleWebhookEvents(ctx context.Context) (closefunc, error) {
 			return sendError(res.ErrorCode, errors.New(res.Error))
 		}
 
-		resp := &agent.IntegrationMutationResponse{}
+		resp := &agent.WebhookResponse{}
 		resp.Success = true
 
 		mutatedObjectsJSON, err := json.Marshal(res.MutatedObjects)
@@ -120,12 +123,6 @@ func (s *runner) handleWebhookEvents(ctx context.Context) (closefunc, error) {
 			return sendError("", err)
 		}
 		resp.UpdatedObjects = string(mutatedObjectsJSON)
-
-		webappResponseJSON, err := json.Marshal(res.WebappResponse)
-		if err != nil {
-			return sendError("", err)
-		}
-		resp.WebappResponse = string(webappResponseJSON)
 
 		return sendEvent(resp)
 	}

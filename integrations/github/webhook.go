@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/pinpt/agent/integrations/github/api"
 	"github.com/pinpt/agent/rpcdef"
@@ -30,15 +31,15 @@ func (s *Integration) returnUpdatedPRForWebhook(prRefID string) (res rpcdef.Webh
 	return
 }
 
-func (s *Integration) Webhook(ctx context.Context, dataJSON string, config rpcdef.ExportConfig) (res rpcdef.WebhookResult, _ error) {
+func (s *Integration) Webhook(ctx context.Context, headers map[string]string, body string, config rpcdef.ExportConfig) (res rpcdef.WebhookResult, _ error) {
 
 	rerr := func(err error) {
 		res.Error = err.Error()
 		return
 	}
 
-	if len(dataJSON) == 0 {
-		rerr(errors.New("empty webhook data passed"))
+	if len(body) == 0 {
+		rerr(errors.New("empty webhook body passed"))
 		return
 	}
 
@@ -52,7 +53,7 @@ func (s *Integration) Webhook(ctx context.Context, dataJSON string, config rpcde
 
 	var data map[string]interface{}
 
-	err = json.Unmarshal([]byte(dataJSON), &data)
+	err = json.Unmarshal([]byte(body), &data)
 	if err != nil {
 		rerr(err)
 		return
@@ -66,11 +67,10 @@ func (s *Integration) Webhook(ctx context.Context, dataJSON string, config rpcde
 	s.qc.UserLoginToRefID = s.users.LoginToRefID
 	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
 
-	xGithubEvent, _ := data["x-github-event"].(string)
+	xGithubEvent, _ := headers["x-github-event"]
 	switch xGithubEvent {
 	case "":
-		s.logger.Info("dataJSON", "v", dataJSON, "o", data)
-		rerr(errors.New("x-github-event key is not provided in webhook object, it is sent in request header and should be added to payload"))
+		rerr(fmt.Errorf("x-github-event key is not provided in webhook object, it is sent in request header and should be added to payload, headers %v", headers))
 		return
 	case "issue_comment":
 		comment, ok := data["comment"].(map[string]interface{})

@@ -14,7 +14,10 @@ import (
 	"github.com/pinpt/agent/cmd/pkg/directexport"
 )
 
-type Data interface{}
+type Data struct {
+	Headers map[string]string `json:"headers"`
+	Body    interface{}       `json:"body"`
+}
 
 type Result struct {
 	MutatedObjects rpcdef.MutatedObjects `json:"mutated_objects"`
@@ -127,7 +130,7 @@ func (s *export) run() (_ rpcdef.WebhookResult, rerr error) {
 	ctx := context.Background()
 	client := s.integration.ILoader.RPCClient()
 
-	data, err := json.Marshal(s.Opts.Data)
+	body, err := json.Marshal(s.Opts.Data.Body)
 	if err != nil {
 		rerr = err
 		return
@@ -138,7 +141,7 @@ func (s *export) run() (_ rpcdef.WebhookResult, rerr error) {
 		gitExportRes <- s.exporter.Run()
 	}()
 
-	res, err := client.Webhook(ctx, string(data), s.integration.ExportConfig)
+	res, err := client.Webhook(ctx, s.Opts.Data.Headers, string(body), s.integration.ExportConfig)
 	if err != nil {
 		_ = s.CloseOnlyIntegrationAndHandlePanic(s.integration.ILoader)
 		rerr = err

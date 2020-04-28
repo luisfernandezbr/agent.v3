@@ -26,9 +26,6 @@ const ignoreMutationRequestsFromOperatorOlderThan = 15 * time.Second
 func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for mutation requests")
 
-	s.logger.Error("disabled mutation requests, using those events as temporary web hook events")
-	return nil, nil
-
 	actionConfig := action.Config{
 		APIKey:  s.conf.APIKey,
 		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),

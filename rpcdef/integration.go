@@ -28,7 +28,7 @@ type Integration interface {
 	Mutate(ctx context.Context, fn string, data string, config ExportConfig) (MutateResult, error)
 
 	// Webhook takes the objects provided by integration webhooks and queries for additional fields if needed
-	Webhook(ctx context.Context, data string, config ExportConfig) (WebhookResult, error)
+	Webhook(ctx context.Context, headers map[string]string, body string, config ExportConfig) (WebhookResult, error)
 }
 
 type MutatedObjects map[string][]interface{}
@@ -271,7 +271,7 @@ func (s *IntegrationClient) Mutate(ctx context.Context, mutateFn string, mutateD
 	return
 }
 
-func (s *IntegrationClient) Webhook(ctx context.Context, webhookData string, exportConfig ExportConfig) (res WebhookResult, rerr error) {
+func (s *IntegrationClient) Webhook(ctx context.Context, headers map[string]string, body string, exportConfig ExportConfig) (res WebhookResult, rerr error) {
 	args := &proto.IntegrationWebhookReq{}
 	var err error
 	args.Config, err = exportConfig.proto()
@@ -279,7 +279,8 @@ func (s *IntegrationClient) Webhook(ctx context.Context, webhookData string, exp
 		rerr = err
 		return
 	}
-	args.WebhookData = webhookData
+	args.Headers = headers
+	args.Body = body
 	resp, err := s.client.Webhook(ctx, args)
 	if err != nil {
 		rerr = err
@@ -415,7 +416,7 @@ func (s *IntegrationServer) Webhook(ctx context.Context, req *proto.IntegrationW
 		return res, err
 	}
 
-	res0, err := s.Impl.Webhook(ctx, req.WebhookData, config)
+	res0, err := s.Impl.Webhook(ctx, req.Headers, req.Body, config)
 	if err != nil {
 		return res, err
 	}

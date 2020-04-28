@@ -84,7 +84,8 @@ message IntegrationMutateResp {
 
 message IntegrationWebhookReq {
     IntegrationExportConfig config = 1;
-    string webhook_data = 2;
+    map<string,string> headers = 2;
+    string body = 3;
 }
 
 message IntegrationWebhookResp {

@@ -133,7 +133,7 @@ func sendEvent(hookURL string, data []byte) {
 	if err != nil {
 		panic(err)
 	}
-	//req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-GitHub-Event", "push")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
