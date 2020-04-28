@@ -110,7 +110,7 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 				return res, err
 			}
 			projectsIface = append(projectsIface, Calendar{
-				RefID: cal.RefID,
+				RefID: cal.Description, // this is the email, use this to get events
 				Name:  cal.Name,
 			})
 		}
@@ -129,7 +129,7 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 				return res, err
 			}
 			projectsIface = append(projectsIface, Calendar{
-				RefID: cal.RefID,
+				RefID: cal.Description, // this is the email, use this to get events
 				Name:  cal.Name,
 			})
 		}
@@ -145,9 +145,10 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 		if err != nil {
 			return "", err
 		}
+		s.logger.Info("trying to get events for user_id", "user_id", proj.RefID, "name", proj.Name)
 		events, users, nextToken, err := s.api.GetEventsAndUsers(url.QueryEscape(proj.RefID), eventSender.LastProcessed())
 		if err != nil {
-			s.logger.Error("error fetching events for user_id, skipping", "err", err, "user_id", proj.RefID)
+			s.logger.Error("error fetching events for user_id, skipping", "err", err, "user_id", proj.RefID, "name", proj.Name)
 			return "", err
 		}
 		for _, evt := range events {
