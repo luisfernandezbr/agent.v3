@@ -14,7 +14,7 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) returnUpdatedPR(prRefID string) (res rpcdef.MutateResult, rerr error) {
+func (s *Integration) getUpdatedPR(prRefID string) (_ map[string]interface{}, rerr error) {
 	pr, err := api.PullRequestByID(s.qc, prRefID)
 	if err != nil {
 		rerr = err
@@ -26,6 +26,15 @@ func (s *Integration) returnUpdatedPR(prRefID string) (res rpcdef.MutateResult, 
 	delete(m, "merged_by_ref_id")
 	delete(m, "commit_ids")
 	delete(m, "commit_shas")
+	return m, nil
+}
+
+func (s *Integration) returnUpdatedPR(prRefID string) (res rpcdef.MutateResult, rerr error) {
+	m, err := s.getUpdatedPR(prRefID)
+	if err != nil {
+		rerr = err
+		return
+	}
 	objs := rpcdef.MutatedObjects{}
 	objs[sourcecode.PullRequestModelName.String()] = []interface{}{m}
 	res.MutatedObjects = objs

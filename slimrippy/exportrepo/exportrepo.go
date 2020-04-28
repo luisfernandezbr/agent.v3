@@ -57,13 +57,20 @@ type Opts struct {
 	// https://example.com/repo1/@@@branch@@@
 	BranchURLTemplate string
 
-	Sessions      *expsessions.Manager
+	Sessions      SessionManger
 	SessionRootID expsessions.ID
 
 	// PRs to process similar to branches.
 	PRs []PR
 
 	CommitUsers *process.CommitUsers
+}
+
+type SessionManger interface {
+	Session(modelType string, parentSessionID expsessions.ID, parentObjectID, parentObjectName string) (_ expsessions.ID, lastProcessed interface{}, _ error)
+	Write(id expsessions.ID, objs []map[string]interface{}) error
+	// lastProcessed is not used in this package
+	Done(id expsessions.ID, lastProcessed interface{}) error
 }
 
 type PR struct {

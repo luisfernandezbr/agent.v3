@@ -13,12 +13,12 @@ type sessions struct {
 	Commit     expsessions.ID
 	CommitUser expsessions.ID
 
-	sessionManager         *expsessions.Manager
+	sessionManager         SessionManger
 	sessionRootID          expsessions.ID
 	repoNameUsedInCacheDir string
 }
 
-func newSessions(sessionManager *expsessions.Manager, sessionRootID expsessions.ID, repoNameUsedInCacheDir string) *sessions {
+func newSessions(sessionManager SessionManger, sessionRootID expsessions.ID, repoNameUsedInCacheDir string) *sessions {
 	s := &sessions{}
 	s.sessionManager = sessionManager
 	s.sessionRootID = sessionRootID

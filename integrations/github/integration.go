@@ -289,12 +289,12 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 		return
 	}
 
-	// export all users in all organization, and when later encountering new users continue export
-	s.users, err = NewUsers(s)
+	s.users, err = NewUsers(s, false)
 	if err != nil {
 		rerr = err
 		return
 	}
+	// export all users in all organization, and when later encountering new users continue export
 	err = s.users.ExportAllOrgUsers(orgs)
 	if err != nil {
 		rerr = err

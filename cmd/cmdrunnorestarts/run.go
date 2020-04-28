@@ -246,6 +246,13 @@ func (s *runner) Run(ctx context.Context) error {
 		}
 		closers = append(closers, close)
 	}
+	{
+		close, err := s.handleWebhookEvents(ctx)
+		if err != nil {
+			return fmt.Errorf("error handling webhook requests, err: %v", err)
+		}
+		closers = append(closers, close)
+	}
 
 	finishMain := make(chan bool, 1)
 	{
