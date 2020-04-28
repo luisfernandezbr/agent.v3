@@ -33,7 +33,7 @@ func (s *api) GetEventsAndUsers(calid string, syncToken string) (res []*calendar
 			newEvent.Description = evt.Description
 			newEvent.RefType = refType
 			newEvent.RefID = evt.ID
-			newEvent.CalendarID = s.ids.CalendarCalendar(calid)
+			newEvent.CalendarID = s.ids.CalendarCalendar(s.ids.CalendarCalendarRefID(calid))
 			newEvent.Location.URL = evt.Location
 			newEvent.OwnerRefID = s.ids.CalendarUserRefID(evt.Organizer.Email)
 			switch evt.Status {
