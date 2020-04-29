@@ -23,13 +23,15 @@ type Users struct {
 	mu sync.Mutex
 }
 
-func NewUsers(integration *Integration) (*Users, error) {
+func NewUsers(integration *Integration, noExport bool) (*Users, error) {
 	s := &Users{}
 	s.integration = integration
-	var err error
-	s.sender, err = objsender.Root(integration.agent, sourcecode.UserModelName.String())
-	if err != nil {
-		return nil, err
+	if !noExport {
+		var err error
+		s.sender, err = objsender.Root(integration.agent, sourcecode.UserModelName.String())
+		if err != nil {
+			return nil, err
+		}
 	}
 	s.loginToID = map[string]string{}
 
@@ -112,6 +114,10 @@ func (s *Users) sendUser(user *sourcecode.User) error {
 }
 
 func (s *Users) sendUsers(users []*sourcecode.User) error {
+	if s.sender == nil {
+		s.integration.logger.Info("trying to send user from mutation/webhooks, this is not implemented")
+		return nil
+	}
 	for _, user := range users {
 		err := s.sender.Send(user)
 		if err != nil {

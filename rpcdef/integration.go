@@ -26,6 +26,9 @@ type Integration interface {
 
 	// Mutate changes integration data
 	Mutate(ctx context.Context, fn string, data string, config ExportConfig) (MutateResult, error)
+
+	// Webhook takes the objects provided by integration webhooks and queries for additional fields if needed
+	Webhook(ctx context.Context, headers map[string]string, body string, config ExportConfig) (WebhookResult, error)
 }
 
 type MutatedObjects map[string][]interface{}
@@ -35,6 +38,11 @@ type MutateResult struct {
 	WebappResponse interface{}
 	Error          string
 	ErrorCode      string
+}
+
+type WebhookResult struct {
+	MutatedObjects MutatedObjects
+	Error          string
 }
 
 type IntegrationConfig inconfig.Integration
@@ -263,6 +271,29 @@ func (s *IntegrationClient) Mutate(ctx context.Context, mutateFn string, mutateD
 	return
 }
 
+func (s *IntegrationClient) Webhook(ctx context.Context, headers map[string]string, body string, exportConfig ExportConfig) (res WebhookResult, rerr error) {
+	args := &proto.IntegrationWebhookReq{}
+	var err error
+	args.Config, err = exportConfig.proto()
+	if err != nil {
+		rerr = err
+		return
+	}
+	args.Headers = headers
+	args.Body = body
+	resp, err := s.client.Webhook(ctx, args)
+	if err != nil {
+		rerr = err
+		return
+	}
+	err = json.Unmarshal([]byte(resp.Json), &res)
+	if err != nil {
+		rerr = err
+		return
+	}
+	return
+}
+
 type IntegrationServer struct {
 	Impl   Integration
 	broker *plugin.GRPCBroker
@@ -366,6 +397,26 @@ func (s *IntegrationServer) Mutate(ctx context.Context, req *proto.IntegrationMu
 	}
 
 	res0, err := s.Impl.Mutate(ctx, req.MutateFn, req.MutateData, config)
+	if err != nil {
+		return res, err
+	}
+	objectsJSONBytes, err := json.Marshal(res0)
+	if err != nil {
+		return res, err
+	}
+	res.Json = string(objectsJSONBytes)
+	return res, nil
+}
+
+func (s *IntegrationServer) Webhook(ctx context.Context, req *proto.IntegrationWebhookReq) (res *proto.IntegrationWebhookResp, _ error) {
+	res = &proto.IntegrationWebhookResp{}
+
+	config, err := exportConfigFromProto(req.Config)
+	if err != nil {
+		return res, err
+	}
+
+	res0, err := s.Impl.Webhook(ctx, req.Headers, req.Body, config)
 	if err != nil {
 		return res, err
 	}

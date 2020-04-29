@@ -68,6 +68,14 @@ func AuthFromEvent(data map[string]interface{}, encryptionKey string) (in Integr
 	in.Config.Exclusions = obj.Exclusions
 	err = ConvertEdgeCases(&in)
 
+	if in.ID == "" {
+		err = errors.New("missing integration id")
+		return
+	}
+	if in.Name == "" {
+		err = errors.New("missing integration name")
+		return
+	}
 	return
 }
 

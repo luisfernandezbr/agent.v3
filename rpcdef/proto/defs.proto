@@ -9,6 +9,7 @@ service Integration {
     rpc ValidateConfig(IntegrationValidateConfigReq) returns (IntegrationValidateConfigResp);
     rpc OnboardExport(IntegrationOnboardExportReq) returns (IntegrationOnboardExportResp);
     rpc Mutate(IntegrationMutateReq) returns (IntegrationMutateResp);
+    rpc Webhook(IntegrationWebhookReq) returns (IntegrationWebhookResp);
 }
 
 message IntegrationInitReq {
@@ -78,6 +79,16 @@ message IntegrationMutateReq {
 }
 
 message IntegrationMutateResp {
+    string json = 1;
+}
+
+message IntegrationWebhookReq {
+    IntegrationExportConfig config = 1;
+    map<string,string> headers = 2;
+    string body = 3;
+}
+
+message IntegrationWebhookResp {
     string json = 1;
 }
 

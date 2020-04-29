@@ -17,6 +17,7 @@ import (
 	"github.com/pinpt/agent/cmd/cmdserviceinstall"
 	"github.com/pinpt/agent/cmd/cmdvalidate"
 	"github.com/pinpt/agent/cmd/cmdvalidateconfig"
+	"github.com/pinpt/agent/cmd/cmdwebhook"
 	"github.com/pinpt/agent/cmd/pkg/cmdlogger"
 	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/agent/pkg/fsconf"
@@ -263,6 +264,48 @@ func init() {
 	integrationCommandFlags(cmd)
 	flagOutputFile(cmd)
 	cmd.Flags().String("mutation", "", "Mutation definition in json format")
+	cmdRoot.AddCommand(cmd)
+}
+
+var cmdWebhook = &cobra.Command{
+	Use:    "webhook",
+	Hidden: true,
+	Short:  "Use webhook to generate new objects",
+	Args:   cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		logger, baseOpts := integrationCommandOpts(cmd)
+		opts := cmdwebhook.Opts{}
+		opts.Opts = baseOpts
+
+		outputFile := newOutputFile(logger, cmd)
+		defer outputFile.Close()
+		opts.Output = outputFile.Writer
+
+		{
+			v, _ := cmd.Flags().GetString("data")
+			if v == "" {
+				exitWithErr(logger, errors.New("provide mutation arg"))
+			}
+			var m cmdwebhook.Data
+			err := json.Unmarshal([]byte(v), &m)
+			if err != nil {
+				exitWithErr(logger, errors.New("can't parse mutation json"))
+			}
+			opts.Data = m
+		}
+
+		err := cmdwebhook.Run(opts)
+		if err != nil {
+			exitWithErr(logger, err)
+		}
+	},
+}
+
+func init() {
+	cmd := cmdWebhook
+	integrationCommandFlags(cmd)
+	flagOutputFile(cmd)
+	cmd.Flags().String("data", "", "Webhook data in json format")
 	cmdRoot.AddCommand(cmd)
 }
 
