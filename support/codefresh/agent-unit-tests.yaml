@@ -34,3 +34,4 @@ steps:
       - cd /codefresh/volume/go/src/github.com/pinpt/agent
       - GOPATH=/codefresh/volume/go dep ensure -v -vendor-only
       - GOPATH=/codefresh/volume/go CGO_ENABLED=0 go test -v ./... -timeout 1m
+      - ls -la /codefresh/volume/*
