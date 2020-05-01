@@ -25,7 +25,7 @@ steps:
     image: '${{build_alpine}}'
     commands:
       - ls -la /codefresh/volume
-      - ls -la /codefresh/volume/test
+      - ls -la /codefresh/volume/*
       - mkdir -p /codefresh/volume/test
       - touch /codefresh/volume/test/file
       - rm -rf /codefresh/volume/go/src/github.com/pinpt/agent
