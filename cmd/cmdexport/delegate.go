@@ -80,3 +80,7 @@ func (s agentDelegate) SendPauseEvent(msg string, resumeDate time.Time) error {
 func (s agentDelegate) SendResumeEvent(msg string) error {
 	return s.export.SendResumeEvent(s.expin, msg)
 }
+
+func (s agentDelegate) GetWebhookURL() (url string, _ error) {
+	return s.export.GetWebhookURL(s.expin)
+}

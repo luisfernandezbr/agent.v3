@@ -14,7 +14,7 @@ import (
 func (s *export) sendProgress(ctx context.Context, progressData []byte) error {
 	jobID := s.Opts.AgentConfig.Backend.ExportJobID
 	if jobID == "" {
-		return errors.New("ExportJobID is not specified in config")
+		return errors.New("export_job_id is not specified in config")
 	}
 	b, err := json.Marshal(progressData)
 	if err != nil {

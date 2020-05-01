@@ -66,3 +66,7 @@ func (s agentDelegate) SendResumeEvent(msg string) error {
 
 	return nil
 }
+
+func (s agentDelegate) GetWebhookURL() (url string, _ error) {
+	panic("not implemented")
+}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -64,13 +65,17 @@ func downloadArchives(opts Opts) {
 	}
 
 	var keys []string
+	dirs := map[string]bool{}
+	dirsWithZips := map[string]bool{}
 
 	err = s3Client.ListObjectsPages(params, func(page *s3.ListObjectsOutput, more bool) bool {
 		for _, obj := range page.Contents {
 			k := *obj.Key
+			dirs[path.Dir(k)] = true
 			if !strings.HasSuffix(k, ".zip") {
 				continue
 			}
+			dirsWithZips[path.Dir(k)] = true
 			keys = append(keys, *obj.Key)
 		}
 		return true
@@ -78,6 +83,8 @@ func downloadArchives(opts Opts) {
 	if err != nil {
 		panic(err)
 	}
+
+	warnMergedExports(dirs, dirsWithZips)
 
 	downloader := s3manager.NewDownloader(awsSession)
 
@@ -89,6 +96,16 @@ func downloadArchives(opts Opts) {
 	err = ioutil.WriteFile(doneFile, nil, 0777)
 	if err != nil {
 		panic(err)
+	}
+
+	warnMergedExports(dirs, dirsWithZips)
+}
+
+func warnMergedExports(dirs, dirsWithZips map[string]bool) {
+	for d := range dirs {
+		if !dirsWithZips[d] {
+			fmt.Printf("Error! Export dir does not have merged zip! %v\n", d)
+		}
 	}
 }
 

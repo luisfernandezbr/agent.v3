@@ -50,6 +50,8 @@ type Agent interface {
 	SendPauseEvent(msg string, resumeDate time.Time) error
 
 	SendResumeEvent(msg string) error
+
+	GetWebhookURL() (url string, _ error)
 }
 
 type ExportObj struct {
@@ -263,6 +265,13 @@ func (s *AgentServer) SendResumeEvent(ctx context.Context, req *proto.SendResume
 	return
 }
 
+func (s *AgentServer) GetWebhookURL(ctx context.Context, req *proto.Empty) (*proto.GetWebhookURLResp, error) {
+	url, err := s.Impl.GetWebhookURL()
+	resp := &proto.GetWebhookURLResp{}
+	resp.Url = url
+	return resp, err
+}
+
 type AgentClient struct {
 	client proto.AgentClient
 }
@@ -402,4 +411,13 @@ func (s *AgentClient) SendResumeEvent(msg string) error {
 		return err
 	}
 	return nil
+}
+
+func (s *AgentClient) GetWebhookURL() (token string, _ error) {
+	args := &proto.Empty{}
+	resp, err := s.client.GetWebhookURL(context.Background(), args)
+	if err != nil {
+		return "", err
+	}
+	return resp.Url, nil
 }
