@@ -41,6 +41,7 @@ func PullRequestPage(
 		Description  string    `json:"description"`
 		WebURL       string    `json:"web_url"`
 		State        string    `json:"state"`
+		Draft        bool      `json:"work_in_progress"`
 		Author       struct {
 			Username string `json:"username"`
 		} `json:"author"`
@@ -83,6 +84,8 @@ func PullRequestPage(
 		case "closed":
 			pr.Status = sourcecode.PullRequestStatusClosed
 			pr.ClosedByRefID = rpr.ClosedBy.Username
+		case "locked":
+			pr.Status = sourcecode.PullRequestStatusLocked
 		case "merged":
 			pr.MergeSha = rpr.MergeCommitSHA
 			pr.MergeCommitID = ids.CodeCommit(qc.CustomerID, qc.RefType, pr.RepoID, rpr.MergeCommitSHA)
@@ -92,6 +95,7 @@ func PullRequestPage(
 			qc.Logger.Error("PR has an unknown state", "state", rpr.State, "ref_id", pr.RefID)
 		}
 		pr.CreatedByRefID = rpr.Author.Username
+		pr.Draft = rpr.Draft
 
 		spr := PullRequest{}
 		spr.IID = strconv.FormatInt(rpr.IID, 10)
