@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/url"
+	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/gitlab/api"
@@ -11,11 +12,18 @@ import (
 )
 
 func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *objsender.Session, repo commonrepo.Repo, pullRequests chan []api.PullRequest) error {
+	var status404 bool
 	for prs := range pullRequests {
 		for _, pr := range prs {
+			if status404 {
+				continue
+			}
 			err := s.exportPullRequestReviews(logger, prSender, repo, pr)
 			if err != nil {
 				logger.Error("error fetching pr reviews", "err", err)
+				if strings.Contains(err.Error(), "status 404") {
+					status404 = true
+				}
 			}
 		}
 	}
