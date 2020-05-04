@@ -437,26 +437,10 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 	pullRequestsForReviews := make(chan []api.PullRequest, 10)
 	pullRequestsForCommits := make(chan []api.PullRequest, 10)
 
-	var errMu sync.Mutex
-	setErr := func(err error, chanToDrain chan []api.PullRequest) {
-		logger.Error("failed repo export", "e", err)
-
-		errMu.Lock()
-		defer errMu.Unlock()
-		// comment this out for now, PROD-460
-		// if rerr == nil {
-		// 	rerr = err
-		// }
-
-		// drain all pull requests on error
-		for range chanToDrain {
-		}
-	}
-
 	go func() {
 		defer close(pullRequestsInitial)
 		if err := s.exportPullRequestsRepo(logger, repo, pullRequestSender, pullRequestsInitial, pullRequestSender.LastProcessedTime()); err != nil {
-			setErr(err, pullRequestsInitial)
+			s.logger.Error("error getting pull requests", "err", err)
 		}
 	}()
 
@@ -476,14 +460,14 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 	go func() {
 		defer wg.Done()
 		if err := s.exportPullRequestsComments(logger, pullRequestSender, repo, pullRequestsForComments); err != nil {
-			setErr(fmt.Errorf("error getting comments %s", err), pullRequestsForComments)
+			s.logger.Error("error getting comments", "err", err)
 		}
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		if err := s.exportPullRequestsReviews(logger, pullRequestSender, repo, pullRequestsForReviews); err != nil {
-			setErr(fmt.Errorf("error getting reviews %s", err), pullRequestsForReviews)
+			s.logger.Error("error getting reviews", "err", err)
 		}
 	}()
 
@@ -495,8 +479,8 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 			for _, pr := range prs {
 				commits, err := s.exportPullRequestCommits(logger, repo, pr.RefID, pr.IID)
 				if err != nil {
-					setErr(fmt.Errorf("error getting commits %s", err), pullRequestsForCommits)
-					return
+					s.logger.Error("error getting commits", "err", err)
+					continue
 				}
 
 				commitsSender.SetTotal(len(commits))
@@ -522,15 +506,15 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 					pr.BranchID = s.qc.IDs.CodeBranch(pr.RepoID, pr.BranchName, pr.CommitShas[0])
 				}
 				if err = pullRequestSender.Send(pr); err != nil {
-					setErr(err, pullRequestsForCommits)
-					return
+					s.logger.Error("error with pull request sender", "err", err)
+					continue
 				}
 
 				for _, c := range commits {
 					c.BranchID = pr.BranchID
 					if err := commitsSender.Send(c); err != nil {
-						setErr(err, pullRequestsForCommits)
-						return
+						s.logger.Error("error with commit sender", "err", err)
+						continue
 					}
 				}
 			}

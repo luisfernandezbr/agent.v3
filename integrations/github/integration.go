@@ -399,6 +399,9 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 }
 
 func (s *Integration) registerWebhooks(repos []Repo) error {
+	s.logger.Info("skipping registering webhooks")
+	return nil
+
 	s.logger.Info("registering webhooks")
 
 	url, err := s.agent.GetWebhookURL()

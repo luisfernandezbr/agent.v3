@@ -15,7 +15,8 @@ func (s *Integration) exportPullRequestsComments(logger hclog.Logger, prSender *
 		for _, pr := range prs {
 			err := s.exportPullRequestComments(logger, prSender, repo, pr)
 			if err != nil {
-				return err
+				// return err
+				logger.Error("error fetching pr comments", "err", err)
 			}
 		}
 	}

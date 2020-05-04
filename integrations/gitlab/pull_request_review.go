@@ -15,7 +15,7 @@ func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *o
 		for _, pr := range prs {
 			err := s.exportPullRequestReviews(logger, prSender, repo, pr)
 			if err != nil {
-				return err
+				logger.Error("error fetching pr reviews", "err", err)
 			}
 		}
 	}
