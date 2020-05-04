@@ -334,6 +334,12 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 		filteredRepos = append(filteredRepos, r.(Repo))
 	}
 
+	err = s.registerWebhooks(filteredRepos)
+	if err != nil {
+		rerr = err
+		return
+	}
+
 	repoSender, err := objsender.Root(s.agent, sourcecode.RepoModelName.String())
 	if err != nil {
 		rerr = err
@@ -391,6 +397,24 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 	s.logger.Info(s.clientManager.PrintStats())
 
 	return exportResult, nil
+}
+
+func (s *Integration) registerWebhooks(repos []Repo) error {
+	s.logger.Info("registering webhooks")
+
+	url, err := s.agent.GetWebhookURL()
+	if err != nil {
+		return err
+	}
+
+	for _, repo := range repos {
+		err := api.WebhookCreateIfNotExists(s.qc, repo.Repo, url, webhookEvents)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type Repo struct {

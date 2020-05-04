@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/pinpt/agent/pkg/expsessions"
 	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/memorylogs"
+	"github.com/pinpt/go-common/api"
 
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent/cmd/cmdintegration"
@@ -364,4 +366,58 @@ func (s *export) runExports() map[expin.Export]runResult {
 	wg.Wait()
 
 	return res
+}
+
+func (s *export) GetWebhookURL(exp expin.Export) (url string, rerr error) {
+	integration := s.Integrations[exp]
+
+	if !s.Opts.AgentConfig.Backend.Enable {
+		return "", errors.New("requested webhook url, but Backend.Enable is false")
+	}
+
+	req := struct {
+		System     string `json:"system"`
+		CustomerID string `json:"customer_id"`
+		Headers    struct {
+			CustomerID    string `json:"customer_id"`
+			IntegrationID string `json:"integration_id"`
+		} `json:"headers"`
+	}{}
+	req.System = "agent-incrementals"
+	req.CustomerID = s.EnrollConf.CustomerID
+	req.Headers.CustomerID = s.EnrollConf.CustomerID
+	req.Headers.IntegrationID = integration.ExportConfig.Integration.ID
+
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		rerr = fmt.Errorf("could not get webhook url, err: %v", err)
+		return
+	}
+
+	s.Logger.Debug("requesting webhook url from event-api", "data", string(reqBytes))
+
+	resp, err := api.Post(context.Background(), s.EnrollConf.Channel, api.EventService, "hook", s.EnrollConf.APIKey, nil)
+	if err != nil {
+		rerr = fmt.Errorf("could not get webhook url, err: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		rerr = fmt.Errorf("could not get webhook url, wrong status code: %v", resp.StatusCode)
+		return
+	}
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		rerr = fmt.Errorf("could not get webhook url, err: %v", err)
+		return
+	}
+	var res struct {
+		URL string `json:"url"`
+	}
+	err = json.Unmarshal(b, &res)
+	if err != nil {
+		rerr = fmt.Errorf("could not get webhook url, err: %v", err)
+		return
+	}
+	return res.URL, nil
 }

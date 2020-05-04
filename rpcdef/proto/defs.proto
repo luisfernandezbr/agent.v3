@@ -113,6 +113,8 @@ service Agent {
     rpc SendPauseEvent(SendPauseEventReq) returns (Empty);
 
     rpc SendResumeEvent(SendResumeEventReq) returns (Empty);
+
+    rpc GetWebhookURL(Empty) returns (GetWebhookURLResp);
 }
 
 message LastProcessed {
@@ -198,4 +200,8 @@ message SendPauseEventReq {
 
 message SendResumeEventReq {
     string message = 1;
+}
+
+message GetWebhookURLResp {
+    string url = 1;
 }

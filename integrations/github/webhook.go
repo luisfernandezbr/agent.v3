@@ -31,6 +31,12 @@ func (s *Integration) returnUpdatedPRForWebhook(prRefID string) (res rpcdef.Webh
 	return
 }
 
+var webhookEvents = []string{
+	"issue_comment",
+	"pull_request",
+	"push",
+}
+
 func (s *Integration) Webhook(ctx context.Context, headers map[string]string, body string, config rpcdef.ExportConfig) (res rpcdef.WebhookResult, _ error) {
 
 	rerr := func(err error) {
