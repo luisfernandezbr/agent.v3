@@ -412,7 +412,7 @@ func (s *Integration) registerWebhooks(repos []Repo) error {
 	for _, repo := range repos {
 		err := api.WebhookCreateIfNotExists(s.qc, repo.Repo, url, webhookEvents)
 		if err != nil {
-			return err
+			s.logger.Error("could not register webhooks for repo", "err", err, "repo", repo.NameWithOwner)
 		}
 	}
 
