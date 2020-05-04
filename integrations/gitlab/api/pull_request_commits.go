@@ -54,40 +54,11 @@ func PullRequestCommitsPage(
 		item.URL = url.Scheme + "://" + url.Hostname() + "/" + repo.NameWithOwner + "/commit/" + rcommit.ID
 		date.ConvertToModel(rcommit.CreatedAt, &item.CreatedDate)
 
-		adds, dels, err := CommitStats(qc, repo.ID, rcommit.ID)
-		if err != nil {
-			return pi, res, err
-		}
-
-		item.Additions = adds
-		item.Deletions = dels
 		item.AuthorRefID = ids.CodeCommitEmail(qc.CustomerID, rcommit.AuthorEmail)
 		item.CommitterRefID = ids.CodeCommitEmail(qc.CustomerID, rcommit.CommitterEmail)
 
 		res = append(res, item)
 	}
-
-	return
-}
-
-func CommitStats(qc QueryContext, repoID string, commitID string) (adds, dels int64, err error) {
-	qc.Logger.Debug("commit stats", "repoID", repoID, "commitID", commitID)
-
-	objectPath := pstrings.JoinURL("projects", repoID, "repository", "commits", commitID)
-
-	var commitStats struct {
-		Stats struct {
-			Additions int64 `json:"additions"`
-			Deletions int64 `json:"deletions"`
-		} `json:"stats"`
-	}
-
-	if _, err = qc.Request(objectPath, nil, &commitStats); err != nil {
-		return
-	}
-
-	adds = commitStats.Stats.Additions
-	dels = commitStats.Stats.Deletions
 
 	return
 }
