@@ -1,52 +1,52 @@
 # Codefresh triggers:
 # Release
-version: "1.0"
-stages:
-  - "clone"
-  - "build"
-  - "integration"
-  - "push"
-steps:
-  main_clone:
-    type: "git-clone"
-    description: "Cloning repository..."
-    repo: "${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}"
-    revision: "${{CF_REVISION}}"
-    stage: "clone"
-  build:
-    title: "Building Docker Image"
-    type: "build"
-    image_name: "pinpt/agent"
-    dockerfile: "docker/release/Dockerfile"
-    stage: "build"
-    build_arguments:
-      - "VERSION=${{CF_RELEASE_TAG}}"
-  parallel_push:
-    type: "parallel"
-    stage: "push"
-    steps:
-      annotate_build:
-        title: "Annotating Build"
-        image: "${{build}}"
-        working_directory: "IMAGE_WORK_DIR"
-        commands:
-          - "echo Annotating Build..."
-        on_success:
-          metadata:
-            set:
-              - ${{build.imageId}}:
-                  - CF_QUALITY: true
-        on_error:
-          metadata:
-            set:
-              - ${{build.imageId}}:
-                  - CF_QUALITY: false
-      dockerhub:
-        title: "Pushing release image to Dockerhub"
-        type: "push"
-        image_name: "pinpt/agent"
-        registry: "dockerhub"
-        candidate: "${{build}}"
-        tags:
-          - "${{CF_RELEASE_TAG}}"
-          - "latest"
+#version: "1.0"
+#stages:
+#  - "clone"
+#  - "build"
+#  - "integration"
+#  - "push"
+#steps:
+#  main_clone:
+#    type: "git-clone"
+#    description: "Cloning repository..."
+#    repo: "${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}"
+#    revision: "${{CF_REVISION}}"
+#    stage: "clone"
+#  build:
+#    title: "Building Docker Image"
+#    type: "build"
+#    image_name: "pinpt/agent"
+#    dockerfile: "docker/release/Dockerfile"
+#    stage: "build"
+#    build_arguments:
+#      - "VERSION=${{CF_RELEASE_TAG}}"
+#  parallel_push:
+#    type: "parallel"
+#    stage: "push"
+#    steps:
+#      annotate_build:
+#        title: "Annotating Build"
+#        image: "${{build}}"
+#        working_directory: "IMAGE_WORK_DIR"
+#        commands:
+#          - "echo Annotating Build..."
+#        on_success:
+#          metadata:
+#            set:
+#              - ${{build.imageId}}:
+#                  - CF_QUALITY: true
+#        on_error:
+#          metadata:
+#            set:
+#              - ${{build.imageId}}:
+#                  - CF_QUALITY: false
+#      dockerhub:
+#        title: "Pushing release image to Dockerhub"
+#        type: "push"
+#        image_name: "pinpt/agent"
+#        registry: "dockerhub"
+#        candidate: "${{build}}"
+#        tags:
+#          - "${{CF_RELEASE_TAG}}"
+#          - "latest"
