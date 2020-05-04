@@ -33,6 +33,8 @@ mergedAt
 closedAt
 # OPEN, CLOSED or MERGED
 state
+draft: isDraft
+locked
 author { login }
 mergedBy { login }
 mergeCommit { oid }
@@ -78,6 +80,8 @@ type pullRequestGraphql struct {
 	ClosedAt    time.Time `json:"closedAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 	State       string    `json:"state"`
+	Draft       bool      `json:"draft"`
+	Locked      bool      `json:"locked"`
 	Author      struct {
 		Login string `json:"login"`
 	} `json:"author"`
@@ -134,6 +138,12 @@ func convertPullRequest(qc QueryContext, data pullRequestGraphql) PullRequest {
 	default:
 		qc.Logger.Error("could not process pr state, state is unknown", "state", data.State, "pr_url", data.URL)
 	}
+
+	if data.Locked {
+		pr.Status = sourcecode.PullRequestStatusLocked
+	}
+
+	pr.Draft = data.Draft
 
 	if data.State == "MERGED" {
 		pr.MergeSha = data.MergeCommit.OID
