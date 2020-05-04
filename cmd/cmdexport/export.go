@@ -26,6 +26,7 @@ import (
 	"github.com/pinpt/agent/cmd/cmdintegration"
 	"github.com/pinpt/agent/pkg/jsonstore"
 	"github.com/pinpt/agent/rpcdef"
+	pjson "github.com/pinpt/go-common/json"
 )
 
 type Opts struct {
@@ -388,15 +389,9 @@ func (s *export) GetWebhookURL(exp expin.Export) (url string, rerr error) {
 	req.Headers.CustomerID = s.EnrollConf.CustomerID
 	req.Headers.IntegrationID = integration.ExportConfig.Integration.ID
 
-	reqBytes, err := json.Marshal(req)
-	if err != nil {
-		rerr = fmt.Errorf("could not get webhook url, err: %v", err)
-		return
-	}
+	s.Logger.Debug("requesting webhook url from event-api", "data", pjson.Stringify(req))
 
-	s.Logger.Debug("requesting webhook url from event-api", "data", string(reqBytes))
-
-	resp, err := api.Post(context.Background(), s.EnrollConf.Channel, api.EventService, "hook", s.EnrollConf.APIKey, nil)
+	resp, err := api.Post(context.Background(), s.EnrollConf.Channel, api.EventService, "hook", s.EnrollConf.APIKey, req)
 	if err != nil {
 		rerr = fmt.Errorf("could not get webhook url, err: %v", err)
 		return
