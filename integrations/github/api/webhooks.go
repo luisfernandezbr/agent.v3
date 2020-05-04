@@ -4,18 +4,25 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/pinpt/agent/pkg/requests2"
 	pstrings "github.com/pinpt/go-common/strings"
 )
 
+// update this using current time, if the format of the url changes, or need a new url for some other reason
+const webhookReplaceOlderThan = "2020-05-04T17:19:42Z"
+
 func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, events []string) (rerr error) {
-	qc.Logger.Debug("checking if webhook registration is needed", "repo", repo.NameWithOwner, "events", events)
+	logger := qc.Logger.With("repo", repo.NameWithOwner, "events", events)
+
+	logger.Debug("checking if webhook registration is needed")
 
 	webhooks, err := webhookList(qc, repo)
 	if err != nil {
@@ -23,32 +30,54 @@ func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, eve
 		return
 	}
 
+	webhookReplaceOlderThan, err := time.Parse(time.RFC3339, webhookReplaceOlderThan)
+	if err != nil {
+		rerr = fmt.Errorf("invalid webhookReplaceOlderThan constant format: %v", err)
+		return
+	}
+
+	found := false
+
 	for _, wh := range webhooks {
 		wantedURL, err := url.Parse(webhookURL)
 		if err != nil {
 			rerr = err
 			return
 		}
-		haveURL, err := url.Parse(wh.URL)
+		haveURL, err := url.Parse(wh.Config.URL)
 		if err != nil {
 			rerr = err
 			return
 		}
+		logger.Info("url", "want_url", wantedURL, "have url", haveURL)
 		if wantedURL.Host == haveURL.Host {
+			found = true
+
 			// already exists
-			if reflect.DeepEqual(sortCopy(events), sortCopy(wh.Events)) {
+			if wh.CreatedAt.Before(webhookReplaceOlderThan) {
+				logger.Info("recreating webhook, because the one we had before is older than", "deadline", webhookReplaceOlderThan)
+
+				// the hook was created by older version of agent and needs re-creating
+			} else if reflect.DeepEqual(sortCopy(events), sortCopy(wh.Events)) {
 				// already same events, nothing to do
-				return nil
+				logger.Debug("existing webhook found, no need to re-create")
+			} else {
+				// remove previous, and add new
+				logger.Info("recreating webhook, because the one we had before had different settings", "repo", repo.NameWithOwner)
 			}
-			// remove previous, and add new
-			qc.Logger.Info("recreating webhook, because the one we had before had different settings", "repo", repo.NameWithOwner)
+
+			// if there are multiple hooks for event-api url, we will remove all previous, only keeping one
 			err := webhookRemove(qc, repo, wh.ID)
 			if err != nil {
 				rerr = err
 				return
 			}
-			// no return here, fall down to create
+
 		}
+	}
+
+	if !found {
+		logger.Info("existing webhook not found, creating")
 	}
 
 	return webhookCreate(qc, repo, webhookURL, events)
@@ -62,9 +91,12 @@ func sortCopy(arr []string) []string {
 }
 
 type webhook struct {
-	ID     int
-	URL    string
-	Events []string
+	ID     int      `json:"id"`
+	Events []string `json:"events"`
+	Config struct {
+		URL string `json:"url"`
+	} `json:"config"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func webhookList(qc QueryContext, repo Repo) (res []webhook, rerr error) {
@@ -76,25 +108,10 @@ func webhookList(qc QueryContext, repo Repo) (res []webhook, rerr error) {
 	req.Header = http.Header{}
 	req.Header.Set("Authorization", "token "+qc.AuthToken)
 
-	var resp []struct {
-		ID     int      `json:"id"`
-		Events []string `json:"events"`
-		Config struct {
-			URL string `json:"url"`
-		} `json:"config"`
-	}
-	_, err := reqs.JSON(req, &resp)
+	_, err := reqs.JSON(req, &res)
 	if err != nil {
 		rerr = err
 		return
-	}
-	for _, obj := range resp {
-		obj2 := webhook{
-			ID:     obj.ID,
-			URL:    obj.Config.URL,
-			Events: obj.Events,
-		}
-		res = append(res, obj2)
 	}
 	return
 }
