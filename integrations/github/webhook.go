@@ -133,13 +133,7 @@ func (s *Integration) Webhook(ctx context.Context, headers map[string]string, bo
 			rerr(errors.New("missing repository.full_name in payload"))
 			return
 		}
-		defaultBranch, _ := obj["default_branch"].(string)
-		if fullName == "" {
-			rerr(errors.New("missing repository.default_branch in payload"))
-			return
-		}
 		repo := api.Repo{}
-		repo.DefaultBranch = defaultBranch
 		repo.ID = repoNodeID
 		repo.NameWithOwner = fullName
 		err := s.exportGit(repo, nil)
@@ -165,5 +159,5 @@ func (s *Integration) webhookPullRequest(logger hclog.Logger, sessions *objsende
 	pullRequestSender := sessions.NewSession(sourcecode.PullRequestModelName.String())
 	commitsSender := sessions.NewSession(sourcecode.PullRequestCommitModelName.String())
 
-	return s.exportPRCommitsAddingToPR(logger, repo, pr, pullRequestSender, commitsSender)
+	return s.exportPRCommitsAddingToPR(logger, pr, pullRequestSender, commitsSender)
 }

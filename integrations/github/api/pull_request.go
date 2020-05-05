@@ -14,6 +14,7 @@ type PullRequest struct {
 	HasComments   bool
 	HasReviews    bool
 	LastCommitSHA string
+	Repo          Repo
 }
 
 const pullRequestFieldsGraphql = `
@@ -67,8 +68,8 @@ closedEvents: timelineItems (last:1 itemTypes:CLOSED_EVENT){
 type pullRequestGraphql struct {
 	ID         string `json:"id"`
 	Repository struct {
-		ID   string `json:"id"`
-		Name string `json:"nameWithOwner"`
+		ID            string `json:"id"`
+		NameWithOwner string `json:"nameWithOwner"`
 	}
 	Number      int       `json:"number"`
 	HeadRefName string    `json:"headRefName"`
@@ -119,11 +120,12 @@ func convertPullRequest(qc QueryContext, data pullRequestGraphql) PullRequest {
 	pr.RefType = "github"
 	pr.RefID = data.ID
 	pr.RepoID = qc.RepoID(data.Repository.ID)
+
 	pr.BranchName = data.HeadRefName
 	pr.Title = data.Title
 	pr.Description = `<div class="source-github">` + data.BodyHTML + `</div>`
 	pr.URL = data.URL
-	pr.Identifier = fmt.Sprintf("%s#%d", data.Repository.Name, data.Number) // such as pinpt/datamodel#123 which is the display format GH uses
+	pr.Identifier = fmt.Sprintf("%s#%d", data.Repository.NameWithOwner, data.Number) // such as pinpt/datamodel#123 which is the display format GH uses
 	date.ConvertToModel(data.CreatedAt, &pr.CreatedDate)
 	date.ConvertToModel(data.MergedAt, &pr.MergedDate)
 	date.ConvertToModel(data.ClosedAt, &pr.ClosedDate)
@@ -196,6 +198,8 @@ func convertPullRequest(qc QueryContext, data pullRequestGraphql) PullRequest {
 
 	pr2 := PullRequest{}
 	pr2.PullRequest = pr
+	pr2.Repo.ID = data.Repository.ID
+	pr2.Repo.NameWithOwner = data.Repository.NameWithOwner
 	pr2.HasComments = data.Comments.TotalCount != 0
 	pr2.HasReviews = data.Reviews.TotalCount != 0
 	if len(data.LastCommits.Nodes) != 0 {

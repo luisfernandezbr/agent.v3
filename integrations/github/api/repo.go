@@ -9,15 +9,24 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-// Repo contains the data needed for exporting other resources depending on it
+// Repo contains repo ID and name for passing around and logging
 type Repo struct {
+	ID            string
+	NameWithOwner string
+}
+
+type RepoWithDefaultBranch struct {
 	ID            string
 	NameWithOwner string
 	// DefaultBranch of the repo, could be empty if no commits yet. Used for getting commit_users
 	DefaultBranch string
 }
 
-func ReposAll(qc QueryContext, org Org, res chan []Repo) error {
+func (s RepoWithDefaultBranch) Repo() Repo {
+	return Repo{ID: s.ID, NameWithOwner: s.NameWithOwner}
+}
+
+func ReposAll(qc QueryContext, org Org, res chan []RepoWithDefaultBranch) error {
 	return PaginateRegular(func(query string) (pi PageInfo, _ error) {
 		pi, sub, err := ReposPageInternal(qc, org, query)
 		if err != nil {
@@ -28,8 +37,8 @@ func ReposAll(qc QueryContext, org Org, res chan []Repo) error {
 	})
 }
 
-func ReposAllSlice(qc QueryContext, org Org) (sl []Repo, rerr error) {
-	res := make(chan []Repo)
+func ReposAllSlice(qc QueryContext, org Org) (sl []RepoWithDefaultBranch, rerr error) {
+	res := make(chan []RepoWithDefaultBranch)
 	go func() {
 		defer close(res)
 		err := ReposAll(qc, org, res)
@@ -45,7 +54,7 @@ func ReposAllSlice(qc QueryContext, org Org) (sl []Repo, rerr error) {
 	return
 }
 
-func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInfo, repos []Repo, _ error) {
+func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInfo, repos []RepoWithDefaultBranch, _ error) {
 
 	var loginQuery string
 
@@ -124,9 +133,9 @@ func ReposPageInternal(qc QueryContext, org Org, queryParams string) (pi PageInf
 		return pi, repos, nil
 	}
 
-	var batch []Repo
+	var batch []RepoWithDefaultBranch
 	for _, data := range repoNodes {
-		repo := Repo{}
+		repo := RepoWithDefaultBranch{}
 		repo.ID = data.ID
 		repo.NameWithOwner = data.NameWithOwner
 		repo.DefaultBranch = data.DefaultBranchRef.Name

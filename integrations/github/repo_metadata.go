@@ -8,7 +8,7 @@ import (
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 )
 
-func (s *Integration) exportRepoMetadata(sender *objsender.Session, orgs []api.Org, onlyInclude []Repo) error {
+func (s *Integration) exportRepoMetadata(sender *objsender.Session, orgs []api.Org, onlyInclude []exportRepo) error {
 
 	for _, org := range orgs {
 		logger := s.logger.With("org", org.Login)
@@ -28,7 +28,7 @@ func (s *Integration) exportRepoMetadata(sender *objsender.Session, orgs []api.O
 	return nil
 }
 
-func (s *Integration) exportRepoMetadataPerOrgOrUser(logger hclog.Logger, sender *objsender.Session, org api.Org, onlyInclude []Repo) error {
+func (s *Integration) exportRepoMetadataPerOrgOrUser(logger hclog.Logger, sender *objsender.Session, org api.Org, onlyInclude []exportRepo) error {
 
 	// map[nameWithOwner]shouldInclude
 	shouldInclude := map[string]bool{}
