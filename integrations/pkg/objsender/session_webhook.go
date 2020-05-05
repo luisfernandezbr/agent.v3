@@ -36,3 +36,7 @@ func (s *SessionWebhook) Send(obj Model) error {
 	s.sessions.write(s.objectType, obj)
 	return nil
 }
+
+func (s *SessionWebhook) Done() error {
+	return nil
+}

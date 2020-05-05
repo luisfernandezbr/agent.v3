@@ -36,8 +36,8 @@ closedAt
 state
 draft: isDraft
 locked
-author { login }
-mergedBy { login }
+author ` + userFields + `
+mergedBy ` + userFields + `
 mergeCommit { oid }
 commits(last: 1) {
 	nodes {
@@ -57,9 +57,7 @@ reviews {
 closedEvents: timelineItems (last:1 itemTypes:CLOSED_EVENT){
 	nodes {
 		... on ClosedEvent {
-			actor {
-				login
-			}
+			actor ` + userFields + `
 		}
 	}
 }
@@ -83,12 +81,8 @@ type pullRequestGraphql struct {
 	State       string    `json:"state"`
 	Draft       bool      `json:"draft"`
 	Locked      bool      `json:"locked"`
-	Author      struct {
-		Login string `json:"login"`
-	} `json:"author"`
-	MergedBy struct {
-		Login string `json:"login"`
-	} `json:"mergedBy"`
+	Author      User      `json:"author"`
+	MergedBy    User      `json:"mergedBy"`
 	MergeCommit struct {
 		OID string `json:"oid"`
 	} `json:"mergeCommit"`
@@ -107,9 +101,7 @@ type pullRequestGraphql struct {
 	} `json:"reviews"`
 	ClosedEvents struct {
 		Nodes []struct {
-			Actor struct {
-				Login string `json:"login"`
-			} `json:"actor"`
+			Actor User `json:"actor"`
 		} `json:"nodes"`
 	} `json:"closedEvents"`
 }
@@ -152,13 +144,13 @@ func convertPullRequest(qc QueryContext, data pullRequestGraphql) PullRequest {
 		pr.MergeCommitID = ids.CodeCommit(qc.CustomerID, qc.RefType, pr.RepoID, pr.MergeSha)
 	}
 
-	// only set those fields in exports, not in mutations
-	if qc.UserLoginToRefID != nil {
+	// only set those fields in exports and webhooks, not in mutations (TODO: maybe change this)
+	if qc.ExportUserUsingFullDetails != nil {
 
 		{
 			login := data.Author.Login
 			var err error
-			pr.CreatedByRefID, err = qc.UserLoginToRefID(data.Author.Login)
+			pr.CreatedByRefID, err = qc.ExportUserUsingFullDetails(qc.Logger, data.Author)
 			if err != nil {
 				qc.Logger.Error("could not resolve pr created by user", "login", login, "pr_url", data.URL)
 			}
@@ -172,7 +164,7 @@ func convertPullRequest(qc QueryContext, data pullRequestGraphql) PullRequest {
 					qc.Logger.Error("pull request: empty login for closed by author field", "pr_url", data.URL)
 				} else {
 					var err error
-					pr.ClosedByRefID, err = qc.UserLoginToRefID(login)
+					pr.ClosedByRefID, err = qc.ExportUserUsingFullDetails(qc.Logger, events[0].Actor)
 					if err != nil {
 						qc.Logger.Error("could not resolve closed by user when processing pr", "login", login, "pr_url", data.URL)
 					}
@@ -188,7 +180,7 @@ func convertPullRequest(qc QueryContext, data pullRequestGraphql) PullRequest {
 				qc.Logger.Error("pull request: empty login for mergedBy field", "pr_url", data.URL)
 			} else {
 				var err error
-				pr.MergedByRefID, err = qc.UserLoginToRefID(login)
+				pr.MergedByRefID, err = qc.ExportUserUsingFullDetails(qc.Logger, data.MergedBy)
 				if err != nil {
 					qc.Logger.Error("could not resolve merged by user when processing pr", "login", login, "pr_url", data.URL)
 				}

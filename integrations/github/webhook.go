@@ -68,13 +68,15 @@ func (s *Integration) Webhook(ctx context.Context, headers map[string]string, bo
 		return
 	}
 
-	s.users, err = NewUsers(s, true)
+	sessions := objsender.NewSessionsWebhook()
+	s.users, err = NewUsersWebhooks(s, sessions)
 	if err != nil {
 		rerr(err)
 		return
 	}
-	s.qc.UserLoginToRefID = s.users.LoginToRefID
-	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
+	//s.qc.UserLoginToRefID = s.users.LoginToRefID
+	//s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
+	s.qc.ExportUserUsingFullDetails = s.users.ExportUserUsingFullDetails
 
 	xGithubEvent, _ := headers["x-github-event"]
 	switch xGithubEvent {
@@ -109,7 +111,7 @@ func (s *Integration) Webhook(ctx context.Context, headers map[string]string, bo
 			rerr(errors.New("missing pull_request.node_id in payload"))
 			return
 		}
-		sessions := objsender.NewSessionsWebhook()
+
 		err := s.webhookPullRequest(s.logger, sessions, prNodeID)
 		if err != nil {
 			rerr(fmt.Errorf("could not get pull request %v", err))

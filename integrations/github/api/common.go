@@ -26,8 +26,10 @@ type QueryContext struct {
 	CustomerID string
 	RefType    string
 
+	// deprecated, use ExportUserUsingFullDetails instead
 	UserLoginToRefID           func(login string) (refID string, _ error)
 	UserLoginToRefIDFromCommit func(logger hclog.Logger, login, name, email string) (refID string, _ error)
+	ExportUserUsingFullDetails func(logger hclog.Logger, user User) (refID string, _ error)
 
 	IsEnterprise func() bool
 
