@@ -48,7 +48,13 @@ func (s *JiraCommon) Mutate(ctx context.Context, fn, data string, config rpcdef.
 		res = mutate.ResultFromError(err)
 	}
 
-	action := mutate.UnmarshalAction(fn)
+	var action agent.IntegrationMutationRequestAction
+	err := action.FromInterface(fn)
+	if err != nil {
+		rerr(err)
+		return
+	}
+
 	qc := s.CommonQC()
 
 	switch action {
