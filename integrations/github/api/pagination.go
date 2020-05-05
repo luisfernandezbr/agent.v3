@@ -41,12 +41,16 @@ func PaginateRegularWithPageSize(pageSize int, fn PaginateRegularFn) error {
 
 type PaginateNewerThanFn func(query string, stopOnUpdatedAt time.Time) (PageInfo, error)
 
-// PaginateNewerThan is pagination for resources supporting orderBy UPDATED_AT field.
 func PaginateNewerThan(lastProcessed time.Time, fn PaginateNewerThanFn) error {
+	return PaginateNewerThanWithPageSize(lastProcessed, defaultPageSize, fn)
+}
+
+// PaginateNewerThan is pagination for resources supporting orderBy UPDATED_AT field.
+func PaginateNewerThanWithPageSize(lastProcessed time.Time, pageSize int, fn PaginateNewerThanFn) error {
 	if lastProcessed.IsZero() {
 		cursor := ""
 		for {
-			q := "first: " + strconv.Itoa(defaultPageSize)
+			q := "first: " + strconv.Itoa(pageSize)
 			if cursor != "" {
 				q += " after:" + pjson.Stringify(cursor)
 			}
@@ -64,7 +68,7 @@ func PaginateNewerThan(lastProcessed time.Time, fn PaginateNewerThanFn) error {
 	}
 	cursor := ""
 	for {
-		q := "first: " + strconv.Itoa(defaultPageSize)
+		q := "first: " + strconv.Itoa(pageSize)
 		if cursor != "" {
 			q += " after:" + pjson.Stringify(cursor)
 		}
