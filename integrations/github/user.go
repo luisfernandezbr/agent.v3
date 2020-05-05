@@ -16,11 +16,11 @@ import (
 
 // map[login]refID
 type Users struct {
-	integration *Integration
-	sender      objsender.SessionCommon
-	loginToID   map[string]string
-
-	mu sync.Mutex
+	integration   *Integration
+	sender        objsender.SessionCommon
+	loginToID     map[string]string
+	exportedRefID map[string]bool
+	mu            sync.Mutex
 }
 
 func NewUsers(integration *Integration, noExport bool) (*Users, error) {
@@ -34,7 +34,7 @@ func NewUsers(integration *Integration, noExport bool) (*Users, error) {
 		}
 	}
 	s.loginToID = map[string]string{}
-
+	s.exportedRefID = map[string]bool{}
 	return s, nil
 }
 
@@ -43,7 +43,7 @@ func NewUsersWebhooks(integration *Integration, sessions *objsender.SessionsWebh
 	s.integration = integration
 	s.sender = sessions.NewSession(sourcecode.UserModelName.String())
 	s.loginToID = map[string]string{}
-
+	s.exportedRefID = map[string]bool{}
 	return s, nil
 }
 
@@ -128,6 +128,11 @@ func (s *Users) sendUsers(users []*sourcecode.User) error {
 		return nil
 	}
 	for _, user := range users {
+		// already exported
+		if s.exportedRefID[user.RefID] {
+			return nil
+		}
+		s.exportedRefID[user.RefID] = true
 		err := s.sender.Send(user)
 		if err != nil {
 			return err

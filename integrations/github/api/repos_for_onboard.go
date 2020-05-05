@@ -122,10 +122,10 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 		repoID := Repo{ID: data.ID, NameWithOwner: data.NameWithOwner}
 		_, noPermissions, err := WebhookList(qc, repoID)
 		if err != nil {
-			repo.WebhookEnabled = false
+			repo.WebhookPermission = false
 			qc.Logger.Error("could not list webhooks for repo", "err", err)
 		} else {
-			repo.WebhookEnabled = !noPermissions
+			repo.WebhookPermission = !noPermissions
 		}
 
 		repo.RefType = qc.RefType
