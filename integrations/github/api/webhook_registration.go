@@ -24,9 +24,13 @@ func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, eve
 
 	logger.Debug("checking if webhook registration is needed")
 
-	webhooks, err := webhookList(qc, repo)
+	webhooks, noPermissions, err := WebhookList(qc, repo)
 	if err != nil {
 		rerr = err
+		return
+	}
+	if noPermissions {
+		rerr = errors.New("no persmissions to list webhooks for repo")
 		return
 	}
 
@@ -49,7 +53,6 @@ func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, eve
 			rerr = err
 			return
 		}
-		logger.Info("url", "want_url", wantedURL, "have url", haveURL)
 		if wantedURL.Host == haveURL.Host {
 			found = true
 
@@ -99,7 +102,7 @@ type webhook struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func webhookList(qc QueryContext, repo Repo) (res []webhook, rerr error) {
+func WebhookList(qc QueryContext, repo Repo) (res []webhook, noPermissions bool, rerr error) {
 	reqs := requests2.New(qc.Logger, qc.Clients.TLSInsecure)
 
 	req := requests2.Request{}
@@ -108,8 +111,12 @@ func webhookList(qc QueryContext, repo Repo) (res []webhook, rerr error) {
 	req.Header = http.Header{}
 	req.Header.Set("Authorization", "token "+qc.AuthToken)
 
-	_, err := reqs.JSON(req, &res)
+	resp, err := reqs.JSON(req, &res)
 	if err != nil {
+		if resp.Resp.StatusCode == http.StatusNotFound {
+			noPermissions = true
+			return
+		}
 		rerr = err
 		return
 	}

@@ -16,11 +16,11 @@ import (
 
 // map[login]refID
 type Users struct {
-	integration *Integration
-	sender      *objsender.Session
-	loginToID   map[string]string
-
-	mu sync.Mutex
+	integration   *Integration
+	sender        objsender.SessionCommon
+	loginToID     map[string]string
+	exportedRefID map[string]bool
+	mu            sync.Mutex
 }
 
 func NewUsers(integration *Integration, noExport bool) (*Users, error) {
@@ -34,7 +34,16 @@ func NewUsers(integration *Integration, noExport bool) (*Users, error) {
 		}
 	}
 	s.loginToID = map[string]string{}
+	s.exportedRefID = map[string]bool{}
+	return s, nil
+}
 
+func NewUsersWebhooks(integration *Integration, sessions *objsender.SessionsWebhook) (*Users, error) {
+	s := &Users{}
+	s.integration = integration
+	s.sender = sessions.NewSession(sourcecode.UserModelName.String())
+	s.loginToID = map[string]string{}
+	s.exportedRefID = map[string]bool{}
 	return s, nil
 }
 
@@ -119,6 +128,11 @@ func (s *Users) sendUsers(users []*sourcecode.User) error {
 		return nil
 	}
 	for _, user := range users {
+		// already exported
+		if s.exportedRefID[user.RefID] {
+			return nil
+		}
+		s.exportedRefID[user.RefID] = true
 		err := s.sender.Send(user)
 		if err != nil {
 			return err
@@ -219,7 +233,7 @@ func (s *Users) LoginToRefID(login string) (refID string, rerr error) {
 
 	logger.Info("could not find user in organization, querying non-org github user for additional details", "login", login)
 
-	user, err := api.User(s.integration.qc, login, false)
+	user, err := api.GetUser(s.integration.qc, login, false)
 	if err != nil {
 		rerr = err
 		return
@@ -243,6 +257,36 @@ func (s *Users) LoginToRefIDFromCommit(logger hclog.Logger, login, name, email s
 		return "", nil
 	}
 	return s.LoginToRefID(login)
+}
+
+func (s *Users) ExportUserUsingFullDetails(logger hclog.Logger, data api.User) (refID string, _ error) {
+	logger.Debug("sending user based on data", "data", data)
+	// deleted users don't have author and other link objects
+	if data.Typename == "" {
+		return "ghost", nil
+	}
+	user := &sourcecode.User{}
+	user.CustomerID = s.integration.customerID
+	user.RefID = data.ID
+	user.RefType = "github"
+	user.Username = pstrings.Pointer(data.Login)
+	// member field is not used in the pipeline
+	//user.Member = false
+	user.URL = pstrings.Pointer(data.URL)
+	user.AvatarURL = pstrings.Pointer(data.AvatarURL)
+	switch data.Typename {
+	case "User":
+		user.Name = data.Name
+		user.Type = sourcecode.UserTypeHuman
+	case "Bot":
+		user.Name = "Bot " + data.Login // bots don't have name fields
+		user.Type = sourcecode.UserTypeBot
+	}
+	err := s.sendUser(user)
+	if err != nil {
+		return "", err
+	}
+	return user.RefID, nil
 }
 
 func (s *Users) Done() error {

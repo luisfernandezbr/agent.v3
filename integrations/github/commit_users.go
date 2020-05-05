@@ -11,13 +11,13 @@ import (
 	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 )
 
-func (s *Integration) exportCommitUsersForRepo(ctx *repoprojects.ProjectCtx, repo Repo) error {
+func (s *Integration) exportCommitUsersForRepo(ctx *repoprojects.ProjectCtx, repo api.RepoWithDefaultBranch) error {
 	logger := ctx.Logger
 	usersSender, err := ctx.Session(commitusers.TableName)
 	if err != nil {
 		return err
 	}
-	err = s.exportCommitsForRepoDefaultBranch(logger, usersSender, repo.Repo)
+	err = s.exportCommitsForRepoDefaultBranch(logger, usersSender, repo)
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func reposToChan(sl []api.Repo, maxToReturn int) chan api.Repo {
 	return res
 }
 
-func (s *Integration) exportCommitsForRepoDefaultBranch(logger hclog.Logger, userSender *objsender.Session, repo api.Repo) error {
+func (s *Integration) exportCommitsForRepoDefaultBranch(logger hclog.Logger, userSender *objsender.Session, repo api.RepoWithDefaultBranch) error {
 	logger.Info("exporting commits (to get users)", "repo_id", repo.ID, "repo_name", repo.NameWithOwner)
 
 	if repo.DefaultBranch == "" {
@@ -80,7 +80,7 @@ func (s *Integration) exportCommitsForRepoAllBranches(et *exportType, repoID str
 }
 */
 
-func (s *Integration) exportCommitsForRepoBranch(logger hclog.Logger, userSender *objsender.Session, repo api.Repo, branchName string) error {
+func (s *Integration) exportCommitsForRepoBranch(logger hclog.Logger, userSender *objsender.Session, repo api.RepoWithDefaultBranch, branchName string) error {
 	logger.Info("exporting commits for branch", "repo_id", repo.ID, "repo_name", repo.NameWithOwner)
 
 	return api.PaginateCommits(
@@ -88,7 +88,7 @@ func (s *Integration) exportCommitsForRepoBranch(logger hclog.Logger, userSender
 		func(query string) (api.PageInfo, error) {
 
 			pi, res, err := api.CommitsPage(s.qc.WithLogger(logger),
-				repo,
+				repo.Repo(),
 				branchName,
 				query,
 			)

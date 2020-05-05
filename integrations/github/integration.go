@@ -281,6 +281,18 @@ func (s *Integration) getOrgs() (res []api.Org, _ error) {
 	return res, nil
 }
 
+type exportRepo struct {
+	api.RepoWithDefaultBranch
+}
+
+func (s exportRepo) GetID() string {
+	return s.RepoWithDefaultBranch.ID
+}
+
+func (s exportRepo) GetReadableID() string {
+	return s.RepoWithDefaultBranch.NameWithOwner
+}
+
 func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rerr error) {
 
 	orgs, err := s.getOrgs()
@@ -304,7 +316,7 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 	s.qc.UserLoginToRefID = s.users.LoginToRefID
 	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
 
-	var unfilteredRepos []Repo
+	var unfilteredRepos []api.RepoWithDefaultBranch
 	if len(orgs) > 0 {
 		unfilteredRepos, rerr = s.getAllOrgRepos(orgs)
 		if rerr != nil {
@@ -319,7 +331,7 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 
 	var unfilteredReposIface []repoprojects.RepoProject
 	for _, r := range unfilteredRepos {
-		unfilteredReposIface = append(unfilteredReposIface, r)
+		unfilteredReposIface = append(unfilteredReposIface, exportRepo{r})
 	}
 
 	filteredReposIface := repoprojects.Filter(s.logger, unfilteredReposIface, repoprojects.FilterConfig{
@@ -329,9 +341,9 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 		StopAfterN:             s.config.StopAfterN,
 	})
 
-	var filteredRepos []Repo
+	var filteredRepos []exportRepo
 	for _, r := range filteredReposIface {
-		filteredRepos = append(filteredRepos, r.(Repo))
+		filteredRepos = append(filteredRepos, r.(exportRepo))
 	}
 
 	// enable for pinpoint only
@@ -360,8 +372,8 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 	processOpts := repoprojects.ProcessOpts{}
 	processOpts.Logger = s.logger
 	processOpts.ProjectFn = func(ctx *repoprojects.ProjectCtx) error {
-		repo := ctx.Project.(Repo)
-		return s.exportRepo(ctx, repo)
+		repo := ctx.Project.(exportRepo)
+		return s.exportRepo(ctx, repo.RepoWithDefaultBranch)
 	}
 
 	// we use s.config.Concurrency for request concurrency, set it here as well, since we don't have additional concurrency inside of repo, so process multiple repos concurrently
@@ -401,7 +413,7 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 	return exportResult, nil
 }
 
-func (s *Integration) registerWebhooks(repos []Repo) error {
+func (s *Integration) registerWebhooks(repos []exportRepo) error {
 	s.logger.Info("registering webhooks")
 
 	url, err := s.agent.GetWebhookURL()
@@ -410,7 +422,7 @@ func (s *Integration) registerWebhooks(repos []Repo) error {
 	}
 
 	for _, repo := range repos {
-		err := api.WebhookCreateIfNotExists(s.qc, repo.Repo, url, webhookEvents)
+		err := api.WebhookCreateIfNotExists(s.qc, repo.Repo(), url, webhookEvents)
 		if err != nil {
 			s.logger.Error("could not register webhooks for repo", "err", err, "repo", repo.NameWithOwner)
 		}
@@ -419,19 +431,7 @@ func (s *Integration) registerWebhooks(repos []Repo) error {
 	return nil
 }
 
-type Repo struct {
-	api.Repo
-}
-
-func (s Repo) GetID() string {
-	return s.Repo.ID
-}
-
-func (s Repo) GetReadableID() string {
-	return s.Repo.NameWithOwner
-}
-
-func (s *Integration) getAllOrgRepos(orgs []api.Org) (res []Repo, rerr error) {
+func (s *Integration) getAllOrgRepos(orgs []api.Org) (res []api.RepoWithDefaultBranch, rerr error) {
 	s.logger.Info("getting a list of all repos")
 	for _, org := range orgs {
 		logger := s.logger.With("org", org.Login)
@@ -442,14 +442,14 @@ func (s *Integration) getAllOrgRepos(orgs []api.Org) (res []Repo, rerr error) {
 			return
 		}
 		for _, r := range orgRepos {
-			res = append(res, Repo{r})
+			res = append(res, r)
 		}
 	}
 	s.logger.Info("completed getting list of repos, total unfiltered", "c", len(res))
 	return
 }
 
-func (s *Integration) getAllPersonalRepos(orgs []api.Org) (res []Repo, rerr error) {
+func (s *Integration) getAllPersonalRepos(orgs []api.Org) (res []api.RepoWithDefaultBranch, rerr error) {
 	s.logger.Info("getting a list of all personal repos")
 
 	orgRepos, err := api.ReposAllSlice(s.qc.WithLogger(s.logger), api.Org{})
@@ -458,7 +458,7 @@ func (s *Integration) getAllPersonalRepos(orgs []api.Org) (res []Repo, rerr erro
 		return
 	}
 	for _, r := range orgRepos {
-		res = append(res, Repo{r})
+		res = append(res, r)
 	}
 
 	s.logger.Info("completed getting list of personal repos, total unfiltered", "c", len(res))
@@ -473,13 +473,13 @@ func branchURLTemplate(repo api.Repo, repoURLPrefix string) string {
 	return urlAppend(repoURLPrefix, repo.NameWithOwner) + "/tree/@@@branch@@@"
 }
 
-func (s *Integration) exportRepo(ctx *repoprojects.ProjectCtx, repo Repo) error {
+func (s *Integration) exportRepo(ctx *repoprojects.ProjectCtx, repo api.RepoWithDefaultBranch) error {
 	logger := ctx.Logger
 	if s.config.OnlyGit {
 		logger.Warn("only_ripsrc flag passed, skipping export of data from github api, will not be exporting prs")
 
 		// if only git do it here, otherwise wait till we export all prs per repo
-		err := s.exportGit(repo.Repo, nil)
+		err := s.exportGit(repo.Repo(), nil)
 		if err != nil {
 			return err
 		}
@@ -493,7 +493,7 @@ func (s *Integration) exportRepo(ctx *repoprojects.ProjectCtx, repo Repo) error 
 		return err
 	}
 
-	err = s.exportPullRequestsAndRelated(ctx, repo)
+	err = s.exportPullRequestsAndRelated(ctx, repo.Repo())
 	if err != nil {
 		return err
 	}
@@ -536,7 +536,7 @@ type RepoError struct {
 	Err  error
 }
 
-func (s *Integration) exportPullRequestsAndRelated(ctx *repoprojects.ProjectCtx, repo Repo) error {
+func (s *Integration) exportPullRequestsAndRelated(ctx *repoprojects.ProjectCtx, repo api.Repo) error {
 	logger := ctx.Logger
 
 	prSender, err := ctx.Session(sourcecode.PullRequestModelName)
@@ -548,12 +548,12 @@ func (s *Integration) exportPullRequestsAndRelated(ctx *repoprojects.ProjectCtx,
 		return err
 	}
 
-	prs, err := s.exportPullRequestsForRepo(logger, repo.Repo, prSender, prCommitsSender)
+	prs, err := s.exportPullRequestsForRepo(logger, repo, prSender, prCommitsSender)
 	if err != nil {
 		return err
 	}
 
-	err = s.exportGit(repo.Repo, prs)
+	err = s.exportGit(repo, prs)
 	if err != nil {
 		return err
 	}
@@ -652,43 +652,49 @@ func (s *Integration) exportPullRequestsForRepo(
 		for prs := range pullRequestsForCommits {
 			for _, pr := range prs {
 
-				commits, err := s.exportPullRequestCommits(logger, pr.RefID)
+				err := s.exportPRCommitsAddingToPR(logger, pr, pullRequestSender, commitsSender)
 				if err != nil {
 					setErr(err)
 					return
 				}
-
-				for _, c := range commits {
-					pr.CommitShas = append(pr.CommitShas, c.Sha)
-				}
-
-				pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, pr.CommitShas)
-				if len(pr.CommitShas) == 0 {
-					logger.Info("found PullRequest with no commits (ignoring it)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
-				} else {
-					pr.BranchID = s.qc.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
-				}
-
-				err = pullRequestSender.Send(pr)
-				if err != nil {
-					setErr(err)
-					return
-				}
-
-				for _, c := range commits {
-					c.BranchID = pr.BranchID
-					err := commitsSender.Send(c)
-					if err != nil {
-						setErr(err)
-						return
-					}
-				}
-
 			}
 		}
 	}()
 	wg.Wait()
 	return
+}
+
+func (s *Integration) exportPRCommitsAddingToPR(logger hclog.Logger, pr api.PullRequest, pullRequestSender objsender.SessionCommon, commitsSender objsender.SessionCommon) error {
+	commits, err := s.exportPullRequestCommits(logger, pr.RefID)
+	if err != nil {
+		return err
+	}
+
+	for _, c := range commits {
+		pr.CommitShas = append(pr.CommitShas, c.Sha)
+	}
+
+	pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, pr.CommitShas)
+	if len(pr.CommitShas) == 0 {
+		logger.Info("found PullRequest with no commits (not setting BranchID)", "repo", pr.RepoID, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
+	} else {
+		pr.BranchID = s.qc.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
+	}
+
+	err = pullRequestSender.Send(pr)
+	if err != nil {
+		return err
+	}
+
+	for _, c := range commits {
+		c.BranchID = pr.BranchID
+		err := commitsSender.Send(c)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {

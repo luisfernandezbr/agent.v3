@@ -8,6 +8,29 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
+type User struct {
+	Typename  string `json:"__typename"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatarUrl"`
+	Login     string `json:"login"`
+	URL       string `json:"url"`
+}
+
+const userFields = `{
+	__typename
+	... on User {
+		id
+		name
+	}
+	... on Bot {
+		id
+	}
+	avatarUrl
+	login
+	url
+}`
+
 type userGithub struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
@@ -38,7 +61,7 @@ func (s userGithub) Convert(customerID string, orgMember bool) (user *sourcecode
 	return user
 }
 
-func User(qc QueryContext, login string, orgMember bool) (
+func GetUser(qc QueryContext, login string, orgMember bool) (
 	user *sourcecode.User, _ error) {
 
 	qc.Logger.Debug("user request", "login", login)
