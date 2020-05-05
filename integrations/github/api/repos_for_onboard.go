@@ -118,6 +118,16 @@ func ReposForOnboardPage(qc QueryContext, org Org, queryParams string, stopOnUpd
 		}
 
 		repo := &agent.RepoResponseRepos{}
+
+		repoID := Repo{ID: data.ID, NameWithOwner: data.NameWithOwner}
+		_, noPermissions, err := WebhookList(qc, repoID)
+		if err != nil {
+			repo.WebhookEnabled = false
+			qc.Logger.Error("could not list webhooks for repo", "err", err)
+		} else {
+			repo.WebhookEnabled = !noPermissions
+		}
+
 		repo.RefType = qc.RefType
 		repo.RefID = data.ID
 		repo.Name = data.NameWithOwner
