@@ -66,7 +66,12 @@ func (s *Integration) Mutate(ctx context.Context, fn, data string, config rpcdef
 
 	s.qc.Request = s.makeRequestNoRetries
 
-	action := mutate.UnmarshalAction(fn)
+	var action agent.IntegrationMutationRequestAction
+	err = action.FromInterface(fn)
+	if err != nil {
+		rerr(err)
+		return
+	}
 
 	switch action {
 	// this is actually pr title
