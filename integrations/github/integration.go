@@ -652,6 +652,12 @@ func (s *Integration) exportPullRequestsForRepo(
 		for prs := range pullRequestsForCommits {
 			for _, pr := range prs {
 
+				err := s.exportPRCommitsAddingToPR(logger, pr)
+				if err != nil {
+					setErr(err)
+					return
+				}
+
 				commits, err := s.exportPullRequestCommits(logger, pr.RefID)
 				if err != nil {
 					setErr(err)
@@ -689,6 +695,39 @@ func (s *Integration) exportPullRequestsForRepo(
 	}()
 	wg.Wait()
 	return
+}
+
+func (s *Integration) exportPRCommitsAddingToPR(logger hclog.Logger, repo Repo, pr api.PullRequest, pullRequestSender SessionCommon, commitsSender SessionCommon) error {
+	commits, err := s.exportPullRequestCommits(logger, pr.RefID)
+	if err != nil {
+		return err
+	}
+
+	for _, c := range commits {
+		pr.CommitShas = append(pr.CommitShas, c.Sha)
+	}
+
+	pr.CommitIds = ids.CodeCommits(s.qc.CustomerID, s.refType, pr.RepoID, pr.CommitShas)
+	if len(pr.CommitShas) == 0 {
+		logger.Info("found PullRequest with no commits (not setting BranchID)", "repo", repo.NameWithOwner, "pr_ref_id", pr.RefID, "pr.url", pr.URL)
+	} else {
+		pr.BranchID = s.qc.BranchID(pr.RepoID, pr.BranchName, pr.CommitShas[0])
+	}
+
+	err = pullRequestSender.Send(pr)
+	if err != nil {
+		return err
+	}
+
+	for _, c := range commits {
+		c.BranchID = pr.BranchID
+		err := commitsSender.Send(c)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func getRepoURL(repoURLPrefix string, user *url.Userinfo, nameWithOwner string) (string, error) {
