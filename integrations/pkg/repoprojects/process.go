@@ -179,8 +179,9 @@ type ProjectCtx struct {
 
 	sender *objsender.Session
 
-	senders   []*objsender.Session
-	sendersMu sync.Mutex
+	senders     []*objsender.Session
+	senderModel []string
+	sendersMu   sync.Mutex
 }
 
 func newProjectCtx(logger hclog.Logger, project RepoProject, sender *objsender.Session) *ProjectCtx {
@@ -201,23 +202,24 @@ func (s *ProjectCtx) Session(modelName datamodel.ModelNameType) (_ *objsender.Se
 		return
 	}
 	s.senders = append(s.senders, sender)
+	s.senderModel = append(s.senderModel, modelName.String())
 	return sender, nil
 }
 
 func (s *ProjectCtx) done() error {
-	for _, sender := range s.senders {
+	for i, sender := range s.senders {
 		err := sender.Done()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed Done on sender model=%v %v", s.senderModel[i], err)
 		}
 	}
 	return nil
 }
 func (s *ProjectCtx) doneLastProcess(token string) error {
-	for _, sender := range s.senders {
+	for i, sender := range s.senders {
 		err := sender.DoneLastProcessed(token)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed DoneLastProcessed on sender model=%v %v", s.senderModel[i], err)
 		}
 	}
 	return nil
