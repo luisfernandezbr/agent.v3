@@ -101,6 +101,11 @@ func (s *Integration) Webhook(ctx context.Context, headers map[string]string, bo
 		}
 		return s.webhookResult(sourcecode.PullRequestCommentModelName, obj)
 	case "pull_request":
+		repo, err := repoFromWebhook(data)
+		if err != nil {
+			rerr(err)
+			return
+		}
 		obj, ok := data["pull_request"].(map[string]interface{})
 		if !ok {
 			rerr(errors.New("missing pull_request map in payload"))
@@ -111,8 +116,7 @@ func (s *Integration) Webhook(ctx context.Context, headers map[string]string, bo
 			rerr(errors.New("missing pull_request.node_id in payload"))
 			return
 		}
-
-		err := s.webhookPullRequest(s.logger, sessions, prNodeID)
+		err = s.webhookPullRequest(s.logger, sessions, repo, prNodeID)
 		if err != nil {
 			rerr(fmt.Errorf("could not get pull request %v", err))
 			return
@@ -120,25 +124,12 @@ func (s *Integration) Webhook(ctx context.Context, headers map[string]string, bo
 		res.MutatedObjects = sessions.Data
 		return
 	case "push":
-		obj, ok := data["repository"].(map[string]interface{})
-		if !ok {
-			rerr(errors.New("missing repository map in payload"))
+		repo, err := repoFromWebhook(data)
+		if err != nil {
+			rerr(err)
 			return
 		}
-		repoNodeID, _ := obj["node_id"].(string)
-		if repoNodeID == "" {
-			rerr(errors.New("missing repository.node_id in payload"))
-			return
-		}
-		fullName, _ := obj["full_name"].(string)
-		if fullName == "" {
-			rerr(errors.New("missing repository.full_name in payload"))
-			return
-		}
-		repo := api.Repo{}
-		repo.ID = repoNodeID
-		repo.NameWithOwner = fullName
-		err := s.exportGit(repo, nil)
+		err = s.exportGit(repo, nil)
 		if err != nil {
 			rerr(err)
 			return
@@ -150,7 +141,27 @@ func (s *Integration) Webhook(ctx context.Context, headers map[string]string, bo
 	}
 }
 
-func (s *Integration) webhookPullRequest(logger hclog.Logger, sessions *objsender.SessionsWebhook, prNodeID string) (rerr error) {
+func repoFromWebhook(data map[string]interface{}) (res api.Repo, rerr error) {
+	obj, ok := data["repository"].(map[string]interface{})
+	if !ok {
+		rerr = errors.New("missing repository map in payload")
+		return
+	}
+	res.ID, _ = obj["node_id"].(string)
+	if res.ID == "" {
+		rerr = errors.New("missing repository.node_id in payload")
+		return
+	}
+	res.NameWithOwner, _ = obj["full_name"].(string)
+	if res.NameWithOwner == "" {
+		rerr = errors.New("missing repository.full_name in payload")
+		return
+	}
+	return
+}
+
+func (s *Integration) webhookPullRequest(logger hclog.Logger, sessions *objsender.SessionsWebhook, repo api.Repo, prNodeID string) (rerr error) {
+	logger = logger.With("repo", repo.NameWithOwner)
 
 	pr, err := api.PullRequestByID(s.qc, prNodeID)
 	if err != nil {
@@ -158,8 +169,16 @@ func (s *Integration) webhookPullRequest(logger hclog.Logger, sessions *objsende
 		return
 	}
 
+	// export pull request reviews
+	pullRequestReviewSender := sessions.NewSession(sourcecode.PullRequestReviewModelName.String())
+	err = s.exportPullRequestReviews(logger, pullRequestReviewSender, repo, pr.RefID)
+	if err != nil {
+		return err
+	}
+
+	// export pull request commits
 	pullRequestSender := sessions.NewSession(sourcecode.PullRequestModelName.String())
 	commitsSender := sessions.NewSession(sourcecode.PullRequestCommitModelName.String())
 
-	return s.exportPRCommitsAddingToPR(logger, pr, pullRequestSender, commitsSender)
+	return s.exportPRCommitsAddingToPR(logger, repo, pr, pullRequestSender, commitsSender)
 }

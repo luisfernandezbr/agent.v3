@@ -14,7 +14,15 @@ func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *o
 				// perf optimization
 				continue
 			}
-			err := s.exportPullRequestReviews(logger, prSender, repo, pr.RefID)
+			reviewsSender, err := prSender.Session(sourcecode.PullRequestReviewModelName.String(), pr.RefID, pr.RefID)
+			if err != nil {
+				return err
+			}
+			err = s.exportPullRequestReviews(logger, reviewsSender, repo, pr.RefID)
+			if err != nil {
+				return err
+			}
+			err = reviewsSender.Done()
 			if err != nil {
 				return err
 			}
@@ -23,23 +31,17 @@ func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *o
 	return nil
 }
 
-func (s *Integration) exportPullRequestReviews(logger hclog.Logger, prSender *objsender.Session, repo api.Repo, prID string) error {
-	reviewsSender, err := prSender.Session(sourcecode.PullRequestReviewModelName.String(), prID, prID)
-	if err != nil {
-		return err
-	}
+func (s *Integration) exportPullRequestReviews(logger hclog.Logger, reviewsSender objsender.SessionCommon, repo api.Repo, prID string) error {
 
-	err = api.PaginateRegularWithPageSize(pageSizeHeavyQueries, func(query string) (api.PageInfo, error) {
+	err := api.PaginateRegularWithPageSize(pageSizeHeavyQueries, func(query string) (api.PageInfo, error) {
 		pi, res, totalCount, err := api.PullRequestReviewTimelineItemsPage(s.qc, repo, prID, query)
 		if err != nil {
 			return pi, err
 		}
-
 		err = reviewsSender.SetTotal(totalCount)
 		if err != nil {
 			return pi, err
 		}
-
 		for _, obj := range res {
 			err := reviewsSender.Send(obj)
 			if err != nil {

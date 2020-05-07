@@ -37,6 +37,10 @@ func (s *SessionWebhook) Send(obj Model) error {
 	return nil
 }
 
+func (s *SessionWebhook) SetTotal(v int) error {
+	return nil
+}
+
 func (s *SessionWebhook) Done() error {
 	return nil
 }
