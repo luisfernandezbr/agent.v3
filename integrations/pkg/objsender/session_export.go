@@ -134,10 +134,14 @@ func (s *Session) SendMap(m map[string]interface{}) error {
 	if !s.noAutoProgress {
 		err := s.incProgress()
 		if err != nil {
-			return err
+			return fmt.Errorf("error calling incProgress: %v %v", s.name, err)
 		}
 	}
-	return s.batch.Send(m)
+	err := s.batch.Send(m)
+	if err != nil {
+		return fmt.Errorf("error calling send: %v %v", s.name, err)
+	}
+	return nil
 }
 
 func (s *Session) IncProgress() error {

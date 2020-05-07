@@ -14,7 +14,7 @@ type batch struct {
 	agent     rpcdef.Agent
 }
 
-const maxBatch = 5
+const maxBatch = 2
 
 func (s *batch) Send(m map[string]interface{}) error {
 	s.mu.Lock()

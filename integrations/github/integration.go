@@ -633,7 +633,8 @@ func (s *Integration) exportPullRequestsForRepo(
 		defer wg.Done()
 		err := s.exportPullRequestsComments(logger, pullRequestSender, pullRequestsForComments)
 		if err != nil {
-			setErr(err)
+			s.logger.Error("could not export pull request comments", "err", err)
+			//setErr(fmt.Errorf("could not export pull request comments: %v", err))
 		}
 	}()
 	wg.Add(1)
@@ -641,7 +642,8 @@ func (s *Integration) exportPullRequestsForRepo(
 		defer wg.Done()
 		err := s.exportPullRequestsReviews(logger, pullRequestSender, repo, pullRequestsForReviews)
 		if err != nil {
-			setErr(err)
+			s.logger.Error("could not export pull request reviews", "err", err)
+			//setErr(fmt.Errorf("could not export pull request reviews: %v", err))
 		}
 	}()
 
@@ -654,8 +656,9 @@ func (s *Integration) exportPullRequestsForRepo(
 
 				err := s.exportPRCommitsAddingToPR(logger, pr, pullRequestSender, commitsSender)
 				if err != nil {
-					setErr(err)
-					return
+					s.logger.Error("could not export pr commits", "err", err)
+					//setErr(fmt.Errorf("could not export pr commits: %v", err))
+					//return
 				}
 			}
 		}
@@ -683,14 +686,14 @@ func (s *Integration) exportPRCommitsAddingToPR(logger hclog.Logger, pr api.Pull
 
 	err = pullRequestSender.Send(pr)
 	if err != nil {
-		return err
+		return fmt.Errorf("error sending pr: %v", err)
 	}
 
 	for _, c := range commits {
 		c.BranchID = pr.BranchID
 		err := commitsSender.Send(c)
 		if err != nil {
-			return err
+			return fmt.Errorf("error sending commit: %v", err)
 		}
 	}
 
