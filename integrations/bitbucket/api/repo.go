@@ -35,6 +35,7 @@ func ReposOnboardPage(qc QueryContext, teamName string, params url.Values) (page
 
 	for _, v := range rr {
 		repo := &agent.RepoResponseRepos{
+			Active:      true,
 			RefID:       v.UUID,
 			RefType:     qc.RefType,
 			Name:        v.FullName,
