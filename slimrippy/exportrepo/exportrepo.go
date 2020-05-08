@@ -176,8 +176,6 @@ func (s *Export) lastProcessedSet(val interface{}, keyLocal ...string) error {
 	return s.opts.LastProcessed.Set(val, key...)
 }
 
-const lpBranches = "branches"
-
 func (s *Export) run(ctx context.Context) (duration ExportDuration, rerr error) {
 	err := os.MkdirAll(s.locs.Temp, 0777)
 	if err != nil {
@@ -199,13 +197,13 @@ func (s *Export) run(ctx context.Context) (duration ExportDuration, rerr error) 
 		return
 	}
 
-	skipsrc, remotebranches, err := s.skipRipsrc(ctx, repoDir)
+	skip, skipRipsrcData, err := s.skipRipsrc(ctx, repoDir, s.opts.PRs)
 	if err != nil {
 		rerr = err
 		return
 	}
-	if skipsrc {
-		s.logger.Info("no changes to this repo, skipping ripsrc")
+	if skip {
+		s.logger.Info("no changes to this repo and all passed PRs seen at passed commit, skipping slimrippy/ripsrc")
 		return
 	}
 
@@ -229,6 +227,7 @@ func (s *Export) run(ctx context.Context) (duration ExportDuration, rerr error) 
 	opts.PullRequestSHAs = prsStr
 	opts.BranchCallback = s.branch
 	opts.CommitCallback = s.commit
+	s.logger.Debug("will export n PRs in exportrepo", "len(pr)", len(s.opts.PRs))
 	state, err := slimrippy.CommitsAndBranches(ctx, opts)
 	if err != nil {
 		rerr = fmt.Errorf("slimrippy failed: %v", err)
@@ -243,7 +242,7 @@ func (s *Export) run(ctx context.Context) (duration ExportDuration, rerr error) 
 		rerr = err
 		return
 	}
-	rerr = s.lastProcessedSet(remotebranches, lpBranches)
+	rerr = s.lastProcessedSet(skipRipsrcData, lpSkipRipsrcBranches)
 	return
 }
 
@@ -283,27 +282,75 @@ func (s *Export) clone(ctx context.Context) (
 	return res.Checkout, nil
 }
 
-func (s *Export) skipRipsrc(ctx context.Context, checkoutdir string) (bool, map[string]slimrippy.BranchLastCommit, error) {
-	cachedbranches := make(map[string]slimrippy.BranchLastCommit)
-	remotebranches := make(map[string]slimrippy.BranchLastCommit)
-	cached := s.lastProcessedGet(lpBranches)
-	if cached != nil {
-		if err := structmarshal.StructToStruct(cached, &cachedbranches); err != nil {
-			return true, nil, err
+const lpSkipRipsrcBranches = "skip-ripsrc-branches"
+
+type skipRipsrcData struct {
+	Branches map[string]slimrippy.BranchLastCommit
+	// map[pr.ID]pr.Commit
+	PRCommits map[string]string
+}
+
+func (s *Export) skipRipsrc(ctx context.Context, checkoutDir string, prs []PR) (skip bool, newData skipRipsrcData, rerr error) {
+
+	data := skipRipsrcData{}
+
+	getNewData := func() error {
+		newData.Branches = map[string]slimrippy.BranchLastCommit{}
+		br, err := slimrippy.GetBranchesWithLastCommit(ctx, checkoutDir)
+		if err != nil {
+			return fmt.Errorf("slimrippy.GetBranchesWithLastCommit %v", err)
+		}
+		for _, b := range br {
+			newData.Branches[b.Name] = b
+		}
+		newData.PRCommits = map[string]string{}
+		for k, v := range data.PRCommits {
+			newData.PRCommits[k] = v
+		}
+		for _, pr := range prs {
+			newData.PRCommits[pr.ID] = pr.LastCommitSHA
+		}
+		return nil
+	}
+
+	dataIface := s.lastProcessedGet(lpSkipRipsrcBranches)
+	if dataIface == nil {
+		err := getNewData()
+		if err != nil {
+			rerr = err
+			return
+		}
+		return
+	}
+	err := structmarshal.StructToStruct(dataIface, &data)
+	if err != nil {
+		rerr = err
+		return
+	}
+	err = getNewData()
+	if err != nil {
+		rerr = err
+		return
+	}
+	if len(newData.Branches) == 0 {
+		s.logger.Debug("not skipping ripsrc, because not branches were found in repo")
+		return
+	}
+	branchesSame := reflect.DeepEqual(data.Branches, newData.Branches)
+	if !branchesSame {
+		s.logger.Debug("not skipping ripsrc, branches-commits are not the same as before")
+		return
+	}
+	for _, pr := range prs {
+		// pr not seen with this commit sha
+		if data.PRCommits[pr.ID] != pr.LastCommitSHA {
+			s.logger.Debug("not skipping ripsrc, because passed PR-commit was not seen before")
+			return
 		}
 	}
-	br, err := slimrippy.GetBranchesWithLastCommit(ctx, checkoutdir)
-	if err != nil {
-		return true, nil, fmt.Errorf("slimrippy.GetBranchesWithLastCommit %v", err)
-	}
-	for _, b := range br {
-		remotebranches[b.Name] = b
-	}
-	if len(remotebranches) == 0 {
-		return false, remotebranches, nil
-	}
-	skip := reflect.DeepEqual(cachedbranches, remotebranches)
-	return skip, remotebranches, nil
+	// ok to skip
+	skip = true
+	return
 }
 
 func (s *Export) branch(data slimrippy.Branch) error {

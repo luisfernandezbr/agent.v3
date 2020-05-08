@@ -521,7 +521,6 @@ func (s *Integration) exportGit(repo api.Repo, prs []PRMeta) error {
 		}
 		args.PRs = append(args.PRs, rpcdef.GitRepoFetchPR(pr))
 	}
-
 	err = s.agent.ExportGitRepo(args)
 	if err != nil {
 		return err

@@ -116,9 +116,14 @@ func (s *Integration) Webhook(ctx context.Context, headers map[string]string, bo
 			rerr(errors.New("missing pull_request.node_id in payload"))
 			return
 		}
-		err = s.webhookPullRequest(s.logger, sessions, repo, prNodeID)
+		prMeta, err := s.webhookPullRequest(s.logger, sessions, repo, prNodeID)
 		if err != nil {
 			rerr(fmt.Errorf("could not get pull request %v", err))
+			return
+		}
+		err = s.exportGit(repo, []PRMeta{prMeta})
+		if err != nil {
+			rerr(err)
 			return
 		}
 		res.MutatedObjects = sessions.Data
@@ -160,7 +165,7 @@ func repoFromWebhook(data map[string]interface{}) (res api.Repo, rerr error) {
 	return
 }
 
-func (s *Integration) webhookPullRequest(logger hclog.Logger, sessions *objsender.SessionsWebhook, repo api.Repo, prNodeID string) (rerr error) {
+func (s *Integration) webhookPullRequest(logger hclog.Logger, sessions *objsender.SessionsWebhook, repo api.Repo, prNodeID string) (res PRMeta, rerr error) {
 	logger = logger.With("repo", repo.NameWithOwner)
 
 	pr, err := api.PullRequestByID(s.qc, prNodeID)
@@ -173,12 +178,25 @@ func (s *Integration) webhookPullRequest(logger hclog.Logger, sessions *objsende
 	pullRequestReviewSender := sessions.NewSession(sourcecode.PullRequestReviewModelName.String())
 	err = s.exportPullRequestReviews(logger, pullRequestReviewSender, repo, pr.RefID)
 	if err != nil {
-		return err
+		rerr = err
+		return
 	}
 
 	// export pull request commits
 	pullRequestSender := sessions.NewSession(sourcecode.PullRequestModelName.String())
 	commitsSender := sessions.NewSession(sourcecode.PullRequestCommitModelName.String())
 
-	return s.exportPRCommitsAddingToPR(logger, repo, pr, pullRequestSender, commitsSender)
+	err = s.exportPRCommitsAddingToPR(logger, repo, pr, pullRequestSender, commitsSender)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	repoID := s.qc.RepoID(repo.ID)
+	res.ID = s.qc.PullRequestID(repoID, pr.RefID)
+	res.RefID = pr.RefID
+	res.URL = pr.URL
+	res.BranchName = pr.BranchName
+	res.LastCommitSHA = pr.LastCommitSHA
+	return
 }
