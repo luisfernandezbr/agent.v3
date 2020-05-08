@@ -27,10 +27,11 @@ login
 ## Users of organization and authors of all commits 
 
 ```
+id
 name
-email
 avatarUrl
 login
+url
 ```
 
 ## Repositories
@@ -39,15 +40,15 @@ login
 id
 createdAt
 updatedAt
-
 nameWithOwner
 defaultBranchRef {
     name
 }
 updatedAt
+id
+nameWithOwner
 url	
 description		
-isArchived	
 primaryLanguage {
     name
 }
@@ -59,14 +60,21 @@ isArchived
 
 ```
 oid
-message
-url
-additions
-deletions
-authoredDate
-committedDate
-author
-committer
+author {
+    name
+    email
+    user {
+        login
+    }
+}
+committer {
+    name
+    email
+    user {
+        login
+    }
+}
+}	
 ```
 
 ## Pull Requests
@@ -74,7 +82,11 @@ committer
 ```
 updatedAt
 id
-repository { id }
+number
+repository {
+	id
+	nameWithOwner
+}
 headRefName
 title
 bodyHTML
@@ -83,23 +95,50 @@ createdAt
 mergedAt
 closedAt
 state
-author { login }						
+draft: isDraft
+locked
+author { login }
 mergedBy { login }
 mergeCommit { oid }
+commits(last: 1) {
+	nodes {
+		commit {
+			oid
+		}
+	}
+}
 comments {
-    totalCount
+	totalCount
 }
 reviews {
-    totalCount
+	totalCount
 }
 closedEvents: timelineItems (last:1 itemTypes:CLOSED_EVENT){
-    nodes {
-        ... on ClosedEvent {
-            actor {
-                login
-            }
-        }
+	nodes {
+		... on ClosedEvent {
+			actor {
+				login
+			}
+		}
+	}
+}
+```
+
+## Pull Requests Commit
+```
+commit {
+    oid
+    message
+    url
+    additions
+    deletions
+    author {
+        email
     }
+    committer {
+        email
+    }
+    authoredDate
 }
 ```
 
@@ -109,15 +148,74 @@ updatedAt
 id
 url
 pullRequest {
-    id
+	id
 }
 repository {
-    id
+	id
 }						
 bodyHTML
 createdAt
 author {
-    login
+	login
+}
+```
+
+## User
+
+```
+{
+	__typename
+	... on User {
+		id
+		name
+		avatarUrl
+		login
+		url		
+	}
+	... on Bot {
+		id
+		avatarUrl
+		login
+		url		
+	}
+}
+```
+
+## Pull Request Timeline
+```
+{
+... on PullRequestReview {
+    __typename
+    id
+    url
+    state
+    createdAt
+    author User
+}
+... on ReviewRequestedEvent {
+    __typename
+    id
+    createdAt
+    requestedReviewer User
+}
+... on ReviewRequestRemovedEvent {
+    __typename
+    id
+    createdAt
+    requestedReviewer User
+}
+... on AssignedEvent {
+    __typename
+    id
+    createdAt
+    assignee User
+}
+... on UnassignedEvent {
+    __typename
+    id
+    createdAt
+    assignee User
+}
 }
 ```
 
