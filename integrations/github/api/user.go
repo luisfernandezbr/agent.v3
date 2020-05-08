@@ -22,13 +22,16 @@ const userFields = `{
 	... on User {
 		id
 		name
+		avatarUrl
+		login
+		url		
 	}
 	... on Bot {
 		id
+		avatarUrl
+		login
+		url		
 	}
-	avatarUrl
-	login
-	url
 }`
 
 type userGithub struct {

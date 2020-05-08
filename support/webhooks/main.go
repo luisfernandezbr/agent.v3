@@ -81,7 +81,7 @@ func register() string {
 }
 
 func proxy() {
-	hookURL := register()
+	//hookURL := register()
 
 	fmt.Println("starting webhooks server")
 	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
@@ -89,6 +89,7 @@ func proxy() {
 		b, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
 		fmt.Println("X-GitHub-Event", r.Header.Get("X-GitHub-Event"))
@@ -106,7 +107,7 @@ func proxy() {
 			panic(err)
 		}
 
-		sendEvent(hookURL, b)
+		//sendEvent(hookURL, b)
 
 		w.WriteHeader(200)
 	})

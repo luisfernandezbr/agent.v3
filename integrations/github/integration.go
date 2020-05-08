@@ -654,7 +654,7 @@ func (s *Integration) exportPullRequestsForRepo(
 		for prs := range pullRequestsForCommits {
 			for _, pr := range prs {
 
-				err := s.exportPRCommitsAddingToPR(logger, pr, pullRequestSender, commitsSender)
+				err := s.exportPRCommitsAddingToPR(logger, repo, pr, pullRequestSender, commitsSender)
 				if err != nil {
 					s.logger.Error("could not export pr commits", "err", err)
 					//setErr(fmt.Errorf("could not export pr commits: %v", err))
@@ -667,7 +667,8 @@ func (s *Integration) exportPullRequestsForRepo(
 	return
 }
 
-func (s *Integration) exportPRCommitsAddingToPR(logger hclog.Logger, pr api.PullRequest, pullRequestSender objsender.SessionCommon, commitsSender objsender.SessionCommon) error {
+func (s *Integration) exportPRCommitsAddingToPR(logger hclog.Logger, repo api.Repo, pr api.PullRequest, pullRequestSender objsender.SessionCommon, commitsSender objsender.SessionCommon) error {
+	logger = logger.With("repo", repo.NameWithOwner)
 	commits, err := s.exportPullRequestCommits(logger, pr.RefID)
 	if err != nil {
 		return err

@@ -14,26 +14,31 @@ type pullRequestReview struct {
 	// PENDING,COMMENTED,APPROVED,CHANGES_REQUESTED or DISMISSED
 	State     string    `json:"state"`
 	CreatedAt time.Time `json:"createdAt"`
-	Author    struct {
-		Login string `json:"login"`
-	} `json:"author"`
+	Author    User      `json:"author"`
 }
 
 type prReviewRequestChange struct {
 	ID                string    `json:"id"`
 	CreatedAt         time.Time `json:"createdAt"`
-	RequestedReviewer struct {
-		Login string `json:"login"`
-	} `json:"requestedReviewer"`
+	RequestedReviewer User      `json:"requestedReviewer"`
 }
 
 type prAssigneeChange struct {
 	ID        string    `json:"id"`
 	CreatedAt time.Time `json:"createdAt"`
-	Assignee  struct {
-		Login string `json:"login"`
-	} `json:"assignee"`
+	Assignee  User      `json:"assignee"`
 }
+
+const userFieldsNoBot = `{
+	__typename
+	... on User {
+		id
+		name
+		avatarUrl
+		login
+		url		
+	}
+}`
 
 func PullRequestReviewTimelineItemsPage(
 	qc QueryContext,
@@ -46,6 +51,8 @@ func PullRequestReviewTimelineItemsPage(
 	}
 
 	logger := qc.Logger.With("pr", pullRequestRefID, "repo", repo.NameWithOwner)
+
+	queryParams += " itemTypes:[PULL_REQUEST_REVIEW,REVIEW_REQUESTED_EVENT,REVIEW_REQUEST_REMOVED_EVENT,ASSIGNED_EVENT,UNASSIGNED_EVENT]"
 
 	logger.Debug("pull_request_timeline_items request", "q", queryParams)
 
@@ -68,49 +75,31 @@ func PullRequestReviewTimelineItemsPage(
 							url
 							state
 							createdAt
-							author {
-								login
-							}
+							author ` + userFields + `
 						}
 						... on ReviewRequestedEvent {
 							__typename
 							id
 							createdAt
-							requestedReviewer {
-								... on User {
-									login
-								}
-							}
+							requestedReviewer ` + userFieldsNoBot + `
 						}
 						... on ReviewRequestRemovedEvent {
 							__typename
 							id
 							createdAt
-							requestedReviewer {
-								... on User {
-									login
-								}
-							}
+							requestedReviewer ` + userFieldsNoBot + `
 						}
 						... on AssignedEvent {
 							__typename
 							id
 							createdAt
-							assignee {
-								... on User {
-									login
-								}
-							}
+							assignee ` + userFields + `
 						}
 						... on UnassignedEvent {
 							__typename
 							id
 							createdAt
-							assignee {
-								... on User {
-									login
-								}
-							}
+							assignee ` + userFields + `
 						}
 					}
 				}
@@ -148,13 +137,14 @@ func PullRequestReviewTimelineItemsPage(
 		item.RepoID = qc.RepoID(repo.ID)
 		item.PullRequestID = qc.PullRequestID(item.RepoID, pullRequestRefID)
 
-		setCommonFields := func(refID string, createdAt time.Time, userLogin string) {
+		setCommonFields := func(refID string, createdAt time.Time, user User) {
 			item.RefID = refID
 			date.ConvertToModel(createdAt, &item.CreatedDate)
 			{
-				item.UserRefID, err = qc.UserLoginToRefID(userLogin)
+				var err error
+				item.UserRefID, err = qc.ExportUserUsingFullDetails(qc.Logger, user)
 				if err != nil {
-					qc.Logger.Error("could not resolve pr review author", "login", userLogin)
+					qc.Logger.Error("could not resolve pr review author", "login", user.Login)
 				}
 			}
 		}
@@ -170,7 +160,7 @@ func PullRequestReviewTimelineItemsPage(
 				return
 			}
 			item.URL = data.URL
-			setCommonFields(data.ID, data.CreatedAt, data.Author.Login)
+			setCommonFields(data.ID, data.CreatedAt, data.Author)
 			switch data.State {
 			case "PENDING":
 				item.State = sourcecode.PullRequestReviewStatePending
@@ -194,7 +184,7 @@ func PullRequestReviewTimelineItemsPage(
 				logger.Debug("skipped review request event, since it did not have login for reviewer user (we don't support team reviewers)")
 				continue
 			}
-			setCommonFields(data.ID, data.CreatedAt, data.RequestedReviewer.Login)
+			setCommonFields(data.ID, data.CreatedAt, data.RequestedReviewer)
 			switch typename {
 			case "ReviewRequestedEvent":
 				item.State = sourcecode.PullRequestReviewStateRequested
@@ -215,7 +205,7 @@ func PullRequestReviewTimelineItemsPage(
 				logger.Debug("skipped assigned event, since it did not have login for assigned user (we don't support team assignees)")
 				continue
 			}
-			setCommonFields(data.ID, data.CreatedAt, data.Assignee.Login)
+			setCommonFields(data.ID, data.CreatedAt, data.Assignee)
 			switch typename {
 			case "AssignedEvent":
 				item.State = sourcecode.PullRequestReviewStateAssigned
