@@ -81,17 +81,17 @@ func (s RepoExporter) Run() (res RepoExporterRes) {
 
 			CommitUsers: commitUsers,
 		}
+		for _, pr1 := range fetch.PRs {
+			pr2 := exportrepo.PR{}
+			pr2.ID = pr1.ID
+			pr2.RefID = pr1.RefID
+			pr2.URL = pr1.URL
+			pr2.BranchName = pr1.BranchName
+			pr2.LastCommitSHA = pr1.LastCommitSHA
+			s.logger.Error("pr data", "lc", pr1.LastCommitSHA, "name", pr1.BranchName)
 
-		/*
-			for _, pr1 := range fetch.PRs {
-				pr2 := exportrepo.PR{}
-				pr2.ID = pr1.ID
-				pr2.RefID = pr1.RefID
-				pr2.URL = pr1.URL
-				pr2.BranchName = pr1.BranchName
-				pr2.LastCommitSHA = pr1.LastCommitSHA
-				opts.PRs = append(opts.PRs, pr2)
-			}*/
+			opts.PRs = append(opts.PRs, pr2)
+		}
 		exp := exportrepo.New(opts, s.opts.Locs)
 		runResult := exp.Run(context.Background())
 		if runResult.SessionErr != nil {

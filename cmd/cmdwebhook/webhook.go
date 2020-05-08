@@ -155,7 +155,7 @@ func (s *export) run() (_ rpcdef.WebhookResult, rerr error) {
 
 	s.exporter.Done()
 
-	s.Logger.Error("waiting for git processing to finish")
+	s.Logger.Info("waiting for git processing to finish")
 	gitRes := <-gitExportRes
 
 	err = gitRes.Err
