@@ -40,7 +40,6 @@ url
 id
 createdAt
 updatedAt
-
 nameWithOwner
 defaultBranchRef {
     name
@@ -50,10 +49,11 @@ id
 nameWithOwner
 url	
 description		
-isArchived	
 primaryLanguage {
     name
 }
+isFork
+isArchived
 ```
 
 ### Commits
@@ -72,6 +72,9 @@ committer {
     email
     user {
         login
+    }
+}
+}	
 ```
 
 ## Pull Requests
@@ -91,7 +94,6 @@ url
 createdAt
 mergedAt
 closedAt
-# OPEN, CLOSED or MERGED
 state
 draft: isDraft
 locked
@@ -111,8 +113,6 @@ comments {
 reviews {
 	totalCount
 }
-# fetch the user who closed the pull request
-# this is only relevant when the state = CLOSED
 closedEvents: timelineItems (last:1 itemTypes:CLOSED_EVENT){
 	nodes {
 		... on ClosedEvent {
@@ -123,6 +123,7 @@ closedEvents: timelineItems (last:1 itemTypes:CLOSED_EVENT){
 	}
 }
 ```
+
 ## Pull Requests Commit
 ```
 commit {
@@ -159,6 +160,27 @@ author {
 }
 ```
 
+## User
+
+```
+{
+	__typename
+	... on User {
+		id
+		name
+		avatarUrl
+		login
+		url		
+	}
+	... on Bot {
+		id
+		avatarUrl
+		login
+		url		
+	}
+}
+```
+
 ## Pull Request Timeline
 ```
 {
@@ -168,49 +190,31 @@ author {
     url
     state
     createdAt
-    author {
-        login
-    }
+    author User
 }
 ... on ReviewRequestedEvent {
     __typename
     id
     createdAt
-    requestedReviewer {
-        ... on User {
-            login
-        }
-    }
+    requestedReviewer User
 }
 ... on ReviewRequestRemovedEvent {
     __typename
     id
     createdAt
-    requestedReviewer {
-        ... on User {
-            login
-        }
-    }
+    requestedReviewer User
 }
 ... on AssignedEvent {
     __typename
     id
     createdAt
-    assignee {
-        ... on User {
-            login
-        }
-    }
+    assignee User
 }
 ... on UnassignedEvent {
     __typename
     id
     createdAt
-    assignee {
-        ... on User {
-            login
-        }
-    }
+    assignee User
 }
 }
 ```
