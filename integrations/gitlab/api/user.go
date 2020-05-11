@@ -48,14 +48,7 @@ func UsersPage(qc QueryContext, params url.Values) (page PageInfo, users []User,
 
 	objectPath := pstrings.JoinURL("/users")
 
-	var rawUsers []struct {
-		Username  string `json:"username"`
-		Email     string `json:"email"`
-		Name      string `json:"name"`
-		ID        int64  `json:"id"`
-		AvatarURL string `json:"avatar_url"`
-		WebURL    string `json:"web_url"`
-	}
+	var rawUsers []UserModel
 
 	params.Set("membership", "true")
 	params.Set("per_page", "100")
@@ -74,7 +67,6 @@ func UsersPage(qc QueryContext, params url.Values) (page PageInfo, users []User,
 			AvatarURL: user.AvatarURL,
 			URL:       user.WebURL,
 		}
-
 		users = append(users, nUser)
 
 	}
@@ -103,10 +95,13 @@ func UserEmails(qc QueryContext, userID int64) (emails []string, err error) {
 	return
 }
 
-func RepoUsersPageREST(qc QueryContext, repo commonrepo.Repo, params url.Values) (page PageInfo, repos []*sourcecode.User, err error) {
+// UsernameMap map[username]ref_id
+type UsernameMap map[string]string
+
+func RepoUsersPageREST(qc QueryContext, repo commonrepo.Repo, usermap UsernameMap, params url.Values) (page PageInfo, repos []*sourcecode.User, err error) {
 	qc.Logger.Debug("users request", "repo", repo)
 
-	objectPath := pstrings.JoinURL("projects", repo.ID, "users")
+	objectPath := pstrings.JoinURL("projects", url.QueryEscape(repo.ID), "users")
 
 	var ru []struct {
 		ID        int64  `json:"id"`
@@ -115,12 +110,10 @@ func RepoUsersPageREST(qc QueryContext, repo commonrepo.Repo, params url.Values)
 		AvatarURL string `json:"avatar_url"`
 		WebURL    string `json:"web_url"`
 	}
-
 	page, err = qc.Request(objectPath, params, &ru)
 	if err != nil {
 		return
 	}
-
 	for _, user := range ru {
 		sourceUser := sourcecode.User{}
 		sourceUser.RefType = qc.RefType
@@ -135,6 +128,7 @@ func RepoUsersPageREST(qc QueryContext, repo commonrepo.Repo, params url.Values)
 		sourceUser.URL = pstrings.Pointer(user.WebURL)
 
 		repos = append(repos, &sourceUser)
+		usermap[user.Username] = sourceUser.RefID
 	}
 
 	return

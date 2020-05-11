@@ -90,8 +90,19 @@ testing different cases
     - created_at 2019-12-12T16:09:36.575Z,
     - updated_at 2019-12-12T16:16:05.575Z, (change)
 
+## Work Issue Comments and Changelog
+
+- The API used for this is the projects/project:id/issues/issue:id/discussions.json which returns a `note` object
+- If the `note` is a _system note_, this it becomes a change, else it's a user comment
+
+## Work Sprint
+
+- The API used for this is the /projects/project:id/milestones
+
 
 ## Notes
 
-
+The following API's are shared between the `WORK` and `SOURCECODE` integration.
+  - sourcecode.User and work.User
+  - sourcecode.Repo and work.Project
 

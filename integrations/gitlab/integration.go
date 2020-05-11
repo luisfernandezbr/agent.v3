@@ -20,7 +20,9 @@ import (
 	"github.com/pinpt/agent/pkg/ids2"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/agent/rpcdef"
+	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/integration-sdk/sourcecode"
+	"github.com/pinpt/integration-sdk/work"
 )
 
 type Config struct {
@@ -119,15 +121,14 @@ LOOP:
 	return
 }
 
-func (s *Integration) Export(ctx context.Context,
-	exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, rerr error) {
+func (s *Integration) Export(ctx context.Context, exportConfig rpcdef.ExportConfig) (res rpcdef.ExportResult, rerr error) {
 	err := s.initWithConfig(exportConfig)
 	if err != nil {
 		rerr = err
 		return
 	}
 
-	projects, err := s.export(ctx)
+	projects, err := s.export(ctx, exportConfig.Integration.Type)
 	if err != nil {
 		rerr = err
 		return
@@ -196,7 +197,7 @@ func (s *Integration) setIntegrationConfig(data rpcdef.IntegrationConfig) error 
 	return nil
 }
 
-func (s *Integration) export(ctx context.Context) (repoResults []rpcdef.ExportProject, rerr error) {
+func (s *Integration) export(ctx context.Context, intType inconfig.IntegrationType) (repoResults []rpcdef.ExportProject, rerr error) {
 
 	if !s.isGitlabCom {
 		if err := UsersEmails(s); err != nil {
@@ -222,7 +223,7 @@ func (s *Integration) export(ctx context.Context) (repoResults []rpcdef.ExportPr
 	}
 
 	for _, groupName := range groupNames {
-		groupResults, err := s.exportGroup(ctx, groupSession, groupName)
+		groupResults, err := s.exportGroup(ctx, groupSession, groupName, intType)
 		if err != nil {
 			rerr = err
 			return
@@ -263,9 +264,9 @@ func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchP
 	return nil
 }
 
-func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.Session, groupName string) (_ []rpcdef.ExportProject, rerr error) {
+func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.Session, groupName string, intType inconfig.IntegrationType) (_ []rpcdef.ExportProject, rerr error) {
 
-	s.logger.Info("exporting group", "name", groupName)
+	s.logger.Info("exporting group", "name", groupName, "intType", intType)
 	logger := s.logger.With("org", groupName)
 
 	repos, err := commonrepo.ReposAllSlice(func(res chan []commonrepo.Repo) error {
@@ -278,7 +279,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 
 	repos = commonrepo.Filter(logger, repos, s.config.FilterConfig)
 
-	if s.config.OnlyGit {
+	if intType == inconfig.IntegrationTypeSourcecode && s.config.OnlyGit {
 		logger.Warn("only_ripsrc flag passed, skipping export of data from gitlab api")
 		for _, repo := range repos {
 			err := s.exportGit(repo, nil)
@@ -289,8 +290,13 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 		}
 		return
 	}
-
-	repoSender, err := groupSession.Session(sourcecode.RepoModelName.String(), groupName, groupName)
+	var modelname string
+	if intType == inconfig.IntegrationTypeWork {
+		modelname = work.ProjectModelName.String()
+	} else {
+		modelname = sourcecode.RepoModelName.String()
+	}
+	repoSender, err := groupSession.Session(modelname, groupName, groupName)
 	if err != nil {
 		rerr = err
 		return
@@ -303,7 +309,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 		return
 	}
 
-	if err = s.exportRepos(ctx, logger, repoSender, groupName, repos); err != nil {
+	if err = s.exportRepos(ctx, logger, repoSender, groupName, repos, intType); err != nil {
 		rerr = err
 		return
 	}
@@ -312,11 +318,22 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 	for _, r := range repos {
 		reposIface = append(reposIface, r)
 	}
-
 	processOpts := repoprojects.ProcessOpts{}
 	processOpts.Logger = s.logger
 	processOpts.ProjectFn = func(ctx *repoprojects.ProjectCtx) error {
 		repo := ctx.Project.(commonrepo.Repo)
+
+		usermap := api.UsernameMap{}
+		if s.isGitlabCom {
+			err := s.exportUsersFromRepo(ctx, repo, usermap, intType)
+			if err != nil {
+				return err
+			}
+		}
+
+		if intType == inconfig.IntegrationTypeWork {
+			return s.exportProjectChildren(ctx, repo, usermap)
+		}
 		return s.exportRepoChildren(ctx, repo)
 	}
 	processOpts.Concurrency = 1
@@ -333,7 +350,6 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 		rerr = err
 		return
 	}
-
 	err = repoSender.Done()
 	if err != nil {
 		rerr = err
@@ -343,14 +359,25 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 	return exportResult, nil
 }
 
-func (s *Integration) exportRepoChildren(ctx *repoprojects.ProjectCtx, repo commonrepo.Repo) error {
-
-	if s.isGitlabCom {
-		err := s.exportUsersFromRepo(ctx, repo)
-		if err != nil {
-			return err
+func (s *Integration) exportProjectChildren(ctx *repoprojects.ProjectCtx, project repoprojects.RepoProject, usermap api.UsernameMap) error {
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		if err := s.exportWorkIssues(ctx, project, usermap); err != nil {
+			s.logger.Error("error getting work issues", "err", err)
 		}
-	}
+		wg.Done()
+	}()
+	go func() {
+		if err := s.exportWorkSprints(ctx, project); err != nil {
+			s.logger.Error("error getting work sprints", "err", err)
+		}
+		wg.Done()
+	}()
+	wg.Wait()
+	return nil
+}
+func (s *Integration) exportRepoChildren(ctx *repoprojects.ProjectCtx, repo commonrepo.Repo) error {
 
 	prs, err := s.exportPullRequestsForRepo(ctx, repo)
 	if err != nil {
@@ -360,7 +387,7 @@ func (s *Integration) exportRepoChildren(ctx *repoprojects.ProjectCtx, repo comm
 	return s.exportGit(repo, prs)
 }
 
-func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender.Session, groupName string, onlyInclude []commonrepo.Repo) error {
+func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender.Session, groupName string, onlyInclude []commonrepo.Repo, intType inconfig.IntegrationType) error {
 
 	shouldInclude := map[string]bool{}
 	for _, repo := range onlyInclude {
@@ -376,7 +403,23 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 			if !shouldInclude[repo.Name] {
 				continue
 			}
-			err := sender.Send(repo)
+			var err error
+			if intType == inconfig.IntegrationTypeWork {
+				err = sender.Send(&work.Project{
+					Active:      repo.Active,
+					CustomerID:  repo.CustomerID,
+					Description: &repo.Description,
+					ID:          repo.ID,
+					Name:        repo.Name,
+					RefID:       repo.RefID,
+					RefType:     repo.RefType,
+					UpdatedAt:   repo.UpdatedAt,
+					URL:         repo.URL,
+					Hashcode:    repo.Hashcode,
+				})
+			} else {
+				err = sender.Send(repo)
+			}
 			if err != nil {
 				return pi, err
 			}
@@ -392,19 +435,48 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 }
 
 // used for gitlab.com
-func (s *Integration) exportUsersFromRepo(ctx *repoprojects.ProjectCtx, repo commonrepo.Repo) error {
-	sender, err := ctx.Session(sourcecode.UserModelName)
+func (s *Integration) exportUsersFromRepo(ctx *repoprojects.ProjectCtx, repo commonrepo.Repo, usermap api.UsernameMap, intType inconfig.IntegrationType) error {
+
+	var modelname datamodel.ModelNameType
+	if intType == inconfig.IntegrationTypeWork {
+		modelname = work.UserModelName
+	} else {
+		modelname = sourcecode.UserModelName
+	}
+	sender, err := ctx.Session(modelname)
 	if err != nil {
 		return err
 	}
 
 	return api.PaginateStartAt(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
-		pi, users, err := api.RepoUsersPageREST(s.qc, repo, parameters)
+		pi, users, err := api.RepoUsersPageREST(s.qc, repo, usermap, parameters)
 		if err != nil {
 			return pi, err
 		}
 		for _, user := range users {
-			err := sender.Send(user)
+			var err error
+			if intType == inconfig.IntegrationTypeWork {
+				var username string
+				if user.Username != nil {
+					username = *user.Username
+				}
+				err = sender.Send(&work.User{
+					AssociatedRefID: user.AssociatedRefID,
+					AvatarURL:       user.AvatarURL,
+					CustomerID:      user.CustomerID,
+					Email:           user.Email,
+					ID:              user.ID,
+					Member:          user.Member,
+					Name:            user.Name,
+					RefID:           user.RefID,
+					RefType:         user.RefType,
+					URL:             user.URL,
+					Username:        username,
+					Hashcode:        user.Hashcode,
+				})
+			} else {
+				err = sender.Send(user)
+			}
 			if err != nil {
 				return pi, err
 			}
