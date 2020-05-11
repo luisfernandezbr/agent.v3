@@ -7,7 +7,7 @@ import (
 
 	"github.com/pinpt/agent/pkg/date"
 	pstrings "github.com/pinpt/go-common/strings"
-	"github.com/pinpt/go-datamodel/work"
+	"github.com/pinpt/integration-sdk/work"
 )
 
 func WorkSprintPage(qc QueryContext, projectID string, params url.Values) (pi PageInfo, res []*work.Sprint, err error) {
