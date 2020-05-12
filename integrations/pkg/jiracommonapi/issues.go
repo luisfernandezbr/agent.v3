@@ -40,8 +40,6 @@ func relativeDuration(d time.Duration) string {
 	return fmt.Sprintf("-%dm", m)
 }
 
-var sprintRegexp = regexp.MustCompile(`(.+?sprint\.Sprint@.+?\[id=)(\d+)(,.+?state=ACTIVE.*)`)
-
 type issueSource struct {
 	ID  string `json:"id"`
 	Key string `json:"key"`
@@ -102,7 +100,6 @@ type issueFields struct {
 	Reporter   User
 	Assignee   User
 	Labels     []string `json:"labels"`
-	SprintIDs  []string
 	IssueLinks []struct {
 		ID   string `json:"id"`
 		Type struct {
@@ -237,6 +234,16 @@ func ParseTime(ts string) (time.Time, error) {
 	return time.Parse(jiraTimeFormat, ts)
 }
 
+var sprintRegexp = regexp.MustCompile(`com\.atlassian\.greenhopper\.service\.sprint\.Sprint@.+?\[id=(\d+)`)
+
+func extractPossibleSprintID(v string) string {
+	matches := sprintRegexp.FindStringSubmatch(v)
+	if len(matches) == 0 {
+		return ""
+	}
+	return matches[1]
+}
+
 func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]CustomField) (_ IssueWithCustomFields, rerr error) {
 
 	var fields issueFields
@@ -244,19 +251,6 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 	if err != nil {
 		rerr = err
 		return
-	}
-
-	for k, v := range data.Fields {
-		if strings.HasPrefix(k, "customfield_") && v != nil {
-			if arr, ok := v.([]interface{}); ok {
-				for _, each := range arr {
-					if sprints := sprintRegexp.FindAllStringSubmatch(fmt.Sprint(each), -1); len(sprints) > 0 {
-						id := sprints[0][2]
-						fields.SprintIDs = append(fields.SprintIDs, qc.SprintID(id))
-					}
-				}
-			}
-		}
 	}
 
 	project := Project{}
@@ -274,7 +268,6 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 	item.RefType = "jira"
 	item.Identifier = data.Key
 	item.ProjectID = qc.ProjectID(project.JiraID)
-	item.SprintIds = fields.SprintIDs
 
 	if fields.DueDate != "" {
 		orig := fields.DueDate
@@ -404,6 +397,24 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 		}
 		date.ConvertToModel(created, &attachment.CreatedDate)
 		item.Attachments = append(item.Attachments, attachment)
+	}
+
+	for k, v := range data.Fields {
+		if strings.HasPrefix(k, "customfield_") && v != nil {
+			if arr, ok := v.([]interface{}); ok {
+				for _, each := range arr {
+					str, ok := each.(string)
+					if !ok {
+						continue
+					}
+					id := extractPossibleSprintID(str)
+					if id == "" {
+						continue
+					}
+					item.SprintIds = append(item.SprintIds, qc.SprintID(id))
+				}
+			}
+		}
 	}
 
 	for k, d := range data.Fields {
