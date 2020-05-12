@@ -11,28 +11,8 @@ import (
 	"github.com/pinpt/agent/integrations/github/api"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/rpcdef"
-	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
-
-func (s *Integration) webhookResult(modelName datamodel.ModelNameType, obj Model) (res rpcdef.WebhookResult, rerr error) {
-	objs := rpcdef.MutatedObjects{}
-	objs[modelName.String()] = []interface{}{obj.ToMap()}
-	res.MutatedObjects = objs
-	return
-}
-
-func (s *Integration) returnUpdatedPRForWebhook(prRefID string) (res rpcdef.WebhookResult, rerr error) {
-	m, err := s.getUpdatedPR(prRefID)
-	if err != nil {
-		rerr = err
-		return
-	}
-	objs := rpcdef.MutatedObjects{}
-	objs[sourcecode.PullRequestModelName.String()] = []interface{}{m}
-	res.MutatedObjects = objs
-	return
-}
 
 var webhookEvents = []string{
 	"issue_comment",
@@ -74,8 +54,7 @@ func (s *Integration) Webhook(ctx context.Context, headers map[string]string, bo
 		rerr(err)
 		return
 	}
-	//s.qc.UserLoginToRefID = s.users.LoginToRefID
-	//s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
+
 	s.qc.ExportUserUsingFullDetails = s.users.ExportUserUsingFullDetails
 
 	xGithubEvent, _ := headers["x-github-event"]
@@ -99,7 +78,10 @@ func (s *Integration) Webhook(ctx context.Context, headers map[string]string, bo
 			rerr(err)
 			return
 		}
-		return s.webhookResult(sourcecode.PullRequestCommentModelName, obj)
+		session := sessions.NewSession(sourcecode.PullRequestCommentModelName.String())
+		session.Send(obj)
+		res.MutatedObjects = sessions.Data
+		return
 	case "pull_request":
 		repo, err := repoFromWebhook(data)
 		if err != nil {
@@ -141,7 +123,7 @@ func (s *Integration) Webhook(ctx context.Context, headers map[string]string, bo
 		}
 		return
 	default:
-		s.logger.Info("skipping webhook with x-github-event %v, this is not in a list of supported webhooks", xGithubEvent)
+		s.logger.Info("skipping webhook with unsupported x-github-event, this is not in a list of supported webhooks", "x-github-event", xGithubEvent)
 		return
 	}
 }

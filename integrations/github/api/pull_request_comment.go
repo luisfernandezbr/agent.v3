@@ -19,9 +19,7 @@ repository {
 }						
 bodyHTML
 createdAt
-author {
-	login
-}
+author ` + userFields + `
 `
 
 type prCommentGraphql struct {
@@ -36,9 +34,7 @@ type prCommentGraphql struct {
 	} `json:"repository"`
 	BodyHTML  string    `json:"bodyHTML"`
 	CreatedAt time.Time `json:"createdAt"`
-	Author    struct {
-		Login string `json:"login"`
-	} `json:"author"`
+	Author    User      `json:"author"`
 }
 
 func prComment(qc QueryContext, data prCommentGraphql) (res *sourcecode.PullRequestComment, rerr error) {
@@ -54,11 +50,10 @@ func prComment(qc QueryContext, data prCommentGraphql) (res *sourcecode.PullRequ
 	date.ConvertToModel(data.CreatedAt, &item.CreatedDate)
 
 	{
-		login := data.Author.Login
 		var err error
-		item.UserRefID, err = qc.UserLoginToRefID(login)
+		item.UserRefID, err = qc.ExportUserUsingFullDetails(qc.Logger, data.Author)
 		if err != nil {
-			qc.Logger.Error("could not resolve pr comment author", "login", login, "comment_url", data.URL)
+			qc.Logger.Error("could not resolve pr comment author", "login", data.Author.Login, "comment_url", data.URL)
 		}
 	}
 
