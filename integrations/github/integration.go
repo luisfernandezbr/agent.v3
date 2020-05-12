@@ -314,6 +314,7 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 	}
 
 	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
+	s.qc.ExportUserUsingFullDetails = s.users.ExportUserUsingFullDetails
 
 	var unfilteredRepos []api.RepoWithDefaultBranch
 	if len(orgs) > 0 {
