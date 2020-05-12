@@ -203,7 +203,7 @@ func IssueByID(qc QueryContext, issueIDOrKey string) (_ IssueWithCustomFields, r
 	// we need both fields and renderedFields so that we can get the unprocessed (fields) and processed (html for renderedFields)
 	params.Add("expand", "changelog,renderedFields")
 
-	qc.Logger.Debug("issue request", "issue_id_or_key", issueIDOrKey)
+	qc.Logger.Debug("IssueByID issue request", "issue_id_or_key", issueIDOrKey)
 
 	var rr issueSource
 
@@ -410,7 +410,6 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 		if !strings.HasPrefix(k, "customfield_") {
 			continue
 		}
-
 		fd, ok := fieldByID[k]
 		if !ok {
 			qc.Logger.Warn("when processing jira issues, could not find field definition by key", "project", project.Key, "key", k)
@@ -638,7 +637,7 @@ func GetIssueKeys(qc QueryContext, issueIDOrKey string) (res IssueKeys, rerr err
 	// don't return any fields
 	params.Add("expand", "project")
 
-	qc.Logger.Debug("issue request", "issue_id_or_key", issueIDOrKey)
+	qc.Logger.Debug("GetIssueKeys issue request", "issue_id_or_key", issueIDOrKey)
 
 	var rr issueSource
 
@@ -648,8 +647,8 @@ func GetIssueKeys(qc QueryContext, issueIDOrKey string) (res IssueKeys, rerr err
 		return
 	}
 
-	fieldsByID := map[string]CustomField{}
-	full, err := convertIssue(qc, rr, fieldsByID)
+	var fields issueFields
+	err = structmarshal.MapToStruct(rr.Fields, &fields)
 	if err != nil {
 		rerr = err
 		return
@@ -657,7 +656,7 @@ func GetIssueKeys(qc QueryContext, issueIDOrKey string) (res IssueKeys, rerr err
 
 	res.IssueKey = rr.Key
 	res.IssueRefID = rr.ID
-	res.ProjectRefID = full.ProjectID
+	res.ProjectRefID = fields.Project.ID
 
 	return res, nil
 }
