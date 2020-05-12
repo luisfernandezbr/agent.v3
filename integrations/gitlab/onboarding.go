@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/url"
+	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/gitlab/api"
@@ -67,9 +68,16 @@ func (s *Integration) onboardExportRepos(ctx context.Context, objectType rpcdef.
 				if objectType == rpcdef.OnboardExportTypeRepos {
 					records = append(records, repo.ToMap())
 				} else {
+					var identifier string
+					if parts := strings.Split(repo.Name, "/"); len(parts) == 2 {
+						identifier = parts[1]
+					} else {
+						identifier = repo.Name
+					}
 					records = append(records, (&agent.ProjectResponseProjects{
 						Active:            repo.Active,
 						Description:       &repo.Description,
+						Identifier:        identifier,
 						Error:             agent.ProjectResponseProjectsError(repo.Error),
 						Name:              repo.Name,
 						RefID:             repo.RefID,
