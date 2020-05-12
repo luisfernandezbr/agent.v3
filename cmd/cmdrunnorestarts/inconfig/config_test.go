@@ -14,7 +14,7 @@ import (
 func TestAuthFromEvent(t *testing.T) {
 	config := `{
 		"api_token": "t1",
-		"url": "u1"
+		"url": "github.com"
 	}`
 
 	encryptionKey, err := encrypt.GenerateKey()
@@ -42,7 +42,25 @@ func TestAuthFromEvent(t *testing.T) {
 	want.Config.Exclusions = []string{"e1"}
 	want.Config.Inclusions = []string{"e1", "e2"}
 	want.Config.APIKey = "t1"
-	want.Config.URL = "u1"
+	want.Config.URL = "https://github.com"
 
 	assert.Equal(want, got)
+}
+
+func TestURLAddHTTPSPrefix(t *testing.T) {
+	cases := []struct {
+		URL  string
+		Want string
+	}{
+		{"", ""},
+		{"github.com", "https://github.com"},
+		{"http://github.com", "http://github.com"},
+		{"https://github.com", "https://github.com"},
+	}
+	for _, c := range cases {
+		got := addHTTPSPrefix(c.URL)
+		if got != c.Want {
+			t.Errorf("invalid result for case %v want %v got %v", c.URL, c.Want, got)
+		}
+	}
 }

@@ -66,6 +66,7 @@ func AuthFromEvent(data map[string]interface{}, encryptionKey string) (in Integr
 	in.Name = obj.Name
 	in.Config.Inclusions = obj.Inclusions
 	in.Config.Exclusions = obj.Exclusions
+	in.Config.URL = addHTTPSPrefix(in.Config.URL)
 	err = ConvertEdgeCases(&in)
 
 	if in.ID == "" {
@@ -77,6 +78,16 @@ func AuthFromEvent(data map[string]interface{}, encryptionKey string) (in Integr
 		return
 	}
 	return
+}
+
+func addHTTPSPrefix(url string) string {
+	if url == "" {
+		return ""
+	}
+	if strings.HasPrefix(url, "https://") || strings.HasPrefix(url, "http://") {
+		return url
+	}
+	return "https://" + url
 }
 
 // TODO: the backend should send us the correct data for each integration
