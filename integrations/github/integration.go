@@ -313,7 +313,6 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 		return
 	}
 
-	s.qc.UserLoginToRefID = s.users.LoginToRefID
 	s.qc.UserLoginToRefIDFromCommit = s.users.LoginToRefIDFromCommit
 
 	var unfilteredRepos []api.RepoWithDefaultBranch

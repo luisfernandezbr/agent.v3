@@ -196,7 +196,7 @@ func (s *Users) exportOrganizationUsers(org api.Org) error {
 	return <-done
 }
 
-func (s *Users) LoginToRefID(login string) (refID string, rerr error) {
+func (s *Users) loginToRefID(login string) (refID string, rerr error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -256,7 +256,7 @@ func (s *Users) LoginToRefIDFromCommit(logger hclog.Logger, login, name, email s
 		// this is for commits with no matching github accounts, which is completely normaly
 		return "", nil
 	}
-	return s.LoginToRefID(login)
+	return s.loginToRefID(login)
 }
 
 func (s *Users) ExportUserUsingFullDetails(logger hclog.Logger, data api.User) (refID string, _ error) {
