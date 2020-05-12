@@ -32,8 +32,7 @@ func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *o
 }
 
 func (s *Integration) exportPullRequestReviews(logger hclog.Logger, reviewsSender objsender.SessionCommon, repo api.Repo, prID string) error {
-
-	err := api.PaginateRegularWithPageSize(pageSizeHeavyQueries, func(query string) (api.PageInfo, error) {
+	return api.PaginateRegularWithPageSize(pageSizeHeavyQueries, func(query string) (api.PageInfo, error) {
 		pi, res, totalCount, err := api.PullRequestReviewTimelineItemsPage(s.qc, repo, prID, query)
 		if err != nil {
 			return pi, err
@@ -50,10 +49,4 @@ func (s *Integration) exportPullRequestReviews(logger hclog.Logger, reviewsSende
 		}
 		return pi, nil
 	})
-
-	if err != nil {
-		return err
-	}
-
-	return reviewsSender.Done()
 }
