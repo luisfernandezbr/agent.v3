@@ -77,7 +77,7 @@ func (s *runner) handleIntegrationEvents(ctx context.Context) (closefunc, error)
 		if integration.Authorization.APIToken != nil {
 			integration2.Config.APIKey = *integration.Authorization.APIToken
 		}
-		inconfig.ConvertEdgeCases(&integration2)
+		inconfig.AdjustFields(&integration2)
 
 		res, err := s.validate(ctx, headers.MessageID, integration2)
 		if err != nil {

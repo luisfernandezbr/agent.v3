@@ -96,7 +96,7 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 			conf.Config.URL = *req.Authorization.URL
 		}
 		conf.Type = inconfig.IntegrationType(req.SystemType)
-		err = inconfig.ConvertEdgeCases(&conf)
+		err = inconfig.AdjustFields(&conf)
 		if err != nil {
 			return sendError("", fmt.Errorf("could not convert jira: %v", err))
 		}

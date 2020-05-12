@@ -66,9 +66,10 @@ func AuthFromEvent(data map[string]interface{}, encryptionKey string) (in Integr
 	in.Name = obj.Name
 	in.Config.Inclusions = obj.Inclusions
 	in.Config.Exclusions = obj.Exclusions
-	in.Config.URL = addHTTPSPrefix(in.Config.URL)
-	err = ConvertEdgeCases(&in)
-
+	err = AdjustFields(&in)
+	if err != nil {
+		return
+	}
 	if in.ID == "" {
 		err = errors.New("missing integration id")
 		return
@@ -90,8 +91,13 @@ func addHTTPSPrefix(url string) string {
 	return "https://" + url
 }
 
+func AdjustFields(in *IntegrationAgent) error {
+	in.Config.URL = addHTTPSPrefix(in.Config.URL)
+	return convertEdgeCases(in)
+}
+
 // TODO: the backend should send us the correct data for each integration
-func ConvertEdgeCases(in *IntegrationAgent) error {
+func convertEdgeCases(in *IntegrationAgent) error {
 
 	if in.Name == "jira" {
 		if in.Config.URL == "" {
