@@ -234,6 +234,7 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 			RefID:       c.RefID,
 			RefType:     c.RefType,
 			Active:      true,
+			Enabled:     true,
 		}
 		records = append(records, calres.ToMap())
 	}

@@ -15,7 +15,7 @@ func oauthIntegrationNameToBackend(name string) string {
 	switch name {
 	case "jira-cloud":
 		return "jira"
-	case "bitbucket":
+	case "bitbucket", "office365":
 		return name
 	case "gcal":
 		return "gsuite"
@@ -24,18 +24,7 @@ func oauthIntegrationNameToBackend(name string) string {
 	}
 }
 
-func (s *Command) OAuthNewAccessToken(exp expin.Export) (accessToken string, _ error) {
-	integration := s.Integrations[exp]
-	integrationName := exp.IntegrationDef.Name
-
-	if !s.Opts.AgentConfig.Backend.Enable {
-		return "", errors.New("requested oauth access token, but Backend.Enable is false")
-	}
-	refresh := integration.OauthRefreshToken
-	if refresh == "" {
-		return "", fmt.Errorf("requested oauth access token for integration %v, but we don't have refresh token for it", integrationName)
-	}
-
+func (s *Command) OAuthNewAccessTokenFromRefreshToken(integrationName string, refresh string) (accessToken string, _ error) {
 	authAPIBase := api.BackendURL(api.AuthService, s.EnrollConf.Channel)
 
 	// need oauth integration name
@@ -60,4 +49,19 @@ func (s *Command) OAuthNewAccessToken(exp expin.Export) (accessToken string, _ e
 	}
 
 	return res.AccessToken, nil
+}
+
+func (s *Command) OAuthNewAccessToken(exp expin.Export) (accessToken string, _ error) {
+	integration := s.Integrations[exp]
+	integrationName := exp.IntegrationDef.Name
+
+	if !s.Opts.AgentConfig.Backend.Enable {
+		return "", errors.New("requested oauth access token, but Backend.Enable is false")
+	}
+	refresh := integration.OauthRefreshToken
+	if refresh == "" {
+		return "", fmt.Errorf("requested oauth access token for integration %v, but we don't have refresh token for it", integrationName)
+	}
+
+	return s.OAuthNewAccessTokenFromRefreshToken(integrationName, refresh)
 }

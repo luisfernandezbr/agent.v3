@@ -26,6 +26,7 @@ var integrationBinaries = []string{
 	"mock",
 	"sonarqube",
 	"gcal",
+	"office365",
 }
 
 type Platform struct {
