@@ -79,3 +79,13 @@
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
   version = "1.14.21"
+
+# dev dependency
+[[constraint]]
+  branch = "master"
+  name = "github.com/andygrunwald/go-jira"
+
+# dev dependency
+[[constraint]]
+  branch = "master"
+  name = "github.com/dghubble/oauth1"
