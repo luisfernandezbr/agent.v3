@@ -102,7 +102,7 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 		for _, each := range s.config.Inclusions {
 			cal, err := s.api.GetCalendar(url.QueryEscape(each))
 			if err != nil {
-				s.logger.Error("error fetching calendar, skipping", "err", err, "id", each)
+				s.logger.Warn("error fetching calendar, skipping", "err", err, "id", each)
 				continue
 			}
 			if err := session.Send(cal); err != nil {
