@@ -88,8 +88,6 @@ func (s RepoExporter) Run() (res RepoExporterRes) {
 			pr2.URL = pr1.URL
 			pr2.BranchName = pr1.BranchName
 			pr2.LastCommitSHA = pr1.LastCommitSHA
-			s.logger.Error("pr data", "lc", pr1.LastCommitSHA, "name", pr1.BranchName)
-
 			opts.PRs = append(opts.PRs, pr2)
 		}
 		exp := exportrepo.New(opts, s.opts.Locs)

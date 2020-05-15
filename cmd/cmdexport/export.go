@@ -352,7 +352,7 @@ func (s *export) runExports() map[expin.Export]runResult {
 				}
 				resMu.Unlock()
 				if err != nil {
-					s.Logger.Error("Export failed", "integration", exp.String(), "dur", time.Since(start).String(), "err", err)
+					s.Logger.Warn("Export failed", "integration", exp.String(), "dur", time.Since(start).String(), "err", err)
 					return
 				}
 				s.Logger.Info("Export success", "integration", exp.String(), "dur", time.Since(start).String())
