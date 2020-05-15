@@ -95,7 +95,7 @@ func (s Result) Log(logger hclog.Logger) {
 		prefix := "Integration " + integration.ID + " "
 		logger.Info(prefix, "duration", integration.Duration.String())
 		if integration.Error != "" {
-			logger.Error(prefix+"failed with error", "err", integration.Error)
+			logger.Warn(prefix+"failed with error", "err", integration.Error)
 			continue
 		}
 		if len(integration.Projects) == 0 {
