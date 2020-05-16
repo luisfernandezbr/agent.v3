@@ -92,6 +92,7 @@ type issueFields struct {
 	} `json:"issuetype"`
 	Status struct {
 		Name string `json:"name"`
+		ID   string `json:"id"`
 	} `json:"status"`
 	Resolution struct {
 		Name string `json:"name"`
@@ -303,6 +304,7 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 	item.Type = fields.IssueType.Name
 	item.TypeID = work.NewIssueTypeID(qc.CustomerID, "jira", fields.IssueType.ID)
 	item.Status = fields.Status.Name
+	item.StatusID = qc.IssueStatus[fields.Status.ID].ID
 	item.Resolution = fields.Resolution.Name
 
 	if !fields.Creator.IsZero() {

@@ -19,6 +19,8 @@ import (
 	"github.com/pinpt/agent/rpcdef"
 	pjson "github.com/pinpt/go-common/json"
 	"github.com/pinpt/integration-sdk/work"
+
+	pstrings "github.com/pinpt/go-common/strings"
 )
 
 func main() {
@@ -228,7 +230,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	}
 
 	var projects []Project
-
+	projectMap := make(map[string]string)
 	{
 		allProjectsDetailed, err := s.projects()
 		if err != nil {
@@ -247,7 +249,33 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 			rerr = err
 			return
 		}
+
+		projectMapAll := make(map[string]string)
+		for _, project := range allProjectsDetailed {
+			projectMapAll[project.RefID] = project.ID
+		}
+
+		for _, prj := range projects {
+			if prjID, ok := projectMapAll[prj.JiraID]; ok {
+				projectMap[prj.JiraID] = prjID
+			}
+		}
+
 	}
+
+	issueStatusSender, err := objsender.Root(s.agent, work.IssueStatusModelName.String())
+	issueStatus, err := s.issueStatus(issueStatusSender)
+	if err != nil {
+		rerr = err
+		return
+	}
+	err = issueStatusSender.Done()
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	s.common.SetIssueStatus(issueStatus)
 
 	exportProjectResults, err := s.common.IssuesAndChangelogs(projectSender, projects, fieldByID)
 	if err != nil {
@@ -259,6 +287,11 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 
 	err = projectSender.Done()
 	if err != nil {
+		rerr = err
+		return
+	}
+
+	if err = s.boards(issueStatus, projectMap); err != nil {
 		rerr = err
 		return
 	}
@@ -301,6 +334,131 @@ type Project = jiracommon.Project
 func (s *Integration) projects() (all []*work.Project, _ error) {
 	return all, jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
 		pi, res, err := api.ProjectsPage(s.qc, paginationParams)
+		if err != nil {
+			return false, 0, err
+		}
+		for _, obj := range res {
+			all = append(all, obj)
+		}
+
+		return pi.HasMore, pi.MaxResults, nil
+	})
+
+}
+
+func (s *Integration) issueStatus(sender *objsender.Session) (res map[string]*work.IssueStatus, _ error) {
+	s.logger.Debug("exporting issue statuses")
+
+	res = make(map[string]*work.IssueStatus)
+
+	statuses, _, err := jiracommonapi.StatusWithDetail(s.common.CommonQC())
+	if err != nil {
+		return res, err
+	}
+
+	if err != nil {
+		return res, err
+	}
+	for _, item := range statuses {
+
+		issueStatus := &work.IssueStatus{
+			CustomerID:  s.qc.CustomerID,
+			Description: item.Description,
+			IconURL:     pstrings.Pointer(item.IconURL),
+			Name:        item.Name,
+			RefID:       item.ID,
+			RefType:     "jira",
+		}
+
+		res[item.ID] = issueStatus
+
+		err := sender.Send(issueStatus)
+		if err != nil {
+			return res, err
+		}
+	}
+
+	return res, nil
+}
+
+func (s *Integration) boards(issueStatus map[string]*work.IssueStatus, projectMap map[string]string) error {
+	boardsSender, err := objsender.Root(s.agent, work.KanbanBoardModelName.String())
+	if err != nil {
+		return err
+	}
+
+	boards, err := s.allBoards()
+	if err != nil {
+		return err
+	}
+
+	for _, board := range boards {
+		projectRefIDs, err := s.allProjectsList(board.RefID)
+		if err != nil {
+			return err
+		}
+
+		if !projectsExistOnMap(projectMap, projectRefIDs) {
+			continue
+		}
+
+		board.ProjectIds = convertProjectRefIDsToIDs(projectMap, projectRefIDs)
+
+		boardColumns, err := api.BoardColumnsStatuses(s.qc, issueStatus, board.RefID)
+		if err != nil {
+			return err
+		}
+
+		board.Columns = boardColumns
+
+		err = boardsSender.Send(board)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := boardsSender.Done(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func projectsExistOnMap(projectMap map[string]string, refIDs []string) (exist bool) {
+	exist = true
+	for _, refID := range refIDs {
+		if _, ok := projectMap[refID]; !ok {
+			return false
+		}
+	}
+	return
+}
+
+func convertProjectRefIDsToIDs(projectMap map[string]string, refIDs []string) (ids []string) {
+	for _, refID := range refIDs {
+		ids = append(ids, projectMap[refID])
+	}
+
+	return
+}
+
+func (s *Integration) allBoards() (all []*work.KanbanBoard, _ error) {
+	return all, jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
+		pi, res, err := api.BoardsPage(s.qc, paginationParams)
+		if err != nil {
+			return false, 0, err
+		}
+		for _, obj := range res {
+			all = append(all, obj)
+		}
+
+		return pi.HasMore, pi.MaxResults, nil
+	})
+}
+
+func (s *Integration) allProjectsList(boardID string) (all []string, _ error) {
+	return all, jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
+		pi, res, err := api.BoardProjectListPage(boardID, s.qc, paginationParams)
 		if err != nil {
 			return false, 0, err
 		}

@@ -41,16 +41,28 @@ func NewRequester(opts RequesterOpts) *Requester {
 }
 
 func (s *Requester) Get(objPath string, params url.Values, res interface{}) error {
-	_, err := s.get(objPath, params, res, 1)
+	_, err := s.get(objPath, params, res, 1, false)
 	return err
 }
 
 func (s *Requester) Get2(objPath string, params url.Values, res interface{}) (statusCode int, _ error) {
-	return s.get(objPath, params, res, 1)
+	return s.get(objPath, params, res, 1, false)
 }
 
-func (s *Requester) get(objPath string, params url.Values, res interface{}, maxOAuthRetries int) (statusCode int, rerr error) {
-	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
+func (s *Requester) GetAgile(objPath string, params url.Values, res interface{}) error {
+	_, err := s.get(objPath, params, res, 1, true)
+	return err
+}
+
+func (s *Requester) get(objPath string, params url.Values, res interface{}, maxOAuthRetries int, useAgile bool) (statusCode int, rerr error) {
+
+	var u string
+	if useAgile {
+		u = pstrings.JoinURL(s.opts.APIURL, "rest/agile/1.0", objPath)
+	} else {
+		u = pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
+	}
+
 	if len(params) != 0 {
 		u += "?" + params.Encode()
 	}
@@ -87,7 +99,7 @@ func (s *Requester) get(objPath string, params url.Values, res interface{}, maxO
 				rerr = err
 				return
 			}
-			return s.get(objPath, params, res, maxOAuthRetries-1)
+			return s.get(objPath, params, res, maxOAuthRetries-1, useAgile)
 		}
 	}
 	if err != nil {

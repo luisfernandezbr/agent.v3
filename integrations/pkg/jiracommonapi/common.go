@@ -7,6 +7,7 @@ import (
 
 	"github.com/pinpt/agent/pkg/ids"
 	pstrings "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/integration-sdk/work"
 )
 
 type QueryContext struct {
@@ -16,6 +17,7 @@ type QueryContext struct {
 	ExportUser  func(user User) error
 	Req         Requester
 	IsOnPremise bool
+	IssueStatus map[string]*work.IssueStatus
 }
 
 func (s QueryContext) Validate() {
