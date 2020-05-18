@@ -2,9 +2,9 @@
 
 ### Performance
 
-It takes 2.5-2.7s second for the mutation to execute if measuring from when even is received in agent operator till response is completed. Tested locally, should be faster on aws.
+It takes 2.5-2.7s second for ISSUE_SET_TITLE to execute if measuring from when even is received in agent operator till response is completed. Tested locally, should be faster on aws.
 
-Of that time 0.6-0.8s is taken by getting updated issue from jira.
+Of that time 0.6-0.8s is taken by getting updated issue from jira. And 0.2s by calling binary, setting up grpc.
 
 ## Supported mutations
 

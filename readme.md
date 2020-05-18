@@ -12,10 +12,11 @@
 - [Development workflow](./_docs/dev_workflow.md)
 - [Exported data](./_docs/exported_data.md)
 - [Managing agent service](./_docs/managing_agent_service.md)
+- [Release](./_docs/release.md)
+- [Troubleshooting production issues (Pinpoint only)](https://www.notion.so/Export-Investigation-8b72b268328542d8a78ff21967117fe2)
+- [Mutations](./_docs/mutations.md)
 
 ## Install
-
-If you login to the admin dashboard in the Pinpoint product, you will get environment specific instructions for installing the agent.
 
 #### Windows
 
@@ -38,25 +39,36 @@ bash -c "$(curl -sSL https://install.pinpt.io/install.sh)"
 
 ```
 docker pull pinpt/agent
-docker run -it --rm --name pinpoint_agent -v `pwd`/pinpoint:/pinpoint pinpt/agent enroll --skip-enroll-if-found --pinpoint-root /pinpoint <ENROLL_CODE>
+docker run -it --rm --name pinpoint_agent -v `pwd`/pinpoint:/pinpoint pinpt/agent enroll --pinpoint-root /pinpoint <ENROLL_CODE>
 ```
 
 ### Required git version
 
 | Version                             | Notes  
 | -------------                       | -------- 
-| 2.20.1             | Default macos version. Works fine.
+| 2.20.1             | Default macos version. Tested as working.
 | 2.13               | Released on 2017-05. Introduced clone --no-tags flag. Should work.
-| <2.13              | We do not support older versions.
+| <2.13              | We do not support versions older than this.
 
 ## Integration docs
 
+### Sourcecode
 - [Microsoft Azure DevOps and TFS](./integrations/azure/readme.md)
 - [Bitbucket](./integrations/bitbucket/readme.md)
 - [GitHub](./integrations/github/readme.md)
 - [GitLab](./integrations/gitlab/readme.md)
+
+### Issue tracking
+- [Microsoft Azure DevOps and TFS](./integrations/azure/readme.md)
+- [GitLab](./integrations/gitlab/readme.md)
 - [Jira](./integrations/jira/readme.md)
+
+### Calendar
+- [Google Calendar](./integrations/gcal/readme.md)
+- [Office 365](./integrations/office365/readme.md)
+
+### Other integrations
 - [SonarQube](./integrations/sonarqube/readme.md)
 
 ## License
-All of this code is Copyright © 2018-2019 by Pinpoint Software, Inc. Licensed under the MIT License
+All of this code is Copyright © 2018-2020 by Pinpoint Software, Inc. Licensed under the MIT License
