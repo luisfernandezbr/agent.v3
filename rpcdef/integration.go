@@ -171,6 +171,10 @@ func NewIntegrationClient(protoClient proto.IntegrationClient, broker *plugin.GR
 func (s *IntegrationClient) Init(agent Agent) error {
 	server := &AgentServer{Impl: agent}
 	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
+		const MiB = 1024 * 1024
+		opts = append(opts,
+			grpc.MaxRecvMsgSize(100*MiB),
+			grpc.MaxSendMsgSize(100*MiB))
 		gs := grpc.NewServer(opts...)
 		proto.RegisterAgentServer(gs, server)
 		s.agentGRPCServer = gs

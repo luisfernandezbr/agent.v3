@@ -22,7 +22,7 @@ func (s *Integration) makeRequest(query string, vars map[string]interface{}, res
 	if v%checkRateLimitEveryNRequest == 0 {
 		err := s.checkRateLimitAndSleepIfNecessary()
 		if err != nil {
-			s.logger.Error("could not check available rate limit quota, issuing request as normal", "err", err)
+			s.logger.Warn("could not check available rate limit quota, issuing request as normal", "err", err)
 		}
 	}
 

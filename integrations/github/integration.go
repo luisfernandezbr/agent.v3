@@ -350,7 +350,7 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 	if s.customerID == "ea63c052fd862a91" || s.customerID == "d05b8b6ef71e3575" || s.customerID == "14ea36c3b3cd0270" {
 		err = s.registerWebhooks(filteredRepos)
 		if err != nil {
-			s.logger.Error("could not register webhooks", "err", err)
+			s.logger.Info("could not register webhooks", "err", err)
 		}
 	}
 
@@ -424,7 +424,7 @@ func (s *Integration) registerWebhooks(repos []exportRepo) error {
 	for _, repo := range repos {
 		err := api.WebhookCreateIfNotExists(s.qc, repo.Repo(), url, webhookEvents)
 		if err != nil {
-			s.logger.Error("could not register webhooks for repo", "err", err, "repo", repo.NameWithOwner)
+			s.logger.Info("could not register webhooks for repo", "err", err, "repo", repo.NameWithOwner)
 		}
 	}
 

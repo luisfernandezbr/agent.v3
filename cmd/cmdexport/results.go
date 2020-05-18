@@ -37,7 +37,7 @@ func (s *export) handleIntegrationPanics(res map[expin.Export]runResult) {
 	for exp, integration := range s.Integrations {
 		ires := res[exp]
 		if ires.Err != nil {
-			s.Logger.Error("Export failed in integration", "integration", exp.String(), "err", ires.Err)
+			s.Logger.Warn("Export failed in integration", "integration", exp.String(), "err", ires.Err)
 			if err := s.Command.CloseOnlyIntegrationAndHandlePanic(integration.ILoader); err != nil {
 				s.Logger.Error("Could not close integration", "err", err)
 			}
@@ -95,7 +95,7 @@ func (s Result) Log(logger hclog.Logger) {
 		prefix := "Integration " + integration.ID + " "
 		logger.Info(prefix, "duration", integration.Duration.String())
 		if integration.Error != "" {
-			logger.Error(prefix+"failed with error", "err", integration.Error)
+			logger.Warn(prefix+"failed with error", "err", integration.Error)
 			continue
 		}
 		if len(integration.Projects) == 0 {
@@ -130,7 +130,12 @@ func (s Result) Log(logger hclog.Logger) {
 				logger.Error(prefix + "failed on more than 10 projects, skipping output")
 				continue
 			}
-			logger.Error(prefix+"failed on project", "id", project.ID, "ref_id", project.RefID, "readable_id", project.ReadableID, "err", project.Error, "git_error", project.GitError)
+			logger := logger.With("id", project.ID, "ref_id", project.RefID, "readable_id", project.ReadableID, "err", project.Error, "git_error", project.GitError)
+			if project.GitError == "empty_repo" {
+				logger.Warn(prefix + "failed on project")
+			} else {
+				logger.Error(prefix + "failed on project")
+			}
 		}
 	}
 }

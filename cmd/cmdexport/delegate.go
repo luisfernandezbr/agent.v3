@@ -72,6 +72,9 @@ func (s agentDelegate) SessionRollback(id int) error {
 func (s agentDelegate) OAuthNewAccessToken() (token string, _ error) {
 	return s.export.OAuthNewAccessToken(s.expin)
 }
+func (s agentDelegate) OAuthNewAccessTokenFromRefreshToken(name string, refresh string) (token string, _ error) {
+	return s.export.OAuthNewAccessTokenFromRefreshToken(name, refresh)
+}
 
 func (s agentDelegate) SendPauseEvent(msg string, resumeDate time.Time) error {
 	return s.export.SendPauseEvent(s.expin, msg, resumeDate)

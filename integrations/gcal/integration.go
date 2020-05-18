@@ -102,7 +102,7 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 		for _, each := range s.config.Inclusions {
 			cal, err := s.api.GetCalendar(url.QueryEscape(each))
 			if err != nil {
-				s.logger.Error("error fetching calendar, skipping", "err", err, "id", each)
+				s.logger.Warn("error fetching calendar, skipping", "err", err, "id", each)
 				continue
 			}
 			if err := session.Send(cal); err != nil {
@@ -234,6 +234,7 @@ func (s *Integration) OnboardExport(ctx context.Context, objectType rpcdef.Onboa
 			RefID:       c.RefID,
 			RefType:     c.RefType,
 			Active:      true,
+			Enabled:     true,
 		}
 		records = append(records, calres.ToMap())
 	}

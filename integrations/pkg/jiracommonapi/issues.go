@@ -356,7 +356,8 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 		case "Relates":
 			linkType = work.IssueLinkedIssuesLinkTypeRelates
 		default:
-			qc.Logger.Error("unknown link type name", "name", link.Type.Name)
+			// we only support default names
+			qc.Logger.Debug("unknown link type name", "name", link.Type.Name)
 			continue
 		}
 		var linkedIssue linkedIssue
