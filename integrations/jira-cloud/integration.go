@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/pinpt/agent/pkg/ids2"
+
 	"github.com/pinpt/agent/pkg/oauthtoken"
 	"github.com/pinpt/agent/pkg/reqstats"
 	"github.com/pinpt/agent/pkg/structmarshal"
@@ -230,7 +232,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	}
 
 	var projects []Project
-	projectMap := make(map[string]string)
+
 	{
 		allProjectsDetailed, err := s.projects()
 		if err != nil {
@@ -249,18 +251,6 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 			rerr = err
 			return
 		}
-
-		projectMapAll := make(map[string]string)
-		for _, project := range allProjectsDetailed {
-			projectMapAll[project.RefID] = project.ID
-		}
-
-		for _, prj := range projects {
-			if prjID, ok := projectMapAll[prj.JiraID]; ok {
-				projectMap[prj.JiraID] = prjID
-			}
-		}
-
 	}
 
 	issueStatusSender, err := objsender.Root(s.agent, work.IssueStatusModelName.String())
@@ -274,8 +264,6 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		rerr = err
 		return
 	}
-
-	s.common.SetIssueStatus(issueStatus)
 
 	exportProjectResults, err := s.common.IssuesAndChangelogs(projectSender, projects, fieldByID)
 	if err != nil {
@@ -291,7 +279,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		return
 	}
 
-	if err = s.boards(issueStatus, projectMap); err != nil {
+	if err = s.boards(issueStatus, projects); err != nil {
 		rerr = err
 		return
 	}
@@ -381,7 +369,7 @@ func (s *Integration) issueStatus(sender *objsender.Session) (res map[string]*wo
 	return res, nil
 }
 
-func (s *Integration) boards(issueStatus map[string]*work.IssueStatus, projectMap map[string]string) error {
+func (s *Integration) boards(issueStatus map[string]*work.IssueStatus, projects []Project) error {
 	boardsSender, err := objsender.Root(s.agent, work.KanbanBoardModelName.String())
 	if err != nil {
 		return err
@@ -392,17 +380,37 @@ func (s *Integration) boards(issueStatus map[string]*work.IssueStatus, projectMa
 		return err
 	}
 
+	projectsFilteredRefIDs := map[string]bool{}
+	for _, project := range projects {
+		projectsFilteredRefIDs[project.JiraID] = true
+	}
+
+	atLeastOneBoardProjectInOurFilteredList := func(boardProjectRefIDs []string) bool {
+		for _, refID := range refIDs {
+			if projectsFilteredRefIDs[refID] {
+				return true
+			}
+		}
+		return false
+	}
+
 	for _, board := range boards {
 		projectRefIDs, err := s.allProjectsList(board.RefID)
 		if err != nil {
 			return err
 		}
 
-		if !projectsExistOnMap(projectMap, projectRefIDs) {
+		if !atLeastOneBoardProjectInOurFilteredList(projectRefIDs) {
 			continue
 		}
 
-		board.ProjectIds = convertProjectRefIDsToIDs(projectMap, projectRefIDs)
+		for _, refID := range projectRefIDs {
+			if !projectsFilteredRefIDs[refID] {
+				continue
+			}
+			id := ids2.New(s.qc.CustomerID, refType).WorkProject(refID)
+			board.ProjectIds = append(board.ProjectIds, id)
+		}
 
 		boardColumns, err := api.BoardColumnsStatuses(s.qc, issueStatus, board.RefID)
 		if err != nil {
@@ -424,23 +432,7 @@ func (s *Integration) boards(issueStatus map[string]*work.IssueStatus, projectMa
 	return nil
 }
 
-func projectsExistOnMap(projectMap map[string]string, refIDs []string) (exist bool) {
-	exist = true
-	for _, refID := range refIDs {
-		if _, ok := projectMap[refID]; !ok {
-			return false
-		}
-	}
-	return
-}
-
-func convertProjectRefIDsToIDs(projectMap map[string]string, refIDs []string) (ids []string) {
-	for _, refID := range refIDs {
-		ids = append(ids, projectMap[refID])
-	}
-
-	return
-}
+const refType = "jira"
 
 func (s *Integration) allBoards() (all []*work.KanbanBoard, _ error) {
 	return all, jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {

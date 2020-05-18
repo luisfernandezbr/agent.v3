@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/ids2"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/go-common/datetime"
 	pstrings "github.com/pinpt/go-common/strings"
@@ -245,6 +246,8 @@ func extractPossibleSprintID(v string) string {
 	return matches[1]
 }
 
+const refType = "jira"
+
 func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]CustomField) (_ IssueWithCustomFields, rerr error) {
 
 	var fields issueFields
@@ -266,7 +269,7 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 	item.Issue = &work.Issue{}
 	item.CustomerID = qc.CustomerID
 	item.RefID = data.ID
-	item.RefType = "jira"
+	item.RefType = refType
 	item.Identifier = data.Key
 	item.ProjectID = qc.ProjectID(project.JiraID)
 
@@ -299,12 +302,14 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 	}
 	date.ConvertToModel(updated, &item.UpdatedDate)
 
+	ids := ids2.New(qc.CustomerID, refType)
+
 	item.Priority = fields.Priority.Name
-	item.PriorityID = work.NewIssuePriorityID(qc.CustomerID, "jira", fields.Priority.ID)
+	item.PriorityID = ids.WorkIssuePriority(fields.Priority.ID)
 	item.Type = fields.IssueType.Name
-	item.TypeID = work.NewIssueTypeID(qc.CustomerID, "jira", fields.IssueType.ID)
+	item.TypeID = ids.WorkIssueType(fields.IssueType.ID)
 	item.Status = fields.Status.Name
-	item.StatusID = qc.IssueStatus[fields.Status.ID].ID
+	item.StatusID = ids.WorkIssueType(fields.Status.ID, item.ProjectID)
 	item.Resolution = fields.Resolution.Name
 
 	if !fields.Creator.IsZero() {

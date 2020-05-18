@@ -3,15 +3,13 @@ package api
 import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
-	"github.com/pinpt/integration-sdk/work"
 )
 
 type QueryContext struct {
-	WebsiteURL  string
-	Logger      hclog.Logger
-	CustomerID  string
-	Req         jiracommonapi.Requester
-	IssueStatus map[string]*work.IssueStatus
+	WebsiteURL string
+	Logger     hclog.Logger
+	CustomerID string
+	Req        jiracommonapi.Requester
 }
 
 type PageInfo struct {
@@ -27,7 +25,6 @@ func (s *QueryContext) Common() jiracommonapi.QueryContext {
 	res.Logger = s.Logger
 	res.ExportUser = nil
 	res.Req = s.Req
-	res.IssueStatus = s.IssueStatus
 	res.Validate()
 	return res
 }

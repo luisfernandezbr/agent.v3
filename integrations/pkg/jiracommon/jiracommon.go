@@ -3,7 +3,6 @@ package jiracommon
 import (
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/rpcdef"
-	"github.com/pinpt/integration-sdk/work"
 
 	"github.com/hashicorp/go-hclog"
 )
@@ -19,7 +18,6 @@ type Opts struct {
 	// Projects only process these projects by key.
 	Projects    []string
 	IsOnPremise bool
-	IssueStatus map[string]*work.IssueStatus
 }
 
 type JiraCommon struct {
@@ -61,8 +59,4 @@ func (s *JiraCommon) CommonQC() jiracommonapi.QueryContext {
 
 func (s *JiraCommon) ExportDone() error {
 	return s.users.Done()
-}
-
-func (s *JiraCommon) SetIssueStatus(is map[string]*work.IssueStatus) {
-	s.opts.IssueStatus = is
 }
