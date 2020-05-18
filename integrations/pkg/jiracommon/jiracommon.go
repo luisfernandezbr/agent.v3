@@ -52,7 +52,6 @@ func (s *JiraCommon) CommonQC() jiracommonapi.QueryContext {
 	}
 	res.Req = s.opts.Req
 	res.IsOnPremise = s.opts.IsOnPremise
-	res.IssueStatus = s.opts.IssueStatus
 	res.Validate()
 	return res
 }

@@ -355,7 +355,7 @@ func (s *Integration) issueStatus(sender *objsender.Session) (res map[string]*wo
 			IconURL:     pstrings.Pointer(item.IconURL),
 			Name:        item.Name,
 			RefID:       item.ID,
-			RefType:     "jira",
+			RefType:     refType,
 		}
 
 		res[item.ID] = issueStatus
@@ -386,7 +386,7 @@ func (s *Integration) boards(issueStatus map[string]*work.IssueStatus, projects 
 	}
 
 	atLeastOneBoardProjectInOurFilteredList := func(boardProjectRefIDs []string) bool {
-		for _, refID := range refIDs {
+		for _, refID := range boardProjectRefIDs {
 			if projectsFilteredRefIDs[refID] {
 				return true
 			}

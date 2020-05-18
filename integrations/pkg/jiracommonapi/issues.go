@@ -309,7 +309,7 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 	item.Type = fields.IssueType.Name
 	item.TypeID = ids.WorkIssueType(fields.IssueType.ID)
 	item.Status = fields.Status.Name
-	item.StatusID = ids.WorkIssueType(fields.Status.ID, item.ProjectID)
+	item.StatusID = ids.WorkIssueStatus(fields.Status.ID, item.ProjectID)
 	item.Resolution = fields.Resolution.Name
 
 	if !fields.Creator.IsZero() {
