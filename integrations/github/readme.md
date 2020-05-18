@@ -43,9 +43,6 @@ The permissions are the same between them. But for github.com token also need to
     - read:user X
     - user:email X
 
-## TODO
-- sourcecode.PullRequest.ClosedByRefID not implemented for GitHub Enterprise 2.15.9. timelineItems is not available need to get it another way
-
 ## API call examples
 
 ```
@@ -63,8 +60,7 @@ go run . export --agent-config-json='{"customer_id":"c1"}' --integrations-json='
 github.PullRequestComment does not include comments created from review, these go to github.PullRequestReview. We do not currently store the text of those.
 
 ## Performance
-
-It takes ~?m on pinpoint organization for initial export and ~?m for incremental immediately after. Using ?% of github.com hourly quota.
+Performance is currently limited by github.com hourly request quota.
 
 ## Concurrency, throttling and request limits
 

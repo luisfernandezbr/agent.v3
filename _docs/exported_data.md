@@ -1,6 +1,6 @@
 ## Exported data
 
-Integrations differ in data that they export. Right now we have 2 different types of integrations, sourcecode and work.
+Integrations differ in data that they export. Right now we have 3 different integration types, sourcecode, work and calendar.
 
 See an example of data exported for [github integration here](../integrations/github/_docs/exported_data.md).
 
@@ -10,67 +10,64 @@ Sourcecode integrations also process git repositories directly after cloning the
 
 Sourcecode integrations clone git repositories to the machine where agent is running. Each commit in repository is processed, code statistics are extracted and send to the server. We do not send the actual code after processing with agent. 
 
-But we do send metadata for every commit, file and line. For example, we send flags for each line to know if it's code, comment or empty line, as well as in which commit it was modified, author, dates and similar.
+We send metadata for every commit, please see the objects below for details.
+
+See the matching sourcecode in `./slimrippy/exportrepo`
 
 ```
 sourcecode.Commit
-    Metadata
-        Sha
-        Message
-        FilesChanged
-        AuthorEmailHash
-        CommitterEmailHash
-        IsGpgSigned
-
-    Counts
-        Additions
-        Deletions
-        Loc
-        Sloc
-        Comments
-        Blanks
-        Size
-        Complexity
-
-    Files 
-        Metadata for each file
-
-        Filename
-        Language
-        Renamed
-        Additions
-        Deletions
-        License
-        Size
-        Loc
-        Sloc
-        Comments
-        Blanks
-        Complexity
-
-sourcecode.Blame
-    This is information about each file changed in commit. Somewhat similar to Files above, but also included information about the lines in the file.
-    License
-    Size
-    Loc
-    Sloc
-    Blanks
-    Comments
-    Filename
-    Language
+    RefID
+    RefType
+    CustomerID
+    RepoID
     Sha
-    Complexity
-    Lines
-        LastCommit
-        AuthorEmailHash
-        Date
-        IsComment
-        IsCode
-        IsBlank
+    Message
+    URL
+    AuthorRefID
+    CommitterRefID
+    Identifier
+    CreatedDate
+
+    Author and Committer
+        Email
+		Name
 
 sourcecode.Branch
+    RefID
     Name
+    URL
+    RefType
+    CustomerID
+    Default
+    Merged
+    MergeCommitSha
+    MergeCommitID
+    BranchedFromCommitShas
+    BranchedFromCommitIds
     CommitShas
+    CommitIds
+    FirstCommitSha
+    FirstCommitID
     BehindDefaultCount
     AheadDefaultCount
+    RepoID
+
+sourcecode.PullRequestBranch
+    PullRequestID
+    RefID
+    Name
+    URL
+    RefType
+    CustomerID
+    Default
+    Merged
+    MergeCommitSha
+    MergeCommitID
+    BranchedFromCommitShas
+    BranchedFromCommitIds
+    CommitShas
+    CommitIds
+    BehindDefaultCount
+    AheadDefaultCount
+    RepoID
 ```

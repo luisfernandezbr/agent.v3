@@ -37,6 +37,6 @@ If you want to re-enroll the agent, delete ~/.pinpoint/next.
 #### Build and run via docker
 
 ```
-docker build -t pinpoint-agent .
+docker build -t pinpoint-agent --build-arg VERSION=dev -f ./docker/release/Dockerfile .
 docker run --rm pinpoint-agent enroll <CODE>
 ```
