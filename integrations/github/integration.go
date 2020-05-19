@@ -632,8 +632,8 @@ func (s *Integration) exportPullRequestsForRepo(
 		defer wg.Done()
 		err := s.exportPullRequestsComments(logger, pullRequestSender, pullRequestsForComments)
 		if err != nil {
-			s.logger.Error("could not export pull request comments", "err", err)
-			//setErr(fmt.Errorf("could not export pull request comments: %v", err))
+			//s.logger.Error("could not export pull request comments", "err", err)
+			setErr(fmt.Errorf("could not export pull request comments: %v", err))
 		}
 	}()
 	wg.Add(1)
@@ -641,8 +641,8 @@ func (s *Integration) exportPullRequestsForRepo(
 		defer wg.Done()
 		err := s.exportPullRequestsReviews(logger, pullRequestSender, repo, pullRequestsForReviews)
 		if err != nil {
-			s.logger.Error("could not export pull request reviews", "err", err)
-			//setErr(fmt.Errorf("could not export pull request reviews: %v", err))
+			//s.logger.Error("could not export pull request reviews", "err", err)
+			setErr(fmt.Errorf("could not export pull request reviews: %v", err))
 		}
 	}()
 
@@ -655,9 +655,9 @@ func (s *Integration) exportPullRequestsForRepo(
 
 				err := s.exportPRCommitsAddingToPR(logger, repo, pr, pullRequestSender, commitsSender)
 				if err != nil {
-					s.logger.Error("could not export pr commits", "err", err)
-					//setErr(fmt.Errorf("could not export pr commits: %v", err))
-					//return
+					//s.logger.Error("could not export pr commits", "err", err)
+					setErr(fmt.Errorf("could not export pr commits: %v", err))
+					return
 				}
 			}
 		}
