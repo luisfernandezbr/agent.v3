@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"sync"
 
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
@@ -42,7 +43,8 @@ func projectsToChan(projects []Project) chan Project {
 func (s *JiraCommon) IssuesAndChangelogs(
 	projectSender *objsender.Session,
 	projects []Project,
-	fieldByID map[string]jiracommonapi.CustomField) (_ []rpcdef.ExportProject, rerr error) {
+	fieldByID map[string]jiracommonapi.CustomField,
+	issuesStatusProjects *sync.Map) (_ []rpcdef.ExportProject, rerr error) {
 
 	projectSender.SetNoAutoProgress(true)
 	projectSender.SetTotal(len(projects))
@@ -53,7 +55,7 @@ func (s *JiraCommon) IssuesAndChangelogs(
 	processOpts.Logger = s.opts.Logger
 	processOpts.ProjectFn = func(ctx *repoprojects.ProjectCtx) error {
 		project := ctx.Project.(Project)
-		return s.issuesAndChangelogsForProject(ctx, project, fieldByID, sprints)
+		return s.issuesAndChangelogsForProject(ctx, project, fieldByID, sprints, issuesStatusProjects)
 	}
 
 	processOpts.Concurrency = issuesAndChangelogsProjectConcurrency
@@ -177,7 +179,8 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 	ctx *repoprojects.ProjectCtx,
 	project Project,
 	fieldByID map[string]jiracommonapi.CustomField,
-	sprints *Sprints) error {
+	sprints *Sprints,
+	issuesStatusProjects *sync.Map) error {
 
 	logger := s.opts.Logger
 
@@ -209,7 +212,7 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 	}
 
 	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
-		pi, resIssues, err := jiracommonapi.IssuesAndChangelogsPage(qc, project.Project, fieldByID, senderIssues.LastProcessedTime(), paginationParams)
+		pi, resIssues, err := jiracommonapi.IssuesAndChangelogsPage(qc, project.Project, fieldByID, senderIssues.LastProcessedTime(), paginationParams, issuesStatusProjects)
 		if err != nil {
 			rerr = err
 			return

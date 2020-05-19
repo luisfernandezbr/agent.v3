@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pinpt/agent/pkg/date"
@@ -132,7 +133,8 @@ func IssuesAndChangelogsPage(
 	project Project,
 	fieldByID map[string]CustomField,
 	updatedSince time.Time,
-	paginationParams url.Values) (
+	paginationParams url.Values,
+	issuesStatusProjects *sync.Map) (
 	pi PageInfo,
 	resIssues []IssueWithCustomFields,
 
@@ -180,7 +182,7 @@ func IssuesAndChangelogsPage(
 	}
 
 	for _, data := range rr.Issues {
-		issue, err := convertIssue(qc, data, fieldByID)
+		issue, err := convertIssue(qc, data, fieldByID, issuesStatusProjects)
 		if err != nil {
 			rerr = err
 			return
@@ -213,7 +215,7 @@ func IssueByID(qc QueryContext, issueIDOrKey string) (_ IssueWithCustomFields, r
 	}
 
 	fieldsByID := map[string]CustomField{}
-	res, err := convertIssue(qc, rr, fieldsByID)
+	res, err := convertIssue(qc, rr, fieldsByID, nil)
 	if err != nil {
 		rerr = err
 		return
@@ -248,7 +250,7 @@ func extractPossibleSprintID(v string) string {
 
 const refType = "jira"
 
-func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]CustomField) (_ IssueWithCustomFields, rerr error) {
+func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]CustomField, issuesStatusProjects *sync.Map) (_ IssueWithCustomFields, rerr error) {
 
 	var fields issueFields
 	err := structmarshal.MapToStruct(data.Fields, &fields)
@@ -310,6 +312,17 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 	item.TypeID = ids.WorkIssueType(fields.IssueType.ID)
 	item.Status = fields.Status.Name
 	item.StatusID = ids.WorkIssueStatus(fields.Status.ID, item.ProjectID)
+	if issuesStatusProjects != nil {
+		var projectIDS map[string]bool
+		savedProjectIDS, ok := issuesStatusProjects.Load(fields.Status.ID)
+		if ok {
+			projectIDS = savedProjectIDS.(map[string]bool)
+		} else {
+			projectIDS = make(map[string]bool)
+		}
+		projectIDS[item.ProjectID] = true
+		issuesStatusProjects.Store(fields.Status.ID, projectIDS)
+	}
 	item.Resolution = fields.Resolution.Name
 
 	if !fields.Creator.IsZero() {

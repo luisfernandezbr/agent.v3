@@ -53,7 +53,8 @@ func BoardsPage(
 // BoardColumnsStatuses get board columns and statuses
 func BoardColumnsStatuses(
 	qc QueryContext,
-	issueStatuses map[string]*work.IssueStatus,
+	projects []string,
+	issueStatuses map[string]map[string]*work.IssueStatus,
 	boardID string,
 ) (res []work.KanbanBoardColumns, _ error) {
 
@@ -82,13 +83,13 @@ func BoardColumnsStatuses(
 		statusIds := make([]string, 0)
 		for _, status := range column.Statuses {
 
-			issueStatus, ok := issueStatuses[status.ID]
-			if !ok {
-				qc.Logger.Warn("status does not exist or board is empty", "board", boardID)
-				continue
+			for _, projectID := range projects {
+				issueStatus, ok := issueStatuses[status.ID][projectID]
+				if ok {
+					statusIds = append(statusIds, issueStatus.ID)
+				}
 			}
 
-			statusIds = append(statusIds, issueStatus.ID)
 		}
 
 		res = append(res, work.KanbanBoardColumns{

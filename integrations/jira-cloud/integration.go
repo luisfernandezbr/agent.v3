@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sync"
 
+	"github.com/josecordaz/myagent/pkg/ids"
 	"github.com/pinpt/agent/pkg/ids2"
 
 	"github.com/pinpt/agent/pkg/oauthtoken"
@@ -253,19 +255,9 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		}
 	}
 
-	issueStatusSender, err := objsender.Root(s.agent, work.IssueStatusModelName.String())
-	issueStatus, err := s.issueStatus(issueStatusSender)
-	if err != nil {
-		rerr = err
-		return
-	}
-	err = issueStatusSender.Done()
-	if err != nil {
-		rerr = err
-		return
-	}
+	var issuesStatusProjects sync.Map
 
-	exportProjectResults, err := s.common.IssuesAndChangelogs(projectSender, projects, fieldByID)
+	exportProjectResults, err := s.common.IssuesAndChangelogs(projectSender, projects, fieldByID, &issuesStatusProjects)
 	if err != nil {
 		rerr = err
 		return
@@ -274,6 +266,18 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	res.Projects = exportProjectResults
 
 	err = projectSender.Done()
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	issueStatusSender, err := objsender.Root(s.agent, work.IssueStatusModelName.String())
+	issueStatus, err := s.issueStatus(issueStatusSender, projects, &issuesStatusProjects)
+	if err != nil {
+		rerr = err
+		return
+	}
+	err = issueStatusSender.Done()
 	if err != nil {
 		rerr = err
 		return
@@ -334,10 +338,10 @@ func (s *Integration) projects() (all []*work.Project, _ error) {
 
 }
 
-func (s *Integration) issueStatus(sender *objsender.Session) (res map[string]*work.IssueStatus, _ error) {
+func (s *Integration) issueStatus(sender *objsender.Session, projectsFilter []Project, issuesStatusProjects *sync.Map) (res map[string]map[string]*work.IssueStatus, _ error) {
 	s.logger.Debug("exporting issue statuses")
 
-	res = make(map[string]*work.IssueStatus)
+	res = make(map[string]map[string]*work.IssueStatus)
 
 	statuses, _, err := jiracommonapi.StatusWithDetail(s.common.CommonQC())
 	if err != nil {
@@ -349,27 +353,49 @@ func (s *Integration) issueStatus(sender *objsender.Session) (res map[string]*wo
 	}
 	for _, item := range statuses {
 
-		issueStatus := &work.IssueStatus{
-			CustomerID:  s.qc.CustomerID,
-			Description: item.Description,
-			IconURL:     pstrings.Pointer(item.IconURL),
-			Name:        item.Name,
-			RefID:       item.ID,
-			RefType:     refType,
+		var projectIDS interface{}
+		var ok bool
+		if projectIDS, ok = issuesStatusProjects.Load(item.ID); !ok {
+			continue
 		}
 
-		res[item.ID] = issueStatus
+		for _, projectIDFilter := range projectsFilter {
 
-		err := sender.Send(issueStatus)
-		if err != nil {
-			return res, err
+			projectIDS := projectIDS.(map[string]bool)
+
+			projectID := ids.WorkProject(s.qc.CustomerID, refType, projectIDFilter.JiraID)
+
+			if _, ok := projectIDS[projectID]; ok {
+				issueStatus := &work.IssueStatus{
+					CustomerID:  s.qc.CustomerID,
+					Description: item.Description,
+					IconURL:     pstrings.Pointer(item.IconURL),
+					Name:        item.Name,
+					RefID:       item.ID,
+					RefType:     refType,
+					ProjectID:   projectID,
+				}
+
+				if res[item.ID] == nil {
+					res[item.ID] = make(map[string]*work.IssueStatus)
+				}
+
+				res[item.ID][projectIDFilter.JiraID] = issueStatus
+
+				err := sender.Send(issueStatus)
+				if err != nil {
+					return res, err
+				}
+			}
+
 		}
+
 	}
 
 	return res, nil
 }
 
-func (s *Integration) boards(issueStatus map[string]*work.IssueStatus, projects []Project) error {
+func (s *Integration) boards(issueStatus map[string]map[string]*work.IssueStatus, projects []Project) error {
 	boardsSender, err := objsender.Root(s.agent, work.KanbanBoardModelName.String())
 	if err != nil {
 		return err
@@ -412,7 +438,7 @@ func (s *Integration) boards(issueStatus map[string]*work.IssueStatus, projects 
 			board.ProjectIds = append(board.ProjectIds, id)
 		}
 
-		boardColumns, err := api.BoardColumnsStatuses(s.qc, issueStatus, board.RefID)
+		boardColumns, err := api.BoardColumnsStatuses(s.qc, projectRefIDs, issueStatus, board.RefID)
 		if err != nil {
 			return err
 		}
