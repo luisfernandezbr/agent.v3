@@ -181,3 +181,16 @@ When commit has a login, we first do the same process of sending this user as fo
 As a second step, for both author and committer, we send a entry with name, email and if it exists a github login link.
 
 Agent checks if we have already sent it behind the scenes, and if not creates a user with github and git ref types.
+
+## Webhook examples
+
+```
+# issue_comment
+go run . webhook --agent-config-json='{"customer_id":"c1"}' --integrations-json='[{"name":"github", "config":{"api_key":"XXXXXX", "url":"https://api.github.com"}}]' --data='{"headers":{"x-github-event":"issue_comment"}, "body": {"comment":{"node_id":"XXXXXXXXXMDU5NDk0NQ=="}}}' --output-file=/tmp/out
+
+# pull_request
+go run . webhook --agent-config-json='{"customer_id":"c1"}' --integrations-json='[{"name":"github", "config":{"api_key":"xxxxxx", "url":"https://api.github.com"}}]' --data='{"headers":{"x-github-event":"pull_request"}, "body": {"pull_request": {"node_id":"XXXXXXXXXA1NzI4=="},"repository": {"node_id":"XXXXXXXXXMDU5NDk0NQ==", "full_name":"xxxxx/test_repo"} }}' --output-file=/tmp/out
+
+# push
+go run . webhook --agent-config-json='{"customer_id":"c1"}' --integrations-json='[{"name":"github", "config":{"api_key":"xxxx", "url":"https://api.github.com"}}]' --data='{"headers":{"x-github-event":"push"}, "body": {"repository": {"node_id":"XXXXXXXXXMDU5NDk0NQ==", "full_name":"xxxx/test"} }}' --output-file=/tmp/out
+```
