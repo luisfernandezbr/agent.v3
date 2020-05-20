@@ -8,7 +8,7 @@ import (
 	"github.com/pinpt/agent/integrations/jira-cloud/api"
 	"github.com/pinpt/agent/integrations/pkg/jiracommon"
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
-	"github.com/pinpt/go-datamodel/work"
+	"github.com/pinpt/integration-sdk/work"
 
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/rpcdef"
