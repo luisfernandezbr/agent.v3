@@ -60,7 +60,7 @@ func (s *Integration) Webhook(ctx context.Context, headers map[string]string, bo
 	xGithubEvent, _ := headers["x-github-event"]
 	switch xGithubEvent {
 	case "":
-		rerr(fmt.Errorf("x-github-event key is not provided in webhook object, it is sent in request header and should be added to payload, headers %v", headers))
+		rerr(fmt.Errorf("x-github-event key is not provided in headers %v", headers))
 		return
 	case "issue_comment":
 		comment, ok := data["comment"].(map[string]interface{})

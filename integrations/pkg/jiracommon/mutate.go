@@ -15,7 +15,7 @@ import (
 
 func (s *JiraCommon) returnUpdatedIssue(issueRefID string) (res rpcdef.MutateResult, rerr error) {
 	qc := s.CommonQC()
-	issue, err := jiracommonapi.IssueByID(qc, issueRefID)
+	issue, err := jiracommonapi.IssueByIDFieldsForMutation(qc, issueRefID)
 	if err != nil {
 		rerr = err
 		return

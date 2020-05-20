@@ -2,7 +2,9 @@ package jiracommon
 
 import (
 	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/rpcdef"
+	"github.com/pinpt/integration-sdk/work"
 
 	"github.com/hashicorp/go-hclog"
 )
@@ -23,7 +25,9 @@ type Opts struct {
 type JiraCommon struct {
 	opts  Opts
 	agent rpcdef.Agent
-	users *Users
+
+	users      *Users
+	userSender *objsender.Session
 }
 
 func New(opts Opts) (*JiraCommon, error) {
@@ -38,7 +42,11 @@ func New(opts Opts) (*JiraCommon, error) {
 
 func (s *JiraCommon) SetupUsers() error {
 	var err error
-	s.users, err = NewUsers(s.opts.Logger, s.opts.CustomerID, s.opts.Agent, s.opts.WebsiteURL)
+	s.userSender, err = objsender.Root(s.agent, work.UserModelName.String())
+	if err != nil {
+		return err
+	}
+	s.users, err = NewUsers(s.opts.Logger, s.opts.CustomerID, s.opts.Agent, s.opts.WebsiteURL, s.userSender)
 	return err
 }
 
@@ -57,5 +65,5 @@ func (s *JiraCommon) CommonQC() jiracommonapi.QueryContext {
 }
 
 func (s *JiraCommon) ExportDone() error {
-	return s.users.Done()
+	return s.userSender.Done()
 }
