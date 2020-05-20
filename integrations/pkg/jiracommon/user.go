@@ -14,23 +14,18 @@ import (
 
 type Users struct {
 	logger     hclog.Logger
-	sender     *objsender.Session
+	sender     objsender.SessionCommon
 	exported   map[string]bool
 	exportedMu sync.Mutex
 	customerID string
 	websiteURL string
 }
 
-func NewUsers(logger hclog.Logger, customerID string, agent rpcdef.Agent, websiteURL string) (_ *Users, rerr error) {
+func NewUsers(logger hclog.Logger, customerID string, agent rpcdef.Agent, websiteURL string, sender objsender.SessionCommon) (_ *Users, rerr error) {
 	s := &Users{}
 	s.logger = logger
 	s.customerID = customerID
-	var err error
-	s.sender, err = objsender.Root(agent, work.UserModelName.String())
-	if err != nil {
-		rerr = err
-		return
-	}
+	s.sender = sender
 	s.exported = map[string]bool{}
 	s.websiteURL = websiteURL
 	return s, nil
@@ -95,8 +90,4 @@ func (s *Users) sendUsers(users []*work.User) error {
 		}
 	}
 	return nil
-}
-
-func (s *Users) Done() error {
-	return s.sender.Done()
 }

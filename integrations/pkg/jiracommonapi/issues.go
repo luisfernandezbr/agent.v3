@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -130,7 +131,8 @@ func IssuesAndChangelogsPage(
 	project Project,
 	fieldByID map[string]CustomField,
 	updatedSince time.Time,
-	paginationParams url.Values) (
+	paginationParams url.Values,
+	issueRefIDFromKey IssueRefIDFromKeyFunc) (
 	pi PageInfo,
 	resIssues []IssueWithCustomFields,
 
@@ -178,7 +180,7 @@ func IssuesAndChangelogsPage(
 	}
 
 	for _, data := range rr.Issues {
-		issue, err := convertIssue(qc, data, fieldByID)
+		issue, err := convertIssue(qc, data, fieldByID, issueRefIDFromKey)
 		if err != nil {
 			rerr = err
 			return
@@ -191,7 +193,7 @@ func IssuesAndChangelogsPage(
 
 // BUG: returned data will have missing start and end date, because we don't pass fieldsByID here
 // Will also be missing story points and epic link
-func IssueByID(qc QueryContext, issueIDOrKey string) (_ IssueWithCustomFields, rerr error) {
+func IssueByIDFieldsForMutation(qc QueryContext, issueIDOrKey string) (_ IssueWithCustomFields, rerr error) {
 	// https://developer.atlassian.com/cloud/jira/platform/rest/v3/#api-rest-api-3-issue-issueIdOrKey-get
 
 	objectPath := "issue/" + issueIDOrKey
@@ -211,7 +213,35 @@ func IssueByID(qc QueryContext, issueIDOrKey string) (_ IssueWithCustomFields, r
 	}
 
 	fieldsByID := map[string]CustomField{}
-	res, err := convertIssue(qc, rr, fieldsByID)
+	res, err := convertIssue(qc, rr, fieldsByID, nil)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	return res, nil
+}
+
+func IssueByIDFull(qc QueryContext, issueIDOrKey string, fieldsByID map[string]CustomField, issueRefIDFromKey IssueRefIDFromKeyFunc) (_ IssueWithCustomFields, rerr error) {
+	// https://developer.atlassian.com/cloud/jira/platform/rest/v3/#api-rest-api-3-issue-issueIdOrKey-get
+
+	objectPath := "issue/" + issueIDOrKey
+
+	params := url.Values{}
+	// we need both fields and renderedFields so that we can get the unprocessed (fields) and processed (html for renderedFields)
+	params.Add("expand", "changelog,renderedFields")
+
+	qc.Logger.Debug("IssueByID issue request", "issue_id_or_key", issueIDOrKey)
+
+	var rr issueSource
+
+	err := qc.Req.Get(objectPath, params, &rr)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	res, err := convertIssue(qc, rr, fieldsByID, issueRefIDFromKey)
 	if err != nil {
 		rerr = err
 		return
@@ -244,7 +274,26 @@ func extractPossibleSprintID(v string) string {
 	return matches[1]
 }
 
-func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]CustomField) (_ IssueWithCustomFields, rerr error) {
+type customFieldIDs struct {
+	StoryPoints string
+	Epic        string
+	StartDate   string
+	EndDate     string
+}
+
+func (s customFieldIDs) missing() (res []string) {
+	if s.StoryPoints == "" {
+		res = append(res, "StoryPoints")
+	}
+	if s.Epic == "" {
+		res = append(res, "Epic")
+	}
+	return
+}
+
+type IssueRefIDFromKeyFunc func(key string) (refID string, _ error)
+
+func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]CustomField, issueRefIDFromKey IssueRefIDFromKeyFunc) (_ IssueWithCustomFields, rerr error) {
 
 	var fields issueFields
 	err := structmarshal.MapToStruct(data.Fields, &fields)
@@ -418,6 +467,27 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 		}
 	}
 
+	customFieldIDs := customFieldIDs{}
+
+	for key, val := range fieldByID {
+		switch val.Name {
+		case "Story Points":
+			customFieldIDs.StoryPoints = key
+		case "Epic Link":
+			customFieldIDs.Epic = key
+		case "Start Date":
+			customFieldIDs.StartDate = key
+		case "End Date":
+			customFieldIDs.EndDate = key
+		}
+	}
+
+	if len(customFieldIDs.missing()) == 0 {
+		qc.Logger.Debug("found all custom field ids")
+	} else {
+		qc.Logger.Warn("some custom field ids were not found", "missing", customFieldIDs.missing())
+	}
+
 	for k, d := range data.Fields {
 		if !strings.HasPrefix(k, "customfield_") {
 			continue
@@ -442,27 +512,51 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 			}
 		}
 
-		if fd.Name == "Start Date" && v != "" {
+		f := CustomFieldValue{}
+		f.ID = fd.ID
+		f.Name = fd.Name
+		f.Value = v
+		item.CustomFields = append(item.CustomFields, f)
+
+		if v == "" {
+			continue
+		}
+		switch fd.ID {
+		case customFieldIDs.StartDate:
 			d, err := ParsePlannedDate(v)
 			if err != nil {
 				qc.Logger.Error("could not parse field %v as date, err: %v", fd.Name, err)
 				continue
 			}
 			date.ConvertToModel(d, &item.PlannedStartDate)
-		} else if fd.Name == "End Date" && v != "" {
+		case customFieldIDs.EndDate:
 			d, err := ParsePlannedDate(v)
 			if err != nil {
 				qc.Logger.Error("could not parse field %v as date, err: %v", fd.Name, err)
 				continue
 			}
 			date.ConvertToModel(d, &item.PlannedEndDate)
+		case customFieldIDs.StoryPoints:
+			// story points can be expressed as fractions or whole numbers so convert it to a float
+			sp, err := strconv.ParseFloat(v, 32)
+			if err != nil {
+				qc.Logger.Error("error parsing Story Point value", "v", v, "err", err, "key", item.Identifier)
+			} else {
+				item.StoryPoints = &sp
+			}
+		case customFieldIDs.Epic:
+			if issueRefIDFromKey == nil {
+				qc.Logger.Error("could not convert epic key to ref id, because issueRefIDFromKey was not passed to convertIssue")
+				continue
+			}
+			refID, err := issueRefIDFromKey(v)
+			if err != nil {
+				qc.Logger.Error("could not convert epic key to ref id", "v", v, "err", err)
+				continue
+			}
+			epicID := qc.IssueID(refID)
+			item.EpicID = &epicID
 		}
-
-		f := CustomFieldValue{}
-		f.ID = fd.ID
-		f.Name = fd.Name
-		f.Value = v
-		item.CustomFields = append(item.CustomFields, f)
 	}
 
 	issueRefID := item.RefID

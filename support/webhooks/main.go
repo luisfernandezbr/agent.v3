@@ -95,6 +95,8 @@ func proxy() {
 		fmt.Println("X-GitHub-Event", r.Header.Get("X-GitHub-Event"))
 		fmt.Println(string(b))
 
+		return
+
 		var data map[string]interface{}
 		err = json.Unmarshal(b, &data)
 		if err != nil {

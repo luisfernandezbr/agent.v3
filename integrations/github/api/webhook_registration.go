@@ -30,7 +30,7 @@ func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, eve
 		return
 	}
 	if noPermissions {
-		rerr = errors.New("no persmissions to list webhooks for repo")
+		rerr = errors.New("no permissions to list webhooks for repo")
 		return
 	}
 
