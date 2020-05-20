@@ -4,9 +4,12 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/pinpt/agent/pkg/ids2"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/work"
 )
+
+var refType = "jira"
 
 func BoardsPage(
 	qc QueryContext,
@@ -42,7 +45,7 @@ func BoardsPage(
 		item := &work.KanbanBoard{}
 		item.CustomerID = qc.CustomerID
 		item.RefID = strconv.FormatInt(data.ID, 10)
-		item.RefType = "jira"
+		item.RefType = refType
 		item.Name = data.Name
 		res = append(res, item)
 	}
@@ -53,8 +56,6 @@ func BoardsPage(
 // BoardColumnsStatuses get board columns and statuses
 func BoardColumnsStatuses(
 	qc QueryContext,
-	projects []string,
-	issueStatuses map[string]map[string]*work.IssueStatus,
 	boardID string,
 ) (res []work.KanbanBoardColumns, _ error) {
 
@@ -83,12 +84,9 @@ func BoardColumnsStatuses(
 		statusIds := make([]string, 0)
 		for _, status := range column.Statuses {
 
-			for _, projectID := range projects {
-				issueStatus, ok := issueStatuses[status.ID][projectID]
-				if ok {
-					statusIds = append(statusIds, issueStatus.ID)
-				}
-			}
+			statusID := ids2.New(qc.CustomerID, refType).WorkProject(status.ID)
+
+			statusIds = append(statusIds, statusID)
 
 		}
 

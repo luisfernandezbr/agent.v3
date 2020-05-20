@@ -100,11 +100,11 @@ func (s Gen) WorkIssueType(refID string) string {
 	return work.NewIssueTypeID(s.customerID, s.refType, refID)
 }
 
-func (s Gen) WorkIssueStatus(refID string, projectID string) string {
+func (s Gen) WorkIssueStatus(refID string) string {
 	if refID == "" {
 		return ""
 	}
-	return work.NewIssueStatusID(s.customerID, s.refType, refID, projectID)
+	return work.NewIssueStatusID(s.customerID, s.refType, refID)
 }
 
 func (s Gen) WorkUser(refID string) string {

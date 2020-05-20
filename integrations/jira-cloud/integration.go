@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"sync"
 
-	"github.com/josecordaz/myagent/pkg/ids"
 	"github.com/pinpt/agent/pkg/ids2"
 
 	"github.com/pinpt/agent/pkg/oauthtoken"
@@ -26,6 +24,8 @@ import (
 
 	pstrings "github.com/pinpt/go-common/strings"
 )
+
+const refType = "jira"
 
 func main() {
 	ibase.MainFunc(func(logger hclog.Logger) rpcdef.Integration {
@@ -216,6 +216,17 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 
 	s.common.SetupUsers()
 
+	issueStatusSender, err := objsender.Root(s.agent, work.IssueStatusModelName.String())
+	if err := s.issueStatus(issueStatusSender); err != nil {
+		rerr = err
+		return
+	}
+	err = issueStatusSender.Done()
+	if err != nil {
+		rerr = err
+		return
+	}
+
 	fields, err := api.FieldsAll(s.qc)
 	if err != nil {
 		rerr = err
@@ -255,9 +266,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		}
 	}
 
-	var issuesStatusProjects sync.Map
-
-	exportProjectResults, err := s.common.IssuesAndChangelogs(projectSender, projects, fieldByID, &issuesStatusProjects)
+	exportProjectResults, err := s.common.IssuesAndChangelogs(projectSender, projects, fieldByID)
 	if err != nil {
 		rerr = err
 		return
@@ -271,19 +280,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		return
 	}
 
-	issueStatusSender, err := objsender.Root(s.agent, work.IssueStatusModelName.String())
-	issueStatus, err := s.issueStatus(issueStatusSender, projects, &issuesStatusProjects)
-	if err != nil {
-		rerr = err
-		return
-	}
-	err = issueStatusSender.Done()
-	if err != nil {
-		rerr = err
-		return
-	}
-
-	if err = s.boards(issueStatus, projects); err != nil {
+	if err = s.boards(projects); err != nil {
 		rerr = err
 		return
 	}
@@ -338,64 +335,39 @@ func (s *Integration) projects() (all []*work.Project, _ error) {
 
 }
 
-func (s *Integration) issueStatus(sender *objsender.Session, projectsFilter []Project, issuesStatusProjects *sync.Map) (res map[string]map[string]*work.IssueStatus, _ error) {
+func (s *Integration) issueStatus(sender *objsender.Session) (_ error) {
 	s.logger.Debug("exporting issue statuses")
-
-	res = make(map[string]map[string]*work.IssueStatus)
 
 	statuses, _, err := jiracommonapi.StatusWithDetail(s.common.CommonQC())
 	if err != nil {
-		return res, err
+		return err
 	}
 
 	if err != nil {
-		return res, err
+		return err
 	}
 	for _, item := range statuses {
 
-		var projectIDS interface{}
-		var ok bool
-		if projectIDS, ok = issuesStatusProjects.Load(item.ID); !ok {
-			continue
+		issueStatus := &work.IssueStatus{
+			CustomerID:  s.qc.CustomerID,
+			Description: item.Description,
+			IconURL:     pstrings.Pointer(item.IconURL),
+			Name:        item.Name,
+			RefID:       item.ID,
+			RefType:     refType,
 		}
 
-		for _, projectIDFilter := range projectsFilter {
-
-			projectIDS := projectIDS.(map[string]bool)
-
-			projectID := ids.WorkProject(s.qc.CustomerID, refType, projectIDFilter.JiraID)
-
-			if _, ok := projectIDS[projectID]; ok {
-				issueStatus := &work.IssueStatus{
-					CustomerID:  s.qc.CustomerID,
-					Description: item.Description,
-					IconURL:     pstrings.Pointer(item.IconURL),
-					Name:        item.Name,
-					RefID:       item.ID,
-					RefType:     refType,
-					ProjectID:   projectID,
-				}
-
-				if res[item.ID] == nil {
-					res[item.ID] = make(map[string]*work.IssueStatus)
-				}
-
-				res[item.ID][projectIDFilter.JiraID] = issueStatus
-
-				err := sender.Send(issueStatus)
-				if err != nil {
-					return res, err
-				}
-			}
-
+		err := sender.Send(issueStatus)
+		if err != nil {
+			return err
 		}
 
 	}
 
-	return res, nil
+	return nil
 }
 
-func (s *Integration) boards(issueStatus map[string]map[string]*work.IssueStatus, projects []Project) error {
+func (s *Integration) boards(projects []Project) error {
 	boardsSender, err := objsender.Root(s.agent, work.KanbanBoardModelName.String())
 	if err != nil {
 		return err
@@ -438,7 +410,7 @@ func (s *Integration) boards(issueStatus map[string]map[string]*work.IssueStatus
 			board.ProjectIds = append(board.ProjectIds, id)
 		}
 
-		boardColumns, err := api.BoardColumnsStatuses(s.qc, projectRefIDs, issueStatus, board.RefID)
+		boardColumns, err := api.BoardColumnsStatuses(s.qc, board.RefID)
 		if err != nil {
 			return err
 		}
@@ -457,8 +429,6 @@ func (s *Integration) boards(issueStatus map[string]map[string]*work.IssueStatus
 
 	return nil
 }
-
-const refType = "jira"
 
 func (s *Integration) allBoards() (all []*work.KanbanBoard, _ error) {
 	return all, jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {

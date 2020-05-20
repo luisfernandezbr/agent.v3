@@ -194,7 +194,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		}
 	}
 
-	exportProjectResults, err := s.common.IssuesAndChangelogs(projectSender, projects, fieldByID, nil)
+	exportProjectResults, err := s.common.IssuesAndChangelogs(projectSender, projects, fieldByID)
 	if err != nil {
 		rerr = err
 		return
