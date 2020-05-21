@@ -1,4 +1,4 @@
-package jiracommonapi
+package commonapi
 
 import (
 	"encoding/json"

@@ -1,11 +1,11 @@
-package jiracommon
+package common
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 
-	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/commonapi"
 	"github.com/pinpt/agent/integrations/pkg/mutate"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/go-common/datamodel"
@@ -15,7 +15,7 @@ import (
 
 func (s *JiraCommon) returnUpdatedIssue(issueRefID string) (res rpcdef.MutateResult, rerr error) {
 	qc := s.CommonQC()
-	issue, err := jiracommonapi.IssueByIDFieldsForMutation(qc, issueRefID)
+	issue, err := commonapi.IssueByIDFieldsForMutation(qc, issueRefID)
 	if err != nil {
 		rerr = err
 		return
@@ -68,7 +68,7 @@ func (s *JiraCommon) Mutate(ctx context.Context, fn, data string, config rpcdef.
 			rerr(err)
 			return
 		}
-		comment, err := jiracommonapi.AddComment(qc, obj.IssueRefID, obj.Body)
+		comment, err := commonapi.AddComment(qc, obj.IssueRefID, obj.Body)
 		if err != nil {
 			rerr(err)
 			return
@@ -84,7 +84,7 @@ func (s *JiraCommon) Mutate(ctx context.Context, fn, data string, config rpcdef.
 			rerr(err)
 			return
 		}
-		err = jiracommonapi.EditTitle(qc, obj.IssueID, obj.Title)
+		err = commonapi.EditTitle(qc, obj.IssueID, obj.Title)
 		if err != nil {
 			rerr(err)
 			return
@@ -101,7 +101,7 @@ func (s *JiraCommon) Mutate(ctx context.Context, fn, data string, config rpcdef.
 			rerr(err)
 			return
 		}
-		err = jiracommonapi.EditStatus(qc, obj.IssueID, obj.TransitionID, obj.Fields)
+		err = commonapi.EditStatus(qc, obj.IssueID, obj.TransitionID, obj.Fields)
 		if err != nil {
 			rerr(err)
 			return
@@ -117,7 +117,7 @@ func (s *JiraCommon) Mutate(ctx context.Context, fn, data string, config rpcdef.
 			rerr(err)
 			return
 		}
-		err = jiracommonapi.EditPriority(qc, obj.IssueID, obj.PriorityID)
+		err = commonapi.EditPriority(qc, obj.IssueID, obj.PriorityID)
 		if err != nil {
 			rerr(err)
 			return
@@ -133,7 +133,7 @@ func (s *JiraCommon) Mutate(ctx context.Context, fn, data string, config rpcdef.
 			rerr(err)
 			return
 		}
-		err = jiracommonapi.AssignUser(qc, obj.IssueID, obj.UserID)
+		err = commonapi.AssignUser(qc, obj.IssueID, obj.UserID)
 		if err != nil {
 			rerr(err)
 			return
@@ -148,7 +148,7 @@ func (s *JiraCommon) Mutate(ctx context.Context, fn, data string, config rpcdef.
 			rerr(err)
 			return
 		}
-		transitions, err := jiracommonapi.GetIssueTransitions(qc, obj.IssueID)
+		transitions, err := commonapi.GetIssueTransitions(qc, obj.IssueID)
 		if err != nil {
 			rerr(err)
 			return

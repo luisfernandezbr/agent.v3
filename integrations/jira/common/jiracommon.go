@@ -1,7 +1,7 @@
-package jiracommon
+package common
 
 import (
-	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/commonapi"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/work"
@@ -13,7 +13,7 @@ type Opts struct {
 	WebsiteURL       string
 	Logger           hclog.Logger
 	CustomerID       string
-	Req              jiracommonapi.Requester
+	Req              commonapi.Requester
 	Agent            rpcdef.Agent
 	ExcludedProjects []string
 	IncludedProjects []string
@@ -50,8 +50,8 @@ func (s *JiraCommon) SetupUsers() error {
 	return err
 }
 
-func (s *JiraCommon) CommonQC() jiracommonapi.QueryContext {
-	res := jiracommonapi.QueryContext{}
+func (s *JiraCommon) CommonQC() commonapi.QueryContext {
+	res := commonapi.QueryContext{}
 	res.WebsiteURL = s.opts.WebsiteURL
 	res.CustomerID = s.opts.CustomerID
 	res.Logger = s.opts.Logger

@@ -1,4 +1,4 @@
-package jiracommonapi
+package commonapi
 
 import (
 	ps "github.com/pinpt/go-common/strings"

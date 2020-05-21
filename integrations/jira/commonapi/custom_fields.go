@@ -1,4 +1,4 @@
-package jiracommonapi
+package commonapi
 
 type CustomField struct {
 	ID   string

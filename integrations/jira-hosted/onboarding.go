@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/pinpt/agent/integrations/jira-hosted/api"
-	"github.com/pinpt/agent/integrations/jira/jiracommon"
+	"github.com/pinpt/agent/integrations/jira/common"
 	"github.com/pinpt/agent/rpcdef"
 )
 
@@ -47,5 +47,5 @@ func (s *Integration) onboardWorkConfig(ctx context.Context, config rpcdef.Expor
 		return res, err
 	}
 
-	return jiracommon.GetWorkConfig(s.qc.Common())
+	return common.GetWorkConfig(s.qc.Common())
 }

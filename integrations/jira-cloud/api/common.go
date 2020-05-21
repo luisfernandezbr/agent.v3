@@ -2,14 +2,14 @@ package api
 
 import (
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/commonapi"
 )
 
 type QueryContext struct {
 	WebsiteURL string
 	Logger     hclog.Logger
 	CustomerID string
-	Req        jiracommonapi.Requester
+	Req        commonapi.Requester
 }
 
 type PageInfo struct {
@@ -18,8 +18,8 @@ type PageInfo struct {
 	HasMore    bool
 }
 
-func (s *QueryContext) Common() jiracommonapi.QueryContext {
-	res := jiracommonapi.QueryContext{}
+func (s *QueryContext) Common() commonapi.QueryContext {
+	res := commonapi.QueryContext{}
 	res.WebsiteURL = s.WebsiteURL
 	res.CustomerID = s.CustomerID
 	res.Logger = s.Logger

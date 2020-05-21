@@ -1,17 +1,17 @@
-package jiracommon
+package common
 
 import (
-	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/commonapi"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/agent"
 )
 
 // GetWorkConfig will return the default jira work config
-func GetWorkConfig(qc jiracommonapi.QueryContext) (res rpcdef.OnboardExportResult, _ error) {
+func GetWorkConfig(qc commonapi.QueryContext) (res rpcdef.OnboardExportResult, _ error) {
 
 	var ws agent.WorkStatusResponseWorkConfig
 
-	statusDetail, _, err := jiracommonapi.StatusWithDetail(qc)
+	statusDetail, _, err := commonapi.StatusWithDetail(qc)
 	if err != nil {
 		res.Error = err
 		return
@@ -23,7 +23,7 @@ func GetWorkConfig(qc jiracommonapi.QueryContext) (res rpcdef.OnboardExportResul
 	return
 }
 
-func appendStaticInfo(ws *agent.WorkStatusResponseWorkConfig, statuses []jiracommonapi.StatusDetail) {
+func appendStaticInfo(ws *agent.WorkStatusResponseWorkConfig, statuses []commonapi.StatusDetail) {
 	ws.Statuses = agent.WorkStatusResponseWorkConfigStatuses{}
 	found := make(map[string]bool)
 	for _, status := range statuses {

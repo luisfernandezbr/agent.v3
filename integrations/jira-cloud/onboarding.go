@@ -5,8 +5,8 @@ import (
 	"net/url"
 
 	"github.com/pinpt/agent/integrations/jira-cloud/api"
-	"github.com/pinpt/agent/integrations/jira/jiracommon"
-	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/common"
+	"github.com/pinpt/agent/integrations/jira/commonapi"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/agent"
 )
@@ -32,7 +32,7 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 	}
 
 	var projects []agent.ProjectResponseProjects
-	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
+	err = commonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
 		pi, sub, err := api.ProjectsOnboardPage(s.qc, paginationParams)
 		if err != nil {
 			rerr = err
@@ -64,5 +64,5 @@ func (s *Integration) onboardWorkConfig(ctx context.Context, config rpcdef.Expor
 		return res, err
 	}
 
-	return jiracommon.GetWorkConfig(s.qc.Common())
+	return common.GetWorkConfig(s.qc.Common())
 }

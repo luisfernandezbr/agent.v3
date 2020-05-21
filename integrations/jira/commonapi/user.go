@@ -1,4 +1,4 @@
-package jiracommonapi
+package commonapi
 
 type User struct {
 	// AccountID not available in hosted jira.

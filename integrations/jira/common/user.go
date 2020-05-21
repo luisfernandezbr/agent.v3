@@ -1,10 +1,10 @@
-package jiracommon
+package common
 
 import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/commonapi"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/pkg/ids"
 	"github.com/pinpt/agent/rpcdef"
@@ -32,7 +32,7 @@ func NewUsers(logger hclog.Logger, customerID string, agent rpcdef.Agent, websit
 }
 
 // Export user is safe for concurrent use
-func (s *Users) ExportUser(user jiracommonapi.User) error {
+func (s *Users) ExportUser(user commonapi.User) error {
 	customerID := s.customerID
 	pk := user.RefID()
 	/*

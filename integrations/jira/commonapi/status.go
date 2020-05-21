@@ -1,4 +1,4 @@
-package jiracommonapi
+package commonapi
 
 type StatusDetail struct {
 	Name           string `json:"name"`

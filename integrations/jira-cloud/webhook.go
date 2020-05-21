@@ -6,8 +6,8 @@ import (
 	"errors"
 
 	"github.com/pinpt/agent/integrations/jira-cloud/api"
-	"github.com/pinpt/agent/integrations/jira/jiracommon"
-	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/common"
+	"github.com/pinpt/agent/integrations/jira/commonapi"
 	"github.com/pinpt/integration-sdk/work"
 
 	"github.com/pinpt/agent/integrations/pkg/objsender"
@@ -81,15 +81,15 @@ func (s *Integration) webhookGetUpdatedIssue(sessions *objsender.SessionsWebhook
 	if err != nil {
 		return err
 	}
-	fieldByID := map[string]jiracommonapi.CustomField{}
+	fieldByID := map[string]commonapi.CustomField{}
 	for _, f := range fields {
 		fieldByID[f.ID] = f
 	}
-	issueResolver := jiracommon.NewIssueResolver(s.qc.Common())
+	issueResolver := common.NewIssueResolver(s.qc.Common())
 
 	userSender := sessions.NewSession(work.UserModelName.String())
 
-	users, err := jiracommon.NewUsers(s.logger, s.qc.CustomerID, s.agent, s.qc.WebsiteURL, userSender)
+	users, err := common.NewUsers(s.logger, s.qc.CustomerID, s.agent, s.qc.WebsiteURL, userSender)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (s *Integration) webhookGetUpdatedIssue(sessions *objsender.SessionsWebhook
 	qcCommon.ExportUser = users.ExportUser
 
 	s.logger.Info("getting issue data", "id", issueIDOrKey)
-	obj, err := jiracommonapi.IssueByIDFull(qcCommon, issueIDOrKey, fieldByID, issueResolver.IssueRefIDFromKey)
+	obj, err := commonapi.IssueByIDFull(qcCommon, issueIDOrKey, fieldByID, issueResolver.IssueRefIDFromKey)
 	if err != nil {
 		return err
 	}

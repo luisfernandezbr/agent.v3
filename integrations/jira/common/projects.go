@@ -1,4 +1,4 @@
-package jiracommon
+package common
 
 import (
 	"github.com/pinpt/integration-sdk/work"

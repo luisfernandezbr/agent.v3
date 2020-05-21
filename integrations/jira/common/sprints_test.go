@@ -1,4 +1,4 @@
-package jiracommon
+package common
 
 import (
 	"testing"

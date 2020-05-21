@@ -1,4 +1,4 @@
-package jiracommon
+package common
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
-	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/commonapi"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 	"github.com/pinpt/agent/pkg/date"
@@ -16,7 +16,7 @@ import (
 )
 
 type Project struct {
-	jiracommonapi.Project
+	commonapi.Project
 }
 
 func (s Project) GetID() string {
@@ -43,7 +43,7 @@ func projectsToChan(projects []Project) chan Project {
 func (s *JiraCommon) IssuesAndChangelogs(
 	projectSender *objsender.Session,
 	projects []Project,
-	fieldByID map[string]jiracommonapi.CustomField) (_ []rpcdef.ExportProject, rerr error) {
+	fieldByID map[string]commonapi.CustomField) (_ []rpcdef.ExportProject, rerr error) {
 
 	projectSender.SetNoAutoProgress(true)
 	projectSender.SetTotal(len(projects))
@@ -125,11 +125,11 @@ func (s *JiraCommon) IssuesAndChangelogs(
 }
 
 type IssueResolver struct {
-	qc    jiracommonapi.QueryContext
+	qc    commonapi.QueryContext
 	cache map[string]string
 }
 
-func NewIssueResolver(qc jiracommonapi.QueryContext) *IssueResolver {
+func NewIssueResolver(qc commonapi.QueryContext) *IssueResolver {
 	s := &IssueResolver{}
 	s.qc = qc
 	s.cache = map[string]string{}
@@ -153,7 +153,7 @@ func (s *IssueResolver) issueRefIDFromKeyNoCache(key string) (refID string, rerr
 	if key == "" {
 		return "", errors.New("empty refID passed to IssueRefIDFromKey")
 	}
-	keys, err := jiracommonapi.GetIssueKeys(s.qc, key)
+	keys, err := commonapi.GetIssueKeys(s.qc, key)
 	if err != nil {
 		rerr = fmt.Errorf("could not query issue: %v", err)
 		return
@@ -165,7 +165,7 @@ func (s *IssueResolver) issueRefIDFromKeyNoCache(key string) (refID string, rerr
 func (s *JiraCommon) issuesAndChangelogsForProject(
 	ctx *repoprojects.ProjectCtx,
 	project Project,
-	fieldByID map[string]jiracommonapi.CustomField,
+	fieldByID map[string]commonapi.CustomField,
 	sprints *Sprints) error {
 
 	logger := s.opts.Logger
@@ -180,8 +180,8 @@ func (s *JiraCommon) issuesAndChangelogsForProject(
 		return err
 	}
 
-	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
-		pi, resIssues, err := jiracommonapi.IssuesAndChangelogsPage(qc, project.Project, fieldByID, senderIssues.LastProcessedTime(), paginationParams, issueResolver.IssueRefIDFromKey)
+	err = commonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
+		pi, resIssues, err := commonapi.IssuesAndChangelogsPage(qc, project.Project, fieldByID, senderIssues.LastProcessedTime(), paginationParams, issueResolver.IssueRefIDFromKey)
 		if err != nil {
 			rerr = err
 			return
@@ -243,8 +243,8 @@ func (s *JiraCommon) exportIssueComments(
 		return err
 	}
 
-	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
-		pi, res, err := jiracommonapi.IssueComments(s.CommonQC(), project.Project, issueRefID, issueKey, paginationParams)
+	err = commonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
+		pi, res, err := commonapi.IssueComments(s.CommonQC(), project.Project, issueRefID, issueKey, paginationParams)
 		if err != nil {
 			rerr = err
 			return
@@ -268,7 +268,7 @@ func (s *JiraCommon) exportIssueComments(
 func (s *JiraCommon) IssueTypes(sender *objsender.Session) error {
 	s.opts.Logger.Debug("exporting issue types")
 
-	res, err := jiracommonapi.IssueTypes(s.CommonQC())
+	res, err := commonapi.IssueTypes(s.CommonQC())
 	if err != nil {
 		return err
 	}
@@ -285,7 +285,7 @@ func (s *JiraCommon) IssueTypes(sender *objsender.Session) error {
 func (s *JiraCommon) IssuePriorities(sender *objsender.Session) error {
 	s.opts.Logger.Debug("exporting issue priorities")
 
-	res, err := jiracommonapi.Priorities(s.CommonQC())
+	res, err := commonapi.Priorities(s.CommonQC())
 	if err != nil {
 		return err
 	}

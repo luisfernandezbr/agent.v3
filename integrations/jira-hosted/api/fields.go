@@ -1,10 +1,10 @@
 package api
 
 import (
-	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/commonapi"
 )
 
-func FieldsAll(qc QueryContext) (res []jiracommonapi.CustomField, rerr error) {
+func FieldsAll(qc QueryContext) (res []commonapi.CustomField, rerr error) {
 
 	objectPath := "field"
 
@@ -22,7 +22,7 @@ func FieldsAll(qc QueryContext) (res []jiracommonapi.CustomField, rerr error) {
 	}
 
 	for _, data := range rr {
-		item := jiracommonapi.CustomField{}
+		item := commonapi.CustomField{}
 		item.ID = data.ID
 		item.Name = data.Name
 		res = append(res, item)
