@@ -32,13 +32,9 @@ func TestJSON(t *testing.T) {
 		A int `json:"a"`
 	}
 	var res []obj
-	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
-	req.SetBasicAuth("u", "p")
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := Request{URL: server.URL, BasicAuthUser: "u", BasicAuthPassword: "p"}
 
-	_, err = r.JSON(req, &res)
+	_, err := r.JSON(req, &res)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/pinpt/agent/pkg/requests"
-	pstrings "github.com/pinpt/go-common/strings"
 )
 
 // Org contains the data needed for exporting other resources depending on it
@@ -81,36 +80,24 @@ func OrgsEnterpriseAll(qc QueryContext) (res []Org, rerr error) {
 }
 
 func OrgsEnterprisePage(qc QueryContext, u string) (res []Org, header http.Header, rerr error) {
-	if u == "" {
-		u = pstrings.JoinURL(qc.APIURL3, "organizations")
+	// This is not necessary in certain server configurations. But in some it's required use token for this
+	req := newRestRequest(qc, "organizations")
+	if u != "" {
+		req.URL = u
 	}
-
-	req, err := http.NewRequest(http.MethodGet, u, nil)
-	if err != nil {
-		rerr = err
-		return
-	}
-
-	// This is not necessary in certain server configurations.
-	req.Header.Set("Authorization", "token "+qc.AuthToken)
-
 	var respJSON []struct {
 		Login string `json:"login"`
 	}
-
 	reqs := requests.New(qc.Logger, qc.Clients.TLSInsecure)
-
 	resp, err := reqs.JSON(req, &respJSON)
 	if err != nil {
 		rerr = err
 		return
 	}
-
 	for _, data := range respJSON {
 		item := Org{}
 		item.Login = data.Login
 		res = append(res, item)
 	}
-
-	return res, resp.Header, nil
+	return res, resp.Resp.Header, nil
 }

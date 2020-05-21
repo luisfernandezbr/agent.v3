@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pinpt/agent/pkg/requests2"
+	"github.com/pinpt/agent/pkg/requests"
 	pstrings "github.com/pinpt/go-common/strings"
 )
 
@@ -103,9 +103,9 @@ type webhook struct {
 }
 
 func WebhookList(qc QueryContext, repo Repo) (res []webhook, noPermissions bool, rerr error) {
-	reqs := requests2.New(qc.Logger, qc.Clients.TLSInsecure)
+	reqs := requests.New(qc.Logger, qc.Clients.TLSInsecure)
 
-	req := requests2.Request{}
+	req := requests.Request{}
 	req.Method = "GET"
 	req.URL = pstrings.JoinURL(qc.APIURL3, "repos", repo.NameWithOwner, "hooks")
 	req.Header = http.Header{}
@@ -143,9 +143,9 @@ func webhookCreate(qc QueryContext, repo Repo, webhookURL string, events []strin
 	data.Config.ContentType = "json"
 	data.Config.InsecureSSL = "0"
 
-	reqs := requests2.New(qc.Logger, qc.Clients.TLSInsecure)
+	reqs := requests.New(qc.Logger, qc.Clients.TLSInsecure)
 
-	req := requests2.Request{}
+	req := requests.Request{}
 	req.Method = "POST"
 	req.URL = pstrings.JoinURL(qc.APIURL3, "repos", repo.NameWithOwner, "hooks")
 	req.Header = http.Header{}
@@ -170,9 +170,9 @@ func webhookCreate(qc QueryContext, repo Repo, webhookURL string, events []strin
 func webhookRemove(qc QueryContext, repo Repo, hookID int) error {
 	qc.Logger.Info("removing webhook", "repo", repo.NameWithOwner, "hook_id", hookID)
 
-	reqs := requests2.New(qc.Logger, qc.Clients.TLSInsecure)
+	reqs := requests.New(qc.Logger, qc.Clients.TLSInsecure)
 
-	req := requests2.Request{}
+	req := requests.Request{}
 	req.Method = "DELETE"
 	req.URL = pstrings.JoinURL(qc.APIURL3, "repos", repo.NameWithOwner, "hooks", strconv.Itoa(hookID))
 	req.Header = http.Header{}

@@ -3,7 +3,7 @@ package mutate
 import (
 	"net/http"
 
-	"github.com/pinpt/agent/pkg/requests2"
+	"github.com/pinpt/agent/pkg/requests"
 	"github.com/pinpt/agent/rpcdef"
 	"golang.org/x/exp/errors"
 )
@@ -29,7 +29,7 @@ type AllowedValue struct {
 const ErrNotFound = "not_found"
 
 func ResultFromError(err error) (res rpcdef.MutateResult) {
-	var e requests2.StatusCodeError
+	var e requests.StatusCodeError
 	if errors.As(err, &e) && e.Got == http.StatusNotFound {
 		res.ErrorCode = ErrNotFound
 	}

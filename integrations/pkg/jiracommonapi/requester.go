@@ -3,7 +3,7 @@ package jiracommonapi
 import (
 	"net/url"
 
-	"github.com/pinpt/agent/pkg/requests2"
+	"github.com/pinpt/agent/pkg/requests"
 )
 
 type Requester interface {
@@ -12,7 +12,7 @@ type Requester interface {
 	Get2(objPath string, params url.Values, res interface{}) (statusCode int, _ error)
 
 	// JSON supports more configuration of request params
-	JSON(req requests2.Request, res interface{}) (_ requests2.Result, rerr error)
+	JSON(req requests.Request, res interface{}) (_ requests.Result, rerr error)
 
 	URL(objPath string) string
 }

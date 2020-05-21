@@ -3,29 +3,20 @@ package api
 import (
 	"context"
 	"errors"
-	"net/http"
 	"strings"
-
-	pstrings "github.com/pinpt/go-common/strings"
 
 	"github.com/pinpt/agent/pkg/requests"
 )
 
 func TokenScopes(qc QueryContext) (scopes []string, rerr error) {
-	u := pstrings.JoinURL(qc.APIURL3, "rate_limit")
-	req, err := http.NewRequest(http.MethodGet, u, nil)
-	if err != nil {
-		rerr = err
-		return
-	}
-	req.Header.Set("Authorization", "token "+qc.AuthToken)
+	req := newRestRequest(qc, "rate_limit")
 	reqs := requests.New(qc.Logger, qc.Clients.TLSInsecure)
-	resp, _, err := reqs.Do(context.TODO(), req)
+	resp, err := reqs.Do(context.TODO(), req)
 	if err != nil {
 		rerr = err
 		return
 	}
-	scopesHeader := resp.Header.Get("X-OAuth-Scopes")
+	scopesHeader := resp.Resp.Header.Get("X-OAuth-Scopes")
 	if scopesHeader == "" {
 		rerr = errors.New("X-OAuth-Scopes is empty")
 		return

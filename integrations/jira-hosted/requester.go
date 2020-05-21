@@ -1,12 +1,10 @@
 package main
 
 import (
-	"net/http"
 	"net/url"
 
 	"github.com/pinpt/agent/pkg/reqstats"
 	"github.com/pinpt/agent/pkg/requests"
-	"github.com/pinpt/agent/pkg/requests2"
 	pstrings "github.com/pinpt/go-common/strings"
 
 	"github.com/hashicorp/go-hclog"
@@ -48,44 +46,26 @@ func (s *Requester) Get2(objPath string, params url.Values, res interface{}) (st
 }
 
 func (s *Requester) get(objPath string, params url.Values, res interface{}) (statusCode int, rerr error) {
-
+	req := requests.NewRequest()
 	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
 	if len(params) != 0 {
 		u += "?" + params.Encode()
 	}
+	req.URL = u
+	resp, err := s.JSON(req, res)
+	if resp.Resp != nil {
+		statusCode = resp.Resp.StatusCode
+	}
+	rerr = err
+	return
+}
+
+func (s *Requester) JSON(req requests.Request, res interface{}) (resp requests.Result, rerr error) {
 	var reqs requests.Requests
 	if s.opts.RetryRequests {
 		reqs = requests.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
 	} else {
 		reqs = requests.New(s.logger, s.opts.Clients.TLSInsecure)
-	}
-
-	req, err := http.NewRequest(http.MethodGet, u, nil)
-	if err != nil {
-		rerr = err
-		return
-	}
-
-	req.SetBasicAuth(s.opts.Username, s.opts.Password)
-
-	resp, err := reqs.JSON(req, res)
-	if resp != nil {
-		statusCode = resp.StatusCode
-	}
-	if err != nil {
-		rerr = err
-		return
-	}
-
-	return
-}
-
-func (s *Requester) JSON(req requests2.Request, res interface{}) (resp requests2.Result, rerr error) {
-	var reqs requests2.Requests
-	if s.opts.RetryRequests {
-		reqs = requests2.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
-	} else {
-		reqs = requests2.New(s.logger, s.opts.Clients.TLSInsecure)
 	}
 
 	req.BasicAuthUser = s.opts.Username
