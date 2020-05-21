@@ -1,4 +1,4 @@
-package jiracommonapi
+package commonapi
 
 func ServerVersion(qc QueryContext) (serverVersion string, err error) {
 

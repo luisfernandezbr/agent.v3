@@ -1,11 +1,11 @@
-package jiracommon
+package common
 
 import (
 	"encoding/json"
 	"io/ioutil"
 	"testing"
 
-	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/commonapi"
 	"github.com/pinpt/integration-sdk/agent"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,7 +14,7 @@ func TestDefaultStatusStates(t *testing.T) {
 	assert := assert.New(t)
 	buf, err := ioutil.ReadFile("./testdata/status.json")
 	assert.NoError(err)
-	var statuses []jiracommonapi.StatusDetail
+	var statuses []commonapi.StatusDetail
 	assert.NoError(json.Unmarshal(buf, &statuses))
 	assert.NotEmpty(statuses)
 	var wc agent.WorkStatusResponseWorkConfig

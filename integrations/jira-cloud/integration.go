@@ -12,9 +12,9 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/jira-cloud/api"
+	"github.com/pinpt/agent/integrations/jira/common"
+	"github.com/pinpt/agent/integrations/jira/commonapi"
 	"github.com/pinpt/agent/integrations/pkg/ibase"
-	"github.com/pinpt/agent/integrations/pkg/jiracommon"
-	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/rpcdef"
 	pjson "github.com/pinpt/go-common/json"
@@ -30,10 +30,10 @@ func main() {
 type Integration struct {
 	logger hclog.Logger
 	agent  rpcdef.Agent
-	config jiracommon.Config
+	config common.Config
 	qc     api.QueryContext
 
-	common *jiracommon.JiraCommon
+	common *common.JiraCommon
 
 	UseOAuth      bool
 	clientManager *reqstats.ClientManager
@@ -51,7 +51,7 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	return nil
 }
 
-func setConfig(config rpcdef.ExportConfig) (res jiracommon.Config, rerr error) {
+func setConfig(config rpcdef.ExportConfig) (res common.Config, rerr error) {
 
 	data := config.Integration
 	validationErr := func(msg string, args ...interface{}) {
@@ -155,7 +155,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 	s.qc.CustomerID = config.Pinpoint.CustomerID
 	s.qc.Logger = s.logger
 
-	s.common, err = jiracommon.New(jiracommon.Opts{
+	s.common, err = common.New(common.Opts{
 		WebsiteURL:       s.qc.WebsiteURL,
 		Logger:           s.logger,
 		CustomerID:       config.Pinpoint.CustomerID,
@@ -185,7 +185,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	err = jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
+	err = commonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
 		_, _, err := api.ProjectsPage(s.qc, paginationParams)
 		if err != nil {
 			return false, 10, err
@@ -216,7 +216,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		return
 	}
 
-	fieldByID := map[string]jiracommonapi.CustomField{}
+	fieldByID := map[string]commonapi.CustomField{}
 	for _, f := range fields {
 		fieldByID[f.ID] = f
 	}
@@ -296,10 +296,10 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	return res, nil
 }
 
-type Project = jiracommon.Project
+type Project = common.Project
 
 func (s *Integration) projects() (all []*work.Project, _ error) {
-	return all, jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
+	return all, commonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
 		pi, res, err := api.ProjectsPage(s.qc, paginationParams)
 		if err != nil {
 			return false, 0, err

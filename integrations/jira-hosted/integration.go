@@ -8,8 +8,8 @@ import (
 	"github.com/pinpt/agent/pkg/structmarshal"
 	pjson "github.com/pinpt/go-common/json"
 
-	"github.com/pinpt/agent/integrations/pkg/jiracommon"
-	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/common"
+	"github.com/pinpt/agent/integrations/jira/commonapi"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 
 	"github.com/hashicorp/go-hclog"
@@ -28,10 +28,10 @@ func main() {
 type Integration struct {
 	logger hclog.Logger
 	agent  rpcdef.Agent
-	config jiracommon.Config
+	config common.Config
 	qc     api.QueryContext
 
-	common *jiracommon.JiraCommon
+	common *common.JiraCommon
 
 	clientManager *reqstats.ClientManager
 	clients       reqstats.Clients
@@ -48,7 +48,7 @@ func (s *Integration) Init(agent rpcdef.Agent) error {
 	return nil
 }
 
-func ConfigFromMap(data rpcdef.IntegrationConfig) (res jiracommon.Config, rerr error) {
+func ConfigFromMap(data rpcdef.IntegrationConfig) (res common.Config, rerr error) {
 
 	validationErr := func(msg string, args ...interface{}) {
 		rerr = fmt.Errorf("config validation error: "+msg+"  "+pjson.Stringify(data.Config), args...)
@@ -104,7 +104,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 		s.qc.Req = requester
 	}
 
-	s.common, err = jiracommon.New(jiracommon.Opts{
+	s.common, err = common.New(common.Opts{
 		WebsiteURL:       s.config.URL,
 		Logger:           s.logger,
 		CustomerID:       config.Pinpoint.CustomerID,
@@ -134,7 +134,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	version, err := jiracommonapi.ServerVersion(s.qc.Common())
+	version, err := commonapi.ServerVersion(s.qc.Common())
 	if err != nil {
 		rerr(err)
 		return
@@ -151,7 +151,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 	return
 }
 
-type Project = jiracommon.Project
+type Project = common.Project
 
 func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (res rpcdef.ExportResult, rerr error) {
 	err := s.initWithConfig(config, true)
@@ -167,7 +167,7 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		return
 	}
 
-	fieldByID := map[string]jiracommonapi.CustomField{}
+	fieldByID := map[string]commonapi.CustomField{}
 	for _, f := range fields {
 		fieldByID[f.ID] = f
 	}

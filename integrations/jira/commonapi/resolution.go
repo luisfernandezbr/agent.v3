@@ -1,4 +1,4 @@
-package jiracommonapi
+package commonapi
 
 func Resolution(qc QueryContext) (res []string, rerr error) {
 

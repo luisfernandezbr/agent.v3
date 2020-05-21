@@ -1,4 +1,4 @@
-package jiracommonapi
+package commonapi
 
 func Labels(qc QueryContext) (res []string, rerr error) {
 

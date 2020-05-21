@@ -1,4 +1,4 @@
-package jiracommon
+package common
 
 type Config struct {
 	URL      string `json:"url"`
