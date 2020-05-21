@@ -10,11 +10,14 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/date"
+	"github.com/pinpt/agent/pkg/ids2"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/go-common/datetime"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/work"
 )
+
+const refType = "jira"
 
 type CustomFieldValue struct {
 	ID    string
@@ -93,6 +96,7 @@ type issueFields struct {
 	} `json:"issuetype"`
 	Status struct {
 		Name string `json:"name"`
+		ID   string `json:"id"`
 	} `json:"status"`
 	Resolution struct {
 		Name string `json:"name"`
@@ -347,11 +351,14 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 	}
 	date.ConvertToModel(updated, &item.UpdatedDate)
 
+	ids := ids2.New(qc.CustomerID, refType)
+
 	item.Priority = fields.Priority.Name
-	item.PriorityID = work.NewIssuePriorityID(qc.CustomerID, "jira", fields.Priority.ID)
+	item.PriorityID = ids.WorkIssuePriority(fields.Priority.ID)
 	item.Type = fields.IssueType.Name
-	item.TypeID = work.NewIssueTypeID(qc.CustomerID, "jira", fields.IssueType.ID)
+	item.TypeID = ids.WorkIssueType(fields.IssueType.ID)
 	item.Status = fields.Status.Name
+	item.StatusID = ids.WorkIssueStatus(fields.Status.ID)
 	item.Resolution = fields.Resolution.Name
 
 	if !fields.Creator.IsZero() {
