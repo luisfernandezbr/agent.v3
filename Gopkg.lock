@@ -264,14 +264,6 @@
   revision = "c2b33e84"
 
 [[projects]]
-  digest = "1:e5a25723381c750a49bc13edc562276ee87fb6a7f79cf1a685410c49e889ac5a"
-  name = "github.com/josecordaz/myagent"
-  packages = ["integrations/pkg/jiracommonapi"]
-  pruneopts = "T"
-  revision = "49c3b3a4cd307bf46099773b871bb29f76ef8bc1"
-  version = "v3.1.10"
-
-[[projects]]
   branch = "master"
   digest = "1:3c00e65f6338649c86854cbf371bb1c30270bcce47deb246ae07a84c9e855bbb"
   name = "github.com/kardianos/service"
@@ -788,7 +780,6 @@
     "github.com/golang/protobuf/proto",
     "github.com/hashicorp/go-hclog",
     "github.com/hashicorp/go-plugin",
-    "github.com/josecordaz/myagent/integrations/pkg/jiracommonapi",
     "github.com/kardianos/service",
     "github.com/mitchellh/go-homedir",
     "github.com/mitchellh/go-ps",

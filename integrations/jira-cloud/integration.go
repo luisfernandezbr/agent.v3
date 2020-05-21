@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/josecordaz/myagent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/pkg/ids2"
 	"github.com/pinpt/agent/pkg/oauthtoken"
 	"github.com/pinpt/agent/pkg/reqstats"
@@ -430,7 +429,7 @@ func (s *Integration) boards(projects []Project) error {
 }
 
 func (s *Integration) allBoards() (all []*work.KanbanBoard, _ error) {
-	return all, jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
+	return all, commonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
 		pi, res, err := api.BoardsPage(s.qc, paginationParams)
 		if err != nil {
 			return false, 0, err
@@ -444,7 +443,7 @@ func (s *Integration) allBoards() (all []*work.KanbanBoard, _ error) {
 }
 
 func (s *Integration) allProjectsList(boardID string) (all []string, _ error) {
-	return all, jiracommonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
+	return all, commonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
 		pi, res, err := api.BoardProjectListPage(boardID, s.qc, paginationParams)
 		if err != nil {
 			return false, 0, err
