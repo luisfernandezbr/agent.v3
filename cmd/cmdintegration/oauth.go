@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/pinpt/agent/pkg/requests2"
+
 	"github.com/pinpt/agent/pkg/expin"
-	"github.com/pinpt/agent/pkg/requests"
 	"github.com/pinpt/go-common/api"
 )
 
@@ -24,7 +25,7 @@ func oauthIntegrationNameToBackend(name string) string {
 	}
 }
 
-func (s *Command) OAuthNewAccessTokenFromRefreshToken(integrationName string, refresh string) (accessToken string, _ error) {
+func (s *Command) OAuthNewAccessTokenFromRefreshToken(integrationName string, refresh string) (accessToken string, rerr error) {
 	authAPIBase := api.BackendURL(api.AuthService, s.EnrollConf.Channel)
 
 	// need oauth integration name
@@ -36,16 +37,13 @@ func (s *Command) OAuthNewAccessTokenFromRefreshToken(integrationName string, re
 		AccessToken string `json:"access_token"`
 	}
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req := requests2.NewRequest()
+	req.URL = url
+	reqs := requests2.New(s.Logger, http.DefaultClient)
+	_, err := reqs.JSON(req, res)
 	if err != nil {
-		return "", fmt.Errorf("could not create a url to get a new oauth token from pinpoint backend, err: %v", err)
-	}
-
-	reqs := requests.New(s.Logger, http.DefaultClient)
-
-	_, err = reqs.JSON(req, &res)
-	if err != nil {
-		return "", fmt.Errorf("could not get new oauth token from pinpoint backend, err %v", err)
+		rerr = fmt.Errorf("could not get new oauth token from pinpoint backend, err %v", err)
+		return
 	}
 
 	return res.AccessToken, nil

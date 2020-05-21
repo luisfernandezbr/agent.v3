@@ -1,11 +1,9 @@
 package main
 
 import (
-	"net/http"
 	"net/url"
 
 	"github.com/pinpt/agent/pkg/reqstats"
-	"github.com/pinpt/agent/pkg/requests"
 	"github.com/pinpt/agent/pkg/requests2"
 	pstrings "github.com/pinpt/go-common/strings"
 
@@ -48,35 +46,17 @@ func (s *Requester) Get2(objPath string, params url.Values, res interface{}) (st
 }
 
 func (s *Requester) get(objPath string, params url.Values, res interface{}) (statusCode int, rerr error) {
-
+	req := requests2.NewRequest()
 	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
 	if len(params) != 0 {
 		u += "?" + params.Encode()
 	}
-	var reqs requests.Requests
-	if s.opts.RetryRequests {
-		reqs = requests.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
-	} else {
-		reqs = requests.New(s.logger, s.opts.Clients.TLSInsecure)
+	req.URL = u
+	resp, err := s.JSON(req, res)
+	if resp.Resp != nil {
+		statusCode = resp.Resp.StatusCode
 	}
-
-	req, err := http.NewRequest(http.MethodGet, u, nil)
-	if err != nil {
-		rerr = err
-		return
-	}
-
-	req.SetBasicAuth(s.opts.Username, s.opts.Password)
-
-	resp, err := reqs.JSON(req, res)
-	if resp != nil {
-		statusCode = resp.StatusCode
-	}
-	if err != nil {
-		rerr = err
-		return
-	}
-
+	rerr = err
 	return
 }
 

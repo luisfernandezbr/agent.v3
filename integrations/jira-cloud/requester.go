@@ -7,7 +7,6 @@ import (
 
 	"github.com/pinpt/agent/pkg/oauthtoken"
 	"github.com/pinpt/agent/pkg/reqstats"
-	"github.com/pinpt/agent/pkg/requests"
 	"github.com/pinpt/agent/pkg/requests2"
 	pstrings "github.com/pinpt/go-common/strings"
 
@@ -50,51 +49,17 @@ func (s *Requester) Get2(objPath string, params url.Values, res interface{}) (st
 }
 
 func (s *Requester) get(objPath string, params url.Values, res interface{}, maxOAuthRetries int) (statusCode int, rerr error) {
+	req := requests2.NewRequest()
 	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
 	if len(params) != 0 {
 		u += "?" + params.Encode()
 	}
-	var reqs requests.Requests
-	if s.opts.RetryRequests {
-		reqs = requests.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
-	} else {
-		reqs = requests.New(s.logger, s.opts.Clients.TLSInsecure)
+	req.URL = u
+	resp, err := s.json(req, res, maxOAuthRetries)
+	if resp.Resp != nil {
+		statusCode = resp.Resp.StatusCode
 	}
-	req, err := http.NewRequest(http.MethodGet, u, nil)
-	if err != nil {
-		rerr = err
-		return
-	}
-
-	if s.opts.OAuthToken != nil {
-		req.Header.Set("Authorization", "Bearer "+s.opts.OAuthToken.Get())
-	} else {
-		req.SetBasicAuth(s.opts.Username, s.opts.Password)
-	}
-
-	resp, err := reqs.JSON(req, res)
-	if resp != nil {
-		statusCode = resp.StatusCode
-	}
-	if s.opts.OAuthToken != nil {
-		if resp != nil && resp.StatusCode == 401 {
-			if maxOAuthRetries == 0 {
-				rerr = fmt.Errorf("received error 401 after retrying with new oauth token, path: %v", objPath)
-				return
-			}
-			err := s.opts.OAuthToken.Refresh()
-			if err != nil {
-				rerr = err
-				return
-			}
-			return s.get(objPath, params, res, maxOAuthRetries-1)
-		}
-	}
-	if err != nil {
-		rerr = err
-		return
-	}
-
+	rerr = err
 	return
 }
 

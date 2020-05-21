@@ -260,7 +260,7 @@ func (s *Users) LoginToRefIDFromCommit(logger hclog.Logger, login, name, email s
 }
 
 func (s *Users) ExportUserUsingFullDetails(logger hclog.Logger, data api.User) (refID string, _ error) {
-	logger.Debug("sending user based on data", "data", data)
+	//logger.Debug("sending user based on data", "data", data)
 	// deleted users don't have author and other link objects
 	if data.Typename == "" {
 		return "ghost", nil
