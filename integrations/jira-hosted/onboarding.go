@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/pinpt/agent/integrations/jira-hosted/api"
-	"github.com/pinpt/agent/integrations/pkg/jiracommon"
+	"github.com/pinpt/agent/integrations/jira/jiracommon"
 	"github.com/pinpt/agent/rpcdef"
 )
 

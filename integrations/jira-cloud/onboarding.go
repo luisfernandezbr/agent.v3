@@ -5,8 +5,8 @@ import (
 	"net/url"
 
 	"github.com/pinpt/agent/integrations/jira-cloud/api"
-	"github.com/pinpt/agent/integrations/pkg/jiracommon"
-	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/jiracommon"
+	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/agent"
 )

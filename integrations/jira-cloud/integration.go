@@ -12,9 +12,9 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/jira-cloud/api"
+	"github.com/pinpt/agent/integrations/jira/jiracommon"
+	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
 	"github.com/pinpt/agent/integrations/pkg/ibase"
-	"github.com/pinpt/agent/integrations/pkg/jiracommon"
-	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/rpcdef"
 	pjson "github.com/pinpt/go-common/json"

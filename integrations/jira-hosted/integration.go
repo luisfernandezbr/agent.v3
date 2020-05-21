@@ -8,8 +8,8 @@ import (
 	"github.com/pinpt/agent/pkg/structmarshal"
 	pjson "github.com/pinpt/go-common/json"
 
-	"github.com/pinpt/agent/integrations/pkg/jiracommon"
-	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/jiracommon"
+	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 
 	"github.com/hashicorp/go-hclog"

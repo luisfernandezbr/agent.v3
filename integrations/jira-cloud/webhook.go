@@ -6,8 +6,8 @@ import (
 	"errors"
 
 	"github.com/pinpt/agent/integrations/jira-cloud/api"
-	"github.com/pinpt/agent/integrations/pkg/jiracommon"
-	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/jiracommon"
+	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
 	"github.com/pinpt/integration-sdk/work"
 
 	"github.com/pinpt/agent/integrations/pkg/objsender"

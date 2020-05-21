@@ -1,7 +1,7 @@
 package jiracommon
 
 import (
-	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/work"

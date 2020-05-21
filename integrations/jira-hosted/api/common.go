@@ -2,7 +2,7 @@ package api
 
 import (
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
 )
 
 type QueryContext struct {

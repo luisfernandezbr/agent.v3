@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
 )
 
 func FieldsAll(qc QueryContext) (res []jiracommonapi.CustomField, rerr error) {

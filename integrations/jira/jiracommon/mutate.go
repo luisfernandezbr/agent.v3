@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pinpt/agent/integrations/pkg/jiracommonapi"
+	"github.com/pinpt/agent/integrations/jira/jiracommonapi"
 	"github.com/pinpt/agent/integrations/pkg/mutate"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/go-common/datamodel"
