@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/reqstats"
-	"github.com/pinpt/agent/pkg/requests2"
+	"github.com/pinpt/agent/pkg/requests"
 )
 
 type Site struct {
@@ -18,10 +18,10 @@ func AccessibleResources(
 	hc reqstats.Clients,
 	accessToken string) (res []Site, rerr error) {
 
-	req := requests2.NewRequest()
+	req := requests.NewRequest()
 	req.URL = "https://api.atlassian.com/oauth/token/accessible-resources"
 	req.Header.Set("Authorization", "Bearer "+accessToken)
-	reqs := requests2.New(logger, hc.Default)
+	reqs := requests.New(logger, hc.Default)
 
 	resp, err := reqs.JSON(req, &res)
 	if resp.Resp != nil && resp.Resp.StatusCode == 401 {

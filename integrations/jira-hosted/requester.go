@@ -4,7 +4,7 @@ import (
 	"net/url"
 
 	"github.com/pinpt/agent/pkg/reqstats"
-	"github.com/pinpt/agent/pkg/requests2"
+	"github.com/pinpt/agent/pkg/requests"
 	pstrings "github.com/pinpt/go-common/strings"
 
 	"github.com/hashicorp/go-hclog"
@@ -46,7 +46,7 @@ func (s *Requester) Get2(objPath string, params url.Values, res interface{}) (st
 }
 
 func (s *Requester) get(objPath string, params url.Values, res interface{}) (statusCode int, rerr error) {
-	req := requests2.NewRequest()
+	req := requests.NewRequest()
 	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
 	if len(params) != 0 {
 		u += "?" + params.Encode()
@@ -60,12 +60,12 @@ func (s *Requester) get(objPath string, params url.Values, res interface{}) (sta
 	return
 }
 
-func (s *Requester) JSON(req requests2.Request, res interface{}) (resp requests2.Result, rerr error) {
-	var reqs requests2.Requests
+func (s *Requester) JSON(req requests.Request, res interface{}) (resp requests.Result, rerr error) {
+	var reqs requests.Requests
 	if s.opts.RetryRequests {
-		reqs = requests2.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
+		reqs = requests.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
 	} else {
-		reqs = requests2.New(s.logger, s.opts.Clients.TLSInsecure)
+		reqs = requests.New(s.logger, s.opts.Clients.TLSInsecure)
 	}
 
 	req.BasicAuthUser = s.opts.Username

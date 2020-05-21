@@ -5,12 +5,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/pinpt/agent/pkg/requests2"
+	"github.com/pinpt/agent/pkg/requests"
 )
 
 func TokenScopes(qc QueryContext) (scopes []string, rerr error) {
 	req := newRestRequest(qc, "rate_limit")
-	reqs := requests2.New(qc.Logger, qc.Clients.TLSInsecure)
+	reqs := requests.New(qc.Logger, qc.Clients.TLSInsecure)
 	resp, err := reqs.Do(context.TODO(), req)
 	if err != nil {
 		rerr = err

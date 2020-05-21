@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/pinpt/agent/pkg/requests2"
+	"github.com/pinpt/agent/pkg/requests"
 )
 
 // EnterpriseVersion returns the major version of enterprise install.
@@ -14,12 +14,12 @@ import (
 // we rely on the fact that when you make an
 // unauthenticated request the api return link to docs with version in the url.
 func EnterpriseVersion(qc QueryContext, apiURL string) (version string, rerr error) {
-	req := requests2.NewRequest()
+	req := requests.NewRequest()
 	req.URL = apiURL
 	var respJSON struct {
 		URL string `json:"documentation_url"`
 	}
-	reqs := requests2.New(qc.Logger, qc.Clients.TLSInsecure)
+	reqs := requests.New(qc.Logger, qc.Clients.TLSInsecure)
 	resp, err := reqs.JSON(req, &respJSON)
 	if err != nil {
 		rerr = err

@@ -5,7 +5,7 @@ import (
 	"net/url"
 
 	"github.com/pinpt/agent/integrations/pkg/mutate"
-	"github.com/pinpt/agent/pkg/requests2"
+	"github.com/pinpt/agent/pkg/requests"
 	"github.com/pinpt/integration-sdk/work"
 )
 
@@ -57,7 +57,7 @@ func addCommentCloud(qc QueryContext, issueID, body string) (_ *work.IssueCommen
 
 	var res CommentResponse
 
-	req := requests2.Request{}
+	req := requests.Request{}
 	req.Method = "POST"
 	req.URL = qc.Req.URL("issue/" + issueID + "/comment")
 	req.Query = params
@@ -90,7 +90,7 @@ func addCommentOnPremise(qc QueryContext, issueID, body string) (_ *work.IssueCo
 
 	var res CommentResponse
 
-	req := requests2.Request{}
+	req := requests.Request{}
 	req.Method = "POST"
 	req.URL = qc.Req.URL("issue/" + issueID + "/comment")
 	req.Query = params
@@ -110,7 +110,7 @@ func addCommentOnPremise(qc QueryContext, issueID, body string) (_ *work.IssueCo
 }
 
 func mutJSONReq(qc QueryContext, method string, uri string, body interface{}, res interface{}) error {
-	req := requests2.Request{}
+	req := requests.Request{}
 	req.Method = method
 	req.URL = qc.Req.URL(uri)
 	var err error
@@ -180,7 +180,7 @@ func getIssueTransitions(qc QueryContext, issueID string) (res []issueTransition
 	params := url.Values{}
 	params.Add("expand", "transitions.fields")
 
-	req := requests2.Request{}
+	req := requests.Request{}
 	req.Method = "GET"
 	req.URL = qc.Req.URL("issue/" + issueID + "/transitions")
 	req.Query = params

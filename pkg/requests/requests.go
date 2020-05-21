@@ -1,4 +1,4 @@
-package requests2
+package requests
 
 import (
 	"bytes"

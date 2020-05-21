@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/pinpt/agent/pkg/requests2"
+	"github.com/pinpt/agent/pkg/requests"
 
 	"github.com/pinpt/agent/pkg/expin"
 	"github.com/pinpt/go-common/api"
@@ -37,9 +37,9 @@ func (s *Command) OAuthNewAccessTokenFromRefreshToken(integrationName string, re
 		AccessToken string `json:"access_token"`
 	}
 
-	req := requests2.NewRequest()
+	req := requests.NewRequest()
 	req.URL = url
-	reqs := requests2.New(s.Logger, http.DefaultClient)
+	reqs := requests.New(s.Logger, http.DefaultClient)
 	_, err := reqs.JSON(req, res)
 	if err != nil {
 		rerr = fmt.Errorf("could not get new oauth token from pinpoint backend, err %v", err)

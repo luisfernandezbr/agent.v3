@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/pinpt/agent/pkg/requests2"
+	"github.com/pinpt/agent/pkg/requests"
 )
 
 // Org contains the data needed for exporting other resources depending on it
@@ -88,7 +88,7 @@ func OrgsEnterprisePage(qc QueryContext, u string) (res []Org, header http.Heade
 	var respJSON []struct {
 		Login string `json:"login"`
 	}
-	reqs := requests2.New(qc.Logger, qc.Clients.TLSInsecure)
+	reqs := requests.New(qc.Logger, qc.Clients.TLSInsecure)
 	resp, err := reqs.JSON(req, &respJSON)
 	if err != nil {
 		rerr = err

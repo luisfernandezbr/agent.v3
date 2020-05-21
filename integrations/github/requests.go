@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pinpt/agent/pkg/requests2"
+	"github.com/pinpt/agent/pkg/requests"
 )
 
 const checkRateLimitEveryNRequest = 100
@@ -52,7 +52,7 @@ func (s *Integration) makeRequestNoRetries(query string, vars map[string]interfa
 	if err != nil {
 		return err
 	}
-	req := requests2.Request{}
+	req := requests.Request{}
 	req.Method = "POST"
 	req.URL = s.config.APIURL
 	req.Body = dataJSON
@@ -61,11 +61,11 @@ func (s *Integration) makeRequestNoRetries(query string, vars map[string]interfa
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := requests2.New(s.logger, s.clients.TLSInsecure).Do(context.Background(), req)
+	resp, err := requests.New(s.logger, s.clients.TLSInsecure).Do(context.Background(), req)
 	if err != nil {
 		return err
 	}
-	err = requests2.AssertStatusCode(resp.Resp.StatusCode, 200, 299)
+	err = requests.AssertStatusCode(resp.Resp.StatusCode, 200, 299)
 	if err != nil {
 		return resp.ErrorContext(err)
 	}

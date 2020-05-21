@@ -7,7 +7,7 @@ import (
 
 	"github.com/pinpt/agent/pkg/oauthtoken"
 	"github.com/pinpt/agent/pkg/reqstats"
-	"github.com/pinpt/agent/pkg/requests2"
+	"github.com/pinpt/agent/pkg/requests"
 	pstrings "github.com/pinpt/go-common/strings"
 
 	"github.com/hashicorp/go-hclog"
@@ -49,7 +49,7 @@ func (s *Requester) Get2(objPath string, params url.Values, res interface{}) (st
 }
 
 func (s *Requester) get(objPath string, params url.Values, res interface{}, maxOAuthRetries int) (statusCode int, rerr error) {
-	req := requests2.NewRequest()
+	req := requests.NewRequest()
 	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
 	if len(params) != 0 {
 		u += "?" + params.Encode()
@@ -67,17 +67,17 @@ func (s *Requester) URL(objPath string) string {
 	return pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)
 }
 
-func (s *Requester) JSON(req requests2.Request, res interface{}) (_ requests2.Result, rerr error) {
+func (s *Requester) JSON(req requests.Request, res interface{}) (_ requests.Result, rerr error) {
 	return s.json(req, res, 1)
 }
 
-func (s *Requester) json(req requests2.Request, res interface{}, maxOAuthRetries int) (resp requests2.Result, rerr error) {
+func (s *Requester) json(req requests.Request, res interface{}, maxOAuthRetries int) (resp requests.Result, rerr error) {
 
-	var reqs requests2.Requests
+	var reqs requests.Requests
 	if s.opts.RetryRequests {
-		reqs = requests2.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
+		reqs = requests.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
 	} else {
-		reqs = requests2.New(s.logger, s.opts.Clients.TLSInsecure)
+		reqs = requests.New(s.logger, s.opts.Clients.TLSInsecure)
 	}
 
 	if s.opts.OAuthToken != nil {
