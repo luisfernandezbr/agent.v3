@@ -366,6 +366,12 @@ func (s *Integration) issueStatus(sender *objsender.Session) (_ error) {
 }
 
 func (s *Integration) boards(projects []Project) error {
+
+	if s.UseOAuth {
+		s.qc.Logger.Warn("kanban boards is not supported for OAuth tokens")
+		return nil
+	}
+
 	boardsSender, err := objsender.Root(s.agent, work.KanbanBoardModelName.String())
 	if err != nil {
 		return err
