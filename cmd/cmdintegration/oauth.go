@@ -40,7 +40,7 @@ func (s *Command) OAuthNewAccessTokenFromRefreshToken(integrationName string, re
 	req := requests.NewRequest()
 	req.URL = url
 	reqs := requests.New(s.Logger, http.DefaultClient)
-	_, err := reqs.JSON(req, res)
+	_, err := reqs.JSON(req, &res)
 	if err != nil {
 		rerr = fmt.Errorf("could not get new oauth token from pinpoint backend, err %v", err)
 		return
