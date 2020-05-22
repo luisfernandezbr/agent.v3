@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/pinpt/agent/pkg/ids2"
 	"github.com/pinpt/agent/pkg/oauthtoken"
 	"github.com/pinpt/agent/pkg/reqstats"
 	"github.com/pinpt/agent/pkg/structmarshal"
@@ -19,7 +20,11 @@ import (
 	"github.com/pinpt/agent/rpcdef"
 	pjson "github.com/pinpt/go-common/json"
 	"github.com/pinpt/integration-sdk/work"
+
+	pstrings "github.com/pinpt/go-common/strings"
 )
+
+const refType = "jira"
 
 func main() {
 	ibase.MainFunc(func(logger hclog.Logger) rpcdef.Integration {
@@ -210,6 +215,17 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 
 	s.common.SetupUsers()
 
+	issueStatusSender, err := objsender.Root(s.agent, work.IssueStatusModelName.String())
+	if err := s.issueStatus(issueStatusSender); err != nil {
+		rerr = err
+		return
+	}
+	err = issueStatusSender.Done()
+	if err != nil {
+		rerr = err
+		return
+	}
+
 	fields, err := api.FieldsAll(s.qc)
 	if err != nil {
 		rerr = err
@@ -263,6 +279,11 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 		return
 	}
 
+	if err = s.boards(projects); err != nil {
+		rerr = err
+		return
+	}
+
 	issueTypesSender, err := objsender.Root(s.agent, work.IssueTypeModelName.String())
 	err = s.common.IssueTypes(issueTypesSender)
 	if err != nil {
@@ -301,6 +322,135 @@ type Project = common.Project
 func (s *Integration) projects() (all []*work.Project, _ error) {
 	return all, commonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
 		pi, res, err := api.ProjectsPage(s.qc, paginationParams)
+		if err != nil {
+			return false, 0, err
+		}
+		for _, obj := range res {
+			all = append(all, obj)
+		}
+
+		return pi.HasMore, pi.MaxResults, nil
+	})
+}
+
+func (s *Integration) issueStatus(sender *objsender.Session) (_ error) {
+	s.logger.Debug("exporting issue statuses")
+
+	statuses, _, err := commonapi.StatusWithDetail(s.common.CommonQC())
+	if err != nil {
+		return err
+	}
+
+	if err != nil {
+		return err
+	}
+	for _, item := range statuses {
+
+		issueStatus := &work.IssueStatus{
+			CustomerID:  s.qc.CustomerID,
+			Description: item.Description,
+			IconURL:     pstrings.Pointer(item.IconURL),
+			Name:        item.Name,
+			RefID:       item.ID,
+			RefType:     refType,
+		}
+
+		err := sender.Send(issueStatus)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func (s *Integration) boards(projects []Project) error {
+
+	if s.UseOAuth {
+		s.qc.Logger.Warn("kanban boards is not supported for OAuth tokens")
+		return nil
+	}
+
+	boardsSender, err := objsender.Root(s.agent, work.KanbanBoardModelName.String())
+	if err != nil {
+		return err
+	}
+
+	boards, err := s.allBoards()
+	if err != nil {
+		return err
+	}
+
+	projectsFilteredRefIDs := map[string]bool{}
+	for _, project := range projects {
+		projectsFilteredRefIDs[project.JiraID] = true
+	}
+
+	atLeastOneBoardProjectInOurFilteredList := func(boardProjectRefIDs []string) bool {
+		for _, refID := range boardProjectRefIDs {
+			if projectsFilteredRefIDs[refID] {
+				return true
+			}
+		}
+		return false
+	}
+
+	for _, board := range boards {
+		projectRefIDs, err := s.allProjectsList(board.RefID)
+		if err != nil {
+			return err
+		}
+
+		if !atLeastOneBoardProjectInOurFilteredList(projectRefIDs) {
+			continue
+		}
+
+		for _, refID := range projectRefIDs {
+			if !projectsFilteredRefIDs[refID] {
+				continue
+			}
+			id := ids2.New(s.qc.CustomerID, refType).WorkProject(refID)
+			board.ProjectIds = append(board.ProjectIds, id)
+		}
+
+		boardColumns, err := api.BoardColumnsStatuses(s.qc, board.RefID)
+		if err != nil {
+			return err
+		}
+
+		board.Columns = boardColumns
+
+		err = boardsSender.Send(board)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := boardsSender.Done(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Integration) allBoards() (all []*work.KanbanBoard, _ error) {
+	return all, commonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
+		pi, res, err := api.BoardsPage(s.qc, paginationParams)
+		if err != nil {
+			return false, 0, err
+		}
+		for _, obj := range res {
+			all = append(all, obj)
+		}
+
+		return pi.HasMore, pi.MaxResults, nil
+	})
+}
+
+func (s *Integration) allProjectsList(boardID string) (all []string, _ error) {
+	return all, commonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, _ error) {
+		pi, res, err := api.BoardProjectListPage(boardID, s.qc, paginationParams)
 		if err != nil {
 			return false, 0, err
 		}

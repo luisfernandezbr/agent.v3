@@ -86,6 +86,27 @@ func (s Gen) WorkIssue(refID string) string {
 	return work.NewIssueID(s.customerID, s.refType, refID)
 }
 
+func (s Gen) WorkIssuePriority(refID string) string {
+	if refID == "" {
+		return ""
+	}
+	return work.NewIssuePriorityID(s.customerID, s.refType, refID)
+}
+
+func (s Gen) WorkIssueType(refID string) string {
+	if refID == "" {
+		return ""
+	}
+	return work.NewIssueTypeID(s.customerID, s.refType, refID)
+}
+
+func (s Gen) WorkIssueStatus(refID string) string {
+	if refID == "" {
+		return ""
+	}
+	return work.NewIssueStatusID(s.customerID, s.refType, refID)
+}
+
 func (s Gen) WorkUser(refID string) string {
 	if refID == "" {
 		return ""
