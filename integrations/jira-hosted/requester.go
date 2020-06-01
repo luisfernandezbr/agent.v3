@@ -45,6 +45,10 @@ func (s *Requester) Get2(objPath string, params url.Values, res interface{}) (st
 	return s.get(objPath, params, res)
 }
 
+func (s *Requester) GetAgile(objPath string, params url.Values, res interface{}) error {
+	return nil
+}
+
 func (s *Requester) get(objPath string, params url.Values, res interface{}) (statusCode int, rerr error) {
 	req := requests.NewRequest()
 	u := pstrings.JoinURL(s.opts.APIURL, "rest/api", s.version, objPath)

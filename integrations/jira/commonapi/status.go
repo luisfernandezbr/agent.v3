@@ -6,6 +6,9 @@ type StatusDetail struct {
 		Key  string `json:"key"`
 		Name string `json:"name"`
 	} `json:"statusCategory"`
+	ID          string `json:"id"`
+	Description string `json:"description"`
+	IconURL     string `json:"iconUrl"`
 }
 
 func StatusWithDetail(qc QueryContext) (_ []StatusDetail, names []string, _ error) {

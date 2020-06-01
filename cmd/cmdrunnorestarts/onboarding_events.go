@@ -243,6 +243,7 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 
 	return func() {
 		rsub.Close()
+		csub.Close()
 		psub.Close()
 		wsub.Close()
 	}, nil
