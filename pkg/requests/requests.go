@@ -78,7 +78,11 @@ func (s Request) Request() (*http.Request, error) {
 			return nil, err
 		}
 	}
-	req.Header = s.Header
+	if s.Header == nil {
+		req.Header = http.Header{}
+	} else {
+		req.Header = s.Header
+	}
 	if s.BasicAuthUser != "" || s.BasicAuthPassword != "" {
 		req.SetBasicAuth(s.BasicAuthUser, s.BasicAuthPassword)
 	}

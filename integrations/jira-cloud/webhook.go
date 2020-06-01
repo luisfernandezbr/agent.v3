@@ -14,6 +14,10 @@ import (
 	"github.com/pinpt/agent/rpcdef"
 )
 
+var webhookEvents = []string{
+	"jira:issue_updated",
+}
+
 func (s *Integration) Webhook(ctx context.Context, headers map[string]string, body string, config rpcdef.ExportConfig) (res rpcdef.WebhookResult, _ error) {
 
 	rerr := func(err error) {

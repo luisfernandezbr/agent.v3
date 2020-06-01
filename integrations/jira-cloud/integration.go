@@ -38,6 +38,8 @@ type Integration struct {
 	UseOAuth      bool
 	clientManager *reqstats.ClientManager
 	clients       reqstats.Clients
+
+	customerID string
 }
 
 func NewIntegration(logger hclog.Logger) *Integration {
@@ -90,6 +92,9 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 	if err != nil {
 		return err
 	}
+
+	s.customerID = config.Pinpoint.CustomerID
+
 	s.UseOAuth = config.UseOAuth
 
 	s.clientManager = reqstats.New(reqstats.Opts{
@@ -97,6 +102,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 		TLSInsecureSkipVerify: false,
 	})
 	s.clients = s.clientManager.Clients
+	s.qc.Clients = s.clients
 
 	var oauth *oauthtoken.Manager
 
@@ -147,18 +153,21 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 		} else {
 			opts.Username = s.config.Username
 			opts.Password = s.config.Password
+			s.qc.User = s.config.Username
+			s.qc.ApiToken = s.config.Password
 		}
 		requester := NewRequester(opts)
 		s.qc.Req = requester
+
 	}
 
-	s.qc.CustomerID = config.Pinpoint.CustomerID
+	s.qc.CustomerID = s.customerID
 	s.qc.Logger = s.logger
 
 	s.common, err = common.New(common.Opts{
 		WebsiteURL:       s.qc.WebsiteURL,
 		Logger:           s.logger,
-		CustomerID:       config.Pinpoint.CustomerID,
+		CustomerID:       s.customerID,
 		Req:              s.qc.Req,
 		Agent:            s.agent,
 		ExcludedProjects: s.config.Exclusions,
@@ -206,6 +215,14 @@ func (s *Integration) Export(ctx context.Context, config rpcdef.ExportConfig) (r
 	if err != nil {
 		rerr = err
 		return
+	}
+
+	// enable for pinpoint only
+	if s.customerID == "ea63c052fd862a91" || s.customerID == "d05b8b6ef71e3575" || s.customerID == "14ea36c3b3cd0270" {
+		err = s.registerWebhooks()
+		if err != nil {
+			s.logger.Info("could not register webhooks", "err", err)
+		}
 	}
 
 	s.common.SetupUsers()
@@ -310,4 +327,25 @@ func (s *Integration) projects() (all []*work.Project, _ error) {
 
 		return pi.HasMore, pi.MaxResults, nil
 	})
+}
+
+func (s *Integration) registerWebhooks() error {
+	s.logger.Info("registering webhooks")
+
+	if s.UseOAuth {
+		s.qc.Logger.Warn("webhooks are not supported for aouth tokens")
+		return nil
+	}
+
+	pinpointWebHookURL, err := s.agent.GetWebhookURL()
+	if err != nil {
+		return err
+	}
+
+	err = api.WebhookCreateIfNotExists(s.qc, pinpointWebHookURL, webhookEvents)
+	if err != nil {
+		s.logger.Info("could not register webhooks", "err", err)
+	}
+
+	return nil
 }

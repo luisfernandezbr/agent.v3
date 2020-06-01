@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/jira/commonapi"
+	"github.com/pinpt/agent/pkg/reqstats"
 )
 
 type QueryContext struct {
@@ -10,6 +11,10 @@ type QueryContext struct {
 	Logger     hclog.Logger
 	CustomerID string
 	Req        commonapi.Requester
+
+	Clients  reqstats.Clients
+	User     string
+	ApiToken string
 }
 
 type PageInfo struct {

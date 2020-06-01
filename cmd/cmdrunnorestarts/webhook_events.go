@@ -46,7 +46,8 @@ func (s *runner) handleWebhookEvents(ctx context.Context) (closefunc, error) {
 
 	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		req := instance.Object().(*agent.WebhookRequest)
-		integrationName := "github" // TODO: req.IntegrationName
+
+		integrationName := req.IntegrationName
 		logger := s.logger.With("in", integrationName)
 
 		start := time.Now()

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
-	"sort"
 	"strconv"
 	"time"
 
@@ -42,12 +41,14 @@ func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, eve
 
 	found := false
 
+	wantedURL, err := url.Parse(webhookURL)
+	if err != nil {
+		rerr = err
+		return
+	}
+
 	for _, wh := range webhooks {
-		wantedURL, err := url.Parse(webhookURL)
-		if err != nil {
-			rerr = err
-			return
-		}
+
 		haveURL, err := url.Parse(wh.Config.URL)
 		if err != nil {
 			rerr = err
@@ -61,7 +62,7 @@ func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, eve
 				logger.Info("recreating webhook, because the one we had before is older than", "deadline", webhookReplaceOlderThan)
 
 				// the hook was created by older version of agent and needs re-creating
-			} else if reflect.DeepEqual(sortCopy(events), sortCopy(wh.Events)) {
+			} else if reflect.DeepEqual(pstrings.SortCopy(events), pstrings.SortCopy(wh.Events)) {
 				// already same events, nothing to do
 				logger.Debug("existing webhook found, no need to re-create")
 			} else {
@@ -84,13 +85,6 @@ func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, eve
 	}
 
 	return webhookCreate(qc, repo, webhookURL, events)
-}
-
-func sortCopy(arr []string) []string {
-	arr2 := make([]string, len(arr))
-	copy(arr2, arr)
-	sort.Strings(arr2)
-	return arr2
 }
 
 type webhook struct {

@@ -31,6 +31,16 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 		return
 	}
 
+	whURL, noPermissions, err := api.WebhookTestPermissions(s.qc)
+	if err != nil {
+		if noPermissions {
+			s.logger.Error("could not create test webhook, the user doesn't have enough permissions", "err", err)
+		}
+		s.logger.Error("could not create test webhook", "err", err)
+	} else {
+		api.WebhookRemove(s.qc, whURL)
+	}
+
 	var projects []agent.ProjectResponseProjects
 	err = commonapi.PaginateStartAt(func(paginationParams url.Values) (hasMore bool, pageSize int, rerr error) {
 		pi, sub, err := api.ProjectsOnboardPage(s.qc, paginationParams)
