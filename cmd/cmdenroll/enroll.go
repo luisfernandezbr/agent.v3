@@ -183,14 +183,17 @@ var factory action.ModelFactory = &modelFactory{}
 func (s *enroller) WaitForResponse(ctx context.Context, ready chan<- bool) (res agent.EnrollResponse, _ error) {
 
 	enrollConfig := action.Config{
-		GroupID: fmt.Sprintf("agent-%v", s.deviceID),
-		Channel: s.opts.Channel,
+		Subscription: event.Subscription{
+			GroupID: fmt.Sprintf("agent-%v", s.deviceID),
+			Channel: s.opts.Channel,
+			Headers: map[string]string{
+				"uuid": s.deviceID,
+			},
+			Offset:      "latest",
+			DisablePing: true,
+		},
 		Factory: factory,
 		Topic:   agent.EnrollResponseModelName.String(),
-		Headers: map[string]string{
-			"uuid": s.deviceID,
-		},
-		Offset: "latest",
 	}
 
 	done := make(chan bool)

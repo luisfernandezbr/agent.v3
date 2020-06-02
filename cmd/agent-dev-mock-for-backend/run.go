@@ -64,16 +64,20 @@ func handleIntegrationEvents(ctx context.Context, log hclog.Logger, apiKey strin
 	errors := make(chan error, 1)
 
 	actionConfig := action.Config{
-		APIKey:  apiKey,
-		GroupID: fmt.Sprintf("agent-%v", agentOpts.DeviceID),
-		Channel: agentOpts.Channel,
+		Subscription: event.Subscription{
+			APIKey:  apiKey,
+			GroupID: fmt.Sprintf("agent-%v", agentOpts.DeviceID),
+			Channel: agentOpts.Channel,
+			Errors:  errors,
+			Headers: map[string]string{
+				"customer_id": customerID,
+				//"uuid":        agentOpts.DeviceID, //NOTE: eventmachine does not send uuid
+			},
+			DisablePing: true,
+		},
+
 		Factory: factory,
 		Topic:   agent.IntegrationRequestModelName.String(),
-		Errors:  errors,
-		Headers: map[string]string{
-			"customer_id": customerID,
-			//"uuid":        agentOpts.DeviceID, //NOTE: eventmachine does not send uuid
-		},
 	}
 
 	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
@@ -130,16 +134,19 @@ func handleExportEvents(ctx context.Context, log hclog.Logger, apiKey string, cu
 	errors := make(chan error, 1)
 
 	actionConfig := action.Config{
-		APIKey:  apiKey,
-		GroupID: fmt.Sprintf("agent-%v", agentOpts.DeviceID),
-		Channel: agentOpts.Channel,
+		Subscription: event.Subscription{
+			APIKey:  apiKey,
+			GroupID: fmt.Sprintf("agent-%v", agentOpts.DeviceID),
+			Channel: agentOpts.Channel,
+			Errors:  errors,
+			Headers: map[string]string{
+				"customer_id": customerID,
+				//"uuid":        agentOpts.DeviceID, //NOTE: eventmachine does not send uuid
+			},
+			DisablePing: true,
+		},
 		Factory: factory,
 		Topic:   agent.ExportRequestModelName.String(),
-		Errors:  errors,
-		Headers: map[string]string{
-			"customer_id": customerID,
-			//"uuid":        agentOpts.DeviceID, //NOTE: eventmachine does not send uuid
-		},
 	}
 
 	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {

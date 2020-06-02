@@ -288,19 +288,6 @@
   revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
 
 [[projects]]
-  digest = "1:9cbeee309974b109b65af9d28d60262bc58e0bf6e3b25a8867e70439b141a15d"
-  name = "github.com/mailru/easyjson"
-  packages = [
-    ".",
-    "buffer",
-    "jlexer",
-    "jwriter",
-  ]
-  pruneopts = "T"
-  revision = "1b2b06f5f209fea48ff5922d8bfb2b9ed5d8f00b"
-  version = "v0.7.0"
-
-[[projects]]
   digest = "1:b168836ecd85a2d138391dbc464d2442ea9400c29cc0636f2c6056b996692e29"
   name = "github.com/mattn/go-colorable"
   packages = ["."]
@@ -357,18 +344,6 @@
   revision = "2e52cf6e685269ed8aefec6390f3cac3ef74e730"
 
 [[projects]]
-  digest = "1:8fe15ca91046ae133d46693abe7755dfd1c5ee091478cb4aca7a6491bef03841"
-  name = "github.com/olivere/elastic"
-  packages = [
-    ".",
-    "config",
-    "uritemplates",
-  ]
-  pruneopts = "T"
-  revision = "91416a867f9a95cdf7332dd1e73264359d0d5c7e"
-  version = "v6.2.23"
-
-[[projects]]
   branch = "master"
   digest = "1:5f81e80915d9312397c603b6da6f751a4ae36ae2b4d4f0474a34241d95738686"
   name = "github.com/pbnjay/memory"
@@ -377,7 +352,7 @@
   revision = "974d429e7ae40c89e7dcd41cfcc22a0bfbe42510"
 
 [[projects]]
-  digest = "1:33e491400e9a6a601c9a3a9fcc846736eb1b2b0246c0cf6e190356891fdef75e"
+  digest = "1:643ea42f62afe65ff15c0f16a6a8c5b0c34dc3a44e983a68bda1149fcbdeffa9"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -402,8 +377,8 @@
     "upload",
   ]
   pruneopts = "T"
-  revision = "f32276fa73f611d731fb1acb0b1a2b55176ee338"
-  version = "v9.1.67"
+  revision = "a9e2e78d3ab96730162e7f9ab5593d505a27c213"
+  version = "v9.1.80"
 
 [[projects]]
   digest = "1:160af92c9d129fe26acd668a490d6dfe34fb73d9c9e2e77f13da7a6f427b1df0"
@@ -414,7 +389,7 @@
   version = "2.0.0"
 
 [[projects]]
-  digest = "1:d0446fb6373a5e5cc02b1de888aa0b8169ed600b81b72c7fcc30dd7114321b86"
+  digest = "1:9200c0707140d562064aa0bbf358dafd80ef01ec967b11e73f72f5ab92fe8a67"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -427,8 +402,8 @@
     "work",
   ]
   pruneopts = "T"
-  revision = "d1de1a9fcd32bd1f1e0bf9641234dcd2bcc2b595"
-  version = "v0.0.986"
+  revision = "dbfbd7f65120ab96c40a50e2690d40fed79235f6"
+  version = "v0.0.996"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
@@ -806,7 +781,6 @@
     "github.com/pinpt/integration-sdk/agent",
     "github.com/pinpt/integration-sdk/calendar",
     "github.com/pinpt/integration-sdk/codequality",
-    "github.com/pinpt/integration-sdk/customer",
     "github.com/pinpt/integration-sdk/sourcecode",
     "github.com/pinpt/integration-sdk/work",
     "github.com/songgao/stacktraces/on/SIGUSR2",

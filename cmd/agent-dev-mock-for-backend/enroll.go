@@ -18,14 +18,18 @@ func enrollRequest(ctx context.Context, log hclog.Logger, code string, agentOpts
 	errors := make(chan error, 1)
 
 	enrollConfig := action.Config{
-		GroupID: fmt.Sprintf("agent-%v", agentOpts.DeviceID),
-		Channel: agentOpts.Channel,
+		Subscription: event.Subscription{
+			GroupID: fmt.Sprintf("agent-%v", agentOpts.DeviceID),
+			Channel: agentOpts.Channel,
+			Errors:  errors,
+			Headers: map[string]string{
+				"uuid": agentOpts.DeviceID,
+			},
+			DisablePing: true,
+		},
+
 		Factory: factory,
 		Topic:   agent.EnrollResponseModelName.String(),
-		Errors:  errors,
-		Headers: map[string]string{
-			"uuid": agentOpts.DeviceID,
-		},
 	}
 
 	done := make(chan bool)

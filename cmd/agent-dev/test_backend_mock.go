@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/go-common/datamodel"
 	"github.com/pinpt/go-common/datetime"
+	"github.com/pinpt/go-common/event"
 	"github.com/pinpt/go-common/event/action"
 	pos "github.com/pinpt/go-common/os"
 	pstrings "github.com/pinpt/go-common/strings"
@@ -197,14 +198,17 @@ var cmdTestBackendMock = &cobra.Command{
 
 		newConfig := func(topic string, customerID string) action.Config {
 			cfg := action.Config{
-				GroupID: "agent-integration-test",
-				Channel: pinpointChannel,
-				Errors:  errors,
+				Subscription: event.Subscription{
+					GroupID:     "agent-integration-test",
+					Channel:     pinpointChannel,
+					Errors:      errors,
+					Offset:      "earliest",
+					Logger:      ppLogger,
+					Headers:     map[string]string{},
+					DisablePing: true,
+				},
 				Topic:   topic,
 				Factory: f,
-				Offset:  "earliest",
-				Logger:  ppLogger,
-				Headers: map[string]string{},
 			}
 			if pinpointUUID != "" {
 				cfg.Headers["uuid"] = pinpointUUID

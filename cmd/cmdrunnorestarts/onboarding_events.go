@@ -48,50 +48,6 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		return data, nil
 	}
 
-	cbUser := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
-
-		rerr := func(err error) {
-			s.logger.Error("could not process users event", "err", err)
-		}
-
-		req := instance.Object().(*agent.UserRequest)
-		data, err := processOnboard(instance.Message(), req.Integration.ToMap(), inconfig.IntegrationType(req.Integration.SystemType), "users")
-		if err != nil {
-			rerr(err)
-			return
-		}
-		resp := &agent.UserResponse{}
-		resp.Type = agent.UserResponseTypeUser
-		resp.RefType = req.RefType
-		resp.RefID = req.RefID
-		resp.RequestID = req.ID
-		resp.IntegrationID = req.Integration.ID
-
-		resp.Success = data.Success
-		if data.Error != "" {
-			resp.Error = pstrings.Pointer(data.Error)
-		}
-		if data.Data != nil {
-			var obj cmdexportonboarddata.DataUsers
-			err := structmarshal.AnyToAny(data.Data, &obj)
-			if err != nil {
-				rerr(fmt.Errorf("invalid data format returned in agent onboard: %v", err))
-			}
-			for _, rec := range obj.Users {
-				user := agent.UserResponseUsers{}
-				user.FromMap(rec)
-				resp.Users = append(resp.Users, user)
-			}
-			for _, rec := range obj.Teams {
-				team := agent.UserResponseTeams{}
-				team.FromMap(rec)
-				resp.Teams = append(resp.Teams, team)
-			}
-		}
-		s.deviceInfo.AppendCommonInfo(resp)
-		return datamodel.NewModelSendEvent(resp), nil
-	}
-
 	cbRepo := func(instance datamodel.ModelReceiveEvent) (_ datamodel.ModelSendEvent, _ error) {
 
 		rerr := func(err error) {
@@ -260,11 +216,6 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		return datamodel.NewModelSendEvent(resp), nil
 	}
 
-	usub, err := action.Register(ctx, action.NewAction(cbUser), s.newSubConfig(agent.UserRequestModelName.String()))
-	if err != nil {
-		return nil, err
-	}
-
 	rsub, err := action.Register(ctx, action.NewAction(cbRepo), s.newSubConfig(agent.RepoRequestModelName.String()))
 	if err != nil {
 		return nil, err
@@ -285,14 +236,12 @@ func (s *runner) handleOnboardingEvents(ctx context.Context) (closefunc, error) 
 		panic(err)
 	}
 
-	usub.WaitForReady()
 	rsub.WaitForReady()
 	csub.WaitForReady()
 	psub.WaitForReady()
 	wsub.WaitForReady()
 
 	return func() {
-		usub.Close()
 		rsub.Close()
 		csub.Close()
 		psub.Close()
