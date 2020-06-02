@@ -15,6 +15,7 @@ func TestSprintRegexp(t *testing.T) {
 		{`complete`, `com.atlassian.greenhopper.service.sprint.Sprint@75abc849[id=3,rapidViewId=6,state=COMPLETE,name=Sample Sprint 2,goal=<null>,startDate=2017-06-03T12:55:01.165Z,endDate=2017-06-17T13:15:01.165Z,completeDate=<null>,sequence=3]`, "3"},
 		{`closed`, `com.atlassian.greenhopper.service.sprint.Sprint@5562e050[id=123,rapidViewId=28,state=CLOSED,name=App Sprint End Nov 22nd,goal=,startDate=2019-11-12T17:13:19.314Z,endDate=2019-11-23T07:13:00.000Z,completeDate=2019-12-02T16:26:31.394Z,sequence=123]`, "123"},
 		{`extra s ??? probably just invalid data`, `com.atlassian.greenhopper.service.sprints.Sprint@75abc849[id=3,rapidViewId=6,state=ACTIVE,name=Sample Sprint 2,goal=<null>,startDate=2017-06-03T12:55:01.165Z,endDate=2017-06-17T13:15:01.165Z,completeDate=<null>,sequence=3]`, ""},
+		{`active`, `com.atlassian.greenhopper.service.sprint.Sprint@75abc849[rapidViewId=6,id=3,state=ACTIVE,name=Sample Sprint 2,goal=<null>,startDate=2017-06-03T12:55:01.165Z,endDate=2017-06-17T13:15:01.165Z,completeDate=<null>,sequence=3]`, "3"},
 	}
 
 	for _, c := range cases {
