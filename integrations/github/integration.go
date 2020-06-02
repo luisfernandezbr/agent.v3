@@ -346,12 +346,9 @@ func (s *Integration) export(ctx context.Context) (_ []rpcdef.ExportProject, rer
 		filteredRepos = append(filteredRepos, r.(exportRepo))
 	}
 
-	// enable for pinpoint only
-	if s.customerID == "ea63c052fd862a91" || s.customerID == "d05b8b6ef71e3575" || s.customerID == "14ea36c3b3cd0270" {
-		err = s.registerWebhooks(filteredRepos)
-		if err != nil {
-			s.logger.Info("could not register webhooks", "err", err)
-		}
+	err = s.registerWebhooks(filteredRepos)
+	if err != nil {
+		s.logger.Info("could not register webhooks", "err", err)
 	}
 
 	repoSender, err := objsender.Root(s.agent, sourcecode.RepoModelName.String())
