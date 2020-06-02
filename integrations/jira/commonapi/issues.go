@@ -268,7 +268,7 @@ func ParseTime(ts string) (time.Time, error) {
 	return time.Parse(jiraTimeFormat, ts)
 }
 
-var sprintRegexp = regexp.MustCompile(`com\.atlassian\.greenhopper\.service\.sprint\.Sprint@.+?\[id=(\d+)`)
+var sprintRegexp = regexp.MustCompile(`com\.atlassian\.greenhopper\.service\.sprint\.Sprint@.+?\[*id=(\d+)`)
 
 func extractPossibleSprintID(v string) string {
 	matches := sprintRegexp.FindStringSubmatch(v)
@@ -458,7 +458,7 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 
 	for k, v := range data.Fields {
 		if strings.HasPrefix(k, "customfield_") && v != nil {
-			if arr, ok := v.([]interface{}); ok {
+			if arr, ok := v.([]interface{}); ok && len(arr) != 0 {
 				for _, each := range arr {
 					str, ok := each.(string)
 					if !ok {
