@@ -332,16 +332,18 @@ var factory action.ModelFactory = &modelFactory{}
 
 func (s *runner) newSubConfig(topic string) action.Config {
 	return action.Config{
-		APIKey:  s.conf.APIKey,
-		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
-		Channel: s.conf.Channel,
+		Subscription: event.Subscription{
+			APIKey:  s.conf.APIKey,
+			GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
+			Channel: s.conf.Channel,
+			Headers: map[string]string{
+				"customer_id": s.conf.CustomerID,
+				"uuid":        s.conf.DeviceID,
+			},
+			Offset: "earliest",
+		},
 		Factory: factory,
 		Topic:   topic,
-		Headers: map[string]string{
-			"customer_id": s.conf.CustomerID,
-			"uuid":        s.conf.DeviceID,
-		},
-		Offset: "earliest",
 	}
 }
 
