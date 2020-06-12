@@ -36,6 +36,9 @@ func (s *api) GetCalendars() (res []*calendar.Calendar, err error) {
 func (s *api) GetCalendar(calID string) (res *calendar.Calendar, err error) {
 	var raw []CalendarObjectRaw
 	err = s.get("calendars/"+calID, queryParams{}, &raw)
+	if err != nil {
+		return nil, err
+	}
 	if len(raw) != 1 {
 		return nil, fmt.Errorf("return 0 or more than 1 calendar. %v", pjson.Stringify(raw))
 	}
