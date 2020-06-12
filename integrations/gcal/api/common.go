@@ -98,6 +98,7 @@ func (s *api) get(u string, params queryParams, res interface{}) error {
 		}
 	case http.StatusUnauthorized:
 		if s.lastTimeRetried.IsZero() || time.Since(s.lastTimeRetried) > (5*time.Minute) {
+			s.lastTimeRetried = time.Now()
 			if err := s.oauth.Refresh(); err != nil {
 				return err
 			}
