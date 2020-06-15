@@ -67,14 +67,15 @@ func main() {
 		log.Fatal(logger, "error creating provider", "err", err)
 	}
 	oauth := NewOauth(logger, *clientID, *clientSecret, &provider, *outfile)
-	var token string
-	var err error
-	if token, err = oauth.AccessToken(); err != nil {
-		log.Fatal(logger, "error with oauth", "err", err)
+	if err := oauth.Authenticate(); err != nil {
+		log.Fatal(logger, "error refreshing token", "err", err)
 	}
 	fmt.Println("ACCESS TOKEN")
-	fmt.Println(token)
-
+	fmt.Println(oauth.Token.AccessToken)
+	fmt.Println()
+	fmt.Println("REFRESH TOKEN")
+	fmt.Println(oauth.Token.RefreshToken)
+	fmt.Println()
 }
 
 func readFromYaml(file string, out interface{}) error {
@@ -116,7 +117,7 @@ func (s *Provider) TokenURI() (*url.URL, error) {
 // AddExtraValues extra values for fetching auth token
 func (s *Provider) AddExtraValues(values *url.Values) {
 	for k, v := range s.ExtraValues {
-		values.Add(k, v)
+		values.Set(k, v)
 	}
 }
 
@@ -269,6 +270,8 @@ func (s *Oauth) fetchAuthCode() (authCode string, err error) {
 	values.Set("response_type", "code")
 	s.Provider.AddExtraValues(&values)
 	authurl.RawQuery = values.Encode()
+
+	fmt.Println("open in browser:", authurl.String())
 	s.openBrowser(authurl.String(), func(vals url.Values) {
 		authCode = vals.Get("code")
 	})
