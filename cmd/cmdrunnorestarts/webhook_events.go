@@ -89,7 +89,8 @@ func (s *runner) handleWebhookEvents(ctx context.Context) (closefunc, error) {
 		age := time.Since(agentRequestSentDate)
 
 		if age > ignoreWebhookRequestsOlderThan {
-			return sendError("", fmt.Errorf("ignoring webhook request older than %v, actual: %v", ignoreWebhookRequestsOlderThan, age))
+			logger.Warn(fmt.Errorf("ignoring webhook request older than %v, actual: %v", ignoreWebhookRequestsOlderThan, age))
+			return nil, nil
 		}
 
 		conf, err := inconfig.AuthFromEvent(map[string]interface{}{
