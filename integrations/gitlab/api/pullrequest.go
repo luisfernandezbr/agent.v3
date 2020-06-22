@@ -9,6 +9,7 @@ import (
 	"github.com/pinpt/agent/pkg/ids"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
+	"github.com/russross/blackfriday"
 )
 
 type PullRequest struct {
@@ -71,7 +72,7 @@ func PullRequestPage(
 		pr.RepoID = qc.IDs.CodeRepo(repoRefID)
 		pr.BranchName = rpr.SourceBranch
 		pr.Title = rpr.Title
-		pr.Description = rpr.Description
+		pr.Description = convertMarkdownToHTML(rpr.Description)
 		pr.URL = rpr.WebURL
 		pr.Identifier = rpr.Identifier
 		date.ConvertToModel(rpr.CreatedAt, &pr.CreatedDate)
@@ -104,4 +105,17 @@ func PullRequestPage(
 	}
 
 	return
+}
+
+const extensions = blackfriday.NoIntraEmphasis |
+	blackfriday.Tables |
+	blackfriday.FencedCode |
+	blackfriday.Autolink |
+	blackfriday.Strikethrough |
+	blackfriday.SpaceHeadings |
+	blackfriday.NoEmptyLineBeforeBlock
+
+func convertMarkdownToHTML(text string) string {
+	output := blackfriday.Run([]byte(text), blackfriday.WithExtensions(extensions))
+	return string(output)
 }
