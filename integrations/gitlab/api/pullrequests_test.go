@@ -36,6 +36,23 @@ func TestConvertMarkdownToHTML(t *testing.T) {
 
 	expected = `<p>simple text</p>
 `
+	actual = convertMarkdownToHTML(text)
+
+	if expected != actual {
+		t.Errorf("wanted %+q, got %+q", expected, actual)
+	}
+
+	text = "\r\n- item 1\r\n\r\nparagraph\r\n\r\n- item 2"
+	expected = `<ul>
+<li>item 1</li>
+</ul>
+
+<p>paragraph</p>
+
+<ul>
+<li>item 2</li>
+</ul>
+`
 
 	actual = convertMarkdownToHTML(text)
 

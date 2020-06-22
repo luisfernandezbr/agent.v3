@@ -3,6 +3,7 @@ package api
 import (
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pinpt/agent/pkg/date"
@@ -116,6 +117,7 @@ const extensions = blackfriday.NoIntraEmphasis |
 	blackfriday.NoEmptyLineBeforeBlock
 
 func convertMarkdownToHTML(text string) string {
-	output := blackfriday.Run([]byte(text), blackfriday.WithExtensions(extensions))
+	input := strings.ReplaceAll(text, "\r", "")
+	output := blackfriday.Run([]byte(input), blackfriday.WithExtensions(extensions))
 	return string(output)
 }
