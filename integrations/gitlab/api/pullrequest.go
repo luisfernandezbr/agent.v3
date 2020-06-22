@@ -9,6 +9,7 @@ import (
 	"github.com/pinpt/agent/pkg/ids"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
+	gfm "github.com/shurcooL/github_flavored_markdown"
 )
 
 type PullRequest struct {
@@ -71,7 +72,7 @@ func PullRequestPage(
 		pr.RepoID = qc.IDs.CodeRepo(repoRefID)
 		pr.BranchName = rpr.SourceBranch
 		pr.Title = rpr.Title
-		pr.Description = rpr.Description
+		pr.Description = string(gfm.Markdown([]byte(rpr.Description)))
 		pr.URL = rpr.WebURL
 		pr.Identifier = rpr.Identifier
 		date.ConvertToModel(rpr.CreatedAt, &pr.CreatedDate)

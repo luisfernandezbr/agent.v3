@@ -3,6 +3,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:fd960771fa3e19acda6cc484d6e4bf8a841b103433464388b6a83c65310ca09e"
+  name = "dmitri.shuralyov.com/text/kebabcase"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "eac43a689475a8a9e9a1c4423778c88d6ae7c794"
+
+[[projects]]
+  branch = "master"
   digest = "1:e202b89e277142c4dd075dcbe5fa938eed384d109031002536e1a63092b7931e"
   name = "github.com/andygrunwald/go-jira"
   packages = ["."]
@@ -58,6 +66,14 @@
   version = "v1.25.26"
 
 [[projects]]
+  digest = "1:6ebabd72e2c8ace232d376a029ae20ba9379843cad8829a281eeda230b7efe6c"
+  name = "github.com/aymerick/douceur"
+  packages = ["css"]
+  pruneopts = "T"
+  revision = "c5c95ec357c8235fbd7f34e8c843d36783f3fad9"
+  version = "v0.2.0"
+
+[[projects]]
   digest = "1:2e557a820f7a27413e4ed4a897d3552ac44d2268db16fc87471dd199b632f4a0"
   name = "github.com/blang/semver"
   packages = ["."]
@@ -83,6 +99,14 @@
   pruneopts = "T"
   revision = "de209a9ffae3256185a6bb135d1a0ada7b2b5f09"
   version = "v2.1.0"
+
+[[projects]]
+  digest = "1:6ebabd72e2c8ace232d376a029ae20ba9379843cad8829a281eeda230b7efe6c"
+  name = "github.com/chris-ramon/douceur"
+  packages = ["parser"]
+  pruneopts = "T"
+  revision = "c5c95ec357c8235fbd7f34e8c843d36783f3fad9"
+  version = "v0.2.0"
 
 [[projects]]
   digest = "1:9f42202ac457c462ad8bb9642806d275af9ab4850cf0b1960b9c6f083d4a309a"
@@ -205,6 +229,14 @@
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:311943d2182ec2ac06f15477b492f1df3c7b57daf80dee727766f8c0864ba156"
+  name = "github.com/gorilla/css"
+  packages = ["scanner"]
+  pruneopts = "T"
+  revision = "398b0b046082ecb3694c01bec6b336a06a4e530a"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "httpsproxy"
   digest = "1:eee726b0a81cd2034c20a661e4bab387a8f7b840cf080cad2d00c3a890c6ceb6"
   name = "github.com/gorilla/websocket"
@@ -302,6 +334,14 @@
   pruneopts = "T"
   revision = "e1f7b56ace729e4a73a29a6b4fac6cd5fcda7ab3"
   version = "v0.0.9"
+
+[[projects]]
+  digest = "1:d0e061db2d9a91817a7f66cd522b0ac65a46e29a5ac0f68903aecbac0fb31dbf"
+  name = "github.com/microcosm-cc/bluemonday"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "0a75d7616912ab9beb9cc6f7283ec1917c61b135"
+  version = "v1.0.3"
 
 [[projects]]
   digest = "1:5d231480e1c64a726869bc4142d270184c419749d34f167646baa21008eb0a79"
@@ -422,11 +462,88 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:3dd8431d7cb4dd5badfbdf6a9c14fd670a4956c9a17f34e6ec98a59e82fb8de5"
+  name = "github.com/russross/blackfriday"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "d3b5b032dc8e8927d31a5071b56e14c89f045135"
+  version = "v2.0.1"
+
+[[projects]]
   digest = "1:c85dd9a95433394aa8ec4949b5de91398c3e3895db5a341fa27f9e7b251a8cb9"
   name = "github.com/sergi/go-diff"
   packages = ["diffmatchpatch"]
   pruneopts = "T"
   revision = "1744e2970ca51c86172c8190fadad617561ed6e7"
+  version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:9c2afec9ba933bc122ccc1b16deb43733dfbb949e8871b24a3c40bbfa137138f"
+  name = "github.com/shurcooL/github_flavored_markdown"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "2122de53247006a637e59cf1c99d0770312d4be3"
+
+[[projects]]
+  branch = "master"
+  digest = "1:5f5efc0e52e9c68ce783a3ea37f20f63b838d00f33b75485c5e4b9a641dbe71f"
+  name = "github.com/shurcooL/go"
+  packages = [
+    "parserutil",
+    "printerutil",
+    "reflectfind",
+    "reflectsource",
+  ]
+  pruneopts = "T"
+  revision = "93f07166e636e9ea49cd6e5cdda12d1579ae31d4"
+
+[[projects]]
+  branch = "master"
+  digest = "1:470c628134a15cac17bb36dbfbf2a86af6633cab3ffe2af5ae7b386ab5a93ab6"
+  name = "github.com/shurcooL/go-goon"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "37c2f522c041b74919a9e5e3a6c5c47eb34730a5"
+
+[[projects]]
+  branch = "master"
+  digest = "1:02f8531dabb386642d16c3bbb2434b981aee4f6a42266290fd415dd04e80f397"
+  name = "github.com/shurcooL/graphql"
+  packages = ["ident"]
+  pruneopts = "T"
+  revision = "d48a9a75455f6af30244670bc0c9d0e38e7392b5"
+
+[[projects]]
+  branch = "master"
+  digest = "1:1c692fbb295a05e0ad77aafe24385cf0947314aa882bbdae716bbcbe7d5f87b1"
+  name = "github.com/shurcooL/highlight_diff"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "111da2e7d480d1ae2e33d64cd6b19530db117002"
+
+[[projects]]
+  branch = "master"
+  digest = "1:2e344cfe4fa5d4760839572bd136dc8c97c1bc88a0dd255cf03e2bb4b243a630"
+  name = "github.com/shurcooL/highlight_go"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "782971ddf21b32e90999140f84ee028a4a8b99de"
+
+[[projects]]
+  branch = "master"
+  digest = "1:01ce6f177eb4da5e87fc7c33f3dc2fa87ec1c9df995dc3ea9f67f080d4c7ae58"
+  name = "github.com/shurcooL/octicon"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "cbb32d6a785c5dddc63742d685ab991ec2051014"
+
+[[projects]]
+  digest = "1:9421f6e9e28ef86933e824b5caff441366f2b69bb281085b9dca40e1f27a1602"
+  name = "github.com/shurcooL/sanitized_anchor_name"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "7bfe4c7ecddb3666a94b053b422cdd8f5aaa3615"
   version = "v1.0.0"
 
 [[projects]]
@@ -439,6 +556,22 @@
   ]
   pruneopts = "T"
   revision = "0f98d2fb7fc3051b528076b5d15d792e4c858992"
+
+[[projects]]
+  branch = "master"
+  digest = "1:7414ad1999047ae0253b16e7bdcf64bcbcad89452ce9942506953aa1d3d6a1c7"
+  name = "github.com/sourcegraph/annotate"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "f4cad6c6324d3f584e1743d8b3e0e017a5f3a636"
+
+[[projects]]
+  branch = "master"
+  digest = "1:731aa36246173b18358447c4b004d1c0cd9cc0030d7e0f8e0d0250909ae0987e"
+  name = "github.com/sourcegraph/syntaxhighlight"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "bd320f5d308e1a3c4314c678d8227a0d72574ae7"
 
 [[projects]]
   digest = "1:0d40f08f9f1d486f6c56a0cb0d50f28ee1d216497adb7ea060b6dfe9587a2a3d"
@@ -555,6 +688,8 @@
   name = "golang.org/x/net"
   packages = [
     "context",
+    "html",
+    "html/atom",
     "http/httpguts",
     "http2",
     "http2/hpack",
@@ -783,6 +918,7 @@
     "github.com/pinpt/integration-sdk/codequality",
     "github.com/pinpt/integration-sdk/sourcecode",
     "github.com/pinpt/integration-sdk/work",
+    "github.com/shurcooL/github_flavored_markdown",
     "github.com/songgao/stacktraces/on/SIGUSR2",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/assert",
