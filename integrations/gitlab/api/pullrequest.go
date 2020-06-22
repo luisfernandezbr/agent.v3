@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/url"
 	"strconv"
 	"time"
@@ -71,7 +72,12 @@ func PullRequestPage(
 		pr.RepoID = qc.IDs.CodeRepo(repoRefID)
 		pr.BranchName = rpr.SourceBranch
 		pr.Title = rpr.Title
-		pr.Description = rpr.Description
+		var html string
+		html, err = markdownToHTML(qc, rpr.Description)
+		if err != nil {
+			return
+		}
+		pr.Description = html
 		pr.URL = rpr.WebURL
 		pr.Identifier = rpr.Identifier
 		date.ConvertToModel(rpr.CreatedAt, &pr.CreatedDate)
@@ -102,6 +108,41 @@ func PullRequestPage(
 		spr.PullRequest = pr
 		res = append(res, spr)
 	}
+
+	return
+}
+
+type Markdown struct {
+	Text string `json:"text"`
+	GFM  bool   `json:"gfm"`
+}
+
+func markdownToHTML(qc QueryContext, text string) (html string, err error) {
+
+	if text == "" {
+		return
+	}
+
+	var res struct {
+		HTML string `json:"html"`
+	}
+
+	objectPath := pstrings.JoinURL("markdown")
+
+	body, err := json.Marshal(Markdown{
+		Text: text,
+		GFM:  true,
+	})
+	if err != nil {
+		return
+	}
+
+	_, err = qc.PostRequest(body, objectPath, nil, &res)
+	if err != nil {
+		return
+	}
+
+	html = res.HTML
 
 	return
 }

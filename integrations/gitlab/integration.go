@@ -161,6 +161,7 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		requester := api.NewRequester(opts)
 
 		s.qc.Request = requester.MakeRequest
+		s.qc.PostRequest = requester.MakePostRequest
 		s.qc.IDs = ids2.New(s.customerID, s.refType)
 	}
 

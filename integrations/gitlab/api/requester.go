@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -47,6 +48,8 @@ func NewRequester(opts RequesterOpts) *Requester {
 }
 
 type internalRequest struct {
+	Method   string
+	Body     []byte
 	URL      string
 	Params   url.Values
 	Response interface{}
@@ -83,6 +86,25 @@ func (e *Requester) MakeRequest(url string, params url.Values, response interfac
 	}()
 
 	ir := internalRequest{
+		URL:      url,
+		Response: &response,
+		Params:   params,
+	}
+
+	return e.makeRequestRetry(&ir, 0)
+
+}
+
+// MakeRequest make request
+func (e *Requester) MakePostRequest(body []byte, url string, params url.Values, response interface{}) (pi PageInfo, err error) {
+	e.opts.Concurrency <- true
+	defer func() {
+		<-e.opts.Concurrency
+	}()
+
+	ir := internalRequest{
+		Method:   http.MethodPost,
+		Body:     body,
 		URL:      url,
 		Response: &response,
 		Params:   params,
@@ -131,9 +153,18 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 		u += "?" + r.Params.Encode()
 	}
 
-	req, err := http.NewRequest(http.MethodGet, u, nil)
-	if err != nil {
-		return false, pi, err
+	var req *http.Request
+	if r.Method == "" {
+		req, rerr = http.NewRequest(http.MethodGet, u, nil)
+		if rerr != nil {
+			return false, pi, rerr
+		}
+	} else {
+		req, rerr = http.NewRequest(r.Method, u, bytes.NewReader(r.Body))
+		if rerr != nil {
+			return false, pi, rerr
+		}
+		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("Accept", "application/json")
 	e.setAuthHeader(req)
@@ -167,7 +198,7 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 
 		if resp.StatusCode == http.StatusTooManyRequests {
 			return rateLimited()

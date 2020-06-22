@@ -19,9 +19,10 @@ const (
 
 // QueryContext query context
 type QueryContext struct {
-	BaseURL string
-	Logger  hclog.Logger
-	Request func(url string, params url.Values, response interface{}) (PageInfo, error)
+	BaseURL     string
+	Logger      hclog.Logger
+	Request     func(url string, params url.Values, response interface{}) (PageInfo, error)
+	PostRequest func(body []byte, url string, params url.Values, response interface{}) (PageInfo, error)
 
 	CustomerID string
 	RefType    string
