@@ -12,6 +12,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/aevent"
 	"github.com/pinpt/agent/pkg/build"
+	"github.com/pinpt/httpclient"
 
 	"github.com/pinpt/agent/cmd/cmdintegration"
 
@@ -34,6 +35,10 @@ import (
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/logsender"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/updater"
 )
+
+func init() {
+	httpclient.Debug = true
+}
 
 type Opts struct {
 	Logger cmdlogger.Logger
