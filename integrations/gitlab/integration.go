@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 	"sync"
-	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
@@ -394,8 +393,8 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 		shouldInclude[repo.NameWithOwner] = true
 	}
 
-	err := api.PaginateNewerThan(s.logger, sender.LastProcessedTime(), func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, repos, err := api.ReposPage(s.qc, groupName, parameters, stopOnUpdatedAt)
+	err := api.PaginateStartAt(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
+		pi, repos, err := api.ReposPage(s.qc, groupName, parameters)
 		if err != nil {
 			return pi, err
 		}

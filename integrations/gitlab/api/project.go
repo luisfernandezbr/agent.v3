@@ -65,8 +65,8 @@ func ReposOnboardPage(qc QueryContext, groupName string, params url.Values) (pag
 }
 
 // ReposPage get repositories page after stopOnUpdatedAt
-func ReposPage(qc QueryContext, groupName string, params url.Values, stopOnUpdatedAt time.Time) (page PageInfo, repos []*sourcecode.Repo, err error) {
-	qc.Logger.Debug("repos request", "group", groupName)
+func ReposPage(qc QueryContext, groupName string, params url.Values) (page PageInfo, repos []*sourcecode.Repo, err error) {
+	qc.Logger.Debug("repos request", "group", groupName, "params", params)
 
 	objectPath := pstrings.JoinURL("groups", url.QueryEscape(groupName), "projects")
 
@@ -87,9 +87,6 @@ func ReposPage(qc QueryContext, groupName string, params url.Values, stopOnUpdat
 	}
 
 	for _, repo := range rr {
-		if repo.UpdatedAt.Before(stopOnUpdatedAt) {
-			return
-		}
 		id := strconv.FormatInt(repo.ID, 10)
 		repo := &sourcecode.Repo{
 			RefID:       id,
