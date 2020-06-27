@@ -352,7 +352,7 @@
   revision = "974d429e7ae40c89e7dcd41cfcc22a0bfbe42510"
 
 [[projects]]
-  digest = "1:643ea42f62afe65ff15c0f16a6a8c5b0c34dc3a44e983a68bda1149fcbdeffa9"
+  digest = "1:98473662d36d4b4b9951bc72746af8ff241abb69c32a17af05a127b4fa975df4"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -377,16 +377,16 @@
     "upload",
   ]
   pruneopts = "T"
-  revision = "a9e2e78d3ab96730162e7f9ab5593d505a27c213"
-  version = "v9.1.80"
+  revision = "a05f6921e4dd1ea0f541d972e7c4c197be8578a2"
+  version = "v9.1.81"
 
 [[projects]]
-  digest = "1:160af92c9d129fe26acd668a490d6dfe34fb73d9c9e2e77f13da7a6f427b1df0"
+  digest = "1:6b6aa4e366679d0a58fed03225dc26faedf970b06d740292c1546ea6184b272a"
   name = "github.com/pinpt/httpclient"
   packages = ["."]
   pruneopts = "T"
-  revision = "09e0028c9067e2f9c7480f7ebe374efc83f12ebb"
-  version = "2.0.0"
+  revision = "d374c2f15648faf3e361ba0cddfa02e238ba1f67"
+  version = "2.0.1"
 
 [[projects]]
   digest = "1:9200c0707140d562064aa0bbf358dafd80ef01ec967b11e73f72f5ab92fe8a67"
