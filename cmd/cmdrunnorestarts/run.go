@@ -37,7 +37,7 @@ import (
 )
 
 func init() {
-	httpclient.Debug = true
+	httpclient.Debug = false // turn on to get httpclient debug
 }
 
 type Opts struct {
