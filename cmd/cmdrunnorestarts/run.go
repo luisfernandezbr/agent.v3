@@ -300,6 +300,7 @@ func (s *runner) Run(ctx context.Context) error {
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {
+	s.logger.Info("sending enabled with customer_id=" + s.conf.CustomerID + " and uuid=" + s.conf.DeviceID)
 
 	data := agent.Enabled{
 		CustomerID: s.conf.CustomerID,
@@ -318,6 +319,7 @@ func (s *runner) sendEnabled(ctx context.Context) error {
 		},
 	}
 
+	s.logger.Info("sending enabled publish channel=" + s.conf.Channel + " and apikey=" + s.conf.APIKey)
 	err := aevent.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
 	if err != nil {
 		return err
