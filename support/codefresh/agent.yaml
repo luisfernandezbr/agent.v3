@@ -34,10 +34,10 @@ steps:
               - '${{build.imageId}}':
                   - CF_QUALITY: false
       push:
-        title: Pushing image to cfcr
+        title: Pushing image to gitlab
         type: push
         image_name: pinpt/agent
-        registry: cfcr
+        registry: gitlab-pinpt
         candidate: '${{build}}'
         tags:
           - '${{CF_BRANCH_TAG_NORMALIZED}}'
