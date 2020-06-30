@@ -82,10 +82,14 @@ type issueFields struct {
 		ID  string `json:"id"`
 		Key string `json:"key"`
 	} `json:"project"`
-	Summary  string `json:"summary"`
-	DueDate  string `json:"duedate"`
-	Created  string `json:"created"`
-	Updated  string `json:"updated"`
+	Summary string `json:"summary"`
+	DueDate string `json:"duedate"`
+	Created string `json:"created"`
+	Updated string `json:"updated"`
+	Parent  *struct {
+		ID  string `json:"id"`
+		Key string `json:"key"`
+	} `json:"parent,omitempty"`
 	Priority struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
@@ -360,6 +364,9 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 	item.Status = fields.Status.Name
 	item.StatusID = ids.WorkIssueStatus(fields.Status.ID)
 	item.Resolution = fields.Resolution.Name
+	if fields.Parent != nil && fields.Parent.ID != "" {
+		item.ParentID = work.NewIssueID(qc.CustomerID, fields.Parent.ID, refType)
+	}
 
 	if !fields.Creator.IsZero() {
 		item.CreatorRefID = fields.Creator.RefID()
