@@ -365,7 +365,7 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 	item.StatusID = ids.WorkIssueStatus(fields.Status.ID)
 	item.Resolution = fields.Resolution.Name
 	if fields.Parent != nil && fields.Parent.ID != "" {
-		item.ParentID = work.NewIssueID(qcu.CstomerID, fields.Parent.ID, refType)
+		item.ParentID = work.NewIssueID(qc.CustomerID, fields.Parent.ID, refType)
 	}
 
 	if !fields.Creator.IsZero() {
