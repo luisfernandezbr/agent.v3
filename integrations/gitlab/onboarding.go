@@ -48,18 +48,16 @@ func (s *Integration) onboardWorkConfig(ctx context.Context, intid string) (res 
 }
 
 func (s *Integration) onboardExportRepos(ctx context.Context, objectType rpcdef.OnboardExportType) (res rpcdef.OnboardExportResult, _ error) {
-	groupNames, err := api.GroupsAll(s.qc)
+	groups, err := api.GroupsAll(s.qc)
 	if err != nil {
 		return res, err
 	}
 
 	var records []map[string]interface{}
 
-	s.logger.Info("groups", "names", groupNames)
-
-	for _, groupName := range groupNames {
+	for _, group := range groups {
 		err := api.PaginateStartAt(s.logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
-			pi, repos, err := api.ReposOnboardPage(s.qc, groupName, paginationParams)
+			pi, repos, err := api.ReposOnboardPage(s.qc, group, paginationParams)
 			if err != nil {
 				return pi, err
 			}
