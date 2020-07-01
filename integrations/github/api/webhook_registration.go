@@ -55,9 +55,6 @@ func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, eve
 			rerr = err
 			return
 		}
-		if strings.Contains(wh.Config.URL, "?integration_instance_id") {
-			continue
-		}
 		if wantedURL.Host == haveURL.Host {
 			pinptWebHooks = append(pinptWebHooks, wh)
 		}
