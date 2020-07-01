@@ -19,14 +19,15 @@ import (
 )
 
 // ReposOnboardPage get repositories page for onboard
-func ReposOnboardPage(qc QueryContext, groupName string, params url.Values) (page PageInfo, repos []*agent.RepoResponseRepos, err error) {
-	qc.Logger.Debug("repos request", "group", groupName)
-
-	objectPath := pstrings.JoinURL("groups", url.QueryEscape(groupName), "projects")
+func ReposOnboardPage(qc QueryContext, group *Group, params url.Values) (page PageInfo, repos []*agent.RepoResponseRepos, err error) {
 
 	params.Set("membership", "true")
 	params.Set("per_page", "100")
 	params.Set("with_shared", "no")
+
+	qc.Logger.Debug("repos request", "group", group.FullPath, "group_id", group.ID, "params", params)
+
+	objectPath := pstrings.JoinURL("groups", group.ID, "projects")
 
 	var rr []struct {
 		CreatedAt   time.Time `json:"created_at"`
@@ -65,10 +66,13 @@ func ReposOnboardPage(qc QueryContext, groupName string, params url.Values) (pag
 }
 
 // ReposPage get repositories page after stopOnUpdatedAt
-func ReposPage(qc QueryContext, groupName string, params url.Values) (page PageInfo, repos []*sourcecode.Repo, err error) {
-	qc.Logger.Debug("repos request", "group", groupName, "params", params)
+func ReposPage(qc QueryContext, group *Group, params url.Values) (page PageInfo, repos []*sourcecode.Repo, err error) {
 
-	objectPath := pstrings.JoinURL("groups", url.QueryEscape(groupName), "projects")
+	params.Set("with_shared", "no")
+
+	qc.Logger.Debug("repos request", "group", group.FullPath, "group_id", group.ID, "params", params)
+
+	objectPath := pstrings.JoinURL("groups", group.ID, "projects")
 
 	var rr []struct {
 		CreatedAt   time.Time `json:"created_at"`
@@ -78,8 +82,6 @@ func ReposPage(qc QueryContext, groupName string, params url.Values) (page PageI
 		Description string    `json:"description"`
 		WebURL      string    `json:"web_url"`
 	}
-
-	params.Set("with_shared", "no")
 
 	page, err = qc.Request(objectPath, params, &rr)
 	if err != nil {
@@ -111,9 +113,9 @@ func ReposPage(qc QueryContext, groupName string, params url.Values) (page PageI
 }
 
 // ReposAll get all group repos available
-func ReposAll(qc interface{}, groupName string, res chan []commonrepo.Repo) error {
+func ReposAll(qc interface{}, group *Group, res chan []commonrepo.Repo) error {
 	return PaginateStartAt(qc.(QueryContext).Logger, func(log hclog.Logger, paginationParams url.Values) (page PageInfo, _ error) {
-		pi, repos, err := ReposPageCommon(qc.(QueryContext), groupName, paginationParams)
+		pi, repos, err := ReposPageCommon(qc.(QueryContext), group, paginationParams)
 		if err != nil {
 			return pi, err
 		}
@@ -123,12 +125,13 @@ func ReposAll(qc interface{}, groupName string, res chan []commonrepo.Repo) erro
 }
 
 // ReposPageCommon get common info repos page
-func ReposPageCommon(qc QueryContext, groupName string, params url.Values) (page PageInfo, repos []commonrepo.Repo, err error) {
-	qc.Logger.Debug("repos request")
-
-	objectPath := pstrings.JoinURL("groups", url.QueryEscape(groupName), "projects")
+func ReposPageCommon(qc QueryContext, group *Group, params url.Values) (page PageInfo, repos []commonrepo.Repo, err error) {
 
 	params.Set("with_shared", "no")
+
+	qc.Logger.Debug("repos request", "group", group.FullPath, "group_id", group.ID, "params", params)
+
+	objectPath := pstrings.JoinURL("groups", group.ID, "projects")
 
 	var rr []struct {
 		ID            int64  `json:"id"`
