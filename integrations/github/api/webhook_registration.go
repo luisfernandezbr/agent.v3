@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pinpt/agent/pkg/requests"
@@ -70,6 +71,9 @@ func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, eve
 		})
 
 		for _, wh := range pinptWebHooks[1:] {
+			if strings.Contains(wh.Config.URL, "?integration_instance_id") {
+				continue
+			}
 			err := webhookRemove(qc, repo, wh.ID)
 			if err != nil {
 				rerr = err
