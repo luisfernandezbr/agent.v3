@@ -31,14 +31,19 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 		return
 	}
 
-	whURL, noPermissions, err := api.WebhookTestPermissions(s.qc)
-	if err != nil {
-		if noPermissions {
-			s.logger.Error("could not create test webhook, the user doesn't have enough permissions", "err", err)
+	if s.customerID == "ea63c052fd862a91" || s.customerID == "d05b8b6ef71e3575" || s.customerID == "14ea36c3b3cd0270" {
+		if !s.UseOAuth {
+			s.qc.Logger.Warn("webhooks are not supported for aouth tokens")
+			whURL, noPermissions, err := api.WebhookTestPermissions(s.qc)
+			if err != nil {
+				if noPermissions {
+					s.logger.Error("could not create test webhook, the user doesn't have enough permissions", "err", err)
+				}
+				s.logger.Error("could not create test webhook", "err", err)
+			} else {
+				api.WebhookRemove(s.qc, whURL)
+			}
 		}
-		s.logger.Error("could not create test webhook", "err", err)
-	} else {
-		api.WebhookRemove(s.qc, whURL)
 	}
 
 	var projects []agent.ProjectResponseProjects
