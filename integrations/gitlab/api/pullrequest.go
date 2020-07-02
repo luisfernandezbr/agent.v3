@@ -3,12 +3,15 @@ package api
 import (
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/ids"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
+	"github.com/russross/blackfriday"
 )
 
 type PullRequest struct {
@@ -19,13 +22,13 @@ type PullRequest struct {
 
 func PullRequestPage(
 	qc QueryContext,
-	repoRefID string,
+	repo commonrepo.Repo,
 	params url.Values,
 	stopOnUpdatedAt time.Time) (pi PageInfo, res []PullRequest, err error) {
 
-	qc.Logger.Debug("repo pull requests", "repo", repoRefID)
+	qc.Logger.Debug("repo pull requests", "repo_ref_id", repo.ID, "repo", repo.NameWithOwner, "stop_on_updated_at", stopOnUpdatedAt.String(), "params", params)
 
-	objectPath := pstrings.JoinURL("projects", url.QueryEscape(repoRefID), "merge_requests")
+	objectPath := pstrings.JoinURL("projects", url.QueryEscape(repo.ID), "merge_requests")
 	params.Set("scope", "all")
 	params.Set("state", "all")
 
@@ -68,10 +71,10 @@ func PullRequestPage(
 		pr.CustomerID = qc.CustomerID
 		pr.RefType = qc.RefType
 		pr.RefID = strconv.FormatInt(rpr.ID, 10)
-		pr.RepoID = qc.IDs.CodeRepo(repoRefID)
+		pr.RepoID = qc.IDs.CodeRepo(repo.ID)
 		pr.BranchName = rpr.SourceBranch
 		pr.Title = rpr.Title
-		pr.Description = rpr.Description
+		pr.Description = convertMarkdownToHTML(rpr.Description)
 		pr.URL = rpr.WebURL
 		pr.Identifier = rpr.Identifier
 		date.ConvertToModel(rpr.CreatedAt, &pr.CreatedDate)
@@ -104,4 +107,18 @@ func PullRequestPage(
 	}
 
 	return
+}
+
+const extensions = blackfriday.NoIntraEmphasis |
+	blackfriday.Tables |
+	blackfriday.FencedCode |
+	blackfriday.Autolink |
+	blackfriday.Strikethrough |
+	blackfriday.SpaceHeadings |
+	blackfriday.NoEmptyLineBeforeBlock
+
+func convertMarkdownToHTML(text string) string {
+	input := strings.ReplaceAll(text, "\r", "")
+	output := blackfriday.Run([]byte(input), blackfriday.WithExtensions(extensions))
+	return string(output)
 }

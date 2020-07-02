@@ -12,15 +12,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pinpt/agent/pkg/commitusers"
+	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/filestore"
 
 	"github.com/pinpt/agent/cmd/cmdexport/process"
-	"github.com/pinpt/agent/pkg/commitusers"
 	"github.com/pinpt/agent/slimrippy/slimrippy"
 
 	"github.com/pinpt/integration-sdk/sourcecode"
 
-	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/expsessions"
 	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/agent/pkg/gitclone"
@@ -456,6 +456,12 @@ func (s *Export) commit(commit slimrippy.Commit) error {
 	}
 
 	writeCommitUser := func(obj commitusers.CommitUser) error {
+		err := obj.Validate()
+		if err != nil {
+			s.logger.Warn("commit user", "err", err)
+			return nil
+		}
+
 		obj2, err := s.opts.CommitUsers.Transform(obj.ToMap())
 		if err != nil {
 			return err

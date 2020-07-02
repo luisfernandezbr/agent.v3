@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pinpt/go-common/datetime"
+	"github.com/pinpt/go-common/event"
 
 	"github.com/pinpt/agent/integrations/pkg/mutate"
 
@@ -27,15 +28,19 @@ func (s *runner) handleMutationEvents(ctx context.Context) (closefunc, error) {
 	s.logger.Info("listening for mutation requests")
 
 	actionConfig := action.Config{
-		APIKey:  s.conf.APIKey,
-		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
-		Channel: s.conf.Channel,
+		Subscription: event.Subscription{
+			APIKey:  s.conf.APIKey,
+			GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
+			Channel: s.conf.Channel,
+			Headers: map[string]string{
+				"customer_id": s.conf.CustomerID,
+				"uuid":        s.conf.DeviceID,
+			},
+			DisablePing: true,
+		},
+
 		Factory: factory,
 		Topic:   agent.IntegrationMutationRequestModelName.String(),
-		Headers: map[string]string{
-			"customer_id": s.conf.CustomerID,
-			"uuid":        s.conf.DeviceID,
-		},
 	}
 
 	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {

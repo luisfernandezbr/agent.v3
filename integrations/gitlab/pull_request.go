@@ -12,7 +12,7 @@ import (
 
 func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, repo commonrepo.Repo, pullRequestSender *objsender.Session, pullRequests chan []api.PullRequest, lastProcessed time.Time) error {
 	return api.PaginateNewerThan(logger, lastProcessed, func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, res, err := api.PullRequestPage(s.qc, repo.ID, parameters, stopOnUpdatedAt)
+		pi, res, err := api.PullRequestPage(s.qc, repo, parameters, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
 		}

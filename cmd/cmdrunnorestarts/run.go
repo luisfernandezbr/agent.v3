@@ -12,6 +12,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/aevent"
 	"github.com/pinpt/agent/pkg/build"
+	"github.com/pinpt/httpclient"
 
 	"github.com/pinpt/agent/cmd/cmdintegration"
 
@@ -34,6 +35,10 @@ import (
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/logsender"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/updater"
 )
+
+func init() {
+	httpclient.Debug = false // turn on to get httpclient debug
+}
 
 type Opts struct {
 	Logger cmdlogger.Logger
@@ -295,6 +300,7 @@ func (s *runner) Run(ctx context.Context) error {
 }
 
 func (s *runner) sendEnabled(ctx context.Context) error {
+	s.logger.Info("sending enabled with customer_id=" + s.conf.CustomerID + " and uuid=" + s.conf.DeviceID)
 
 	data := agent.Enabled{
 		CustomerID: s.conf.CustomerID,
@@ -313,6 +319,7 @@ func (s *runner) sendEnabled(ctx context.Context) error {
 		},
 	}
 
+	s.logger.Info("sending enabled publish channel=" + s.conf.Channel + " and apikey=" + s.conf.APIKey)
 	err := aevent.Publish(ctx, publishEvent, s.conf.Channel, s.conf.APIKey)
 	if err != nil {
 		return err
@@ -332,16 +339,19 @@ var factory action.ModelFactory = &modelFactory{}
 
 func (s *runner) newSubConfig(topic string) action.Config {
 	return action.Config{
-		APIKey:  s.conf.APIKey,
-		GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
-		Channel: s.conf.Channel,
+		Subscription: event.Subscription{
+			APIKey:  s.conf.APIKey,
+			GroupID: fmt.Sprintf("agent-%v", s.conf.DeviceID),
+			Channel: s.conf.Channel,
+			Headers: map[string]string{
+				"customer_id": s.conf.CustomerID,
+				"uuid":        s.conf.DeviceID,
+			},
+			Offset:      "earliest",
+			DisablePing: true,
+		},
 		Factory: factory,
 		Topic:   topic,
-		Headers: map[string]string{
-			"customer_id": s.conf.CustomerID,
-			"uuid":        s.conf.DeviceID,
-		},
-		Offset: "earliest",
 	}
 }
 

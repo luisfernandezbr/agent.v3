@@ -2,4 +2,4 @@
 version: "1.0"
 auth_uri: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
 token_uri: https://login.microsoftonline.com/common/oauth2/v2.0/token
-scope: wl.calendars,offline_access
+scope: Calendars.Read,offline_access,User.Read

@@ -106,7 +106,7 @@ func (s *runner) runService(ctx context.Context) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = stderr
 	runErr := cmd.Run()
-	if runErr.Error() == "exit status 2" {
+	if runErr != nil && runErr.Error() == "exit status 2" {
 		s.logger.Info("exited from run --no-restarts")
 		return runErr
 	}

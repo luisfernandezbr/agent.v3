@@ -67,7 +67,6 @@ func (api *API) FetchWorkItemsByIDs(projid string, ids []string) ([]WorkItemResp
 
 		if !api.hasResolution(projid, fields.WorkItemType) {
 			if api.completedState(projid, fields.WorkItemType, fields.State) {
-				panic(fields.WorkItemType + " - " + fields.State + " - " + fields.Reason)
 				fields.ResolvedReason = fields.Reason
 			}
 		}

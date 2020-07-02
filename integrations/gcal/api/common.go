@@ -34,7 +34,8 @@ type api struct {
 	refType    string
 	ids        ids2.Gen
 	// for local testing
-	accessToken string
+	accessToken     string
+	lastTimeRetried time.Time
 }
 
 func New(logger hclog.Logger, customerID string, refType string, oauth *oauthtoken.Manager, accessToken string) API {
@@ -96,16 +97,17 @@ func (s *api) get(u string, params queryParams, res interface{}) error {
 			return fmt.Errorf("error unmarshaling response. err %v res %v", err, stringres)
 		}
 	case http.StatusUnauthorized:
-		if err := s.oauth.Refresh(); err != nil {
-			return err
+		if s.lastTimeRetried.IsZero() || time.Since(s.lastTimeRetried) > (5*time.Minute) {
+			s.lastTimeRetried = time.Now()
+			if err := s.oauth.Refresh(); err != nil {
+				return err
+			}
+			return s.get(u, params, req)
 		}
-		return s.get(u, params, req)
-	default:
-		b, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("error reading response body. err %v", err)
-		}
-		return fmt.Errorf("error fetching from google calendar api. response_code: %v. response: %v", resp.StatusCode, string(b))
 	}
-	return nil
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response body. err %v", err)
+	}
+	return fmt.Errorf("error fetching from google calendar api. response_code: %v. response: %v", resp.StatusCode, string(b))
 }

@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pinpt/agent/pkg/requests"
@@ -16,9 +18,9 @@ import (
 )
 
 // update this using current time, if the format of the url changes, or need a new url for some other reason
-const webhookReplaceOlderThan = "2020-05-04T17:19:42Z"
+const WebhookReplaceOlderThan = "2020-05-04T17:19:42Z"
 
-func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, events []string) (rerr error) {
+func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, events []string, webhookReplaceOlderThan string) (rerr error) {
 	logger := qc.Logger.With("repo", repo.NameWithOwner, "events", events)
 
 	logger.Debug("checking if webhook registration is needed")
@@ -33,13 +35,11 @@ func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, eve
 		return
 	}
 
-	webhookReplaceOlderThan, err := time.Parse(time.RFC3339, webhookReplaceOlderThan)
+	webhookReplaceOlder, err := time.Parse(time.RFC3339, webhookReplaceOlderThan)
 	if err != nil {
 		rerr = fmt.Errorf("invalid webhookReplaceOlderThan constant format: %v", err)
 		return
 	}
-
-	found := false
 
 	wantedURL, err := url.Parse(webhookURL)
 	if err != nil {
@@ -47,44 +47,67 @@ func WebhookCreateIfNotExists(qc QueryContext, repo Repo, webhookURL string, eve
 		return
 	}
 
-	for _, wh := range webhooks {
+	var pinptWebHooks []webhook
 
+	for _, wh := range webhooks {
 		haveURL, err := url.Parse(wh.Config.URL)
 		if err != nil {
 			rerr = err
 			return
 		}
+		if strings.Contains(wh.Config.URL, "?integration_instance_id") {
+			logger.Info("ignoring agent v4 webhook")
+			continue
+		}
 		if wantedURL.Host == haveURL.Host {
-			found = true
+			pinptWebHooks = append(pinptWebHooks, wh)
+		}
+	}
 
-			// already exists
-			if wh.CreatedAt.Before(webhookReplaceOlderThan) {
-				logger.Info("recreating webhook, because the one we had before is older than", "deadline", webhookReplaceOlderThan)
+	whCount := len(pinptWebHooks)
 
-				// the hook was created by older version of agent and needs re-creating
-			} else if reflect.DeepEqual(pstrings.SortCopy(events), pstrings.SortCopy(wh.Events)) {
-				// already same events, nothing to do
-				logger.Debug("existing webhook found, no need to re-create")
-			} else {
-				// remove previous, and add new
-				logger.Info("recreating webhook, because the one we had before had different settings", "repo", repo.NameWithOwner)
-			}
+	if whCount == 0 {
+		return webhookCreate(qc, repo, webhookURL, events)
+	} else if whCount > 1 {
 
-			// if there are multiple hooks for event-api url, we will remove all previous, only keeping one
+		sort.SliceStable(pinptWebHooks, func(i, j int) bool {
+			return pinptWebHooks[i].CreatedAt.Unix() > pinptWebHooks[j].CreatedAt.Unix()
+		})
+
+		for _, wh := range pinptWebHooks[1:] {
 			err := webhookRemove(qc, repo, wh.ID)
 			if err != nil {
 				rerr = err
 				return
 			}
-
 		}
 	}
 
-	if !found {
-		logger.Info("existing webhook not found, creating")
+	wh := pinptWebHooks[0]
+	var update bool
+	if wh.CreatedAt.Before(webhookReplaceOlder) {
+		logger.Info("recreating webhook, because the one we had before is older than", "deadline", webhookReplaceOlderThan)
+		update = true
+	}
+	if !reflect.DeepEqual(pstrings.SortCopy(events), pstrings.SortCopy(wh.Events)) {
+		logger.Info("recreating webhook, because the one we had before had different settings", "repo", repo.NameWithOwner)
+		update = true
 	}
 
-	return webhookCreate(qc, repo, webhookURL, events)
+	if update {
+		err := webhookRemove(qc, repo, wh.ID)
+		if err != nil {
+			rerr = err
+			return
+		}
+		err = webhookCreate(qc, repo, webhookURL, events)
+		if err != nil {
+			rerr = err
+			return
+		}
+	}
+
+	return
 }
 
 type webhook struct {

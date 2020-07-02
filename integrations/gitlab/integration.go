@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 	"sync"
-	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
@@ -206,7 +205,7 @@ func (s *Integration) export(ctx context.Context, intType inconfig.IntegrationTy
 		}
 	}
 
-	groupNames, err := api.GroupsAll(s.qc)
+	groups, err := api.GroupsAll(s.qc)
 	if err != nil {
 		rerr = err
 		return
@@ -217,13 +216,13 @@ func (s *Integration) export(ctx context.Context, intType inconfig.IntegrationTy
 		rerr = err
 		return
 	}
-	if err = groupSession.SetTotal(len(groupNames)); err != nil {
+	if err = groupSession.SetTotal(len(groups)); err != nil {
 		rerr = err
 		return
 	}
 
-	for _, groupName := range groupNames {
-		groupResults, err := s.exportGroup(ctx, groupSession, groupName, intType)
+	for _, group := range groups {
+		groupResults, err := s.exportGroup(ctx, groupSession, group, intType)
 		if err != nil {
 			rerr = err
 			return
@@ -264,13 +263,14 @@ func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchP
 	return nil
 }
 
-func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.Session, groupName string, intType inconfig.IntegrationType) (_ []rpcdef.ExportProject, rerr error) {
+func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.Session, group *api.Group, intType inconfig.IntegrationType) (_ []rpcdef.ExportProject, rerr error) {
 
-	s.logger.Info("exporting group", "name", groupName, "intType", intType)
-	logger := s.logger.With("org", groupName)
+	s.logger.Info("exporting group", "name", group.FullPath, "id", group.ID, "intType", intType)
+
+	logger := s.logger.With("org", group)
 
 	repos, err := commonrepo.ReposAllSlice(func(res chan []commonrepo.Repo) error {
-		return api.ReposAll(s.qc, groupName, res)
+		return api.ReposAll(s.qc, group, res)
 	})
 	if err != nil {
 		rerr = err
@@ -296,7 +296,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 	} else {
 		modelname = sourcecode.RepoModelName.String()
 	}
-	repoSender, err := groupSession.Session(modelname, groupName, groupName)
+	repoSender, err := groupSession.Session(modelname, group.FullPath, group.FullPath)
 	if err != nil {
 		rerr = err
 		return
@@ -309,7 +309,7 @@ func (s *Integration) exportGroup(ctx context.Context, groupSession *objsender.S
 		return
 	}
 
-	if err = s.exportRepos(ctx, logger, repoSender, groupName, repos, intType); err != nil {
+	if err = s.exportRepos(ctx, logger, repoSender, group, repos, intType); err != nil {
 		rerr = err
 		return
 	}
@@ -387,15 +387,15 @@ func (s *Integration) exportRepoChildren(ctx *repoprojects.ProjectCtx, repo comm
 	return s.exportGit(repo, prs)
 }
 
-func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender.Session, groupName string, onlyInclude []commonrepo.Repo, intType inconfig.IntegrationType) error {
+func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender.Session, group *api.Group, onlyInclude []commonrepo.Repo, intType inconfig.IntegrationType) error {
 
 	shouldInclude := map[string]bool{}
 	for _, repo := range onlyInclude {
 		shouldInclude[repo.NameWithOwner] = true
 	}
 
-	err := api.PaginateNewerThan(s.logger, sender.LastProcessedTime(), func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, repos, err := api.ReposPage(s.qc, groupName, parameters, stopOnUpdatedAt)
+	err := api.PaginateStartAt(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
+		pi, repos, err := api.ReposPage(s.qc, group, parameters)
 		if err != nil {
 			return pi, err
 		}
