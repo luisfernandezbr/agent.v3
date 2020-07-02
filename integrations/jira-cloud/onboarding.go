@@ -33,7 +33,6 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 
 	if s.customerID == "ea63c052fd862a91" || s.customerID == "d05b8b6ef71e3575" || s.customerID == "14ea36c3b3cd0270" {
 		if !s.UseOAuth {
-			s.qc.Logger.Warn("webhooks are not supported for aouth tokens")
 			whURL, noPermissions, err := api.WebhookTestPermissions(s.qc)
 			if err != nil {
 				if noPermissions {
@@ -43,6 +42,8 @@ func (s *Integration) onboardExportProjects(ctx context.Context, config rpcdef.E
 			} else {
 				api.WebhookRemove(s.qc, whURL)
 			}
+		} else {
+			s.qc.Logger.Warn("webhooks are not supported for aouth tokens")
 		}
 	}
 
