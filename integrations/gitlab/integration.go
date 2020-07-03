@@ -549,7 +549,7 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 		defer wg.Done()
 		for prs := range pullRequestsForCommits {
 			for _, pr := range prs {
-				commits, err := s.exportPullRequestCommits(logger, repo, pr.RefID, pr.IID)
+				commits, err := s.exportPullRequestCommits(logger, repo, pr)
 				if err != nil {
 					s.logger.Error("error getting commits", "err", err)
 					continue

@@ -16,13 +16,12 @@ import (
 func PullRequestCommitsPage(
 	qc QueryContext,
 	repo commonrepo.Repo,
-	prID string,
-	prIID string,
+	pr PullRequest,
 	params url.Values) (pi PageInfo, res []*sourcecode.PullRequestCommit, err error) {
 
 	qc.Logger.Debug("pull request commits", "repo", repo.NameWithOwner)
 
-	objectPath := pstrings.JoinURL("projects", repo.ID, "merge_requests", prIID, "commits")
+	objectPath := pstrings.JoinURL("projects", repo.ID, "merge_requests", pr.IID, "commits")
 
 	var rcommits []struct {
 		ID             string    `json:"id"`
@@ -44,7 +43,7 @@ func PullRequestCommitsPage(
 		item.RefType = qc.RefType
 		item.RefID = rcommit.ID
 		item.RepoID = qc.IDs.CodeRepo(repo.ID)
-		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, prID)
+		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, pr.RefID)
 		item.Sha = rcommit.ID
 		item.Message = rcommit.Message
 		url, err := url.Parse(qc.BaseURL)
