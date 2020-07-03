@@ -53,7 +53,7 @@ func PullRequestReviewsPage(
 		item.RefType = qc.RefType
 		item.RefID = fmt.Sprint(rreview.ID)
 		item.RepoID = qc.IDs.CodeRepo(repo.ID)
-		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, pr.ID)
+		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, pr.RefID)
 		item.State = sourcecode.PullRequestReviewStateApproved
 
 		date.ConvertToModel(rreview.CreatedAt, &item.CreatedDate)
@@ -69,7 +69,7 @@ func PullRequestReviewsPage(
 		item.RefType = qc.RefType
 		item.RefID = fmt.Sprint(rreview.ID)
 		item.RepoID = qc.IDs.CodeRepo(repo.ID)
-		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, pr.ID)
+		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, pr.RefID)
 		item.State = sourcecode.PullRequestReviewStatePending
 
 		date.ConvertToModel(rreview.CreatedAt, &item.CreatedDate)

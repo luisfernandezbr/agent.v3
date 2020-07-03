@@ -11,9 +11,9 @@ import (
 	"github.com/pinpt/agent/integrations/gitlab/api"
 )
 
-func (s *Integration) exportPullRequestCommits(logger hclog.Logger, repo commonrepo.Repo, prID string, prIID string) (res []*sourcecode.PullRequestCommit, _ error) {
+func (s *Integration) exportPullRequestCommits(logger hclog.Logger, repo commonrepo.Repo, pr api.PullRequest) (res []*sourcecode.PullRequestCommit, _ error) {
 	err := api.PaginateStartAt(s.logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
-		pi, sub, err := api.PullRequestCommitsPage(s.qc, repo, prID, prIID, paginationParams)
+		pi, sub, err := api.PullRequestCommitsPage(s.qc, repo, pr, paginationParams)
 		if err != nil {
 			return pi, err
 		}
