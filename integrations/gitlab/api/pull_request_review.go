@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
@@ -25,17 +26,17 @@ func PullRequestReviewsPage(
 		ID         int64 `json:"id"`
 		ApprovedBy []struct {
 			User struct {
-				ID string `json:"id"`
+				ID int64 `json:"id"`
 			} `json:"user"`
 		} `json:"approved_by"`
 		SuggestedApprovers []struct {
 			User struct {
-				ID string `json:"id"`
+				ID int64 `json:"id"`
 			} `json:"user"`
 		} `json:"suggested_approvers"`
 		Approvers []struct {
 			User struct {
-				ID string `json:"id"`
+				ID int64 `json:"id"`
 			} `json:"user"`
 		} `json:"approvers"`
 		CreatedAt time.Time `json:"created_at"`
@@ -58,7 +59,7 @@ func PullRequestReviewsPage(
 
 		date.ConvertToModel(rreview.CreatedAt, &item.CreatedDate)
 
-		item.UserRefID = a.User.ID
+		item.UserRefID = strconv.FormatInt(a.User.ID, 10)
 
 		res = append(res, item)
 	}
@@ -74,7 +75,7 @@ func PullRequestReviewsPage(
 
 		date.ConvertToModel(rreview.CreatedAt, &item.CreatedDate)
 
-		item.UserRefID = a.User.ID
+		item.UserRefID = strconv.FormatInt(a.User.ID, 10)
 
 		res = append(res, item)
 	}
