@@ -46,13 +46,13 @@ func PullRequestPage(
 		State        string    `json:"state"`
 		Draft        bool      `json:"work_in_progress"`
 		Author       struct {
-			Username string `json:"username"`
+			ID int64 `json:"id"`
 		} `json:"author"`
 		ClosedBy struct {
-			Username string `json:"username"`
+			ID int64 `json:"id"`
 		} `json:"closed_by"`
 		MergedBy struct {
-			Username string `json:"username"`
+			ID int64 `json:"id"`
 		} `json:"merged_by"`
 		MergeCommitSHA string `json:"merge_commit_sha"`
 		Identifier     string `json:"reference"` // this looks how we display in Gitlab such as !1
@@ -86,18 +86,18 @@ func PullRequestPage(
 			pr.Status = sourcecode.PullRequestStatusOpen
 		case "closed":
 			pr.Status = sourcecode.PullRequestStatusClosed
-			pr.ClosedByRefID = rpr.ClosedBy.Username
+			pr.ClosedByRefID = strconv.FormatInt(rpr.ClosedBy.ID, 10)
 		case "locked":
 			pr.Status = sourcecode.PullRequestStatusLocked
 		case "merged":
 			pr.MergeSha = rpr.MergeCommitSHA
 			pr.MergeCommitID = ids.CodeCommit(qc.CustomerID, qc.RefType, pr.RepoID, rpr.MergeCommitSHA)
-			pr.MergedByRefID = rpr.MergedBy.Username
+			pr.MergedByRefID = strconv.FormatInt(rpr.MergedBy.ID, 10)
 			pr.Status = sourcecode.PullRequestStatusMerged
 		default:
 			qc.Logger.Error("PR has an unknown state", "state", rpr.State, "ref_id", pr.RefID)
 		}
-		pr.CreatedByRefID = rpr.Author.Username
+		pr.CreatedByRefID = strconv.FormatInt(rpr.Author.ID, 10)
 		pr.Draft = rpr.Draft
 
 		spr := PullRequest{}

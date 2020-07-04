@@ -75,7 +75,7 @@ func UsersPage(qc QueryContext, params url.Values) (page PageInfo, users []User,
 }
 
 func UserEmails(qc QueryContext, userID int64) (emails []string, err error) {
-	qc.Logger.Debug("users request")
+	qc.Logger.Debug("user emails request", "user_id", userID)
 
 	objectPath := pstrings.JoinURL("users", fmt.Sprint(userID), "emails")
 
@@ -98,7 +98,7 @@ func UserEmails(qc QueryContext, userID int64) (emails []string, err error) {
 // UsernameMap map[username]ref_id
 type UsernameMap map[string]string
 
-func RepoUsersPageREST(qc QueryContext, repo commonrepo.Repo, usermap UsernameMap, params url.Values) (page PageInfo, repos []*sourcecode.User, err error) {
+func RepoUsersPageREST(qc QueryContext, repo commonrepo.Repo, usermap UsernameMap, params url.Values) (page PageInfo, users []*sourcecode.User, err error) {
 	qc.Logger.Debug("users request", "repo", repo)
 
 	objectPath := pstrings.JoinURL("projects", url.QueryEscape(repo.ID), "users")
@@ -127,7 +127,7 @@ func RepoUsersPageREST(qc QueryContext, repo commonrepo.Repo, usermap UsernameMa
 		sourceUser.Type = sourcecode.UserTypeHuman
 		sourceUser.URL = pstrings.Pointer(user.WebURL)
 
-		repos = append(repos, &sourceUser)
+		users = append(users, &sourceUser)
 		usermap[user.Username] = sourceUser.RefID
 	}
 

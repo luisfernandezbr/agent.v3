@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
@@ -24,7 +25,7 @@ func PullRequestCommentsPage(
 	var rcomments []struct {
 		ID     int64 `json:"id"`
 		Author struct {
-			Username string `json:"username"`
+			ID int64 `json:"id"`
 		} `json:"author"`
 		Body      string    `json:"body"`
 		UpdatedAt time.Time `json:"updated_at"`
@@ -53,7 +54,7 @@ func PullRequestCommentsPage(
 		item.Body = rcomment.Body
 		date.ConvertToModel(rcomment.CreatedAt, &item.CreatedDate)
 
-		item.UserRefID = rcomment.Author.Username
+		item.UserRefID = strconv.FormatInt(rcomment.Author.ID, 10)
 		res = append(res, item)
 	}
 
