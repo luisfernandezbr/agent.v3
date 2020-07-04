@@ -46,13 +46,13 @@ func PullRequestPage(
 		State        string    `json:"state"`
 		Draft        bool      `json:"work_in_progress"`
 		Author       struct {
-			ID int64 `json:"username"`
+			ID int64 `json:"id"`
 		} `json:"author"`
 		ClosedBy struct {
-			ID int64 `json:"username"`
+			ID int64 `json:"id"`
 		} `json:"closed_by"`
 		MergedBy struct {
-			ID int64 `json:"username"`
+			ID int64 `json:"id"`
 		} `json:"merged_by"`
 		MergeCommitSHA string `json:"merge_commit_sha"`
 		Identifier     string `json:"reference"` // this looks how we display in Gitlab such as !1
