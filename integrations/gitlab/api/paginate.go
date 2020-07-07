@@ -14,7 +14,7 @@ func PaginateStartAt(log hclog.Logger, fn PaginateStartAtFn) error {
 	nextPage := "1"
 	for {
 		q := url.Values{}
-		q.Add("page", nextPage)
+		q.Set("page", nextPage)
 		pageInfo, err := fn(log, q)
 		if err != nil {
 			return err
@@ -38,9 +38,9 @@ func PaginateNewerThan(log hclog.Logger, lastProcessed time.Time, fn PaginateNew
 	p.Set("per_page", "100")
 
 	for {
-		p.Add("page", nextPage)
+		p.Set("page", nextPage)
 		if !lastProcessed.IsZero() {
-			p.Add("order_by", "updated_at")
+			p.Set("order_by", "updated_at")
 		}
 		pageInfo, err := fn(log, p, lastProcessed)
 		if err != nil {
