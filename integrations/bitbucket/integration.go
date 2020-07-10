@@ -435,8 +435,8 @@ func (s *Integration) exportCommitUsersForRepo(ctx *repoprojects.ProjectCtx, rep
 	if err != nil {
 		return err
 	}
-	return api.Paginate(ctx.Logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
-		pi, users, err := api.CommitUsersSourcecodePage(s.qc, repo.NameWithOwner, parameters)
+	return api.PaginateNewerThan(ctx.Logger, usersSender.LastProcessedTime(), func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
+		pi, users, err := api.CommitUsersSourcecodePage(s.qc, repo.NameWithOwner, parameters, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
 		}
@@ -444,6 +444,11 @@ func (s *Integration) exportCommitUsersForRepo(ctx *repoprojects.ProjectCtx, rep
 			return pi, err
 		}
 		for _, user := range users {
+			err := user.Validate()
+			if err != nil {
+				s.logger.Warn("commit user", "err", err)
+				continue
+			}
 			if err := usersSender.SendMap(user.ToMap()); err != nil {
 				return pi, err
 			}

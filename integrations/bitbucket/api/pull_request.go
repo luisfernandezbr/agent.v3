@@ -36,7 +36,7 @@ func PullRequestPage(
 	// Greater than 50 throws "Invalid pagelen"
 	params.Set("pagelen", "50")
 
-	qc.Logger.Debug("repo pull requests", "repo", repo.RefID, "repo_name", repo.NameWithOwner, "params", params)
+	qc.Logger.Debug("repo pull requests", "repo", repo.RefID, "repo_name", repo.NameWithOwner, "inc_date", stopOnUpdatedAt, "params", params)
 
 	var rprs []struct {
 		RefID  int64 `json:"id"`

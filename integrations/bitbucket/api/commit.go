@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -10,8 +11,17 @@ import (
 	pstrings "github.com/pinpt/go-common/strings"
 )
 
-func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) (page PageInfo, users []commitusers.CommitUser, err error) {
+func CommitUsersSourcecodePage(
+	qc QueryContext,
+	repo string,
+	params url.Values,
+	stopOnUpdatedAt time.Time) (page PageInfo, users []commitusers.CommitUser, err error) {
+
 	qc.Logger.Debug("commit users request", "repo", repo)
+
+	if !stopOnUpdatedAt.IsZero() {
+		params.Set("q", fmt.Sprintf(" date > %s", stopOnUpdatedAt.UTC().Format("2006-01-02T15:04:05.000000-07:00")))
+	}
 
 	objectPath := pstrings.JoinURL("repositories", repo, "commits")
 

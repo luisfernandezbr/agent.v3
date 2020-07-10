@@ -26,7 +26,7 @@ func PullRequestCommentsPage(
 
 	params.Set("pagelen", "100")
 
-	qc.Logger.Debug("pull request comments", "repo", repo.RefID, "repo_name", repo.NameWithOwner, "pr_i", pr.Identifier, "pr_ref_id", pr.RefID, "params", params)
+	qc.Logger.Debug("pull request comments", "repo", repo.RefID, "repo_name", repo.NameWithOwner, "pr_i", pr.Identifier, "pr_ref_id", pr.RefID, "inc_date", stopOnUpdatedAt, "params", params)
 
 	objectPath := pstrings.JoinURL("repositories", repo.NameWithOwner, "pullrequests", pr.RefID, "comments")
 

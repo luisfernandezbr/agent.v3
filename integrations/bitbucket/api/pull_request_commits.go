@@ -31,7 +31,7 @@ func PullRequestCommitsPage(
 	params.Set("fields", "values.hash,values.message,values.date,values.author.raw,page,pagelen,size?page="+params.Get("page"))
 	params.Del("page")
 
-	qc.Logger.Debug("pull request commits", "repo", repo.RefID, "repo_name", repo.NameWithOwner, "pr_i", pr.Identifier, "pr_ref_id", pr.RefID, "params", params)
+	qc.Logger.Debug("pull request commits", "repo", repo.RefID, "repo_name", repo.NameWithOwner, "pr_i", pr.Identifier, "pr_ref_id", pr.RefID, "inc_date", stopOnUpdatedAt, "params", params)
 
 	objectPath := pstrings.JoinURL("repositories", repo.NameWithOwner, "pullrequests", pr.RefID, "commits")
 
