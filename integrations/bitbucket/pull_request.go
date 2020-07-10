@@ -23,7 +23,20 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 		rerr = err
 		return
 	}
+
+	commentsSender, err := ctx.Session(sourcecode.PullRequestCommentModelName)
+	if err != nil {
+		rerr = err
+		return
+	}
+
 	commitsSender, err := ctx.Session(sourcecode.PullRequestCommitModelName)
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	reviewsSender, err := ctx.Session(sourcecode.PullRequestReviewModelName)
 	if err != nil {
 		rerr = err
 		return
@@ -37,7 +50,7 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 	pullRequestsInitial := make(chan []sourcecode.PullRequest)
 	go func() {
 		defer close(pullRequestsInitial)
-		if err := s.exportPullRequestsRepo(logger, repo, pullRequestSender, pullRequestsInitial, pullRequestSender.LastProcessedTime()); err != nil {
+		if err := s.exportPullRequestsRepo(logger, repo, pullRequestSender, reviewsSender, pullRequestsInitial, pullRequestSender.LastProcessedTime()); err != nil {
 			pullRequestsErr = err
 		}
 	}()
@@ -78,7 +91,7 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := s.exportPullRequestsComments(logger, pullRequestSender, repo, pullRequestsForComments)
+		err := s.exportPullRequestsComments(logger, commentsSender, repo, pullRequestsForComments)
 		if err != nil {
 			setErr(fmt.Errorf("error getting comments %s", err))
 		}
@@ -90,7 +103,7 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 		defer wg.Done()
 		for prs := range pullRequestsForCommits {
 			for _, pr := range prs {
-				commits, err := s.exportPullRequestCommits(logger, repo, pr.RefID)
+				commits, err := s.exportPullRequestCommits(logger, repo, pr, commitsSender)
 				if err != nil {
 					setErr(fmt.Errorf("error getting commits %s", err))
 					return
@@ -98,7 +111,7 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 
 				if len(commits) > 0 {
 					meta := rpcdef.GitRepoFetchPR{}
-					repoID := s.qc.IDs.CodeRepo(repo.ID)
+					repoID := s.qc.IDs.CodeRepo(repo.RefID)
 					meta.ID = s.qc.IDs.CodePullRequest(repoID, pr.RefID)
 					meta.RefID = pr.RefID
 					meta.URL = pr.URL
@@ -137,13 +150,13 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 	return
 }
 
-func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, repo commonrepo.Repo, sender *objsender.Session, pullRequests chan []sourcecode.PullRequest, lastProcessed time.Time) error {
-	return api.PaginateNewerThan(logger, lastProcessed, func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, res, err := api.PullRequestPage(s.qc, sender, repo.ID, repo.NameWithOwner, parameters, stopOnUpdatedAt)
+func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, repo commonrepo.Repo, prSender *objsender.Session, reviewsSender *objsender.Session, pullRequests chan []sourcecode.PullRequest, lastProcessed time.Time) error {
+	return api.PaginateNewerThan(logger, prSender.LastProcessedTime(), func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
+		pi, res, err := api.PullRequestPage(s.qc, reviewsSender, repo, parameters, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
 		}
-		if err = sender.SetTotal(pi.Total); err != nil {
+		if err = prSender.SetTotal(pi.Total); err != nil {
 			return pi, err
 		}
 		pullRequests <- res

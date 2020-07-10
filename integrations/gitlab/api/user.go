@@ -101,7 +101,7 @@ type UsernameMap map[string]string
 func RepoUsersPageREST(qc QueryContext, repo commonrepo.Repo, usermap UsernameMap, params url.Values) (page PageInfo, users []*sourcecode.User, err error) {
 	qc.Logger.Debug("users request", "repo", repo)
 
-	objectPath := pstrings.JoinURL("projects", url.QueryEscape(repo.ID), "users")
+	objectPath := pstrings.JoinURL("projects", url.QueryEscape(repo.RefID), "users")
 
 	var ru []struct {
 		ID        int64  `json:"id"`

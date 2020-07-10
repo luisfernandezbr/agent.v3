@@ -26,9 +26,9 @@ func PullRequestPage(
 	params url.Values,
 	stopOnUpdatedAt time.Time) (pi PageInfo, res []PullRequest, err error) {
 
-	qc.Logger.Debug("repo pull requests", "repo_ref_id", repo.ID, "repo", repo.NameWithOwner, "stop_on_updated_at", stopOnUpdatedAt.String(), "params", params)
+	qc.Logger.Debug("repo pull requests", "repo_ref_id", repo.RefID, "repo", repo.NameWithOwner, "stop_on_updated_at", stopOnUpdatedAt.String(), "params", params)
 
-	objectPath := pstrings.JoinURL("projects", url.QueryEscape(repo.ID), "merge_requests")
+	objectPath := pstrings.JoinURL("projects", url.QueryEscape(repo.RefID), "merge_requests")
 	params.Set("scope", "all")
 	params.Set("state", "all")
 
@@ -71,7 +71,7 @@ func PullRequestPage(
 		pr.CustomerID = qc.CustomerID
 		pr.RefType = qc.RefType
 		pr.RefID = strconv.FormatInt(rpr.ID, 10)
-		pr.RepoID = qc.IDs.CodeRepo(repo.ID)
+		pr.RepoID = qc.IDs.CodeRepo(repo.RefID)
 		pr.BranchName = rpr.SourceBranch
 		pr.Title = rpr.Title
 		pr.Description = convertMarkdownToHTML(rpr.Description)

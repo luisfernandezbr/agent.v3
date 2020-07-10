@@ -250,7 +250,7 @@ func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchP
 	}
 
 	args := rpcdef.GitRepoFetch{}
-	args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
+	args.RepoID = s.qc.IDs.CodeRepo(repo.RefID)
 	args.UniqueName = repo.NameWithOwner
 	args.RefType = s.refType
 	args.URL = repoURL
@@ -559,7 +559,7 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 
 				if len(commits) > 0 {
 					meta := rpcdef.GitRepoFetchPR{}
-					repoID := s.qc.IDs.CodeRepo(repo.ID)
+					repoID := s.qc.IDs.CodeRepo(repo.RefID)
 					meta.ID = s.qc.IDs.CodePullRequest(repoID, pr.RefID)
 					meta.RefID = pr.RefID
 					meta.URL = pr.URL
