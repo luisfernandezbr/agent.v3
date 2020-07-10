@@ -6,14 +6,14 @@ import (
 )
 
 type Repo struct {
-	ID            string
+	RefID         string
 	NameWithOwner string
 	// DefaultBranch of the repo, could be empty if no commits yet. Used for getting commit_users
 	DefaultBranch string
 }
 
 func (s Repo) GetID() string {
-	return s.ID
+	return s.RefID
 }
 
 func (s Repo) GetReadableID() string {

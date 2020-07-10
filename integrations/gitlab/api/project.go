@@ -89,9 +89,9 @@ func ReposPage(qc QueryContext, group *Group, params url.Values) (page PageInfo,
 	}
 
 	for _, repo := range rr {
-		id := strconv.FormatInt(repo.ID, 10)
+		refID := strconv.FormatInt(repo.ID, 10)
 		repo := &sourcecode.Repo{
-			RefID:       id,
+			RefID:       refID,
 			RefType:     qc.RefType,
 			CustomerID:  qc.CustomerID,
 			Name:        repo.FullName,
@@ -101,7 +101,7 @@ func ReposPage(qc QueryContext, group *Group, params url.Values) (page PageInfo,
 			Active:      true,
 		}
 
-		repo.Language, err = repoLanguage(qc, id)
+		repo.Language, err = repoLanguage(qc, refID)
 		if err != nil {
 			return
 		}
@@ -146,7 +146,7 @@ func ReposPageCommon(qc QueryContext, group *Group, params url.Values) (page Pag
 
 	for _, repo := range rr {
 		repo := commonrepo.Repo{
-			ID:            fmt.Sprint(repo.ID),
+			RefID:         fmt.Sprint(repo.ID),
 			NameWithOwner: repo.FullName,
 			DefaultBranch: repo.DefaultBranch,
 		}

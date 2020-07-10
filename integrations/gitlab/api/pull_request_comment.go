@@ -18,9 +18,9 @@ func PullRequestCommentsPage(
 	pr PullRequest,
 	params url.Values) (pi PageInfo, res []*sourcecode.PullRequestComment, err error) {
 
-	qc.Logger.Debug("pull request commits", "repo", repo.ID)
+	qc.Logger.Debug("pull request comments", "repo", repo.RefID)
 
-	objectPath := pstrings.JoinURL("projects", url.QueryEscape(repo.ID), "merge_requests", pr.IID, "notes")
+	objectPath := pstrings.JoinURL("projects", url.QueryEscape(repo.RefID), "merge_requests", pr.IID, "notes")
 
 	var rcomments []struct {
 		ID     int64 `json:"id"`
@@ -53,7 +53,7 @@ func PullRequestCommentsPage(
 		item.RefID = fmt.Sprint(rcomment.ID)
 		item.URL = pstrings.JoinURL(u.Scheme, "://", u.Hostname(), repo.NameWithOwner, "merge_requests", pr.IID)
 		date.ConvertToModel(rcomment.UpdatedAt, &item.UpdatedDate)
-		item.RepoID = qc.IDs.CodeRepo(repo.ID)
+		item.RepoID = qc.IDs.CodeRepo(repo.RefID)
 		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, pr.ID)
 		item.Body = rcomment.Body
 		date.ConvertToModel(rcomment.CreatedAt, &item.CreatedDate)

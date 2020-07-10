@@ -481,7 +481,7 @@ func (s *Integration) exportGit(repo commonrepo.Repo, prs []rpcdef.GitRepoFetchP
 	}
 
 	args := rpcdef.GitRepoFetch{}
-	args.RepoID = s.qc.IDs.CodeRepo(repo.ID)
+	args.RepoID = s.qc.IDs.CodeRepo(repo.RefID)
 	args.UniqueName = repo.NameWithOwner
 	args.RefType = s.refType
 	args.URL = repoURL

@@ -20,7 +20,7 @@ func PullRequestReviewsPage(
 
 	qc.Logger.Debug("pull request reviews", "repo", repo.NameWithOwner, "prID", pr.ID, "prIID", pr.IID)
 
-	objectPath := pstrings.JoinURL("projects", repo.ID, "merge_requests", pr.IID, "approvals")
+	objectPath := pstrings.JoinURL("projects", repo.RefID, "merge_requests", pr.IID, "approvals")
 
 	var rreview struct {
 		ID         int64 `json:"id"`
@@ -53,7 +53,7 @@ func PullRequestReviewsPage(
 		item.CustomerID = qc.CustomerID
 		item.RefType = qc.RefType
 		item.RefID = fmt.Sprint(rreview.ID)
-		item.RepoID = qc.IDs.CodeRepo(repo.ID)
+		item.RepoID = qc.IDs.CodeRepo(repo.RefID)
 		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, pr.RefID)
 		item.State = sourcecode.PullRequestReviewStateApproved
 
@@ -69,7 +69,7 @@ func PullRequestReviewsPage(
 		item.CustomerID = qc.CustomerID
 		item.RefType = qc.RefType
 		item.RefID = fmt.Sprint(rreview.ID)
-		item.RepoID = qc.IDs.CodeRepo(repo.ID)
+		item.RepoID = qc.IDs.CodeRepo(repo.RefID)
 		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, pr.RefID)
 		item.State = sourcecode.PullRequestReviewStatePending
 

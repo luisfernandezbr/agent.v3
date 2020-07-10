@@ -21,7 +21,7 @@ func PullRequestCommitsPage(
 
 	qc.Logger.Debug("pull request commits", "repo", repo.NameWithOwner)
 
-	objectPath := pstrings.JoinURL("projects", repo.ID, "merge_requests", pr.IID, "commits")
+	objectPath := pstrings.JoinURL("projects", repo.RefID, "merge_requests", pr.IID, "commits")
 
 	var rcommits []struct {
 		ID             string    `json:"id"`
@@ -42,7 +42,7 @@ func PullRequestCommitsPage(
 		item.CustomerID = qc.CustomerID
 		item.RefType = qc.RefType
 		item.RefID = rcommit.ID
-		item.RepoID = qc.IDs.CodeRepo(repo.ID)
+		item.RepoID = qc.IDs.CodeRepo(repo.RefID)
 		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, pr.RefID)
 		item.Sha = rcommit.ID
 		item.Message = rcommit.Message

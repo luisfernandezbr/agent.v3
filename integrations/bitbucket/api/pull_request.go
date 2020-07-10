@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 
 	"github.com/pinpt/agent/pkg/date"
@@ -17,15 +18,16 @@ import (
 
 func PullRequestPage(
 	qc QueryContext,
-	sender *objsender.Session,
-	repoID string,
-	repoName string,
+	reviewsSender *objsender.Session,
+	repo commonrepo.Repo,
 	params url.Values,
 	stopOnUpdatedAt time.Time) (pi PageInfo, res []sourcecode.PullRequest, err error) {
 
-	qc.Logger.Debug("repo pull requests", "repo", repoName)
+	if !stopOnUpdatedAt.IsZero() {
+		params.Set("q", fmt.Sprintf(" updated_on > %s", stopOnUpdatedAt.UTC().Format("2006-01-02T15:04:05.000000-07:00")))
+	}
 
-	objectPath := pstrings.JoinURL("repositories", repoName, "pullrequests")
+	objectPath := pstrings.JoinURL("repositories", repo.NameWithOwner, "pullrequests")
 	params.Add("state", "MERGED")
 	params.Add("state", "SUPERSEDED")
 	params.Add("state", "OPEN")
@@ -34,8 +36,10 @@ func PullRequestPage(
 	// Greater than 50 throws "Invalid pagelen"
 	params.Set("pagelen", "50")
 
+	qc.Logger.Debug("repo pull requests", "repo", repo.RefID, "repo_name", repo.NameWithOwner, "params", params)
+
 	var rprs []struct {
-		ID     int64 `json:"id"`
+		RefID  int64 `json:"id"`
 		Source struct {
 			Branch struct {
 				Name string `json:"name"`
@@ -76,19 +80,16 @@ func PullRequestPage(
 	}
 
 	for _, rpr := range rprs {
-		if rpr.UpdatedOn.Before(stopOnUpdatedAt) {
-			return pi, res, nil
-		}
 		pr := sourcecode.PullRequest{}
 		pr.CustomerID = qc.CustomerID
 		pr.RefType = qc.RefType
-		pr.RefID = fmt.Sprint(rpr.ID)
-		pr.RepoID = qc.IDs.CodeRepo(repoID)
+		pr.RefID = strconv.FormatInt(rpr.RefID, 10)
+		pr.RepoID = qc.IDs.CodeRepo(repo.RefID)
 		pr.BranchName = rpr.Source.Branch.Name
 		pr.Title = rpr.Title
 		pr.Description = rpr.Description
 		pr.URL = rpr.Links.HTML.Href
-		pr.Identifier = fmt.Sprintf("#%d", rpr.ID) // in bitbucket looks like #1 is the format for PR identifiers in their UI
+		pr.Identifier = fmt.Sprintf("#%d", rpr.RefID) // in bitbucket looks like #1 is the format for PR identifiers in their UI
 		date.ConvertToModel(rpr.CreatedOn, &pr.CreatedDate)
 		date.ConvertToModel(rpr.UpdatedOn, &pr.MergedDate)
 		date.ConvertToModel(rpr.UpdatedOn, &pr.ClosedDate)
@@ -111,38 +112,36 @@ func PullRequestPage(
 
 		res = append(res, pr)
 
-		reviewsSender, err := sender.Session(sourcecode.PullRequestCommentModelName.String(), pr.RefID, pr.RefID)
-		if err != nil {
-			return pi, res, err
-		}
-
 		for _, participant := range rpr.Participants {
-			if participant.Role == "REVIEWER" {
-				review := sourcecode.PullRequestReview{}
 
-				review.CustomerID = qc.CustomerID
-				review.PullRequestID = strconv.FormatInt(rpr.ID, 10)
-				review.RefID = hash.Values(pr.RefID, participant.User.AccountID)
-				review.RefType = qc.RefType
-				review.RepoID = qc.IDs.CodeRepo(repoID)
+			review := &sourcecode.PullRequestReview{}
 
-				if participant.Approved {
-					review.State = sourcecode.PullRequestReviewStateApproved
-				} else {
-					review.State = sourcecode.PullRequestReviewStatePending
-				}
+			review.CustomerID = qc.CustomerID
+			review.RefType = qc.RefType
+			review.RefID = hash.Values(pr.RefID, participant.User.AccountID)
+			review.RepoID = qc.IDs.CodeRepo(repo.RefID)
+			review.PullRequestID = qc.IDs.CodePullRequest(review.RepoID, strconv.FormatInt(rpr.RefID, 10))
 
-				review.UserRefID = participant.User.AccountID
+			if participant.Approved {
+				review.State = sourcecode.PullRequestReviewStateApproved
+			} else if participant.Role == "PARTICIPANT" {
+				review.State = sourcecode.PullRequestReviewStateCommented
+			} else if participant.Role == "REVIEWER" {
+				review.State = sourcecode.PullRequestReviewStatePending
+			}
 
-				if err = reviewsSender.Send(&review); err != nil {
-					return pi, res, err
-				}
+			review.UserRefID = participant.User.AccountID
+
+			date.ConvertToModel(participant.ParticipatedOn, &review.CreatedDate)
+
+			if err = reviewsSender.SetTotal(1); err != nil {
+				return pi, res, err
+			}
+			if err = reviewsSender.Send(review); err != nil {
+				return pi, res, err
 			}
 		}
 
-		if err = reviewsSender.Done(); err != nil {
-			break
-		}
 	}
 
 	return

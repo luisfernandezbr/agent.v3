@@ -93,8 +93,8 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 
 	if r.Pageable && r.Params.Get("fields") == "" {
 		tags := getJsonTags(r.Response)
-		// This parameters will help us get only the fields we need
-		// This reduce the time from ~27s to ~12s
+		// fields parameter will help us get only the fields we need
+		// it reduces time from ~27s to ~12s
 		r.Params.Set("fields", tags)
 	}
 

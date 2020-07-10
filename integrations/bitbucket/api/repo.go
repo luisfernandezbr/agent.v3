@@ -82,7 +82,7 @@ func ReposPage(qc QueryContext, teamName string, params url.Values) (page PageIn
 
 	for _, repo := range rr {
 		repo := commonrepo.Repo{
-			ID:            repo.UUID,
+			RefID:         repo.UUID,
 			NameWithOwner: repo.FullName,
 			DefaultBranch: repo.MainBranch.Name,
 		}

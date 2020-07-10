@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -17,12 +18,22 @@ import (
 func PullRequestCommitsPage(
 	qc QueryContext,
 	repo commonrepo.Repo,
-	prID string,
-	params url.Values) (pi PageInfo, res []*sourcecode.PullRequestCommit, err error) {
+	pr sourcecode.PullRequest,
+	params url.Values,
+	stopOnUpdatedAt time.Time) (pi PageInfo, res []*sourcecode.PullRequestCommit, err error) {
 
-	qc.Logger.Debug("pull request commits", "repo", repo.NameWithOwner, "pr", prID)
+	if !stopOnUpdatedAt.IsZero() {
+		params.Set("q", fmt.Sprintf(" date > %s", stopOnUpdatedAt.UTC().Format("2006-01-02T15:04:05.000000-07:00")))
+	}
 
-	objectPath := pstrings.JoinURL("repositories", repo.NameWithOwner, "pullrequests", prID, "commits")
+	params.Set("pagelen", "100")
+	// Setting the page parameter alone as part of params results in "Invalid page" error
+	params.Set("fields", "values.hash,values.message,values.date,values.author.raw,page,pagelen,size?page="+params.Get("page"))
+	params.Del("page")
+
+	qc.Logger.Debug("pull request commits", "repo", repo.RefID, "repo_name", repo.NameWithOwner, "pr_i", pr.Identifier, "pr_ref_id", pr.RefID, "params", params)
+
+	objectPath := pstrings.JoinURL("repositories", repo.NameWithOwner, "pullrequests", pr.RefID, "commits")
 
 	var rcommits []struct {
 		Hash    string    `json:"hash"`
@@ -32,11 +43,6 @@ func PullRequestCommitsPage(
 			Raw string `json:"raw"`
 		} `json:"author"`
 	}
-
-	params.Set("pagelen", "100")
-	// Setting the page parameter alone as part of params results in "Invalid page" error
-	params.Set("fields", "values.hash,values.message,values.date,values.author.raw,page,pagelen,size?page="+params.Get("page"))
-	params.Del("page")
 
 	pi, err = qc.Request(objectPath, params, true, &rcommits)
 	if err != nil {
@@ -48,8 +54,8 @@ func PullRequestCommitsPage(
 		item.CustomerID = qc.CustomerID
 		item.RefType = qc.RefType
 		item.RefID = rcommit.Hash
-		item.RepoID = qc.IDs.CodeRepo(repo.ID)
-		item.PullRequestID = qc.IDs.CodePullRequest(repo.ID, prID)
+		item.RepoID = qc.IDs.CodeRepo(repo.RefID)
+		item.PullRequestID = qc.IDs.CodePullRequest(item.RepoID, pr.RefID)
 		item.Sha = rcommit.Hash
 		item.Message = rcommit.Message
 		url, err := url.Parse(qc.BaseURL)

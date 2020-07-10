@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/url"
+	"time"
 
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 
@@ -11,10 +12,10 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func (s *Integration) exportPullRequestsComments(logger hclog.Logger, prSender *objsender.Session, repo commonrepo.Repo, pullRequests chan []sourcecode.PullRequest) error {
+func (s *Integration) exportPullRequestsComments(logger hclog.Logger, commentsSender *objsender.Session, repo commonrepo.Repo, pullRequests chan []sourcecode.PullRequest) error {
 	for prs := range pullRequests {
 		for _, pr := range prs {
-			err := s.exportPullRequestComments(logger, prSender, repo, pr)
+			err := s.exportPullRequestComments(logger, commentsSender, repo, pr)
 			if err != nil {
 				return err
 			}
@@ -23,15 +24,10 @@ func (s *Integration) exportPullRequestsComments(logger hclog.Logger, prSender *
 	return nil
 }
 
-func (s *Integration) exportPullRequestComments(logger hclog.Logger, prSender *objsender.Session, repo commonrepo.Repo, pr sourcecode.PullRequest) error {
+func (s *Integration) exportPullRequestComments(logger hclog.Logger, commentsSender *objsender.Session, repo commonrepo.Repo, pr sourcecode.PullRequest) error {
 
-	commentsSender, err := prSender.Session(sourcecode.PullRequestCommentModelName.String(), pr.RefID, pr.RefID)
-	if err != nil {
-		return err
-	}
-
-	err = api.Paginate(logger, func(log hclog.Logger, paginationParams url.Values) (page api.PageInfo, _ error) {
-		pi, res, err := api.PullRequestCommentsPage(s.qc, repo, pr, paginationParams)
+	return api.PaginateNewerThan(logger, commentsSender.LastProcessedTime(), func(log hclog.Logger, paginationParams url.Values, stopOnUpdatedAt time.Time) (page api.PageInfo, _ error) {
+		pi, res, err := api.PullRequestCommentsPage(s.qc, repo, pr, paginationParams, stopOnUpdatedAt)
 		if err != nil {
 			return pi, err
 		}
@@ -50,9 +46,4 @@ func (s *Integration) exportPullRequestComments(logger hclog.Logger, prSender *o
 		return pi, nil
 	})
 
-	if err != nil {
-		return err
-	}
-
-	return commentsSender.Done()
 }
