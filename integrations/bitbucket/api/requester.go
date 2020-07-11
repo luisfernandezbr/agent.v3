@@ -31,7 +31,7 @@ type internalRequest struct {
 	Params   url.Values
 	Pageable bool
 	Response interface{}
-	PageInfo PageInfo
+	NextPage NextPage
 }
 
 func NewRequester(opts RequesterOpts) *Requester {
@@ -57,13 +57,14 @@ func (s *Requester) setAuth(req *http.Request) {
 }
 
 // Request make request
-func (e *Requester) Request(url string, params url.Values, pageable bool, response interface{}) (pi PageInfo, err error) {
+func (e *Requester) Request(url string, params url.Values, pageable bool, response interface{}, nextPage NextPage) (np NextPage, err error) {
 
 	ir := &internalRequest{
 		URL:      url,
 		Params:   params,
 		Pageable: pageable,
 		Response: response,
+		NextPage: nextPage,
 	}
 
 	return e.makeRequestRetry(ir, 0)
@@ -72,26 +73,28 @@ func (e *Requester) Request(url string, params url.Values, pageable bool, respon
 
 const maxGeneralRetries = 2
 
-func (e *Requester) makeRequestRetry(req *internalRequest, generalRetry int) (pageInfo PageInfo, err error) {
+func (e *Requester) makeRequestRetry(req *internalRequest, generalRetry int) (nextPage NextPage, err error) {
 	var isRetryable bool
-	isRetryable, pageInfo, err = e.request(req, generalRetry+1)
+	isRetryable, nextPage, err = e.request(req, generalRetry+1)
 	if err != nil {
 		if !isRetryable {
-			return pageInfo, err
+			return nextPage, err
 		}
 		if generalRetry >= maxGeneralRetries {
-			return pageInfo, fmt.Errorf(`can't retry request, too many retries, err: %v`, err)
+			return nextPage, fmt.Errorf(`can't retry request, too many retries, err: %v`, err)
 		}
 		return e.makeRequestRetry(req, generalRetry+1)
 	}
 	return
 }
 
-func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetryable bool, pi PageInfo, rerr error) {
+func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetryable bool, np NextPage, rerr error) {
 
 	u := pstrings.JoinURL(e.opts.APIURL, r.URL)
 
-	if r.Pageable && r.Params.Get("fields") == "" {
+	if r.NextPage != "" {
+		u = string(r.NextPage)
+	} else if r.Pageable && r.Params.Get("fields") == "" {
 		tags := getJsonTags(r.Response)
 		// fields parameter will help us get only the fields we need
 		// it reduces time from ~27s to ~12s
@@ -123,30 +126,32 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 		if resp.StatusCode == http.StatusUnauthorized {
 			if e.opts.UseOAuth {
 				if rerr = e.opts.OAuth.Refresh(); rerr != nil {
-					return false, pi, rerr
+					return false, np, rerr
 				}
-				return true, pi, fmt.Errorf("error refreshing token")
+				return true, np, fmt.Errorf("error refreshing token")
 			}
-			return false, pi, fmt.Errorf("request not authorized")
+			return false, np, fmt.Errorf("request not authorized")
 		}
 
 		if resp.StatusCode == http.StatusTooManyRequests {
-			// 1 minute wait time was causing constant throttles, try sleeping for longer and see if that helps
-			waitTime := 15 * time.Minute
+			// according to docs there is quota available every minute
+			waitTime := 1 * time.Minute
+
+			e.opts.Logger.Warn("api request failed due to throttling, will sleep for 1m and retry", "retryThrottled", retryThrottled)
 			paused := time.Now()
-			e.opts.Agent.SendPauseEvent("", paused.Add(waitTime))
+			e.opts.Agent.SendPauseEvent(fmt.Sprintf("bitbucket paused, it will resume in %v", waitTime), paused.Add(waitTime))
 			time.Sleep(waitTime)
-			e.opts.Agent.SendResumeEvent("")
-			return true, pi, fmt.Errorf("rate limit hit")
+			e.opts.Agent.SendResumeEvent(fmt.Sprintf("bitbucket resumed, time elapsed %v", time.Since(paused)))
+			return true, np, fmt.Errorf("rate limit hit")
 		}
 
 		if resp.StatusCode == http.StatusNotFound {
 			e.logger.Warn("the source or destination could not be found", "url", u)
-			return false, pi, nil
+			return false, np, nil
 		}
 
 		e.logger.Debug("api request failed", "url", u, "status", resp.StatusCode)
-		return true, pi, fmt.Errorf(`bitbucket returned invalid status code: %v`, resp.StatusCode)
+		return true, np, fmt.Errorf(`bitbucket returned invalid status code: %v`, resp.StatusCode)
 	}
 
 	if r.Pageable {
@@ -160,16 +165,11 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 			return
 		}
 
-		u, _ := url.Parse(response.Next)
-
-		pi.PageSize = response.PageLen
-		pi.Page = response.Page
-		pi.NextPage = u.Query().Get("page")
-		pi.Total = response.TotalValues
+		np = NextPage(response.Next)
 
 	} else {
 		if err = json.NewDecoder(resp.Body).Decode(&r.Response); err != nil {
-			return false, pi, err
+			return false, np, err
 		}
 	}
 
@@ -177,11 +177,10 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 }
 
 type Response struct {
-	TotalValues int             `json:"size"`
-	Page        int64           `json:"page"`
-	PageLen     int64           `json:"pagelen"`
-	Next        string          `json:"next"`
-	Values      json.RawMessage `json:"values"`
+	Page    int64           `json:"page"`
+	PageLen int64           `json:"pagelen"`
+	Next    string          `json:"next"`
+	Values  json.RawMessage `json:"values"`
 }
 
 func getJsonTags(i interface{}) string {

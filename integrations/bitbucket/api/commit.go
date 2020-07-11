@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -15,17 +14,12 @@ func CommitUsersSourcecodePage(
 	qc QueryContext,
 	repo string,
 	params url.Values,
-	stopOnUpdatedAt time.Time) (page PageInfo, users []commitusers.CommitUser, err error) {
+	stopOnUpdatedAt time.Time,
+	nextPage NextPage) (np NextPage, users []commitusers.CommitUser, err error) {
 
-	qc.Logger.Debug("commit users request", "repo", repo)
-
-	if !stopOnUpdatedAt.IsZero() {
-		params.Set("q", fmt.Sprintf(" date > %s", stopOnUpdatedAt.UTC().Format("2006-01-02T15:04:05.000000-07:00")))
-	}
+	qc.Logger.Debug("commit users request", "repo", repo, "inc_date", stopOnUpdatedAt, "params", params)
 
 	objectPath := pstrings.JoinURL("repositories", repo, "commits")
-
-	params.Set("pagelen", "100")
 
 	var rcommits []struct {
 		Author struct {
@@ -38,13 +32,15 @@ func CommitUsersSourcecodePage(
 		Date time.Time `json:"date"`
 	}
 
-	page, err = qc.Request(objectPath, params, true, &rcommits)
+	np, err = qc.Request(objectPath, params, true, &rcommits, nextPage)
 	if err != nil {
 		return
 	}
 
 	for _, c := range rcommits {
-
+		if c.Date.Before(stopOnUpdatedAt) {
+			return
+		}
 		name := c.Author.User.DisplayName
 		if name == "" {
 			name, _ = GetNameAndEmail(c.Author.Raw)

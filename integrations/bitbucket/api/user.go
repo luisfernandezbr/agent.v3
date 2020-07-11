@@ -8,12 +8,15 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func UsersSourcecodePage(qc QueryContext, group string, params url.Values) (page PageInfo, users []*sourcecode.User, err error) {
+func UsersSourcecodePage(
+	qc QueryContext,
+	group string,
+	params url.Values,
+	nextPage NextPage) (np NextPage, users []*sourcecode.User, err error) {
+
 	qc.Logger.Debug("users request", "group", group)
 
 	objectPath := pstrings.JoinURL("teams", group, "members")
-
-	params.Set("pagelen", "100")
 
 	var us []struct {
 		DisplayName string `json:"display_name"`
@@ -28,7 +31,7 @@ func UsersSourcecodePage(qc QueryContext, group string, params url.Values) (page
 		AccountID string `json:"account_id"`
 	}
 
-	page, err = qc.Request(objectPath, params, true, &us)
+	np, err = qc.Request(objectPath, params, true, &us, nextPage)
 	if err != nil {
 		return
 	}

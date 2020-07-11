@@ -151,12 +151,23 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 }
 
 func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, repo commonrepo.Repo, prSender *objsender.Session, reviewsSender *objsender.Session, pullRequests chan []sourcecode.PullRequest, lastProcessed time.Time) error {
-	return api.PaginateNewerThan(logger, prSender.LastProcessedTime(), func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, res, err := api.PullRequestPage(s.qc, reviewsSender, repo, parameters, stopOnUpdatedAt)
+
+	params := url.Values{}
+	params.Add("state", "MERGED")
+	params.Add("state", "SUPERSEDED")
+	params.Add("state", "OPEN")
+	params.Add("state", "DECLINED")
+	// Greater than 50 throws "Invalid pagelen"
+	params.Set("pagelen", "50")
+
+	stopOnUpdatedAt := prSender.LastProcessedTime()
+	if !stopOnUpdatedAt.IsZero() {
+		params.Set("q", fmt.Sprintf(" updated_on > %s", stopOnUpdatedAt.UTC().Format("2006-01-02T15:04:05.000000-07:00")))
+	}
+
+	return api.Paginate(logger, func(log hclog.Logger, nextPage api.NextPage) (api.NextPage, error) {
+		pi, res, err := api.PullRequestPage(s.qc, reviewsSender, repo, params, nextPage)
 		if err != nil {
-			return pi, err
-		}
-		if err = prSender.SetTotal(pi.Total); err != nil {
 			return pi, err
 		}
 		pullRequests <- res
