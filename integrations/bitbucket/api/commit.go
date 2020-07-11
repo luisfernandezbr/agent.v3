@@ -13,13 +13,14 @@ import (
 func CommitUsersSourcecodePage(
 	qc QueryContext,
 	repo string,
+	defaultBranch string,
 	params url.Values,
 	stopOnUpdatedAt time.Time,
 	nextPage NextPage) (np NextPage, users []commitusers.CommitUser, err error) {
 
-	qc.Logger.Debug("commit users request", "repo", repo, "inc_date", stopOnUpdatedAt, "params", params)
+	qc.Logger.Debug("commit users request", "repo", repo, "default_branch", defaultBranch, "inc_date", stopOnUpdatedAt, "params", params)
 
-	objectPath := pstrings.JoinURL("repositories", repo, "commits")
+	objectPath := pstrings.JoinURL("repositories", repo, "commits", defaultBranch)
 
 	var rcommits []struct {
 		Author struct {
@@ -39,6 +40,7 @@ func CommitUsersSourcecodePage(
 
 	for _, c := range rcommits {
 		if c.Date.Before(stopOnUpdatedAt) {
+			np = ""
 			return
 		}
 		name := c.Author.User.DisplayName

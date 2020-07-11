@@ -99,9 +99,6 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 		// fields parameter will help us get only the fields we need
 		// it reduces time from ~27s to ~12s
 		r.Params.Set("fields", tags)
-	}
-
-	if len(r.Params) != 0 {
 		u += "?" + r.Params.Encode()
 	}
 

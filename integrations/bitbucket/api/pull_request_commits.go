@@ -42,7 +42,8 @@ func PullRequestCommitsPage(
 
 	for _, rcommit := range rcommits {
 		if rcommit.Date.Before(stopOnUpdatedAt) {
-			break
+			np = ""
+			return
 		}
 		item := &sourcecode.PullRequestCommit{}
 		item.CustomerID = qc.CustomerID
