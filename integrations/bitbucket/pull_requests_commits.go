@@ -19,8 +19,8 @@ func (s *Integration) exportPullRequestCommits(logger hclog.Logger, repo commonr
 
 	stopOnUpdatedAt := prCommitsSender.LastProcessedTime()
 
-	rerr = api.Paginate(s.logger, func(log hclog.Logger, nextPage api.NextPage) (api.NextPage, error) {
-		np, sub, err := api.PullRequestCommitsPage(s.qc, repo, pr, params, stopOnUpdatedAt, nextPage)
+	rerr = api.Paginate(func(nextPage api.NextPage) (api.NextPage, error) {
+		np, sub, err := api.PullRequestCommitsPage(s.qc, logger, repo, pr, params, stopOnUpdatedAt, nextPage)
 		if err != nil {
 			return np, err
 		}

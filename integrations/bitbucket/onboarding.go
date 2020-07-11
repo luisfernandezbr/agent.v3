@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/bitbucket/api"
 	"github.com/pinpt/agent/rpcdef"
 )
@@ -35,7 +34,7 @@ func (s *Integration) onboardExportRepos(ctx context.Context) (res rpcdef.Onboar
 	params.Set("pagelen", "100")
 
 	for _, teamName := range teamNames {
-		err := api.Paginate(s.logger, func(log hclog.Logger, nextPage api.NextPage) (np api.NextPage, _ error) {
+		err := api.Paginate(func(nextPage api.NextPage) (np api.NextPage, _ error) {
 			pageInfo, repos, err := api.ReposOnboardPage(s.qc, teamName, params, nextPage)
 			if err != nil {
 				return np, err

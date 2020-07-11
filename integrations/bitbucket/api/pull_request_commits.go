@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 
 	"github.com/pinpt/agent/pkg/date"
@@ -16,13 +17,14 @@ import (
 
 func PullRequestCommitsPage(
 	qc QueryContext,
+	logger hclog.Logger,
 	repo commonrepo.Repo,
 	pr sourcecode.PullRequest,
 	params url.Values,
 	stopOnUpdatedAt time.Time,
 	nextPage NextPage) (np NextPage, res []*sourcecode.PullRequestCommit, err error) {
 
-	qc.Logger.Debug("pull request commits", "repo", repo.RefID, "repo_name", repo.NameWithOwner, "pr_i", pr.Identifier, "pr_ref_id", pr.RefID, "inc_date", stopOnUpdatedAt, "params", params)
+	logger.Debug("pr commits", "inc_date", stopOnUpdatedAt, "params", params, "next_page", nextPage)
 
 	objectPath := pstrings.JoinURL("repositories", repo.NameWithOwner, "pullrequests", pr.RefID, "commits")
 

@@ -42,15 +42,14 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 		return
 	}
 
-	logger := ctx.Logger.With("repo", repo.NameWithOwner)
-	logger.Info("exporting")
+	ctx.Logger.Info("exporting")
 
 	// export changed pull requests
 	var pullRequestsErr error
 	pullRequestsInitial := make(chan []sourcecode.PullRequest)
 	go func() {
 		defer close(pullRequestsInitial)
-		if err := s.exportPullRequestsRepo(logger, repo, pullRequestSender, reviewsSender, pullRequestsInitial, pullRequestSender.LastProcessedTime()); err != nil {
+		if err := s.exportPullRequestsRepo(ctx.Logger, repo, pullRequestSender, reviewsSender, pullRequestsInitial, pullRequestSender.LastProcessedTime()); err != nil {
 			pullRequestsErr = err
 		}
 	}()
@@ -61,7 +60,7 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 
 	var errMu sync.Mutex
 	setErr := func(err error) {
-		logger.Error("failed repo export", "e", err)
+		ctx.Logger.Error("failed repo export", "e", err)
 		errMu.Lock()
 		defer errMu.Unlock()
 		if rerr == nil {
@@ -91,7 +90,7 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := s.exportPullRequestsComments(logger, commentsSender, repo, pullRequestsForComments)
+		err := s.exportPullRequestsComments(ctx.Logger, commentsSender, repo, pullRequestsForComments)
 		if err != nil {
 			setErr(fmt.Errorf("error getting comments %s", err))
 		}
@@ -103,6 +102,7 @@ func (s *Integration) exportPullRequestsForRepo(ctx *repoprojects.ProjectCtx, re
 		defer wg.Done()
 		for prs := range pullRequestsForCommits {
 			for _, pr := range prs {
+				logger := ctx.Logger.With("pr_id", pr.RefID)
 				commits, err := s.exportPullRequestCommits(logger, repo, pr, commitsSender)
 				if err != nil {
 					setErr(fmt.Errorf("error getting commits %s", err))
@@ -165,8 +165,8 @@ func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, repo commonrep
 		params.Set("q", fmt.Sprintf(" updated_on > %s", stopOnUpdatedAt.UTC().Format("2006-01-02T15:04:05.000000-07:00")))
 	}
 
-	return api.Paginate(logger, func(log hclog.Logger, nextPage api.NextPage) (api.NextPage, error) {
-		pi, res, err := api.PullRequestPage(s.qc, reviewsSender, repo, params, nextPage)
+	return api.Paginate(func(nextPage api.NextPage) (api.NextPage, error) {
+		pi, res, err := api.PullRequestPage(s.qc, logger, reviewsSender, repo, params, nextPage)
 		if err != nil {
 			return pi, err
 		}

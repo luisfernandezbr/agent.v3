@@ -409,7 +409,7 @@ func (s *Integration) exportUsers(ctx context.Context, logger hclog.Logger, grou
 	params := url.Values{}
 	params.Set("pagelen", "100")
 
-	err = api.Paginate(s.logger, func(log hclog.Logger, nextPage api.NextPage) (api.NextPage, error) {
+	err = api.Paginate(func(nextPage api.NextPage) (api.NextPage, error) {
 		np, users, err := api.UsersSourcecodePage(s.qc, groupName, params, nextPage)
 		if err != nil {
 			return np, err
@@ -441,8 +441,8 @@ func (s *Integration) exportCommitUsersForRepo(ctx *repoprojects.ProjectCtx, rep
 
 	stopOnUpdatedAt := usersSender.LastProcessedTime()
 
-	return api.Paginate(ctx.Logger, func(log hclog.Logger, nextPage api.NextPage) (api.NextPage, error) {
-		np, users, err := api.CommitUsersSourcecodePage(s.qc, repo.NameWithOwner, repo.DefaultBranch, params, stopOnUpdatedAt, nextPage)
+	return api.Paginate(func(nextPage api.NextPage) (api.NextPage, error) {
+		np, users, err := api.CommitUsersSourcecodePage(s.qc, ctx.Logger, repo.NameWithOwner, repo.DefaultBranch, params, stopOnUpdatedAt, nextPage)
 		if err != nil {
 			return np, err
 		}

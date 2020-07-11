@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 
@@ -18,12 +19,13 @@ import (
 
 func PullRequestPage(
 	qc QueryContext,
+	log hclog.Logger,
 	reviewsSender *objsender.Session,
 	repo commonrepo.Repo,
 	params url.Values,
 	nextPage NextPage) (np NextPage, res []sourcecode.PullRequest, err error) {
 
-	qc.Logger.Debug("repo pull requests", "repo", repo.RefID, "repo_name", repo.NameWithOwner, "params", params)
+	log.Debug("repo prs", "params", params, "next_page", nextPage)
 
 	objectPath := pstrings.JoinURL("repositories", repo.NameWithOwner, "pullrequests")
 

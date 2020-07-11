@@ -116,8 +116,6 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 	}
 	defer resp.Body.Close()
 
-	e.logger.Debug("api request", "url", u, "status", resp.StatusCode)
-
 	if resp.StatusCode != http.StatusOK {
 
 		if resp.StatusCode == http.StatusUnauthorized {

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/commitusers"
 
 	pstrings "github.com/pinpt/go-common/strings"
@@ -12,13 +13,14 @@ import (
 
 func CommitUsersSourcecodePage(
 	qc QueryContext,
+	logger hclog.Logger,
 	repo string,
 	defaultBranch string,
 	params url.Values,
 	stopOnUpdatedAt time.Time,
 	nextPage NextPage) (np NextPage, users []commitusers.CommitUser, err error) {
 
-	qc.Logger.Debug("commit users request", "repo", repo, "default_branch", defaultBranch, "inc_date", stopOnUpdatedAt, "params", params)
+	logger.Debug("commit users", "default_branch", defaultBranch, "inc_date", stopOnUpdatedAt, "params", params, "next", nextPage)
 
 	objectPath := pstrings.JoinURL("repositories", repo, "commits", defaultBranch)
 

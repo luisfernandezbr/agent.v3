@@ -4,8 +4,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
-
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/go-common/datetime"
@@ -19,7 +17,8 @@ func ReposOnboardPage(
 	teamName string,
 	params url.Values,
 	nextPage NextPage) (np NextPage, repos []*agent.RepoResponseRepos, err error) {
-	qc.Logger.Debug("onboard repos request", "teamName", teamName, "params", params.Encode())
+
+	qc.Logger.Debug("onboard repos request", "team_name", teamName, "params", params, "next_page", nextPage)
 
 	objectPath := pstrings.JoinURL("repositories", teamName)
 	params.Set("pagelen", "100")
@@ -60,7 +59,7 @@ func ReposAll(qc interface{}, teamName string, res chan []commonrepo.Repo) error
 	params := url.Values{}
 	params.Set("pagelen", "100")
 
-	return Paginate(qc.(QueryContext).Logger, func(log hclog.Logger, nextPage NextPage) (NextPage, error) {
+	return Paginate(func(nextPage NextPage) (NextPage, error) {
 		pi, repos, err := ReposPage(qc.(QueryContext), teamName, params, nextPage)
 		if err != nil {
 			return pi, err
@@ -70,8 +69,13 @@ func ReposAll(qc interface{}, teamName string, res chan []commonrepo.Repo) error
 	})
 }
 
-func ReposPage(qc QueryContext, teamName string, params url.Values, nextPage NextPage) (np NextPage, repos []commonrepo.Repo, err error) {
-	qc.Logger.Debug("repos request repos page", "team", teamName, "params", params.Encode())
+func ReposPage(
+	qc QueryContext,
+	teamName string,
+	params url.Values,
+	nextPage NextPage) (np NextPage, repos []commonrepo.Repo, err error) {
+
+	qc.Logger.Debug("repos", "team", teamName, "params", params)
 
 	objectPath := pstrings.JoinURL("repositories", teamName)
 
@@ -107,7 +111,7 @@ func ReposSourcecodePage(
 	stopOnUpdatedAt time.Time,
 	nextPage NextPage) (np NextPage, repos []*sourcecode.Repo, err error) {
 
-	qc.Logger.Debug("repos request repos sourcecode page", "teamName", teamName)
+	qc.Logger.Debug("repos sourcecode", "team_name", teamName, "params", params, "next", nextPage)
 
 	objectPath := pstrings.JoinURL("repositories", teamName)
 
@@ -118,7 +122,7 @@ func ReposSourcecodePage(
 		FullName    string    `json:"full_name"`
 		Description string    `json:"description"`
 		Links       struct {
-			Html struct {
+			HTML struct {
 				Href string `json:"href"`
 			} `json:"html"`
 		} `json:"links"`
@@ -145,7 +149,7 @@ func ReposSourcecodePage(
 			RefType:     qc.RefType,
 			CustomerID:  qc.CustomerID,
 			Name:        repo.FullName,
-			URL:         repo.Links.Html.Href,
+			URL:         repo.Links.HTML.Href,
 			Description: repo.Description,
 			UpdatedAt:   datetime.TimeToEpoch(repo.UpdatedAt),
 			Active:      true,

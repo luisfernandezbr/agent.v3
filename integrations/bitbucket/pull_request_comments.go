@@ -15,6 +15,7 @@ import (
 func (s *Integration) exportPullRequestsComments(logger hclog.Logger, commentsSender *objsender.Session, repo commonrepo.Repo, pullRequests chan []sourcecode.PullRequest) error {
 	for prs := range pullRequests {
 		for _, pr := range prs {
+			logger := logger.With("pr_id", pr.RefID)
 			err := s.exportPullRequestComments(logger, commentsSender, repo, pr)
 			if err != nil {
 				return err
@@ -34,8 +35,8 @@ func (s *Integration) exportPullRequestComments(logger hclog.Logger, commentsSen
 		params.Set("q", fmt.Sprintf(" updated_on > %s", stopOnUpdatedAt.UTC().Format("2006-01-02T15:04:05.000000-07:00")))
 	}
 
-	return api.Paginate(logger, func(log hclog.Logger, nextPage api.NextPage) (np api.NextPage, _ error) {
-		pi, res, err := api.PullRequestCommentsPage(s.qc, repo, pr, params, nextPage)
+	return api.Paginate(func(nextPage api.NextPage) (np api.NextPage, _ error) {
+		pi, res, err := api.PullRequestCommentsPage(s.qc, logger, repo, pr, params, nextPage)
 		if err != nil {
 			return pi, err
 		}

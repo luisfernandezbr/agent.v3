@@ -1,16 +1,12 @@
 package api
 
-import (
-	"github.com/hashicorp/go-hclog"
-)
+type PaginateFn func(nextPage NextPage) (NextPage, error)
 
-type PaginateFn func(log hclog.Logger, nextPage NextPage) (NextPage, error)
-
-func Paginate(log hclog.Logger, fn PaginateFn) (rerr error) {
+func Paginate(fn PaginateFn) (rerr error) {
 
 	var nextPage NextPage
 	for {
-		nextPage, rerr = fn(log, nextPage)
+		nextPage, rerr = fn(nextPage)
 		if rerr != nil {
 			return
 		}
