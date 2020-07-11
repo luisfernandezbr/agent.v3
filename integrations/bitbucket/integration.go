@@ -381,7 +381,7 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 
 	stopOnUpdatedAt := sender.LastProcessedTime()
 
-	return api.Paginate(s.logger, func(log hclog.Logger, nextPage api.NextPage) (api.NextPage, error) {
+	return api.Paginate(func(nextPage api.NextPage) (api.NextPage, error) {
 		np, repos, err := api.ReposSourcecodePage(s.qc, groupName, params, stopOnUpdatedAt, nextPage)
 		if err != nil {
 			return np, err
