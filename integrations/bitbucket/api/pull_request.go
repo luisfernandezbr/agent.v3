@@ -36,9 +36,11 @@ func PullRequestPage(
 				Name string `json:"name"`
 			} `json:"branch"`
 		} `json:"source"`
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		Links       struct {
+		Title   string `json:"title"`
+		Summary struct {
+			HTML string `json:"html"`
+		} `json:"summary"`
+		Links struct {
 			HTML struct {
 				Href string `json:"href"`
 			} `json:"html"`
@@ -78,7 +80,7 @@ func PullRequestPage(
 		pr.RepoID = qc.IDs.CodeRepo(repo.RefID)
 		pr.BranchName = rpr.Source.Branch.Name
 		pr.Title = rpr.Title
-		pr.Description = rpr.Description
+		pr.Description = rpr.Summary.HTML
 		pr.URL = rpr.Links.HTML.Href
 		pr.Identifier = fmt.Sprintf("#%d", rpr.RefID) // in bitbucket looks like #1 is the format for PR identifiers in their UI
 		date.ConvertToModel(rpr.CreatedOn, &pr.CreatedDate)
