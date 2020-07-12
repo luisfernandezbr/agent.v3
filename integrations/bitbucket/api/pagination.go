@@ -7,11 +7,8 @@ func Paginate(fn PaginateFn) (rerr error) {
 	var nextPage NextPage
 	for {
 		nextPage, rerr = fn(nextPage)
-		if rerr != nil {
+		if rerr != nil || nextPage == "" {
 			return
-		}
-		if nextPage == "" {
-			return nil
 		}
 	}
 }

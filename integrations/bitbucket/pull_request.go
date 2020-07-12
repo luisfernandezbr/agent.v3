@@ -166,11 +166,11 @@ func (s *Integration) exportPullRequestsRepo(logger hclog.Logger, repo commonrep
 	}
 
 	return api.Paginate(func(nextPage api.NextPage) (api.NextPage, error) {
-		pi, res, err := api.PullRequestPage(s.qc, logger, reviewsSender, repo, params, nextPage)
+		np, res, err := api.PullRequestPage(s.qc, logger, reviewsSender, repo, params, nextPage)
 		if err != nil {
-			return pi, err
+			return np, err
 		}
 		pullRequests <- res
-		return pi, nil
+		return np, nil
 	})
 }

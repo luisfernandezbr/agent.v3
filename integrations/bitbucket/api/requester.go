@@ -90,14 +90,15 @@ func (e *Requester) makeRequestRetry(req *internalRequest, generalRetry int) (ne
 
 func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetryable bool, np NextPage, rerr error) {
 
-	u := pstrings.JoinURL(e.opts.APIURL, r.URL)
+	var u string
 
 	if r.NextPage != "" {
 		u = string(r.NextPage)
-	} else if r.Pageable && r.Params.Get("fields") == "" {
+	} else if r.Pageable {
+		u = pstrings.JoinURL(e.opts.APIURL, r.URL)
 		tags := getJsonTags(r.Response)
 		// fields parameter will help us get only the fields we need
-		// it reduces time from ~27s to ~12s
+		// it reduces api response from ~27s to ~12s
 		r.Params.Set("fields", tags)
 		u += "?" + r.Params.Encode()
 	}
@@ -115,6 +116,8 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 		return
 	}
 	defer resp.Body.Close()
+
+	e.logger.Debug("api request", "url", u, "status", resp.StatusCode)
 
 	if resp.StatusCode != http.StatusOK {
 
