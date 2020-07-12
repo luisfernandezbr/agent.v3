@@ -14,7 +14,7 @@ func Teams(qc QueryContext) (teamNames []string, err error) {
 		Name string `json:"username"`
 	}
 
-	_, err = qc.Request(objectPath, params, true, &teams)
+	_, err = qc.Request(objectPath, params, true, &teams, "")
 	if err != nil {
 		return
 	}

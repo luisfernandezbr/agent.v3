@@ -2,11 +2,11 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent/pkg/date"
 	pstrings "github.com/pinpt/go-common/strings"
@@ -15,18 +15,13 @@ import (
 
 func PullRequestCommentsPage(
 	qc QueryContext,
+	logger hclog.Logger,
 	repo commonrepo.Repo,
 	pr sourcecode.PullRequest,
 	params url.Values,
-	stopOnUpdatedAt time.Time) (pi PageInfo, res []*sourcecode.PullRequestComment, err error) {
+	nextPage NextPage) (np NextPage, res []*sourcecode.PullRequestComment, err error) {
 
-	if !stopOnUpdatedAt.IsZero() {
-		params.Set("q", fmt.Sprintf(" updated_on > %s", stopOnUpdatedAt.UTC().Format("2006-01-02T15:04:05.000000-07:00")))
-	}
-
-	params.Set("pagelen", "100")
-
-	qc.Logger.Debug("pull request comments", "repo", repo.RefID, "repo_name", repo.NameWithOwner, "pr_i", pr.Identifier, "pr_ref_id", pr.RefID, "params", params)
+	logger.Debug("pr comments", "params", params, "next_page", nextPage)
 
 	objectPath := pstrings.JoinURL("repositories", repo.NameWithOwner, "pullrequests", pr.RefID, "comments")
 
@@ -48,7 +43,7 @@ func PullRequestCommentsPage(
 		Inline json.RawMessage `json:"inline"`
 	}
 
-	pi, err = qc.Request(objectPath, params, true, &rcomments)
+	np, err = qc.Request(objectPath, params, true, &rcomments, nextPage)
 	if err != nil {
 		return
 	}

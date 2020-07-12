@@ -1,11 +1,11 @@
 package api
 
 import (
-	"fmt"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 
 	"github.com/pinpt/agent/pkg/date"
@@ -17,21 +17,14 @@ import (
 
 func PullRequestCommitsPage(
 	qc QueryContext,
+	logger hclog.Logger,
 	repo commonrepo.Repo,
 	pr sourcecode.PullRequest,
 	params url.Values,
-	stopOnUpdatedAt time.Time) (pi PageInfo, res []*sourcecode.PullRequestCommit, err error) {
+	stopOnUpdatedAt time.Time,
+	nextPage NextPage) (np NextPage, res []*sourcecode.PullRequestCommit, err error) {
 
-	if !stopOnUpdatedAt.IsZero() {
-		params.Set("q", fmt.Sprintf(" date > %s", stopOnUpdatedAt.UTC().Format("2006-01-02T15:04:05.000000-07:00")))
-	}
-
-	params.Set("pagelen", "100")
-	// Setting the page parameter alone as part of params results in "Invalid page" error
-	params.Set("fields", "values.hash,values.message,values.date,values.author.raw,page,pagelen,size?page="+params.Get("page"))
-	params.Del("page")
-
-	qc.Logger.Debug("pull request commits", "repo", repo.RefID, "repo_name", repo.NameWithOwner, "pr_i", pr.Identifier, "pr_ref_id", pr.RefID, "params", params)
+	logger.Debug("pr commits", "inc_date", stopOnUpdatedAt, "params", params, "next_page", nextPage)
 
 	objectPath := pstrings.JoinURL("repositories", repo.NameWithOwner, "pullrequests", pr.RefID, "commits")
 
@@ -44,12 +37,16 @@ func PullRequestCommitsPage(
 		} `json:"author"`
 	}
 
-	pi, err = qc.Request(objectPath, params, true, &rcommits)
+	np, err = qc.Request(objectPath, params, true, &rcommits, nextPage)
 	if err != nil {
 		return
 	}
 
 	for _, rcommit := range rcommits {
+		if rcommit.Date.Before(stopOnUpdatedAt) {
+			np = ""
+			return
+		}
 		item := &sourcecode.PullRequestCommit{}
 		item.CustomerID = qc.CustomerID
 		item.RefType = qc.RefType
@@ -60,7 +57,7 @@ func PullRequestCommitsPage(
 		item.Message = rcommit.Message
 		url, err := url.Parse(qc.BaseURL)
 		if err != nil {
-			return pi, res, err
+			return np, res, err
 		}
 		item.URL = url.Scheme + "://" + strings.TrimPrefix(url.Hostname(), "api.") + "/" + repo.NameWithOwner + "/commits/" + rcommit.Hash
 		date.ConvertToModel(rcommit.Date, &item.CreatedDate)

@@ -11,7 +11,7 @@ import (
 type QueryContext struct {
 	BaseURL string
 	Logger  hclog.Logger
-	Request func(string, url.Values, bool, interface{}) (PageInfo, error)
+	Request func(string, url.Values, bool, interface{}, NextPage) (NextPage, error)
 
 	CustomerID string
 	RefType    string
@@ -19,9 +19,4 @@ type QueryContext struct {
 	IDs ids2.Gen
 }
 
-type PageInfo struct {
-	PageSize int64
-	NextPage string
-	Page     int64
-	Total    int
-}
+type NextPage string

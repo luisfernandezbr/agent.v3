@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 
 	pjson "github.com/pinpt/go-common/json"
 
@@ -103,7 +102,7 @@ func (s *Integration) ValidateConfig(ctx context.Context, exportConfig rpcdef.Ex
 
 LOOP:
 	for _, team := range teamNames {
-		_, repos, err := api.ReposPage(s.qc, team, params)
+		_, repos, err := api.ReposPage(s.qc, team, params, "")
 		if err != nil {
 			rerr(err)
 			return
@@ -377,14 +376,15 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 		shouldInclude[repo.NameWithOwner] = true
 	}
 
-	return api.PaginateNewerThan(s.logger, sender.LastProcessedTime(), func(log hclog.Logger, parameters url.Values, stopOnUpdatedAt time.Time) (api.PageInfo, error) {
-		pi, repos, err := api.ReposSourcecodePage(s.qc, groupName, parameters, stopOnUpdatedAt)
-		if err != nil {
-			return pi, err
-		}
+	params := url.Values{}
+	params.Set("pagelen", "100")
 
-		if err = sender.SetTotal(pi.Total); err != nil {
-			return pi, err
+	stopOnUpdatedAt := sender.LastProcessedTime()
+
+	return api.Paginate(func(nextPage api.NextPage) (api.NextPage, error) {
+		np, repos, err := api.ReposSourcecodePage(s.qc, groupName, params, stopOnUpdatedAt, nextPage)
+		if err != nil {
+			return np, err
 		}
 
 		for _, repo := range repos {
@@ -392,10 +392,10 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 				continue
 			}
 			if err := sender.Send(repo); err != nil {
-				return pi, err
+				return np, err
 			}
 		}
-		return pi, nil
+		return np, nil
 	})
 }
 
@@ -406,20 +406,20 @@ func (s *Integration) exportUsers(ctx context.Context, logger hclog.Logger, grou
 		return err
 	}
 
-	err = api.Paginate(s.logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
-		pi, users, err := api.UsersSourcecodePage(s.qc, groupName, parameters)
+	params := url.Values{}
+	params.Set("pagelen", "100")
+
+	err = api.Paginate(func(nextPage api.NextPage) (api.NextPage, error) {
+		np, users, err := api.UsersSourcecodePage(s.qc, groupName, params, nextPage)
 		if err != nil {
-			return pi, err
-		}
-		if err = sender.SetTotal(pi.Total); err != nil {
-			return pi, err
+			return np, err
 		}
 		for _, user := range users {
 			if err := sender.Send(user); err != nil {
-				return pi, err
+				return np, err
 			}
 		}
-		return pi, nil
+		return np, nil
 	})
 
 	if err != nil {
@@ -435,20 +435,28 @@ func (s *Integration) exportCommitUsersForRepo(ctx *repoprojects.ProjectCtx, rep
 	if err != nil {
 		return err
 	}
-	return api.Paginate(ctx.Logger, func(log hclog.Logger, parameters url.Values) (api.PageInfo, error) {
-		pi, users, err := api.CommitUsersSourcecodePage(s.qc, repo.NameWithOwner, parameters)
+
+	params := url.Values{}
+	params.Set("pagelen", "100")
+
+	stopOnUpdatedAt := usersSender.LastProcessedTime()
+
+	return api.Paginate(func(nextPage api.NextPage) (api.NextPage, error) {
+		np, users, err := api.CommitUsersSourcecodePage(s.qc, ctx.Logger, repo.NameWithOwner, repo.DefaultBranch, params, stopOnUpdatedAt, nextPage)
 		if err != nil {
-			return pi, err
-		}
-		if err = usersSender.SetTotal(pi.Total); err != nil {
-			return pi, err
+			return np, err
 		}
 		for _, user := range users {
+			err := user.Validate()
+			if err != nil {
+				s.logger.Warn("commit user", "err", err)
+				continue
+			}
 			if err := usersSender.SendMap(user.ToMap()); err != nil {
-				return pi, err
+				return np, err
 			}
 		}
-		return pi, nil
+		return np, nil
 	})
 }
 

@@ -5,17 +5,24 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/commitusers"
 
 	pstrings "github.com/pinpt/go-common/strings"
 )
 
-func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) (page PageInfo, users []commitusers.CommitUser, err error) {
-	qc.Logger.Debug("commit users request", "repo", repo)
+func CommitUsersSourcecodePage(
+	qc QueryContext,
+	logger hclog.Logger,
+	repo string,
+	defaultBranch string,
+	params url.Values,
+	stopOnUpdatedAt time.Time,
+	nextPage NextPage) (np NextPage, users []commitusers.CommitUser, err error) {
 
-	objectPath := pstrings.JoinURL("repositories", repo, "commits")
+	logger.Debug("commit users", "default_branch", defaultBranch, "inc_date", stopOnUpdatedAt, "params", params, "next", nextPage)
 
-	params.Set("pagelen", "100")
+	objectPath := pstrings.JoinURL("repositories", repo, "commits", defaultBranch)
 
 	var rcommits []struct {
 		Author struct {
@@ -28,13 +35,16 @@ func CommitUsersSourcecodePage(qc QueryContext, repo string, params url.Values) 
 		Date time.Time `json:"date"`
 	}
 
-	page, err = qc.Request(objectPath, params, true, &rcommits)
+	np, err = qc.Request(objectPath, params, true, &rcommits, nextPage)
 	if err != nil {
 		return
 	}
 
 	for _, c := range rcommits {
-
+		if c.Date.Before(stopOnUpdatedAt) {
+			np = ""
+			return
+		}
 		name := c.Author.User.DisplayName
 		if name == "" {
 			name, _ = GetNameAndEmail(c.Author.Raw)

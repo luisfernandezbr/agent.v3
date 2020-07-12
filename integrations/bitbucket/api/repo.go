@@ -4,8 +4,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
-
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/go-common/datetime"
@@ -14,8 +12,13 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func ReposOnboardPage(qc QueryContext, teamName string, params url.Values) (page PageInfo, repos []*agent.RepoResponseRepos, err error) {
-	qc.Logger.Debug("onboard repos request", "teamName", teamName, "params", params.Encode())
+func ReposOnboardPage(
+	qc QueryContext,
+	teamName string,
+	params url.Values,
+	nextPage NextPage) (np NextPage, repos []*agent.RepoResponseRepos, err error) {
+
+	qc.Logger.Debug("onboard repos request", "team_name", teamName, "params", params, "next_page", nextPage)
 
 	objectPath := pstrings.JoinURL("repositories", teamName)
 	params.Set("pagelen", "100")
@@ -28,7 +31,7 @@ func ReposOnboardPage(qc QueryContext, teamName string, params url.Values) (page
 		CreatedOn   time.Time `json:"created_on"`
 	}
 
-	page, err = qc.Request(objectPath, params, true, &rr)
+	np, err = qc.Request(objectPath, params, true, &rr, nextPage)
 	if err != nil {
 		return
 	}
@@ -52,8 +55,12 @@ func ReposOnboardPage(qc QueryContext, teamName string, params url.Values) (page
 }
 
 func ReposAll(qc interface{}, teamName string, res chan []commonrepo.Repo) error {
-	return Paginate(qc.(QueryContext).Logger, func(log hclog.Logger, paginationParams url.Values) (page PageInfo, _ error) {
-		pi, repos, err := ReposPage(qc.(QueryContext), teamName, paginationParams)
+
+	params := url.Values{}
+	params.Set("pagelen", "100")
+
+	return Paginate(func(nextPage NextPage) (NextPage, error) {
+		pi, repos, err := ReposPage(qc.(QueryContext), teamName, params, nextPage)
 		if err != nil {
 			return pi, err
 		}
@@ -62,8 +69,13 @@ func ReposAll(qc interface{}, teamName string, res chan []commonrepo.Repo) error
 	})
 }
 
-func ReposPage(qc QueryContext, teamName string, params url.Values) (page PageInfo, repos []commonrepo.Repo, err error) {
-	qc.Logger.Debug("repos request repos page", "team", teamName, "params", params.Encode())
+func ReposPage(
+	qc QueryContext,
+	teamName string,
+	params url.Values,
+	nextPage NextPage) (np NextPage, repos []commonrepo.Repo, err error) {
+
+	qc.Logger.Debug("repos", "team", teamName, "params", params)
 
 	objectPath := pstrings.JoinURL("repositories", teamName)
 
@@ -75,7 +87,7 @@ func ReposPage(qc QueryContext, teamName string, params url.Values) (page PageIn
 		} `json:"mainbranch"`
 	}
 
-	page, err = qc.Request(objectPath, params, true, &rr)
+	np, err = qc.Request(objectPath, params, true, &rr, nextPage)
 	if err != nil {
 		return
 	}
@@ -93,12 +105,15 @@ func ReposPage(qc QueryContext, teamName string, params url.Values) (page PageIn
 	return
 }
 
-func ReposSourcecodePage(qc QueryContext, teamName string, params url.Values, stopOnUpdatedAt time.Time) (page PageInfo, repos []*sourcecode.Repo, err error) {
-	qc.Logger.Debug("repos request repos sourcecode page", "teamName", teamName)
+func ReposSourcecodePage(
+	qc QueryContext, teamName string,
+	params url.Values,
+	stopOnUpdatedAt time.Time,
+	nextPage NextPage) (np NextPage, repos []*sourcecode.Repo, err error) {
+
+	qc.Logger.Debug("repos sourcecode", "team_name", teamName, "params", params, "next", nextPage)
 
 	objectPath := pstrings.JoinURL("repositories", teamName)
-
-	params.Set("pagelen", "100")
 
 	type repo struct {
 		CreatedAt   time.Time `json:"created_on"`
@@ -107,7 +122,7 @@ func ReposSourcecodePage(qc QueryContext, teamName string, params url.Values, st
 		FullName    string    `json:"full_name"`
 		Description string    `json:"description"`
 		Links       struct {
-			Html struct {
+			HTML struct {
 				Href string `json:"href"`
 			} `json:"html"`
 		} `json:"links"`
@@ -115,7 +130,7 @@ func ReposSourcecodePage(qc QueryContext, teamName string, params url.Values, st
 
 	var rr []repo
 
-	page, err = qc.Request(objectPath, params, true, &rr)
+	np, err = qc.Request(objectPath, params, true, &rr, nextPage)
 	if err != nil {
 		return
 	}
@@ -134,7 +149,7 @@ func ReposSourcecodePage(qc QueryContext, teamName string, params url.Values, st
 			RefType:     qc.RefType,
 			CustomerID:  qc.CustomerID,
 			Name:        repo.FullName,
-			URL:         repo.Links.Html.Href,
+			URL:         repo.Links.HTML.Href,
 			Description: repo.Description,
 			UpdatedAt:   datetime.TimeToEpoch(repo.UpdatedAt),
 			Active:      true,

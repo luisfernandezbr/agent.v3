@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/url"
-	"time"
 
 	"github.com/pinpt/agent/integrations/bitbucket/api"
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
@@ -13,19 +12,23 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-func (s *Integration) exportPullRequestCommits(logger hclog.Logger, repo commonrepo.Repo, pr sourcecode.PullRequest, prCommitsSender *objsender.Session) (res []*sourcecode.PullRequestCommit, _ error) {
-	err := api.PaginateNewerThan(s.logger, prCommitsSender.LastProcessedTime(), func(log hclog.Logger, paginationParams url.Values, stopOnUpdatedAt time.Time) (page api.PageInfo, _ error) {
-		pi, sub, err := api.PullRequestCommitsPage(s.qc, repo, pr, paginationParams, stopOnUpdatedAt)
+func (s *Integration) exportPullRequestCommits(logger hclog.Logger, repo commonrepo.Repo, pr sourcecode.PullRequest, prCommitsSender *objsender.Session) (res []*sourcecode.PullRequestCommit, rerr error) {
+
+	params := url.Values{}
+	params.Set("pagelen", "100")
+
+	stopOnUpdatedAt := prCommitsSender.LastProcessedTime()
+
+	rerr = api.Paginate(func(nextPage api.NextPage) (api.NextPage, error) {
+		np, sub, err := api.PullRequestCommitsPage(s.qc, logger, repo, pr, params, stopOnUpdatedAt, nextPage)
 		if err != nil {
-			return pi, err
+			return np, err
 		}
 		for _, obj := range sub {
 			res = append(res, obj)
 		}
-		return pi, nil
+		return np, nil
 	})
-	if err != nil {
-		return nil, err
-	}
+
 	return
 }

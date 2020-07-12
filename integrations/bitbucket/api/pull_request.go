@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 
@@ -18,25 +19,15 @@ import (
 
 func PullRequestPage(
 	qc QueryContext,
+	log hclog.Logger,
 	reviewsSender *objsender.Session,
 	repo commonrepo.Repo,
 	params url.Values,
-	stopOnUpdatedAt time.Time) (pi PageInfo, res []sourcecode.PullRequest, err error) {
+	nextPage NextPage) (np NextPage, res []sourcecode.PullRequest, err error) {
 
-	if !stopOnUpdatedAt.IsZero() {
-		params.Set("q", fmt.Sprintf(" updated_on > %s", stopOnUpdatedAt.UTC().Format("2006-01-02T15:04:05.000000-07:00")))
-	}
+	log.Debug("repo prs", "params", params, "next_page", nextPage)
 
 	objectPath := pstrings.JoinURL("repositories", repo.NameWithOwner, "pullrequests")
-	params.Add("state", "MERGED")
-	params.Add("state", "SUPERSEDED")
-	params.Add("state", "OPEN")
-	params.Add("state", "DECLINED")
-	params.Set("sort", "-updated_on")
-	// Greater than 50 throws "Invalid pagelen"
-	params.Set("pagelen", "50")
-
-	qc.Logger.Debug("repo pull requests", "repo", repo.RefID, "repo_name", repo.NameWithOwner, "params", params)
 
 	var rprs []struct {
 		RefID  int64 `json:"id"`
@@ -74,7 +65,7 @@ func PullRequestPage(
 		} `json:"participants"`
 	}
 
-	pi, err = qc.Request(objectPath, params, true, &rprs)
+	np, err = qc.Request(objectPath, params, true, &rprs, nextPage)
 	if err != nil {
 		return
 	}
@@ -134,11 +125,8 @@ func PullRequestPage(
 
 			date.ConvertToModel(participant.ParticipatedOn, &review.CreatedDate)
 
-			if err = reviewsSender.SetTotal(1); err != nil {
-				return pi, res, err
-			}
 			if err = reviewsSender.Send(review); err != nil {
-				return pi, res, err
+				return np, res, err
 			}
 		}
 
