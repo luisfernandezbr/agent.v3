@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pinpt/agent/integrations/pkg/commonpr"
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 
@@ -80,7 +81,11 @@ func PullRequestPage(
 		pr.RepoID = qc.IDs.CodeRepo(repo.RefID)
 		pr.BranchName = rpr.Source.Branch.Name
 		pr.Title = rpr.Title
-		pr.Description = rpr.Summary.HTML
+		if !isHTML(rpr.Summary.HTML) {
+			pr.Description = commonpr.ConvertMarkdownToHTML(rpr.Summary.HTML)
+		} else {
+			pr.Description = rpr.Summary.HTML
+		}
 		pr.URL = rpr.Links.HTML.Href
 		pr.Identifier = fmt.Sprintf("#%d", rpr.RefID) // in bitbucket looks like #1 is the format for PR identifiers in their UI
 		date.ConvertToModel(rpr.CreatedOn, &pr.CreatedDate)
@@ -135,4 +140,16 @@ func PullRequestPage(
 	}
 
 	return
+}
+
+func isHTML(html string) bool {
+	if html == "" || len(html) == 1 {
+		return false
+	}
+
+	if html[0:1] == "<" && html[len(html)-1:len(html)] == ">" {
+		return true
+	}
+
+	return false
 }
