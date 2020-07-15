@@ -352,7 +352,8 @@
   revision = "974d429e7ae40c89e7dcd41cfcc22a0bfbe42510"
 
 [[projects]]
-  digest = "1:98473662d36d4b4b9951bc72746af8ff241abb69c32a17af05a127b4fa975df4"
+  branch = "depv10"
+  digest = "1:6296aa98e76d341782df70c351354a18a46302bcbbbf43a91c580321ebadf85b"
   name = "github.com/pinpt/go-common"
   packages = [
     "api",
@@ -377,8 +378,7 @@
     "upload",
   ]
   pruneopts = "T"
-  revision = "a05f6921e4dd1ea0f541d972e7c4c197be8578a2"
-  version = "v9.1.81"
+  revision = "62d250de9521bf31119d7788ed4ddf9fa437b171"
 
 [[projects]]
   digest = "1:6b6aa4e366679d0a58fed03225dc26faedf970b06d740292c1546ea6184b272a"
@@ -389,7 +389,8 @@
   version = "2.0.1"
 
 [[projects]]
-  digest = "1:9200c0707140d562064aa0bbf358dafd80ef01ec967b11e73f72f5ab92fe8a67"
+  branch = "depv10"
+  digest = "1:f6dd320dbba559b6c0f1ab9e3384675e5141f8424fb8c5d50c5ff0f8978defbd"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -402,8 +403,7 @@
     "work",
   ]
   pruneopts = "T"
-  revision = "dbfbd7f65120ab96c40a50e2690d40fed79235f6"
-  version = "v0.0.996"
+  revision = "bc833d8fd1fb44afeef94cc0c52b85d3cf89b5b1"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
