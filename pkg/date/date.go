@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/pinpt/go-common/datetime"
+	"github.com/pinpt/go-common/v10/datetime"
 )
 
 // ConvertToModel will fill dateModel based on passed time

@@ -8,7 +8,7 @@ import (
 	"github.com/pinpt/agent/integrations/gitlab/api"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/pkg/commitusers"
-	pstrings "github.com/pinpt/go-common/strings"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 

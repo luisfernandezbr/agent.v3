@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/pinpt/go-common/datamodel"
-	"github.com/pinpt/go-common/event/action"
+	"github.com/pinpt/go-common/v10/datamodel"
+	"github.com/pinpt/go-common/v10/event/action"
 	isdk "github.com/pinpt/integration-sdk"
 )
 

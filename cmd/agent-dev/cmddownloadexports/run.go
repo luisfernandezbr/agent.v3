@@ -12,7 +12,7 @@ import (
 
 	"github.com/pinpt/agent/pkg/fs"
 
-	pstrings "github.com/pinpt/go-common/strings"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"

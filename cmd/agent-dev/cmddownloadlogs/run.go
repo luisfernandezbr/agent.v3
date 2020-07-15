@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	pstrings "github.com/pinpt/go-common/strings"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 )
 
 type Opts struct {

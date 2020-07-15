@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/requests"
-	pstrings "github.com/pinpt/go-common/strings"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 )
 
 // update this using current time, if the format of the url changes, or need a new url for some other reason

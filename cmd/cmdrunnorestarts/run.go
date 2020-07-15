@@ -16,18 +16,18 @@ import (
 
 	"github.com/pinpt/agent/cmd/cmdintegration"
 
-	"github.com/pinpt/go-common/hash"
+	"github.com/pinpt/go-common/v10/hash"
 
 	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/agent/pkg/fsconf"
-	"github.com/pinpt/go-common/event"
+	"github.com/pinpt/go-common/v10/event"
 	"github.com/pinpt/integration-sdk/agent"
 
 	"github.com/pinpt/agent/cmd/pkg/cmdlogger"
 	"github.com/pinpt/agent/pkg/deviceinfo"
 
-	"github.com/pinpt/go-common/datamodel"
-	"github.com/pinpt/go-common/event/action"
+	"github.com/pinpt/go-common/v10/datamodel"
+	"github.com/pinpt/go-common/v10/event/action"
 	isdk "github.com/pinpt/integration-sdk"
 
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/crashes"

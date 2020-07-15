@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/sysinfo"
-	"github.com/pinpt/go-common/datetime"
+	"github.com/pinpt/go-common/v10/datetime"
 )
 
 func SystemID() string {

@@ -7,7 +7,7 @@ import (
 	"github.com/pbnjay/memory"
 
 	"github.com/denisbrodbeck/machineid"
-	pos "github.com/pinpt/go-common/os"
+	pos "github.com/pinpt/go-common/v10/os"
 )
 
 // SystemInfo returns the operating system details

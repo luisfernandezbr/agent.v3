@@ -20,13 +20,13 @@ import (
 	"github.com/pinpt/agent/pkg/expsessions"
 	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/memorylogs"
-	"github.com/pinpt/go-common/api"
+	"github.com/pinpt/go-common/v10/api"
 
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/pinpt/agent/cmd/cmdintegration"
 	"github.com/pinpt/agent/pkg/jsonstore"
 	"github.com/pinpt/agent/rpcdef"
-	pjson "github.com/pinpt/go-common/json"
+	pjson "github.com/pinpt/go-common/v10/json"
 )
 
 type Opts struct {

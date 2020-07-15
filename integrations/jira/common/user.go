@@ -8,7 +8,7 @@ import (
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/pkg/ids"
 	"github.com/pinpt/agent/rpcdef"
-	pstrings "github.com/pinpt/go-common/strings"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/integration-sdk/work"
 )
 

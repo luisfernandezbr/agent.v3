@@ -8,7 +8,7 @@ import (
 	"github.com/pinpt/agent/integrations/jira/commonapi"
 	"github.com/pinpt/agent/integrations/pkg/mutate"
 	"github.com/pinpt/agent/rpcdef"
-	"github.com/pinpt/go-common/datamodel"
+	"github.com/pinpt/go-common/v10/datamodel"
 	"github.com/pinpt/integration-sdk/agent"
 	"github.com/pinpt/integration-sdk/work"
 )

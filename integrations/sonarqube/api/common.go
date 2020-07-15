@@ -13,8 +13,8 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/go-common/httpdefaults"
-	pstring "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/go-common/v10/httpdefaults"
+	pstring "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/httpclient"
 )
 

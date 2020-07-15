@@ -9,7 +9,7 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/go-common/io"
+	"github.com/pinpt/go-common/v10/io"
 )
 
 type Writer interface {

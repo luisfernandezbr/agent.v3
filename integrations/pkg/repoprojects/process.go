@@ -9,7 +9,7 @@ import (
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/pkg/ids2"
 	"github.com/pinpt/agent/rpcdef"
-	"github.com/pinpt/go-common/datamodel"
+	"github.com/pinpt/go-common/v10/datamodel"
 )
 
 type ProcessOpts struct {

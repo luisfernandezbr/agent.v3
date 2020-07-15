@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/go-common/fileutil"
+	"github.com/pinpt/go-common/v10/fileutil"
 )
 
 type AccessDetails struct {

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/date"
-	pjson "github.com/pinpt/go-common/json"
+	pjson "github.com/pinpt/go-common/v10/json"
 	"github.com/pinpt/integration-sdk/calendar"
 )
 

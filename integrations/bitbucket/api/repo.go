@@ -6,8 +6,8 @@ import (
 
 	"github.com/pinpt/agent/integrations/pkg/commonrepo"
 	"github.com/pinpt/agent/pkg/date"
-	"github.com/pinpt/go-common/datetime"
-	pstrings "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/go-common/v10/datetime"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/integration-sdk/agent"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )

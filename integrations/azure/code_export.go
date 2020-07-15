@@ -9,7 +9,7 @@ import (
 
 	"github.com/pinpt/agent/integrations/pkg/repoprojects"
 	"github.com/pinpt/agent/rpcdef"
-	pjson "github.com/pinpt/go-common/json"
+	pjson "github.com/pinpt/go-common/v10/json"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 

@@ -5,7 +5,7 @@ import (
 
 	"github.com/pinpt/agent/pkg/reqstats"
 	"github.com/pinpt/agent/pkg/requests"
-	pstrings "github.com/pinpt/go-common/strings"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 
 	"github.com/hashicorp/go-hclog"
 )

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/date"
-	"github.com/pinpt/go-common/hash"
+	"github.com/pinpt/go-common/v10/hash"
 	"github.com/pinpt/integration-sdk/codequality"
 )
 

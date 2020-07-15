@@ -11,12 +11,12 @@ import (
 	"net/http"
 	"time"
 
-	ps "github.com/pinpt/go-common/strings"
+	ps "github.com/pinpt/go-common/v10/strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/agentconf"
-	"github.com/pinpt/go-common/api"
-	pos "github.com/pinpt/go-common/os"
+	"github.com/pinpt/go-common/v10/api"
+	pos "github.com/pinpt/go-common/v10/os"
 	"github.com/pinpt/httpclient"
 )
 

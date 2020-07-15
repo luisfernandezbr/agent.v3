@@ -3,8 +3,8 @@ package api
 import (
 	"errors"
 
-	pjson "github.com/pinpt/go-common/json"
-	pstrings "github.com/pinpt/go-common/strings"
+	pjson "github.com/pinpt/go-common/v10/json"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 

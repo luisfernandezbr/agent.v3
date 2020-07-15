@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/go-common/datetime"
+	"github.com/pinpt/go-common/v10/datetime"
 
 	"github.com/pinpt/agent/cmd/agent-dev/cmddownloadexports"
 	"github.com/pinpt/agent/cmd/agent-dev/cmddownloadlogs"
@@ -30,7 +30,7 @@ import (
 	"github.com/pinpt/agent/slimrippy/exportrepo"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/go-common/hash"
+	"github.com/pinpt/go-common/v10/hash"
 	"github.com/spf13/cobra"
 )
 

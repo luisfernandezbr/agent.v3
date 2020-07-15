@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/go-common/fileutil"
-	pjson "github.com/pinpt/go-common/json"
-	"github.com/pinpt/go-common/log"
+	"github.com/pinpt/go-common/v10/fileutil"
+	pjson "github.com/pinpt/go-common/v10/json"
+	"github.com/pinpt/go-common/v10/log"
 	yaml "gopkg.in/yaml.v2"
 )
 

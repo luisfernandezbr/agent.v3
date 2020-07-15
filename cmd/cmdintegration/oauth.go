@@ -9,7 +9,7 @@ import (
 	"github.com/pinpt/agent/pkg/requests"
 
 	"github.com/pinpt/agent/pkg/expin"
-	"github.com/pinpt/go-common/api"
+	"github.com/pinpt/go-common/v10/api"
 )
 
 func oauthIntegrationNameToBackend(name string) string {

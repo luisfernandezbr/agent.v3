@@ -6,7 +6,7 @@ import (
 
 	"github.com/pinpt/agent/pkg/reqstats"
 	"github.com/pinpt/agent/pkg/structmarshal"
-	pjson "github.com/pinpt/go-common/json"
+	pjson "github.com/pinpt/go-common/v10/json"
 
 	"github.com/pinpt/agent/integrations/jira/common"
 	"github.com/pinpt/agent/integrations/jira/commonapi"

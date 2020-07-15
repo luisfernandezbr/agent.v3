@@ -17,7 +17,7 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/go-common/event"
+	"github.com/pinpt/go-common/v10/event"
 	"github.com/pinpt/integration-sdk/agent"
 
 	"github.com/pinpt/agent/cmd/cmdintegration"

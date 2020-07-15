@@ -16,14 +16,14 @@ import (
 	"runtime"
 	"strconv"
 
-	pstrings "github.com/pinpt/go-common/strings"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/agent/pkg/build"
 	"github.com/pinpt/agent/pkg/fs"
 	"github.com/pinpt/agent/pkg/fsconf"
-	"github.com/pinpt/go-common/api"
+	"github.com/pinpt/go-common/v10/api"
 )
 
 // Updater handles agent and built-in integration updates

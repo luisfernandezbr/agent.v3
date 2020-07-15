@@ -11,11 +11,11 @@ import (
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/encrypt"
 	"github.com/pinpt/agent/pkg/structmarshal"
-	"github.com/pinpt/go-common/datamodel"
-	"github.com/pinpt/go-common/event"
-	"github.com/pinpt/go-common/event/action"
-	pjson "github.com/pinpt/go-common/json"
-	pstrings "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/go-common/v10/datamodel"
+	"github.com/pinpt/go-common/v10/event"
+	"github.com/pinpt/go-common/v10/event/action"
+	pjson "github.com/pinpt/go-common/v10/json"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/integration-sdk/agent"
 )
 

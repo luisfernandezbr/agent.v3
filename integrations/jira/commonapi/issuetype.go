@@ -1,7 +1,7 @@
 package commonapi
 
 import (
-	ps "github.com/pinpt/go-common/strings"
+	ps "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/integration-sdk/work"
 )
 

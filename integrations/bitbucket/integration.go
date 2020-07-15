@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	pjson "github.com/pinpt/go-common/json"
+	pjson "github.com/pinpt/go-common/v10/json"
 
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/integrations/pkg/objsender"

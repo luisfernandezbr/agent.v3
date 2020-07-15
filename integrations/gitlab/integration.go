@@ -19,7 +19,7 @@ import (
 	"github.com/pinpt/agent/pkg/ids2"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/agent/rpcdef"
-	"github.com/pinpt/go-common/datamodel"
+	"github.com/pinpt/go-common/v10/datamodel"
 	"github.com/pinpt/integration-sdk/sourcecode"
 	"github.com/pinpt/integration-sdk/work"
 )

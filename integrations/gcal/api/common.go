@@ -13,8 +13,8 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/ids2"
 	"github.com/pinpt/agent/pkg/oauthtoken"
-	"github.com/pinpt/go-common/httpdefaults"
-	pstrings "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/go-common/v10/httpdefaults"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/httpclient"
 	"github.com/pinpt/integration-sdk/calendar"
 )

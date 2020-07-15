@@ -6,9 +6,9 @@ import (
 
 	"github.com/pinpt/integration-sdk/agent"
 
-	"github.com/pinpt/go-common/datamodel"
-	"github.com/pinpt/go-common/event"
-	"github.com/pinpt/go-common/event/action"
+	"github.com/pinpt/go-common/v10/datamodel"
+	"github.com/pinpt/go-common/v10/event"
+	"github.com/pinpt/go-common/v10/event/action"
 
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/exporter"
 )

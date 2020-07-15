@@ -9,10 +9,10 @@ import (
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/subcommand"
 	"github.com/pinpt/agent/pkg/structmarshal"
-	"github.com/pinpt/go-common/datamodel"
-	"github.com/pinpt/go-common/event/action"
-	"github.com/pinpt/go-common/eventing"
-	pstrings "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/go-common/v10/datamodel"
+	"github.com/pinpt/go-common/v10/event/action"
+	"github.com/pinpt/go-common/v10/eventing"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/integration-sdk/agent"
 )
 

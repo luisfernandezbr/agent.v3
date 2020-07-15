@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 
-	pstrings "github.com/pinpt/go-common/strings"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 
 	"github.com/pinpt/agent/integrations/github/api"
 	"github.com/pinpt/integration-sdk/sourcecode"

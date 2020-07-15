@@ -8,7 +8,7 @@ import (
 	"github.com/pinpt/agent/pkg/aevent"
 	"github.com/pinpt/integration-sdk/agent"
 
-	"github.com/pinpt/go-common/event"
+	"github.com/pinpt/go-common/v10/event"
 )
 
 func (s *export) sendProgress(ctx context.Context, progressData []byte) error {

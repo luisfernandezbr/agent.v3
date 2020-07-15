@@ -13,20 +13,20 @@ import (
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/encrypt"
 	"github.com/pinpt/agent/pkg/sysinfo"
-	pstrings "github.com/pinpt/go-common/strings"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 
-	"github.com/pinpt/go-common/fileutil"
+	"github.com/pinpt/go-common/v10/fileutil"
 
 	"github.com/pinpt/agent/pkg/agentconf"
 	"github.com/pinpt/agent/pkg/fsconf"
 
 	"github.com/pinpt/agent/pkg/deviceinfo"
 
-	"github.com/pinpt/go-common/event"
+	"github.com/pinpt/go-common/v10/event"
 	"github.com/pinpt/integration-sdk/agent"
 
-	"github.com/pinpt/go-common/datamodel"
-	"github.com/pinpt/go-common/event/action"
+	"github.com/pinpt/go-common/v10/datamodel"
+	"github.com/pinpt/go-common/v10/event/action"
 	isdk "github.com/pinpt/integration-sdk"
 )
 

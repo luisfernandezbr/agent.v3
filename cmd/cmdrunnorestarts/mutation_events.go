@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pinpt/go-common/datetime"
-	"github.com/pinpt/go-common/event"
+	"github.com/pinpt/go-common/v10/datetime"
+	"github.com/pinpt/go-common/v10/event"
 
 	"github.com/pinpt/agent/integrations/pkg/mutate"
 
@@ -18,8 +18,8 @@ import (
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/integration-sdk/agent"
 
-	"github.com/pinpt/go-common/datamodel"
-	"github.com/pinpt/go-common/event/action"
+	"github.com/pinpt/go-common/v10/datamodel"
+	"github.com/pinpt/go-common/v10/event/action"
 )
 
 const ignoreMutationRequestsFromOperatorOlderThan = 15 * time.Second

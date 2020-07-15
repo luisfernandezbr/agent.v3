@@ -205,13 +205,12 @@
   version = "v1.1.1"
 
 [[projects]]
-  branch = "httpsproxy"
-  digest = "1:eee726b0a81cd2034c20a661e4bab387a8f7b840cf080cad2d00c3a890c6ceb6"
+  digest = "1:1c1dc6463328445339094106c14124cc51b431596370338962fcbe7f72162cb1"
   name = "github.com/gorilla/websocket"
   packages = ["."]
   pruneopts = "T"
-  revision = "d9055c4295fd7dd351660927cf9d8ab5232d0e9f"
-  source = "github.com/pinpt/websocket"
+  revision = "b65e62901fc1c0d968042419e74789f6af455eb9"
+  version = "v1.4.2"
 
 [[projects]]
   digest = "1:3a96018fa09d755ab054066674cb50c0d8fba40d29eae79b43b5d363c7d64410"
@@ -352,33 +351,33 @@
   revision = "974d429e7ae40c89e7dcd41cfcc22a0bfbe42510"
 
 [[projects]]
-  digest = "1:98473662d36d4b4b9951bc72746af8ff241abb69c32a17af05a127b4fa975df4"
+  branch = "testb"
+  digest = "1:1134dcf28bcd4a10b9a38e309ae427928bf8082f876bbaae848ac2bd79f4df82"
   name = "github.com/pinpt/go-common"
   packages = [
-    "api",
-    "auth",
-    "datamodel",
-    "datetime",
-    "event",
-    "event/action",
-    "eventing",
-    "fileutil",
-    "graphql",
-    "hash",
-    "httpdefaults",
-    "io",
-    "json",
-    "log",
-    "number",
-    "os",
-    "slice",
-    "strings",
-    "term",
-    "upload",
+    "v10/api",
+    "v10/auth",
+    "v10/datamodel",
+    "v10/datetime",
+    "v10/event",
+    "v10/event/action",
+    "v10/eventing",
+    "v10/fileutil",
+    "v10/graphql",
+    "v10/hash",
+    "v10/httpdefaults",
+    "v10/io",
+    "v10/json",
+    "v10/log",
+    "v10/number",
+    "v10/os",
+    "v10/slice",
+    "v10/strings",
+    "v10/term",
+    "v10/upload",
   ]
   pruneopts = "T"
-  revision = "a05f6921e4dd1ea0f541d972e7c4c197be8578a2"
-  version = "v9.1.81"
+  revision = "4b322f00850d07493ae69a48441c75e4e5032bda"
 
 [[projects]]
   digest = "1:6b6aa4e366679d0a58fed03225dc26faedf970b06d740292c1546ea6184b272a"
@@ -389,7 +388,8 @@
   version = "2.0.1"
 
 [[projects]]
-  digest = "1:9200c0707140d562064aa0bbf358dafd80ef01ec967b11e73f72f5ab92fe8a67"
+  branch = "testb"
+  digest = "1:54e25b76d75193b0d2f3918291fa2bcbd09082d5456464fb491a98ead692245a"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -399,11 +399,11 @@
     "codequality",
     "customer",
     "sourcecode",
+    "web",
     "work",
   ]
   pruneopts = "T"
-  revision = "dbfbd7f65120ab96c40a50e2690d40fed79235f6"
-  version = "v0.0.996"
+  revision = "4c21916638d6118f28d9eafa5e805ffab4e71c43"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
@@ -775,23 +775,23 @@
     "github.com/mitchellh/go-homedir",
     "github.com/mitchellh/go-ps",
     "github.com/pbnjay/memory",
-    "github.com/pinpt/go-common/api",
-    "github.com/pinpt/go-common/auth",
-    "github.com/pinpt/go-common/datamodel",
-    "github.com/pinpt/go-common/datetime",
-    "github.com/pinpt/go-common/event",
-    "github.com/pinpt/go-common/event/action",
-    "github.com/pinpt/go-common/eventing",
-    "github.com/pinpt/go-common/fileutil",
-    "github.com/pinpt/go-common/hash",
-    "github.com/pinpt/go-common/httpdefaults",
-    "github.com/pinpt/go-common/io",
-    "github.com/pinpt/go-common/json",
-    "github.com/pinpt/go-common/log",
-    "github.com/pinpt/go-common/number",
-    "github.com/pinpt/go-common/os",
-    "github.com/pinpt/go-common/strings",
-    "github.com/pinpt/go-common/upload",
+    "github.com/pinpt/go-common/v10/api",
+    "github.com/pinpt/go-common/v10/auth",
+    "github.com/pinpt/go-common/v10/datamodel",
+    "github.com/pinpt/go-common/v10/datetime",
+    "github.com/pinpt/go-common/v10/event",
+    "github.com/pinpt/go-common/v10/event/action",
+    "github.com/pinpt/go-common/v10/eventing",
+    "github.com/pinpt/go-common/v10/fileutil",
+    "github.com/pinpt/go-common/v10/hash",
+    "github.com/pinpt/go-common/v10/httpdefaults",
+    "github.com/pinpt/go-common/v10/io",
+    "github.com/pinpt/go-common/v10/json",
+    "github.com/pinpt/go-common/v10/log",
+    "github.com/pinpt/go-common/v10/number",
+    "github.com/pinpt/go-common/v10/os",
+    "github.com/pinpt/go-common/v10/strings",
+    "github.com/pinpt/go-common/v10/upload",
     "github.com/pinpt/httpclient",
     "github.com/pinpt/integration-sdk",
     "github.com/pinpt/integration-sdk/agent",

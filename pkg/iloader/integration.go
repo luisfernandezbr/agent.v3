@@ -9,7 +9,7 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 
-	"github.com/pinpt/go-common/fileutil"
+	"github.com/pinpt/go-common/v10/fileutil"
 
 	"path/filepath"
 	"strings"
