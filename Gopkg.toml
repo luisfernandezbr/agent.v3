@@ -23,7 +23,7 @@
 
 [[constraint]]
   name = "github.com/pinpt/go-common"
-  version = "9"
+  branch = "depv10"
 
 [[constraint]]  
   name = "github.com/kardianos/service"
@@ -35,7 +35,7 @@
 
 [[constraint]]
   name = "github.com/pinpt/integration-sdk"
-  version = "0"
+  branch = "depv10"
 
 [[constraint]]
   name = "github.com/denisbrodbeck/machineid"
