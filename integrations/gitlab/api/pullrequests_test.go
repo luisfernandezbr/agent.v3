@@ -1,6 +1,9 @@
 package api
 
-import "testing"
+import (
+	"testing"
+	"github.com/pinpt/agent/integrations/pkg/commonpr"
+)
 
 func TestConvertMarkdownToHTML(t *testing.T) {
 
@@ -26,7 +29,7 @@ func TestConvertMarkdownToHTML(t *testing.T) {
 </ul>
 `
 
-	actual := convertMarkdownToHTML(text)
+	actual := commonpr.ConvertMarkdownToHTML(text)
 
 	if expected != actual {
 		t.Errorf("wanted %+q, got %+q", expected, actual)
@@ -36,7 +39,7 @@ func TestConvertMarkdownToHTML(t *testing.T) {
 
 	expected = `<p>simple text</p>
 `
-	actual = convertMarkdownToHTML(text)
+	actual = commonpr.ConvertMarkdownToHTML(text)
 
 	if expected != actual {
 		t.Errorf("wanted %+q, got %+q", expected, actual)
@@ -54,7 +57,7 @@ func TestConvertMarkdownToHTML(t *testing.T) {
 </ul>
 `
 
-	actual = convertMarkdownToHTML(text)
+	actual = commonpr.ConvertMarkdownToHTML(text)
 
 	if expected != actual {
 		t.Errorf("wanted %+q, got %+q", expected, actual)
