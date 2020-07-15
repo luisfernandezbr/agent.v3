@@ -13,6 +13,7 @@ import (
 	"github.com/pinpt/agent/pkg/ids2"
 	"github.com/pinpt/agent/pkg/structmarshal"
 	"github.com/pinpt/go-common/datetime"
+	pjson "github.com/pinpt/go-common/json"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/integration-sdk/work"
 )
@@ -275,7 +276,7 @@ func ParseTime(ts string) (time.Time, error) {
 var sprintRegexp = regexp.MustCompile(`com\.atlassian\.greenhopper\.service\.sprint\.Sprint@.+?\[*id=(\d+)`)
 
 func extractPossibleSprintID(v string) string {
-	matches := sprintRegexp.FindStringSubmatch(v)
+	matches := sprintRegexp.FindStringSubmatch(pjson.Stringify(v))
 	if len(matches) == 0 {
 		return ""
 	}
