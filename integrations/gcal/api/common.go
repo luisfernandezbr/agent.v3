@@ -96,6 +96,7 @@ func (s *api) get(u string, params queryParams, res interface{}) error {
 		if err != nil {
 			return fmt.Errorf("error unmarshaling response. err %v res %v", err, stringres)
 		}
+		return nil
 	case http.StatusUnauthorized:
 		if s.lastTimeRetried.IsZero() || time.Since(s.lastTimeRetried) > (5*time.Minute) {
 			s.lastTimeRetried = time.Now()
