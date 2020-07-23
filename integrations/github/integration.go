@@ -230,7 +230,7 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	if s.config.Enterprise {
 		err := s.checkEnterpriseVersion()
 		if err != nil {
-			return err
+			s.logger.Warn("it is not possible to get server version", "err", err)
 		}
 	}
 
