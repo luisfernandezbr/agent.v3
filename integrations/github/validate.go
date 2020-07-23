@@ -69,8 +69,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 	if s.config.Enterprise {
 		version, err := api.EnterpriseVersion(s.qc, s.config.APIURL)
 		if err != nil {
-			rerr(err)
-			return
+			s.logger.Warn("it is not possible to get server version", "err", err)
 		}
 		res.ServerVersion = version
 	} else {
