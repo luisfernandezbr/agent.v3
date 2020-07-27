@@ -134,13 +134,7 @@ func (s *Integration) ValidateConfig(ctx context.Context,
 		return
 	}
 
-	version, err := commonapi.ServerVersion(s.qc.Common())
-	if err != nil {
-		rerr(err)
-		return
-	}
-
-	res.ServerVersion = version
+	res.ServerVersion = ""
 
 	_, err = api.Projects(s.qc)
 	if err != nil {
