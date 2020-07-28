@@ -228,6 +228,8 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 	// pullrequest.timelineItems were a preview feature, and need custom accept header to enable
 	// https://developer.github.com/enterprise/2.16/v4/object/pullrequest/
 	// https://developer.github.com/enterprise/2.16/v4/previews/#issues-preview
+	// https://developer.github.com/enterprise/2.19/v4/previews/#draft-pull-requests-preview
+	req.Header.Set("Accept", "application/vnd.github.shadow-cat-preview+json")
 	req.Header.Set("Accept", "application/vnd.github.starfire-preview+json")
 
 	req.Header.Set("Authorization", "bearer "+s.config.Token)
