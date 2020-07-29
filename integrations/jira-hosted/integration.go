@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/pinpt/agent/pkg/reqstats"
 	"github.com/pinpt/agent/pkg/structmarshal"
@@ -86,10 +88,15 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 	s.qc.CustomerID = config.Pinpoint.CustomerID
 	s.qc.Logger = s.logger
 
+	useOAuth1, err := strconv.ParseBool(os.Getenv("PP_JIRA_USE_OAUTH1"))
+	if err != nil {
+		return err
+	}
+
 	s.clientManager, err = reqstats.New(reqstats.Opts{
 		Logger:                s.logger,
 		TLSInsecureSkipVerify: true,
-		SetOAuth1Client:       true,
+		SetOAuth1Client:       useOAuth1,
 		OAuth1ConsumerKey:     s.config.Username,
 		OAuth1Token:           s.config.Password,
 		OAuth1URL:             s.config.URL,

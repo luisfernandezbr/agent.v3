@@ -16,7 +16,7 @@ import (
 
 func OAuth1HTTPClient(url, consumerKey, token string) (*http.Client, error) {
 	ctx := context.Background()
-	keyDERBlock, _ := pem.Decode([]byte(os.Getenv("OJA_JIRA_PRIVATE_KEY")))
+	keyDERBlock, _ := pem.Decode([]byte(os.Getenv("PP_JIRA_PRIVATE_KEY")))
 	if keyDERBlock == nil {
 		log.Fatal("unable to decode key PEM block")
 	}
@@ -41,7 +41,7 @@ func OAuth1HTTPClient(url, consumerKey, token string) (*http.Client, error) {
 		},
 	}
 
-	tok := &oauth1.Token{Token: token, TokenSecret: os.Getenv("OJA_JIRA_TOKEN_SECRET")}
+	tok := &oauth1.Token{Token: token, TokenSecret: os.Getenv("PP_JIRA_TOKEN_SECRET")}
 
 	return config.Client(ctx, tok), nil
 
