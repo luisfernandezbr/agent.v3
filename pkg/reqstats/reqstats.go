@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -23,7 +24,6 @@ type Opts struct {
 	Logger hclog.Logger
 	// TLSInsecureSkipVerify to disable tls cert checks when integration uses TLSInsecure() client
 	TLSInsecureSkipVerify bool
-	SetOAuth1Client       bool
 	OAuth1ConsumerKey     string
 	OAuth1Token           string
 	OAuth1URL             string
@@ -70,7 +70,7 @@ func New(opts Opts) (*ClientManager, error) {
 		s.Clients.TLSInsecure = c
 	}
 
-	if opts.SetOAuth1Client {
+	if os.Getenv("PP_JIRA_PRIVATE_KEY") != "" {
 		oauthClient, err := OAuth1HTTPClient(opts.OAuth1URL, opts.OAuth1ConsumerKey, opts.OAuth1Token)
 		if err != nil {
 			return nil, err
