@@ -3,12 +3,10 @@ package reqstats
 import (
 	"context"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/dghubble/oauth1"
@@ -45,33 +43,4 @@ func OAuth1HTTPClient(url, consumerKey, token string) (*http.Client, error) {
 
 	return config.Client(ctx, tok), nil
 
-}
-
-func GetJIRAHTTPClient(ctx context.Context, config *oauth1.Config) (*http.Client, error) {
-	cacheFile, err := jiraTokenCacheFile()
-	if err != nil {
-		log.Fatalf("Unable to get path to cached credential file. %v", err)
-	}
-	tok, err := jiraTokenFromFile(cacheFile)
-	if err != nil {
-		return nil, err
-	}
-	return config.Client(ctx, tok), nil
-}
-
-func jiraTokenFromFile(file string) (*oauth1.Token, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
-	t := &oauth1.Token{}
-	err = json.NewDecoder(f).Decode(t)
-	defer f.Close()
-	return t, err
-}
-
-func jiraTokenCacheFile() (string, error) {
-	tokenCacheDir := "/Users/carlos/go/src/github.com/pinpt/agent/support/oauthjiraagile/credentials"
-	os.MkdirAll(tokenCacheDir, 0700)
-	return filepath.Join(tokenCacheDir, "http%3A%2F%2Flocalhost%3A8084.json"), nil
 }
