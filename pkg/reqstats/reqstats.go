@@ -16,12 +16,17 @@ import (
 type Clients struct {
 	Default     *http.Client
 	TLSInsecure *http.Client
+	OAuth1      *http.Client
 }
 
 type Opts struct {
 	Logger hclog.Logger
 	// TLSInsecureSkipVerify to disable tls cert checks when integration uses TLSInsecure() client
 	TLSInsecureSkipVerify bool
+	SetOAuth1Client       bool
+	OAuth1ConsumerKey     string
+	OAuth1Token           string
+	OAuth1URL             string
 }
 
 type ClientManager struct {
@@ -38,7 +43,7 @@ func int64p() *int64 {
 	return &v
 }
 
-func New(opts Opts) *ClientManager {
+func New(opts Opts) (*ClientManager, error) {
 	if opts.Logger == nil {
 		panic("provide logger")
 	}
@@ -65,7 +70,15 @@ func New(opts Opts) *ClientManager {
 		s.Clients.TLSInsecure = c
 	}
 
-	return s
+	if opts.SetOAuth1Client {
+		oauthClient, err := OAuth1HTTPClient(opts.OAuth1URL, opts.OAuth1ConsumerKey, opts.OAuth1Token)
+		if err != nil {
+			return nil, err
+		}
+		s.Clients.OAuth1 = oauthClient
+	}
+
+	return s, nil
 }
 
 func (s ClientManager) PrintStats() string {

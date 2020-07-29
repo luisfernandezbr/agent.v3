@@ -18,6 +18,7 @@ type RequesterOpts struct {
 	Password string
 
 	RetryRequests bool
+	UseOAuth1     bool
 }
 
 type Requester struct {
@@ -66,7 +67,9 @@ func (s *Requester) get(objPath string, params url.Values, res interface{}) (sta
 
 func (s *Requester) JSON(req requests.Request, res interface{}) (resp requests.Result, rerr error) {
 	var reqs requests.Requests
-	if s.opts.RetryRequests {
+	if s.opts.UseOAuth1 {
+		reqs = requests.New(s.logger, s.opts.Clients.OAuth1)
+	} else if s.opts.RetryRequests {
 		reqs = requests.NewRetryableDefault(s.logger, s.opts.Clients.TLSInsecure)
 	} else {
 		reqs = requests.New(s.logger, s.opts.Clients.TLSInsecure)

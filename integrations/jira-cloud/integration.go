@@ -97,10 +97,13 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 	}
 	s.UseOAuth = config.UseOAuth
 
-	s.clientManager = reqstats.New(reqstats.Opts{
+	s.clientManager, err = reqstats.New(reqstats.Opts{
 		Logger:                s.logger,
 		TLSInsecureSkipVerify: false,
 	})
+	if err != nil {
+		return err
+	}
 	s.clients = s.clientManager.Clients
 
 	var oauth *oauthtoken.Manager

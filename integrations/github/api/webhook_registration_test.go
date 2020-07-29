@@ -124,13 +124,16 @@ func TestWebhookCreateIfNotExists(t *testing.T) {
 		Name: "test",
 	})
 
+	rm, err := reqstats.New(reqstats.Opts{
+		Logger:                logger,
+		TLSInsecureSkipVerify: true,
+	})
+	assert.NoError(err)
+
 	qc := QueryContext{
 		APIURL3: server.URL,
 		Logger:  logger,
-		Clients: reqstats.New(reqstats.Opts{
-			Logger:                logger,
-			TLSInsecureSkipVerify: true,
-		}).Clients,
+		Clients: rm.Clients,
 	}
 
 	// don't do anything
@@ -139,7 +142,7 @@ func TestWebhookCreateIfNotExists(t *testing.T) {
 		NameWithOwner: "pinpt/test",
 	}
 
-	err := WebhookCreateIfNotExists(qc, testRepo, "https://test.example.com", []string{"wh1"}, WebhookReplaceOlderThan)
+	err = WebhookCreateIfNotExists(qc, testRepo, "https://test.example.com", []string{"wh1"}, WebhookReplaceOlderThan)
 	assert.NoError(err)
 
 	// no permissions

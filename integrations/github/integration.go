@@ -219,10 +219,13 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	s.qc.APIURL = s.config.APIURL
 	s.qc.APIURL3 = s.config.APIURL3
 	s.qc.AuthToken = s.config.Token
-	s.clientManager = reqstats.New(reqstats.Opts{
+	s.clientManager, err = reqstats.New(reqstats.Opts{
 		Logger:                s.logger,
 		TLSInsecureSkipVerify: s.config.TLSInsecureSkipVerify,
 	})
+	if err != nil {
+		return err
+	}
 	s.clients = s.clientManager.Clients
 	s.qc.Clients = s.clients
 	s.qc.Request = s.makeRequest
