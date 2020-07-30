@@ -46,6 +46,8 @@ type Integration struct {
 
 	clientManager *reqstats.ClientManager
 	clients       reqstats.Clients
+
+	enterpriseVersion string
 }
 
 func NewIntegration(logger hclog.Logger) *Integration {
