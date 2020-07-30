@@ -21,6 +21,11 @@ func EnterpriseVersion(qc QueryContext, apiURL string) (version string, rerr err
 	}
 	reqs := requests.New(qc.Logger, qc.Clients.TLSInsecure)
 	resp, err := reqs.JSON(req, &respJSON)
+	version = resp.Resp.Header.Get("X-GitHub-Enterprise-Version")
+	qc.Logger.Info("header-version", "version", version)
+	if version != "" {
+		return
+	}
 	if err != nil {
 		rerr = err
 		return

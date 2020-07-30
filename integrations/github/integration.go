@@ -46,6 +46,8 @@ type Integration struct {
 
 	clientManager *reqstats.ClientManager
 	clients       reqstats.Clients
+
+	enterpriseVersion string
 }
 
 func NewIntegration(logger hclog.Logger) *Integration {
@@ -272,7 +274,12 @@ func (s *Integration) getOrgs() (res []api.Org, _ error) {
 	} else {
 		res, err = api.OrgsEnterpriseAll(s.qc)
 		if err != nil {
-			return nil, err
+			s.logger.Warn("couldn't get orgs with v3 api", "err", err)
+			res, err = api.OrgsAll(s.qc)
+			if err != nil {
+				s.logger.Warn("couldn't get orgs with graphql api", "err", err)
+				return nil, err
+			}
 		}
 	}
 	var names []string
