@@ -58,7 +58,7 @@ func (s *Integration) makeRequestNoRetries(query string, vars map[string]interfa
 	req.Body = dataJSON
 	req.Header = http.Header{}
 	req.Header.Set("Authorization", "bearer "+s.config.Token)
-	req.Header.Set("Accept", "application/json")
+	s.setAcceptHeader(&req.Header)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := requests.New(s.logger, s.clients.TLSInsecure).Do(context.Background(), req)
@@ -217,19 +217,12 @@ func (s *Integration) makeRequestRetry(req request, res interface{}, generalRetr
 
 const maxThrottledRetries = 3
 
-func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{}, retryThrottled int) (isErrorRetryable bool, rerr error) {
-
-	req, err := http.NewRequest(reqDef.Method, reqDef.URL, bytes.NewReader(reqDef.Body))
-	if err != nil {
-		rerr = err
-		return
-	}
-
+func (s *Integration) setAcceptHeader(header *http.Header) {
 	// Setting preview header to support github enterprise 2.16
 	// pullrequest.timelineItems were a preview feature, and need custom accept header to enable
 	// https://developer.github.com/enterprise/2.16/v4/object/pullrequest/
 	// https://developer.github.com/enterprise/2.16/v4/previews/#issues-preview
-	req.Header.Set("Accept", "application/vnd.github.starfire-preview+json")
+	header.Set("Accept", "application/vnd.github.starfire-preview+json")
 
 	// https://docs.github.com/en/enterprise/2.17/user/graphql/overview/schema-previews#draft-pull-requests-preview
 	// https://docs.github.com/en/enterprise/2.18/user/graphql/overview/schema-previews#draft-pull-requests-preview
@@ -239,8 +232,19 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 		strings.Index(s.enterpriseVersion, "2.18") == 0 ||
 		strings.Index(s.enterpriseVersion, "2.19") == 0 ||
 		strings.Index(s.enterpriseVersion, "2.20") == 0 {
-		req.Header.Set("Accept", "application/vnd.github.shadow-cat-preview+json")
+		header.Set("Accept", "application/vnd.github.shadow-cat-preview+json")
 	}
+}
+
+func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{}, retryThrottled int) (isErrorRetryable bool, rerr error) {
+
+	req, err := http.NewRequest(reqDef.Method, reqDef.URL, bytes.NewReader(reqDef.Body))
+	if err != nil {
+		rerr = err
+		return
+	}
+
+	s.setAcceptHeader(&req.Header)
 
 	req.Header.Set("Authorization", "bearer "+s.config.Token)
 	resp, err := s.clients.TLSInsecure.Do(req)
