@@ -164,10 +164,13 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig) error {
 		s.oauth = oauth
 	}
 
-	s.clientManager = reqstats.New(reqstats.Opts{
+	s.clientManager, err = reqstats.New(reqstats.Opts{
 		Logger:                s.logger,
 		TLSInsecureSkipVerify: s.config.InsecureSkipVerify,
 	})
+	if err != nil {
+		return err
+	}
 
 	{
 		opts := api.RequesterOpts{}
