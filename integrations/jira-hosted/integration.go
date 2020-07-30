@@ -10,11 +10,11 @@ import (
 
 	"github.com/pinpt/agent/integrations/jira/common"
 	"github.com/pinpt/agent/integrations/jira/commonapi"
+	"github.com/pinpt/agent/integrations/pkg/ibase"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/jira-hosted/api"
-	"github.com/pinpt/agent/integrations/pkg/ibase"
 	"github.com/pinpt/agent/rpcdef"
 	"github.com/pinpt/integration-sdk/work"
 )
@@ -86,10 +86,16 @@ func (s *Integration) initWithConfig(config rpcdef.ExportConfig, retryRequests b
 	s.qc.CustomerID = config.Pinpoint.CustomerID
 	s.qc.Logger = s.logger
 
-	s.clientManager = reqstats.New(reqstats.Opts{
+	s.clientManager, err = reqstats.New(reqstats.Opts{
 		Logger:                s.logger,
 		TLSInsecureSkipVerify: true,
+		OAuth1ConsumerKey:     s.config.Username,
+		OAuth1Token:           s.config.Password,
+		OAuth1URL:             s.config.URL,
 	})
+	if err != nil {
+		return err
+	}
 	s.clients = s.clientManager.Clients
 
 	{
