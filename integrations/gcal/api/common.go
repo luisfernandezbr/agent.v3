@@ -12,7 +12,6 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/ids2"
-	"github.com/pinpt/agent/pkg/oauthtoken"
 	"github.com/pinpt/go-common/httpdefaults"
 	pstrings "github.com/pinpt/go-common/strings"
 	"github.com/pinpt/httpclient"
@@ -26,19 +25,21 @@ type API interface {
 	Validate() error
 }
 
+type refreshTokenFunc = func() (string, error)
+
 type api struct {
-	logger     hclog.Logger
-	oauth      *oauthtoken.Manager
-	client     *httpclient.HTTPClient
-	customerID string
-	refType    string
-	ids        ids2.Gen
-	// for local testing
-	accessToken     string
-	lastTimeRetried time.Time
+	logger           hclog.Logger
+	client           *httpclient.HTTPClient
+	customerID       string
+	refType          string
+	ids              ids2.Gen
+	refreshTokenFunc refreshTokenFunc
+	accessToken      string
+	lastTimeRetried  time.Time
 }
 
-func New(logger hclog.Logger, customerID string, refType string, oauth *oauthtoken.Manager, accessToken string) API {
+// New creates a new instance
+func New(logger hclog.Logger, customerID string, refType string, refreshToken refreshTokenFunc) (API, error) {
 	client := &http.Client{
 		Transport: httpdefaults.DefaultTransport(),
 		Timeout:   10 * time.Minute,
@@ -47,15 +48,19 @@ func New(logger hclog.Logger, customerID string, refType string, oauth *oauthtok
 		Paginator: paginator{},
 		Retryable: httpclient.NewBackoffRetry(10*time.Millisecond, 100*time.Millisecond, 60*time.Second, 2.0),
 	}
-	return &api{
-		client:      httpclient.NewHTTPClient(context.Background(), conf, client),
-		logger:      logger,
-		oauth:       oauth,
-		customerID:  customerID,
-		refType:     refType,
-		ids:         ids2.New(customerID, refType),
-		accessToken: accessToken,
+	accessToken, err := refreshToken()
+	if err != nil {
+		return nil, err
 	}
+	return &api{
+		client:           httpclient.NewHTTPClient(context.Background(), conf, client),
+		logger:           logger,
+		customerID:       customerID,
+		refType:          refType,
+		ids:              ids2.New(customerID, refType),
+		accessToken:      accessToken,
+		refreshTokenFunc: refreshToken,
+	}, nil
 }
 
 type queryParams map[string]string
@@ -73,11 +78,8 @@ func (s *api) get(u string, params queryParams, res interface{}) error {
 		return fmt.Errorf("error creating request. err %v", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if s.oauth != nil {
-		req.Header.Set("Authorization", "Bearer "+s.oauth.Get())
-	} else {
-		req.Header.Set("Authorization", "Bearer "+s.accessToken)
-	}
+	req.Header.Set("Authorization", "Bearer "+s.accessToken)
+
 	// ========== do the request ==========
 	resp, err := s.client.Do(req)
 	if err != nil {
@@ -99,8 +101,10 @@ func (s *api) get(u string, params queryParams, res interface{}) error {
 		return nil
 	case http.StatusUnauthorized:
 		if s.lastTimeRetried.IsZero() || time.Since(s.lastTimeRetried) > (5*time.Minute) {
+			var err error
 			s.lastTimeRetried = time.Now()
-			if err := s.oauth.Refresh(); err != nil {
+			s.accessToken, err = s.refreshTokenFunc()
+			if err != nil {
 				return err
 			}
 			return s.get(u, params, req)

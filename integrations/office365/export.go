@@ -46,7 +46,7 @@ func (s *Integration) export(ctx context.Context, conf rpcdef.ExportConfig) (res
 	var projectsIface []repoprojects.RepoProject
 	for _, refreshToken := range s.config.Inclusions {
 		api, err := api.New(s.logger, conf.Pinpoint.CustomerID, s.refType, func() (string, error) {
-			return s.agent.OAuthNewAccessTokenFromRefreshToken("office365", refreshToken)
+			return s.agent.OAuthNewAccessTokenFromRefreshToken(s.refType, refreshToken)
 		})
 		if err != nil {
 			s.logger.Error("something wrong with refresh token", "err", err)

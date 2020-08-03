@@ -26,13 +26,13 @@ type API interface {
 }
 
 type api struct {
-	logger       hclog.Logger
-	refreshToken refreshTokenFunc
-	client       *httpclient.HTTPClient
-	customerID   string
-	refType      string
-	ids          ids2.Gen
-	accessToken  string
+	logger           hclog.Logger
+	refreshTokenFunc refreshTokenFunc
+	client           *httpclient.HTTPClient
+	customerID       string
+	refType          string
+	ids              ids2.Gen
+	accessToken      string
 }
 type refreshTokenFunc = func() (string, error)
 
@@ -50,12 +50,13 @@ func New(logger hclog.Logger, customerID string, refType string, refreshToken re
 		return nil, err
 	}
 	return &api{
-		client:      httpclient.NewHTTPClient(context.Background(), conf, client),
-		logger:      logger,
-		customerID:  customerID,
-		refType:     refType,
-		ids:         ids2.New(customerID, refType),
-		accessToken: accessToken,
+		client:           httpclient.NewHTTPClient(context.Background(), conf, client),
+		logger:           logger,
+		customerID:       customerID,
+		refType:          refType,
+		ids:              ids2.New(customerID, refType),
+		accessToken:      accessToken,
+		refreshTokenFunc: refreshToken,
 	}, nil
 }
 
@@ -94,7 +95,7 @@ func (s *api) get(u string, params queryParams, res interface{}) error {
 			return fmt.Errorf("error unmarshaling response. err %v res %v", err, stringres)
 		}
 	case http.StatusUnauthorized:
-		if s.accessToken, err = s.refreshToken(); err != nil {
+		if s.accessToken, err = s.refreshTokenFunc(); err != nil {
 			return err
 		}
 		return s.get(u, params, req)
