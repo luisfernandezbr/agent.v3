@@ -333,11 +333,12 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 
 		if errRes.Errors[0].Type != "SERVICE_UNAVAILABLE" {
 
-			s.logger.Warn("api didn't return some values", "err", string(b))
+			s.logger.Warn(fmt.Sprintf("service unavailable, api didn't return some values err %s", string(b)))
 
 			s.logger.Warn("sleeping for 1 minute")
 			time.Sleep(time.Minute + 1)
-			s.logger.Warn("retry after service unavailable")
+			s.logger.Warn(fmt.Sprintf("retry after service unavailable, query %s, retry %d", string(reqDef.Body), retryThrottled))
+
 			return true, s.makeRequestRetry(reqDef, res, retryThrottled+1)
 		}
 
