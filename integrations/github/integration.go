@@ -232,6 +232,8 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	s.qc.Clients = s.clients
 	s.qc.Request = s.makeRequest
 
+	s.logger.Info(fmt.Sprintf("gitlab type enterprise %v", s.config.Enterprise))
+
 	if s.config.Enterprise {
 		err := s.checkEnterpriseVersion()
 		if err != nil {
