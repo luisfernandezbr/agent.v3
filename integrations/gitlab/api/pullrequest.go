@@ -53,8 +53,9 @@ func PullRequestPage(
 		MergedBy struct {
 			ID int64 `json:"id"`
 		} `json:"merged_by"`
-		MergeCommitSHA string `json:"merge_commit_sha"`
-		Identifier     string `json:"reference"` // this looks how we display in Gitlab such as !1
+		MergeCommitSHA string   `json:"merge_commit_sha"`
+		Identifier     string   `json:"reference"` // this looks how we display in Gitlab such as !1
+		Labels         []string `json:"labels"`
 	}
 
 	pi, err = qc.Request(objectPath, params, &rprs)
@@ -98,6 +99,7 @@ func PullRequestPage(
 		}
 		pr.CreatedByRefID = strconv.FormatInt(rpr.Author.ID, 10)
 		pr.Draft = rpr.Draft
+		pr.Labels = rpr.Labels
 
 		spr := PullRequest{}
 		spr.IID = strconv.FormatInt(rpr.IID, 10)
