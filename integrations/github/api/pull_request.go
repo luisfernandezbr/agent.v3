@@ -61,6 +61,11 @@ closedEvents: timelineItems (last:1 itemTypes:CLOSED_EVENT){
 		}
 	}
 }
+labels(first:100){
+	nodes{
+		name
+	}
+}
 `
 
 type pullRequestGraphql struct {
@@ -104,6 +109,11 @@ type pullRequestGraphql struct {
 			Actor User `json:"actor"`
 		} `json:"nodes"`
 	} `json:"closedEvents"`
+	Labels struct {
+		Nodes []struct {
+			Name string `json:"name"`
+		} `json:"nodes"`
+	} `json:"labels"`
 }
 
 func convertPullRequest(qc QueryContext, data pullRequestGraphql) PullRequest {
@@ -196,6 +206,11 @@ func convertPullRequest(qc QueryContext, data pullRequestGraphql) PullRequest {
 	pr2.HasReviews = data.Reviews.TotalCount != 0
 	if len(data.LastCommits.Nodes) != 0 {
 		pr2.LastCommitSHA = data.LastCommits.Nodes[0].Commit.OID
+	}
+
+	pr2.Labels = make([]string, 0)
+	for _, labelNode := range data.Labels.Nodes {
+		pr2.Labels = append(pr2.Labels, labelNode.Name)
 	}
 
 	return pr2
