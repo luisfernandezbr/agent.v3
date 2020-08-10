@@ -390,7 +390,7 @@
 
 [[projects]]
   branch = "depv10"
-  digest = "1:f6dd320dbba559b6c0f1ab9e3384675e5141f8424fb8c5d50c5ff0f8978defbd"
+  digest = "1:65d8a565bd1380f6cbbbee012d45b8b4e68f1daf7545c44fd5576e929b7a40c6"
   name = "github.com/pinpt/integration-sdk"
   packages = [
     ".",
@@ -403,7 +403,7 @@
     "work",
   ]
   pruneopts = "T"
-  revision = "bc833d8fd1fb44afeef94cc0c52b85d3cf89b5b1"
+  revision = "7db38b0f416988b60e106b5eb24728e5f098f033"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
