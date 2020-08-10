@@ -53,9 +53,11 @@ func PullRequestPage(
 		MergedBy struct {
 			ID int64 `json:"id"`
 		} `json:"merged_by"`
-		MergeCommitSHA string   `json:"merge_commit_sha"`
-		Identifier     string   `json:"reference"` // this looks how we display in Gitlab such as !1
-		Labels         []string `json:"labels"`
+		MergeCommitSHA string `json:"merge_commit_sha"`
+		References     struct {
+			Full string `json:"full"`
+		} `json:"references"`
+		Labels []string `json:"labels"`
 	}
 
 	pi, err = qc.Request(objectPath, params, &rprs)
@@ -76,7 +78,7 @@ func PullRequestPage(
 		pr.Title = rpr.Title
 		pr.Description = commonpr.ConvertMarkdownToHTML(rpr.Description)
 		pr.URL = rpr.WebURL
-		pr.Identifier = rpr.Identifier
+		pr.Identifier = rpr.References.Full
 		date.ConvertToModel(rpr.CreatedAt, &pr.CreatedDate)
 		date.ConvertToModel(rpr.MergedAt, &pr.MergedDate)
 		date.ConvertToModel(rpr.ClosedAt, &pr.ClosedDate)
