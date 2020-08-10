@@ -97,7 +97,7 @@ func (api *API) FetchPullRequests(ctx *repoprojects.ProjectCtx, repoid string, r
 			BranchName:    pr.SourceBranch,
 			LastCommitSHA: pr.commitshas[len(pr.commitshas)-1],
 		})
-		api.sendPullRequestObjects(repoRefID, pr, prsender)
+		api.sendPullRequestObjects(repoRefID, pr, reponame, prsender)
 	}
 
 	for _, pr := range pullrequestcomments {
@@ -202,7 +202,7 @@ func (api *API) sendPullRequestCommentObject(repoRefID string, pr pullRequestRes
 	}
 }
 
-func (api *API) sendPullRequestObjects(repoRefID string, p pullRequestResponseWithShas, prsender *objsender.Session) {
+func (api *API) sendPullRequestObjects(repoRefID string, p pullRequestResponseWithShas, reponame string, prsender *objsender.Session) {
 
 	pr := &sourcecode.PullRequest{
 		BranchName:     p.SourceBranch,
@@ -215,7 +215,7 @@ func (api *API) sendPullRequestObjects(repoRefID string, p pullRequestResponseWi
 		Title:          p.Title,
 		URL:            p.URL,
 		CommitShas:     p.commitshas,
-		Identifier:     fmt.Sprintf("#%d", p.PullRequestID), // format for displaying the PR in app
+		Identifier:     reponame, // format for displaying the PR in app
 	}
 	if p.commitshas != nil {
 		pr.BranchID = api.IDs.CodeBranch(repoRefID, p.SourceBranch, p.commitshas[0])
