@@ -7,7 +7,7 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 )
 
-const stateVer = 12 // changing this value forces a new historical
+const stateVer = 13 // changing this value forces a new historical
 
 type Locs struct {
 	// Dirs
