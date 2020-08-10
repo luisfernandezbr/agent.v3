@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/subcommand"
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/go-common/datamodel"
@@ -34,6 +35,8 @@ func (s *runner) handleCancelEvents(ctx context.Context) (closefunc, error) {
 	cb := func(instance datamodel.ModelReceiveEvent) (datamodel.ModelSendEvent, error) {
 		ev := instance.Object().(*agent.CancelRequest)
 
+		s.logger.Info("received cancel request")
+
 		var cmdname string
 		switch ev.Command {
 		case agent.CancelRequestCommandExport:
@@ -55,11 +58,8 @@ func (s *runner) handleCancelEvents(ctx context.Context) (closefunc, error) {
 			s.logger.Error("error in cancel request", "err", err)
 
 		} else {
-			if err := subcommand.KillCommand(subcommand.KillCmdOpts{
-				PrintLog: func(msg string, args ...interface{}) {
-					s.logger.Debug(msg, args)
-				},
-			}, cmdname); err != nil {
+			err := killCommand(s.logger, cmdname)
+			if err != nil {
 				errstr := err.Error()
 				resp.Error = &errstr
 				s.logger.Error("error processing cancel request", "err", err.Error())
@@ -76,4 +76,12 @@ func (s *runner) handleCancelEvents(ctx context.Context) (closefunc, error) {
 	sub.WaitForReady()
 
 	return func() { sub.Close() }, nil
+}
+
+func killCommand(logger hclog.Logger, cmdname string) error {
+	return subcommand.KillCommand(subcommand.KillCmdOpts{
+		PrintLog: func(msg string, args ...interface{}) {
+			logger.Debug(msg, args)
+		},
+	}, cmdname)
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/pinpt/agent/pkg/ids"
 	"github.com/pinpt/agent/pkg/reqstats"
 	"github.com/pinpt/agent/pkg/structmarshal"
+	"github.com/pinpt/go-common/number"
 	"github.com/pinpt/integration-sdk/sourcecode"
 
 	"github.com/hashicorp/go-hclog"
@@ -26,6 +27,29 @@ func main() {
 	ibase.MainFunc(func(logger hclog.Logger) rpcdef.Integration {
 		return NewIntegration(logger)
 	})
+}
+
+type AssigneeAvailability struct {
+	sync.Mutex
+	Available *bool
+}
+
+func (a *AssigneeAvailability) isAvailable() bool {
+	a.Lock()
+	defer a.Unlock()
+	return *a.Available
+}
+
+func (a *AssigneeAvailability) setAssigneeAvailability(availability bool) {
+	a.Lock()
+	defer a.Unlock()
+	a.Available = number.BoolPointer(availability)
+}
+
+func (a *AssigneeAvailability) isAvailableSet() bool {
+	a.Lock()
+	defer a.Unlock()
+	return a.Available != nil
 }
 
 type Integration struct {
@@ -48,6 +72,20 @@ type Integration struct {
 	clients       reqstats.Clients
 
 	enterpriseVersion string
+
+	assigneeAvailability AssigneeAvailability
+}
+
+func (i *Integration) isAssigneeAvailable() bool {
+	return i.assigneeAvailability.isAvailable()
+}
+
+func (i *Integration) setAssigneeAvailability(availability bool) {
+	i.assigneeAvailability.setAssigneeAvailability(availability)
+}
+
+func (i *Integration) isAssigneeAvailableSet() bool {
+	return i.assigneeAvailability.isAvailableSet()
 }
 
 func NewIntegration(logger hclog.Logger) *Integration {
@@ -185,7 +223,7 @@ func (s *Integration) setIntegrationConfig(data rpcdef.IntegrationConfig) error 
 
 	res.Concurrency = def.Concurrency
 	if def.Concurrency == 0 {
-		if !res.Enterprise {
+		if !res.Enterprise || s.customerID == "991c9c4b6331daa4" {
 			// github.com starts to return errors with more than 1 concurrency
 			res.Concurrency = 1
 		} else {
@@ -206,6 +244,7 @@ func urlAppend(p1, p2 string) string {
 
 func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	s.customerID = exportConfig.Pinpoint.CustomerID
+	s.assigneeAvailability = AssigneeAvailability{}
 	s.qc.CustomerID = s.customerID
 	s.qc.RefType = "github"
 	err := s.setIntegrationConfig(exportConfig.Integration)
@@ -231,8 +270,6 @@ func (s *Integration) initWithConfig(exportConfig rpcdef.ExportConfig) error {
 	s.clients = s.clientManager.Clients
 	s.qc.Clients = s.clients
 	s.qc.Request = s.makeRequest
-
-	s.logger.Info(fmt.Sprintf("gitlab type enterprise %v", s.config.Enterprise))
 
 	if s.config.Enterprise {
 		err := s.checkEnterpriseVersion()

@@ -40,21 +40,14 @@ const userFieldsNoBot = `{
 	}
 }`
 
-func PullRequestReviewTimelineItemsPage(
-	qc QueryContext,
-	repo Repo,
-	pullRequestRefID string,
-	queryParams string) (pi PageInfo, res []*sourcecode.PullRequestReview, totalCount int, rerr error) {
+func GetPullRequestReviewTimelineQuery(pullRequestRefID, queryParams string, assigneeAvailability bool) string {
 
-	if pullRequestRefID == "" {
-		panic("missing pr id")
+	var userAssignatedEvent string
+	if assigneeAvailability {
+		userAssignatedEvent = "assignee " + userFields
+	} else {
+		userAssignatedEvent = "user " + userFields2
 	}
-
-	logger := qc.Logger.With("pr", pullRequestRefID, "repo", repo.NameWithOwner)
-
-	queryParams += " itemTypes:[PULL_REQUEST_REVIEW,REVIEW_REQUESTED_EVENT,REVIEW_REQUEST_REMOVED_EVENT,ASSIGNED_EVENT,UNASSIGNED_EVENT]"
-
-	logger.Debug("pull_request_timeline_items request", "q", queryParams)
 
 	query := `
 	query {
@@ -93,13 +86,13 @@ func PullRequestReviewTimelineItemsPage(
 							__typename
 							id
 							createdAt
-							assignee ` + userFields + `
+							` + userAssignatedEvent + `
 						}
 						... on UnassignedEvent {
 							__typename
 							id
 							createdAt
-							assignee ` + userFields + `
+							` + userAssignatedEvent + `
 						}
 					}
 				}
@@ -107,6 +100,28 @@ func PullRequestReviewTimelineItemsPage(
 		}
 	}
 	`
+
+	return query
+}
+
+func PullRequestReviewTimelineItemsPage(
+	qc QueryContext,
+	repo Repo,
+	pullRequestRefID string,
+	queryParams string,
+	assigneeAvailability bool) (pi PageInfo, res []*sourcecode.PullRequestReview, totalCount int, rerr error) {
+
+	if pullRequestRefID == "" {
+		panic("missing pr id")
+	}
+
+	logger := qc.Logger.With("pr", pullRequestRefID, "repo", repo.NameWithOwner)
+
+	queryParams += " itemTypes:[PULL_REQUEST_REVIEW,REVIEW_REQUESTED_EVENT,REVIEW_REQUEST_REMOVED_EVENT,ASSIGNED_EVENT,UNASSIGNED_EVENT]"
+
+	logger.Debug("pull_request_timeline_items request", "q", queryParams)
+
+	query := GetPullRequestReviewTimelineQuery(pullRequestRefID, queryParams, assigneeAvailability)
 
 	var requestRes struct {
 		Data struct {

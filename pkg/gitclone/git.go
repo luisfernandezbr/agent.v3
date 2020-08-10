@@ -96,17 +96,20 @@ func cloneWithCacheNoRetries(ctx context.Context, logger hclog.Logger, access Ac
 	cacheDir := filepath.Join(dirs.CacheRoot, cacheDirName)
 
 	if !fileutil.FileExists(cacheDir) {
+		logger.Info("git clone if exist")
 		err := cloneFreshIntoCache(ctx, logger, access, dirs, cacheDirName)
 		if err != nil {
 			rerr = err
 			return
 		}
 	} else {
+		logger.Info("git clone updating credentials")
 		err := updateCredentials(ctx, logger, access, dirs, cacheDirName)
 		if err != nil {
 			rerr = err
 			return
 		}
+		logger.Info("git clone updating credentials")
 		err = updateClonedRepo(ctx, logger, access, dirs, cacheDirName)
 		if err != nil {
 			rerr = err
