@@ -246,6 +246,12 @@ func (api *API) sendPullRequestObjects(repoRefID string, p pullRequestResponseWi
 			pr.MergedByRefID = r.ID
 		}
 	}
+
+	pr.Labels = make([]string, 0)
+	for _, p := range p.Labels {
+		pr.Labels = append(pr.Labels, p.Name)
+	}
+
 	if err := prsender.Send(pr); err != nil {
 		api.logger.Error("error sending pull request", "id", pr.RefID, "err", err)
 	}
