@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/integrations/github/api"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
@@ -33,7 +35,22 @@ func (s *Integration) exportPullRequestsReviews(logger hclog.Logger, prSender *o
 
 func (s *Integration) exportPullRequestReviews(logger hclog.Logger, reviewsSender objsender.SessionCommon, repo api.Repo, prID string) error {
 	return api.PaginateRegularWithPageSize(pageSizeHeavyQueries, func(query string) (api.PageInfo, error) {
-		pi, res, totalCount, err := api.PullRequestReviewTimelineItemsPage(s.qc, repo, prID, query)
+
+		if !s.isAssigneeAvailableSet() {
+			s.logger.Info("check assignee availability")
+			_, _, _, err := api.PullRequestReviewTimelineItemsPage(s.qc, repo, prID, query, true)
+			if err != nil {
+				if strings.Contains(err.Error(), "Field 'assignee' doesn't exist on type 'AssignedEvent'") {
+					s.logger.Info("setting assignee availability", "status", false)
+					s.setAssigneeAvailability(false)
+				}
+			} else {
+				s.logger.Info("setting assignee availability", "status", false)
+				s.setAssigneeAvailability(true)
+			}
+		}
+
+		pi, res, totalCount, err := api.PullRequestReviewTimelineItemsPage(s.qc, repo, prID, query, s.isAssigneeAvailable())
 		if err != nil {
 			return pi, err
 		}

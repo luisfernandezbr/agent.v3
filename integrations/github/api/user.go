@@ -34,6 +34,17 @@ const userFields = `{
 	}
 }`
 
+const userFields2 = `{
+	__typename
+	... on User {
+		id
+		name
+		avatarUrl
+		login
+		url		
+	}
+}`
+
 type userGithub struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`

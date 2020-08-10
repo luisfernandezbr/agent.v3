@@ -244,7 +244,9 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 		return
 	}
 
-	s.setAcceptHeader(&req.Header)
+	if bytes.Contains(reqDef.Body, []byte("draft: isDraft")) {
+		s.setAcceptHeader(&req.Header)
+	}
 
 	req.Header.Set("Authorization", "bearer "+s.config.Token)
 	resp, err := s.clients.TLSInsecure.Do(req)
@@ -331,19 +333,15 @@ func (s *Integration) makeRequestRetryThrottled(reqDef request, res interface{},
 	json.Unmarshal(b, &errRes)
 	if len(errRes.Errors) != 0 {
 
-		if errRes.Errors[0].Type != "SERVICE_UNAVAILABLE" {
-
-			s.logger.Warn("api didn't return some values", "err", errRes)
-
-			return s.makeRequestRetryThrottled(reqDef, res, retryThrottled+1)
-		}
-
 		s.logger.Info("api request got errors returned in json", "body", string(b))
 
 		err1 := errRes.Errors[0]
 		// "{"errors":[{"type":"RATE_LIMITED","message":"API rate limit exceeded"}]}"
 		if err1.Type == "RATE_LIMITED" {
 			return rateLimited()
+		} else if err1.Type == "SERVICE_UNAVAILABLE" {
+			s.logger.Warn("service unavailable err", "err", errRes.Errors[0])
+			return false, fmt.Errorf("service unavailable err %s", err)
 		}
 
 		rerr = fmt.Errorf("api request failed: type: %v message %v", err1.Type, err1.Message)
