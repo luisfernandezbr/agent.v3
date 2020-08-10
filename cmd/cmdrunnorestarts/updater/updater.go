@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	pstrings "github.com/pinpt/go-common/strings"
 
@@ -199,17 +200,20 @@ func (s *Updater) updateIntegrations(version string, downloadDir string) error {
 // retrying RemoveAll 2 times for this
 func backupLoc(loc string) (backupLoc string, _ error) {
 	i := 0
-	var lastErr error
+	var lastErr, busyError error
 	for {
 		backupLoc = loc + ".old" + strconv.Itoa(i)
 		err := os.RemoveAll(backupLoc)
 		if err == nil {
 			return
 		}
+		if strings.Contains(err.Error(), "device or resource busy") {
+			busyError = killBusyProcesses(err)
+		}
 		lastErr = err
 		i++
 		if i >= 2 {
-			return "", fmt.Errorf("could not find name for backup, old backup can not be deleted, failed after %v attempts, last err %v", i, lastErr)
+			return "", fmt.Errorf("could not find name for backup, old backup can not be deleted, failed after %v attempts, last errors %v, %v ", i, lastErr, busyError)
 		}
 	}
 }

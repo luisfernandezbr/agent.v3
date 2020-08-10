@@ -18,7 +18,7 @@ func (s *Integration) checkEnterpriseVersion() error {
 		return fmt.Errorf("the version of your github install is too old, version: %v", version)
 	}
 	s.enterpriseVersion = version
-	s.logger.Info("github enterprise version is", "v", version)
+	s.logger.Info(fmt.Sprintf("github enterprise version is %s", version))
 	return nil
 }
 
