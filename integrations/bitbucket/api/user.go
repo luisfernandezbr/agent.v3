@@ -16,19 +16,22 @@ func UsersSourcecodePage(
 
 	qc.Logger.Debug("users request", "group", group)
 
-	objectPath := pstrings.JoinURL("teams", group, "members")
+	objectPath := pstrings.JoinURL("workspaces", group, "members")
 
 	var us []struct {
-		DisplayName string `json:"display_name"`
-		Links       struct {
-			Avatar struct {
-				Href string `json:"href"`
-			} `json:"avatar"`
-			HTML struct {
-				Href string `json:"href"`
-			} `json:"html"`
-		} `json:"links"`
-		AccountID string `json:"account_id"`
+		User struct {
+			DisplayName string `json:"display_name"`
+			Links       struct {
+				Avatar struct {
+					Href string `json:"href"`
+				} `json:"avatar"`
+				HTML struct {
+					Href string `json:"href"`
+				} `json:"html"`
+			} `json:"links"`
+			AccountID string `json:"account_id"`
+			Nickname  string `json:"nickname"`
+		} `json:"user"`
 	}
 
 	np, err = qc.Request(objectPath, params, true, &us, nextPage)
@@ -38,16 +41,16 @@ func UsersSourcecodePage(
 
 	for _, u := range us {
 		user := &sourcecode.User{
-			RefID:      u.AccountID,
+			RefID:      u.User.AccountID,
 			RefType:    qc.RefType,
 			CustomerID: qc.CustomerID,
-			Name:       u.DisplayName,
-			AvatarURL:  pstrings.Pointer(u.Links.Avatar.Href),
+			Name:       u.User.DisplayName,
+			AvatarURL:  pstrings.Pointer(u.User.Links.Avatar.Href),
 			Member:     true,
 			Type:       sourcecode.UserTypeHuman,
-			URL:        strings.Pointer(u.Links.HTML.Href),
+			URL:        strings.Pointer(u.User.Links.HTML.Href),
 			// Email: Not possible
-			// Username: Not possible
+			Username: strings.Pointer(u.User.Nickname),
 		}
 
 		users = append(users, user)

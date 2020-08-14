@@ -5,13 +5,13 @@ import "net/url"
 func Teams(qc QueryContext) (teamNames []string, err error) {
 	qc.Logger.Debug("teams request")
 
-	objectPath := "teams"
+	objectPath := "workspaces"
 	params := url.Values{}
 	params.Set("pagelen", "100")
 	params.Set("role", "member")
 
 	var teams []struct {
-		Name string `json:"username"`
+		Name string `json:"name"`
 	}
 
 	_, err = qc.Request(objectPath, params, true, &teams, "")
