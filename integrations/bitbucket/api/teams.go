@@ -11,7 +11,7 @@ func Teams(qc QueryContext) (teamNames []string, err error) {
 	params.Set("role", "member")
 
 	var teams []struct {
-		Name string `json:"username"`
+		Name string `json:"name"`
 	}
 
 	_, err = qc.Request(objectPath, params, true, &teams, "")
