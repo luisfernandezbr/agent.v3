@@ -54,7 +54,7 @@ func (o *CommonInfo) AppendCommonInfo(event interface{}) {
 			numCPU := int64(systemInfo.NumCPU)
 			val.Set(reflect.ValueOf(numCPU))
 		} else if field.Name == "FreeSpace" {
-			freeSpace := int64(systemInfo.FreeSpace)
+			freeSpace := 0
 			val.Set(reflect.ValueOf(freeSpace))
 		} else if field.Name == "GoVersion" {
 			goVersion := systemInfo.GoVersion
