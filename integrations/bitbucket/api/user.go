@@ -30,7 +30,6 @@ func UsersSourcecodePage(
 				} `json:"html"`
 			} `json:"links"`
 			AccountID string `json:"account_id"`
-			Nickname  string `json:"nickname"`
 		} `json:"user"`
 	}
 
@@ -49,12 +48,26 @@ func UsersSourcecodePage(
 			Member:     true,
 			Type:       sourcecode.UserTypeHuman,
 			URL:        strings.Pointer(u.User.Links.HTML.Href),
-			// Email: Not possible
-			Username: strings.Pointer(u.User.Nickname),
+			// Email: Not available
+			// Username: Not available
 		}
 
 		users = append(users, user)
 	}
+
+	return
+}
+
+// AreUserCredentialsValid if this returns ok the credentials are fine
+func AreUserCredentialsValid(qc QueryContext) (err error) {
+
+	qc.Logger.Debug("users credentials validation")
+
+	objectPath := pstrings.JoinURL("user")
+
+	var us interface{}
+
+	_, err = qc.Request(objectPath, nil, true, &us, "")
 
 	return
 }

@@ -12,16 +12,17 @@ import (
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 
-func ReposOnboardPage(
+// ResposUserHasAccessToPage it will fetch repos the user has access to
+func ResposUserHasAccessToPage(
 	qc QueryContext,
-	teamName string,
 	params url.Values,
 	nextPage NextPage) (np NextPage, repos []*agent.RepoResponseRepos, err error) {
 
-	qc.Logger.Debug("onboard repos request", "team_name", teamName, "params", params, "next_page", nextPage)
+	qc.Logger.Debug("onboard repos request", "params", params, "next_page", nextPage)
 
-	objectPath := pstrings.JoinURL("repositories", teamName)
+	objectPath := pstrings.JoinURL("users", "permissions", "repositories")
 	params.Set("pagelen", "100")
+	params.Set("role", "member")
 
 	var rr []struct {
 		UUID        string    `json:"uuid"`
@@ -54,13 +55,56 @@ func ReposOnboardPage(
 	return
 }
 
-func ReposAll(qc interface{}, teamName string, res chan []commonrepo.Repo) error {
+func ReposOnboardPage(
+	qc QueryContext,
+	teamName string,
+	params url.Values,
+	nextPage NextPage) (np NextPage, repos []*agent.RepoResponseRepos, err error) {
+
+	qc.Logger.Debug("onboard repos request", "team_name", teamName, "params", params, "next_page", nextPage)
+
+	objectPath := pstrings.JoinURL("repositories", teamName)
+	params.Set("pagelen", "100")
+	params.Set("role", "member")
+
+	var rr []struct {
+		UUID        string    `json:"uuid"`
+		FullName    string    `json:"full_name"`
+		Description string    `json:"description"`
+		Language    string    `json:"language"`
+		CreatedOn   time.Time `json:"created_on"`
+	}
+
+	np, err = qc.Request(objectPath, params, true, &rr, nextPage)
+	if err != nil {
+		return
+	}
+
+	for _, v := range rr {
+		repo := &agent.RepoResponseRepos{
+			Active:      true,
+			RefID:       v.UUID,
+			RefType:     qc.RefType,
+			Name:        v.FullName,
+			Description: v.Description,
+			Language:    v.Language,
+		}
+
+		date.ConvertToModel(v.CreatedOn, &repo.CreatedDate)
+
+		repos = append(repos, repo)
+	}
+
+	return
+}
+
+func ReposAll(qc interface{}, res chan []commonrepo.Repo) error {
 
 	params := url.Values{}
 	params.Set("pagelen", "100")
 
 	return Paginate(func(nextPage NextPage) (NextPage, error) {
-		pi, repos, err := ReposPage(qc.(QueryContext), teamName, params, nextPage)
+		pi, repos, err := ReposPage(qc.(QueryContext), params, nextPage)
 		if err != nil {
 			return pi, err
 		}
@@ -71,13 +115,14 @@ func ReposAll(qc interface{}, teamName string, res chan []commonrepo.Repo) error
 
 func ReposPage(
 	qc QueryContext,
-	teamName string,
 	params url.Values,
 	nextPage NextPage) (np NextPage, repos []commonrepo.Repo, err error) {
 
-	qc.Logger.Debug("repos", "team", teamName, "params", params)
+	params.Set("role", "member")
 
-	objectPath := pstrings.JoinURL("repositories", teamName)
+	qc.Logger.Debug("repos", "params", params)
+
+	objectPath := pstrings.JoinURL("repositories")
 
 	var rr []struct {
 		UUID       string `json:"uuid"`
@@ -106,18 +151,20 @@ func ReposPage(
 }
 
 func ReposSourcecodePage(
-	qc QueryContext, teamName string,
+	qc QueryContext,
 	params url.Values,
 	stopOnUpdatedAt time.Time,
 	nextPage NextPage) (np NextPage, repos []*sourcecode.Repo, err error) {
 
-	qc.Logger.Debug("repos sourcecode", "team_name", teamName, "params", params, "next", nextPage)
+	qc.Logger.Debug("repos sourcecode", "params", params, "next", nextPage)
 
-	objectPath := pstrings.JoinURL("repositories", teamName)
+	objectPath := pstrings.JoinURL("repositories")
+	params.Set("pagelen", "100")
+	params.Set("role", "member")
 
 	type repo struct {
-		CreatedAt   time.Time `json:"created_on"`
-		UpdatedAt   time.Time `json:"updated_on"`
+		CreatedOn   time.Time `json:"created_on"`
+		UpdatedOn   time.Time `json:"updated_on"`
 		UUID        string    `json:"uuid"`
 		FullName    string    `json:"full_name"`
 		Description string    `json:"description"`
@@ -135,15 +182,10 @@ func ReposSourcecodePage(
 		return
 	}
 
-	var processRepos []repo
-
-	for _, r := range rr {
-		if r.UpdatedAt.After(stopOnUpdatedAt) {
-			processRepos = append(processRepos, r)
+	for _, repo := range rr {
+		if stopOnUpdatedAt.After(repo.UpdatedOn) {
+			return
 		}
-	}
-
-	for _, repo := range processRepos {
 		repo := &sourcecode.Repo{
 			RefID:       repo.UUID,
 			RefType:     qc.RefType,
@@ -151,7 +193,7 @@ func ReposSourcecodePage(
 			Name:        repo.FullName,
 			URL:         repo.Links.HTML.Href,
 			Description: repo.Description,
-			UpdatedAt:   datetime.TimeToEpoch(repo.UpdatedAt),
+			UpdatedAt:   datetime.TimeToEpoch(repo.UpdatedOn),
 			Active:      true,
 		}
 
