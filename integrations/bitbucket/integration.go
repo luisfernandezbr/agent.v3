@@ -91,32 +91,10 @@ func (s *Integration) ValidateConfig(ctx context.Context, exportConfig rpcdef.Ex
 
 	res.ServerVersion = "cloud"
 
-	teamNames, err := api.Teams(s.qc)
+	err = api.AreUserCredentialsValid(s.qc)
 	if err != nil {
 		rerr(err)
 		return
-	}
-
-	params := url.Values{}
-	params.Set("pagelen", "1")
-
-LOOP:
-	for _, team := range teamNames {
-		_, repos, err := api.ReposPage(s.qc, team, params, "")
-		if err != nil {
-			rerr(err)
-			return
-		}
-		if len(repos) > 0 {
-			repoURL, err := s.getRepoURL(repos[0].NameWithOwner)
-			if err != nil {
-				rerr(err)
-				return
-			}
-
-			res.RepoURL = repoURL
-			break LOOP
-		}
 	}
 
 	return
@@ -221,39 +199,8 @@ func (s *Integration) setConfig(config rpcdef.ExportConfig) error {
 
 func (s *Integration) export(ctx context.Context) (exportResults []rpcdef.ExportProject, rerr error) {
 
-	teamSession, err := objsender.RootTracking(s.agent, "team")
-	if err != nil {
-		rerr = err
-		return
-	}
-
-	teamNames, err := api.Teams(s.qc)
-	if err != nil {
-		rerr = err
-		return
-	}
-
-	if err = teamSession.SetTotal(len(teamNames)); err != nil {
-		rerr = err
-		return
-	}
-
-	for _, teamName := range teamNames {
-		teamResults, err := s.exportTeam(ctx, teamSession, teamName)
-		if err != nil {
-			rerr = err
-			return
-		}
-		exportResults = append(exportResults, teamResults...)
-		if err := teamSession.IncProgress(); err != nil {
-			rerr = err
-			return
-		}
-	}
-
-	err = teamSession.Done()
-	if err != nil {
-		rerr = err
+	exportResults, rerr = s.exportAllRepos(ctx)
+	if rerr != nil {
 		return
 	}
 
@@ -262,55 +209,46 @@ func (s *Integration) export(ctx context.Context) (exportResults []rpcdef.Export
 	return
 }
 
-func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender.Session, teamName string) (_ []rpcdef.ExportProject, rerr error) {
-	s.logger.Info("exporting group", "name", teamName)
-	logger := s.logger.With("org", teamName)
+func (s *Integration) exportAllRepos(ctx context.Context) (_ []rpcdef.ExportProject, err error) {
 
 	repos, err := commonrepo.ReposAllSlice(func(res chan []commonrepo.Repo) error {
-		return api.ReposAll(s.qc, teamName, res)
+		return api.ReposAll(s.qc, res)
 	})
 	if err != nil {
-		rerr = err
 		return
 	}
 
-	repos = commonrepo.Filter(logger, repos, s.config.FilterConfig)
+	repos = commonrepo.Filter(s.logger, repos, s.config.FilterConfig)
 
 	if s.config.OnlyGit {
-		logger.Warn("only_ripsrc flag passed, skipping export of data from bitbucket api")
+		s.logger.Warn("only_ripsrc flag passed, skipping export of data from bitbucket api")
 		for _, repo := range repos {
-			err := s.exportGit(repo, nil)
+			err = s.exportGit(repo, nil)
 			if err != nil {
-				rerr = err
 				return
 			}
 		}
 		return
 	}
 
-	repoSender, err := teamSession.Session(sourcecode.RepoModelName.String(), teamName, teamName)
+	if err := s.exportWorkspacesUsers(ctx, repos); err != nil {
+		return nil, err
+	}
+
+	repoSender, err := objsender.Root(s.agent, sourcecode.RepoModelName.String())
 	if err != nil {
-		rerr = err
 		return
 	}
 
 	// export repos
-	err = s.exportRepos(ctx, logger, repoSender, teamName, repos)
+	err = s.exportRepos(ctx, s.logger, repoSender, repos)
 	if err != nil {
-		rerr = err
 		return
 	}
 
 	s.logger.Info("exporting repos", "len", len(repos))
 
 	if err = repoSender.SetTotal(len(repos)); err != nil {
-		rerr = err
-		return
-	}
-
-	// export users
-	if err = s.exportUsers(ctx, logger, teamName); err != nil {
-		rerr = err
 		return
 	}
 
@@ -340,17 +278,45 @@ func (s *Integration) exportTeam(ctx context.Context, teamSession *objsender.Ses
 	processor := repoprojects.NewProcess(processOpts)
 	exportResult, err := processor.Run()
 	if err != nil {
-		rerr = err
 		return
 	}
 
 	err = repoSender.Done()
 	if err != nil {
-		rerr = err
 		return
 	}
 
 	return exportResult, nil
+}
+
+func filterWorkspaces(repos []commonrepo.Repo) (workspaces map[string]interface{}) {
+
+	workspaces = make(map[string]interface{})
+
+	for _, repo := range repos {
+		repoNameSeparated := strings.Split(repo.NameWithOwner, "/")
+		if len(repoNameSeparated) == 0 {
+			continue
+		}
+
+		workspaceName := repoNameSeparated[0]
+		workspaces[workspaceName] = nil
+	}
+	return
+}
+
+func (s *Integration) exportWorkspacesUsers(ctx context.Context, repos []commonrepo.Repo) error {
+
+	workspaces := filterWorkspaces(repos)
+
+	for workspace := range workspaces {
+		if err := s.exportUsers(ctx, s.logger, workspace); err != nil {
+			return err
+		}
+	}
+
+	return nil
+
 }
 
 func (s *Integration) exportRepoChildren(ctx *repoprojects.ProjectCtx, repo commonrepo.Repo) error {
@@ -372,7 +338,7 @@ func (s *Integration) exportRepoChildren(ctx *repoprojects.ProjectCtx, repo comm
 	return nil
 }
 
-func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender.Session, groupName string, onlyInclude []commonrepo.Repo) error {
+func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, sender *objsender.Session, onlyInclude []commonrepo.Repo) error {
 
 	shouldInclude := map[string]bool{}
 	for _, repo := range onlyInclude {
@@ -381,11 +347,12 @@ func (s *Integration) exportRepos(ctx context.Context, logger hclog.Logger, send
 
 	params := url.Values{}
 	params.Set("pagelen", "100")
+	params.Set("sort", "-updated_on")
 
 	stopOnUpdatedAt := sender.LastProcessedTime()
 
 	return api.Paginate(func(nextPage api.NextPage) (api.NextPage, error) {
-		np, repos, err := api.ReposSourcecodePage(s.qc, groupName, params, stopOnUpdatedAt, nextPage)
+		np, repos, err := api.ReposSourcecodePage(s.qc, params, stopOnUpdatedAt, nextPage)
 		if err != nil {
 			return np, err
 		}
