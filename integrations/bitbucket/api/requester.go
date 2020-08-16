@@ -101,6 +101,8 @@ func (e *Requester) request(r *internalRequest, retryThrottled int) (isErrorRetr
 		// it reduces api response from ~27s to ~12s
 		r.Params.Set("fields", tags)
 		u += "?" + r.Params.Encode()
+	} else {
+		u = pstrings.JoinURL(e.opts.APIURL, r.URL)
 	}
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)

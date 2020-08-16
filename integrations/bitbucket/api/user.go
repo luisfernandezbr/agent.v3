@@ -67,7 +67,7 @@ func AreUserCredentialsValid(qc QueryContext) (err error) {
 
 	var us interface{}
 
-	_, err = qc.Request(objectPath, nil, true, &us, "")
+	_, err = qc.Request(objectPath, nil, false, &us, "")
 
 	return
 }
