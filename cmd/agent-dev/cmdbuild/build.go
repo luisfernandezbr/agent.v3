@@ -46,7 +46,13 @@ func doBuild(opts Opts, platforms Platforms) {
 	{
 		// build integrations
 		concurrency := runtime.NumCPU() * 2 / len(platforms)
-		inChan := stringsToChan(integrationBinaries)
+		var inChan chan string
+		if opts.Integration != "" {
+			inChan = stringsToChan([]string{opts.Integration})
+		} else {
+			inChan = stringsToChan(integrationBinaries)
+		}
+
 		wg := sync.WaitGroup{}
 		for i := 0; i < concurrency; i++ {
 			wg.Add(1)

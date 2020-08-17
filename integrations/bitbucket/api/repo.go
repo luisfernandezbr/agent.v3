@@ -20,50 +20,7 @@ func ResposUserHasAccessToPage(
 
 	qc.Logger.Debug("onboard repos request", "params", params, "next_page", nextPage)
 
-	objectPath := pstrings.JoinURL("users", "permissions", "repositories")
-	params.Set("pagelen", "100")
-	params.Set("role", "member")
-
-	var rr []struct {
-		UUID        string    `json:"uuid"`
-		FullName    string    `json:"full_name"`
-		Description string    `json:"description"`
-		Language    string    `json:"language"`
-		CreatedOn   time.Time `json:"created_on"`
-	}
-
-	np, err = qc.Request(objectPath, params, true, &rr, nextPage)
-	if err != nil {
-		return
-	}
-
-	for _, v := range rr {
-		repo := &agent.RepoResponseRepos{
-			Active:      true,
-			RefID:       v.UUID,
-			RefType:     qc.RefType,
-			Name:        v.FullName,
-			Description: v.Description,
-			Language:    v.Language,
-		}
-
-		date.ConvertToModel(v.CreatedOn, &repo.CreatedDate)
-
-		repos = append(repos, repo)
-	}
-
-	return
-}
-
-func ReposOnboardPage(
-	qc QueryContext,
-	teamName string,
-	params url.Values,
-	nextPage NextPage) (np NextPage, repos []*agent.RepoResponseRepos, err error) {
-
-	qc.Logger.Debug("onboard repos request", "team_name", teamName, "params", params, "next_page", nextPage)
-
-	objectPath := pstrings.JoinURL("repositories", teamName)
+	objectPath := pstrings.JoinURL("repositories")
 	params.Set("pagelen", "100")
 	params.Set("role", "member")
 

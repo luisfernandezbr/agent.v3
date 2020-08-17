@@ -14,6 +14,7 @@ type Opts struct {
 	OnlyPlatform string // only build for this platform
 	OnlyAgent    bool   // build only agent and skip the rest
 	SkipArchives bool   // do not create zips and gzips
+	Integration  string // build only this integration binary
 }
 
 var integrationBinaries = []string{
