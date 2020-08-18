@@ -311,6 +311,10 @@ func (s *Integration) exportWorkspacesUsers(ctx context.Context, repos []commonr
 
 	for workspace := range workspaces {
 		if err := s.exportUsers(ctx, s.logger, workspace); err != nil {
+			if strings.Contains(err.Error(), "invalid status code: 403") {
+				s.logger.Warn("user doesn't have access to fetch member for this workspace", "workspace", workspace)
+				continue
+			}
 			return err
 		}
 	}
