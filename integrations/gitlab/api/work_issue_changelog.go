@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/pinpt/agent/pkg/date"
@@ -50,12 +51,7 @@ func WorkIssuesDiscussionsPage(qc QueryContext, projectID string, issueID string
 			}
 			date.ConvertToModel(nn.CreatedAt, &changelog.CreatedDate)
 
-			if strings.HasPrefix(nn.Body, "closed") || strings.HasPrefix(nn.Body, "reopened") {
-				// IssueChangeLogFieldStatus
-				changelog.To = nn.Body
-				changelog.ToString = nn.Body
-				changelog.Field = work.IssueChangeLogFieldStatus
-			} else if strings.HasPrefix(nn.Body, "assigned to ") {
+			if strings.HasPrefix(nn.Body, "assigned to ") {
 				// IssueChangeLogFieldAssigneeRefID
 				reg := regexp.MustCompile(`@(\w)+`)
 				all := reg.FindAllString(nn.Body, 2)
@@ -129,5 +125,30 @@ func WorkIssuesDiscussionsPage(qc QueryContext, projectID string, issueID string
 
 		}
 	}
+
+	qc.Logger.Debug("work issues changelog resource_state_events", "project", projectID)
+
+	objectPath = pstrings.JoinURL("projects", url.QueryEscape(projectID), "issues", issueID, "resource_state_events")
+
+	var stateEvents []ResourceStateEvents
+	pi, err = qc.Request(objectPath, params, &stateEvents)
+	if err != nil {
+		return
+	}
+	for _, stateEvent := range stateEvents {
+		changelog := work.IssueChangeLog{
+			RefID:  fmt.Sprint(stateEvent.ID),
+			UserID: strconv.FormatInt(stateEvent.User.ID, 10),
+		}
+		date.ConvertToModel(stateEvent.CreatedAt, &changelog.CreatedDate)
+
+		if stateEvent.State == "closed" || stateEvent.State == "reopened" {
+			changelog.To = stateEvent.State
+			changelog.ToString = stateEvent.State
+			changelog.Field = work.IssueChangeLogFieldStatus
+		}
+		changelogs = append(changelogs, changelog)
+	}
+
 	return
 }
