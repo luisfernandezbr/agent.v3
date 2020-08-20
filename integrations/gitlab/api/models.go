@@ -23,6 +23,13 @@ type DiscussionModel struct {
 	} `json:"notes"`
 }
 
+type ResourceStateEvents struct {
+	ID        int       `json:"id"`
+	User      UserModel `json:"user"`
+	CreatedAt time.Time `json:"created_at"`
+	State     string    `json:"state"`
+}
+
 type IssueModel struct {
 	ID          int       `json:"id"`
 	Iid         int       `json:"iid"`
@@ -32,6 +39,7 @@ type IssueModel struct {
 	State       string    `json:"state"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	ClosedAt    time.Time `json:"closed_at"`
 	Labels      []string  `json:"labels"`
 	Milestone   struct {
 		ID          int       `json:"id"`
