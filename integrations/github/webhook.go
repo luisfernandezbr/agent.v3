@@ -98,29 +98,29 @@ func (s *Integration) Webhook(ctx context.Context, headers map[string]string, bo
 			rerr(errors.New("missing pull_request.node_id in payload"))
 			return
 		}
-		prMeta, err := s.webhookPullRequest(s.logger, sessions, repo, prNodeID)
+		_, err = s.webhookPullRequest(s.logger, sessions, repo, prNodeID)
 		if err != nil {
 			rerr(fmt.Errorf("could not get pull request %v", err))
 			return
 		}
-		err = s.exportGit(repo, []PRMeta{prMeta})
-		if err != nil {
-			rerr(err)
-			return
-		}
+		// err = s.exportGit(repo, []PRMeta{prMeta})
+		// if err != nil {
+		// 	rerr(err)
+		// 	return
+		// }
 		res.MutatedObjects = sessions.Data
 		return
 	case "push":
-		repo, err := repoFromWebhook(data)
+		_, err := repoFromWebhook(data)
 		if err != nil {
 			rerr(err)
 			return
 		}
-		err = s.exportGit(repo, nil)
-		if err != nil {
-			rerr(err)
-			return
-		}
+		// err = s.exportGit(repo, nil)
+		// if err != nil {
+		// 	rerr(err)
+		// 	return
+		// }
 		return
 	default:
 		s.logger.Info("skipping webhook with unsupported x-github-event, this is not in a list of supported webhooks", "x-github-event", xGithubEvent)

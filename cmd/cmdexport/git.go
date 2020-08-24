@@ -56,20 +56,21 @@ func (s *export) gitSetResult(exp expin.Export, repoID string, err error) {
 func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 	logger := s.Logger.Named("git")
 
-	if s.Opts.AgentConfig.SkipGit {
-		logger.Warn("SkipGit is true, skipping git clone and ripsrc for all repos")
-		for range s.gitProcessingRepos {
-		}
-		return
+	// if s.Opts.AgentConfig.SkipGit {
+	logger.Warn("SkipGit is true, skipping git clone and ripsrc for all repos")
+	for range s.gitProcessingRepos {
 	}
+	return
+	// }
 
-	if s.deviceInfo.CustomerID == "a81aa38c034c4d89" ||
-		s.deviceInfo.CustomerID == "0cd907eefb614a29" {
-		logger.Warn("SkipGit is true, skipping git clone and ripsrc for all repos")
-		for range s.gitProcessingRepos {
-		}
-		return
-	}
+	// if s.deviceInfo.CustomerID == "a81aa38c034c4d89" ||
+	// 	s.deviceInfo.CustomerID == "0cd907eefb614a29" ||
+	// 	s.deviceInfo.CustomerID == "b3d0b0050c3b7f6c" {
+	// 	logger.Warn("SkipGit is true, skipping git clone and ripsrc for all repos")
+	// 	for range s.gitProcessingRepos {
+	// 	}
+	// 	return
+	// }
 
 	logger.Info("starting git/ripsrc repo processing")
 
