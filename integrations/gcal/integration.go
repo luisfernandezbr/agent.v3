@@ -139,6 +139,7 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 			projectsIface = append(projectsIface, Calendar{
 				RefID: cal.Description, // this is the email, use this to get events
 				Name:  cal.Name,
+				API:   api,
 			})
 		}
 	}

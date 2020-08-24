@@ -12,7 +12,10 @@ import (
 func (s *api) GetEventsAndUsers(calid string, syncToken string) (res []*calendar.Event, allUsers map[string]*calendar.User, newToken string, err error) {
 
 	params := queryParams{
-		"maxResults": "2500",
+		"maxResults":   "2500",
+		"alt":          "json",
+		"showDeleted":  "true",
+		"singleEvents": "true",
 	}
 	if syncToken != "" {
 		params["syncToken"] = syncToken
