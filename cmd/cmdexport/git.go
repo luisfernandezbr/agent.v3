@@ -63,7 +63,8 @@ func (s *export) gitProcessing() (hadErrors bool, fatalError error) {
 		return
 	}
 
-	if s.deviceInfo.CustomerID == "a81aa38c034c4d89" {
+	if s.deviceInfo.CustomerID == "a81aa38c034c4d89" ||
+		s.deviceInfo.CustomerID == "0cd907eefb614a29" {
 		logger.Warn("SkipGit is true, skipping git clone and ripsrc for all repos")
 		for range s.gitProcessingRepos {
 		}
