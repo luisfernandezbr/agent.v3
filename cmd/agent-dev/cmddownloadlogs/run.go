@@ -114,12 +114,13 @@ func getData(opts Opts) {
 
 		u := pstrings.JoinURL(opts.URL, index, "_search")
 
-		req, err := http.NewRequest("GET", u, bytes.NewReader(b))
+		req, err := http.NewRequest("POST", u, bytes.NewReader(b))
 		if err != nil {
 			panic(err)
 		}
 		req.SetBasicAuth(opts.User, opts.Password)
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("kbn-xsrf", "true")
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
