@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/pinpt/go-common/event"
+	"github.com/pinpt/go-common/v10/event"
 )
 
 const defaultPublishTimeout = 30 * time.Second

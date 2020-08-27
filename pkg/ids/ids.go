@@ -1,7 +1,7 @@
 package ids
 
 import (
-	"github.com/pinpt/go-common/hash"
+	"github.com/pinpt/go-common/v10/hash"
 	"github.com/pinpt/integration-sdk/sourcecode"
 	"github.com/pinpt/integration-sdk/work"
 )

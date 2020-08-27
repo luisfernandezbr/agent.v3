@@ -18,10 +18,10 @@ import (
 	"github.com/pinpt/agent/integrations/pkg/ibase"
 	"github.com/pinpt/agent/integrations/pkg/objsender"
 	"github.com/pinpt/agent/rpcdef"
-	pjson "github.com/pinpt/go-common/json"
+	pjson "github.com/pinpt/go-common/v10/json"
 	"github.com/pinpt/integration-sdk/work"
 
-	pstrings "github.com/pinpt/go-common/strings"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 )
 
 const refType = "jira"

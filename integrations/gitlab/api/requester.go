@@ -13,8 +13,8 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/rpcdef"
-	"github.com/pinpt/go-common/httpdefaults"
-	pstrings "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/go-common/v10/httpdefaults"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 )
 
 // RequesterOpts requester opts

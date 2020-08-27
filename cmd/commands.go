@@ -23,7 +23,7 @@ import (
 	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/agent/pkg/service"
 	"github.com/pinpt/agent/rpcdef"
-	pos "github.com/pinpt/go-common/os"
+	pos "github.com/pinpt/go-common/v10/os"
 	"github.com/spf13/cobra"
 )
 

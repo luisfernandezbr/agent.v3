@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/oauthtoken"
 	"github.com/pinpt/agent/rpcdef"
-	pstrings "github.com/pinpt/go-common/strings"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 )
 
 type RequesterOpts struct {

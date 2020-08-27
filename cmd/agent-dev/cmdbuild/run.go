@@ -3,7 +3,7 @@ package cmdbuild
 import (
 	"fmt"
 
-	"github.com/pinpt/go-common/fileutil"
+	"github.com/pinpt/go-common/v10/fileutil"
 )
 
 type Opts struct {

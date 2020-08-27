@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/pinpt/go-common/fileutil"
-	"github.com/pinpt/go-common/hash"
+	"github.com/pinpt/go-common/v10/fileutil"
+	"github.com/pinpt/go-common/v10/hash"
 )
 
 var dequoteRegexp = regexp.MustCompile(`"(.*)"`)

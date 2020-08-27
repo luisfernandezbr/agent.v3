@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	jsonp "github.com/pinpt/go-common/json"
+	jsonp "github.com/pinpt/go-common/v10/json"
 )
 
 func assertProgress(t *testing.T, pt *ProgressTracker, want string) {

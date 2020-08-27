@@ -15,8 +15,8 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/archive"
 	"github.com/pinpt/agent/pkg/fsconf"
-	"github.com/pinpt/go-common/fileutil"
-	"github.com/pinpt/go-common/upload"
+	"github.com/pinpt/go-common/v10/fileutil"
+	"github.com/pinpt/go-common/v10/upload"
 )
 
 var ErrNoFilesFound = errors.New("no files found to upload")

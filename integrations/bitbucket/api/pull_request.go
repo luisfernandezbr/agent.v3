@@ -13,8 +13,8 @@ import (
 
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/ids"
-	"github.com/pinpt/go-common/hash"
-	pstrings "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/go-common/v10/hash"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/integration-sdk/sourcecode"
 )
 

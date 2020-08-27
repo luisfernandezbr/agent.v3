@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pinpt/go-common/datetime"
+	"github.com/pinpt/go-common/v10/datetime"
 
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/structmarshal"

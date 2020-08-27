@@ -3,7 +3,7 @@ package commonpr
 import (
 	"strings"
 
-	"github.com/russross/blackfriday"
+	"github.com/russross/blackfriday/v2"
 )
 
 const extensions = blackfriday.NoIntraEmphasis |

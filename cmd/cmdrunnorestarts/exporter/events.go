@@ -7,7 +7,7 @@ import (
 
 	"github.com/pinpt/agent/pkg/aevent"
 	"github.com/pinpt/agent/pkg/date"
-	"github.com/pinpt/go-common/event"
+	"github.com/pinpt/go-common/v10/event"
 	"github.com/pinpt/integration-sdk/agent"
 )
 

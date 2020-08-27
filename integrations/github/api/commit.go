@@ -3,7 +3,7 @@ package api
 import (
 	"fmt"
 
-	pjson "github.com/pinpt/go-common/json"
+	pjson "github.com/pinpt/go-common/v10/json"
 )
 
 type CommitAuthor struct {

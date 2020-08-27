@@ -1,20 +1,14 @@
-FROM golang:alpine
-RUN apk add make dep git
-RUN apk add openrc --no-cache;
-WORKDIR $GOPATH/src/github.com/pinpt/agent
+FROM golang as builder
 
-# Do not require rebuilding container if dependencies are the same
-COPY Gopkg.toml .
-COPY Gopkg.lock .
-# The downloaded vendored packages are saved,
-# but the vendor dir itself will be removed in next step
-RUN dep ensure -v -vendor-only
+WORKDIR /workspace
 
-# Copy source code
+# Copy everything
 COPY . .
 
-# Restore vendor dir from cache
-RUN dep ensure -v -vendor-only
+# cache deps before building and copying source so that we don't need to re-download as much
+# and so that source changes don't invalidate our downloaded layer
+RUN go mod download
+
 
 # Build the actual binaries
 ARG BUILD=

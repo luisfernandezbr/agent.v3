@@ -14,8 +14,8 @@ docker-dev-ubuntu:
 	docker run --rm -it -v $(GOPATH)/src/github.com/pinpt/agent:/go/src/github.com/pinpt/agent $(shell docker build -q . -f docker/dev/ubuntu/Dockerfile)
 
 dependencies:
-	@rm -rf .vendor-new
-	@dep ensure -v -vendor-only
+	@go get
+	@go mod tidy
 
 proto:
 	protoc -I rpcdef/proto/ rpcdef/proto/*.proto --go_out=plugins=grpc:rpcdef/proto/

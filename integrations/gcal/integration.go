@@ -148,26 +148,26 @@ func (s *Integration) Export(ctx context.Context, conf rpcdef.ExportConfig) (res
 
 	processOpts := repoprojects.ProcessOpts{}
 	processOpts.Logger = s.logger
-	processOpts.ProjectLastProcessFn = func(ctx *repoprojects.ProjectCtx) (string, error) {
+	processOpts.ProjectFn = func(ctx *repoprojects.ProjectCtx) error {
 		proj := ctx.Project.(Calendar)
 		eventSender, err := ctx.Session(calendar.EventModelName)
 		if err != nil {
-			return "", err
+			return err
 		}
 		s.logger.Info("trying to get events for user_id", "user_id", proj.RefID, "name", proj.Name)
-		events, users, nextToken, err := proj.API.GetEventsAndUsers(proj.RefID, eventSender.LastProcessed())
+		events, users, err := proj.API.GetEventsAndUsers(proj.RefID)
 		if err != nil {
 			s.logger.Error("error fetching events for user_id, skipping", "err", err, "user_id", proj.RefID, "name", proj.Name)
-			return "", err
+			return err
 		}
 		for _, evt := range events {
 			if err := eventSender.Send(evt); err != nil {
-				return "", err
+				return err
 			}
 		}
 
 		userchan <- users
-		return nextToken, err
+		return err
 	}
 	rerr := make(chan error, 1)
 	go func() {

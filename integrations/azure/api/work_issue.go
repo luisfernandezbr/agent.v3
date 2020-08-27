@@ -8,7 +8,7 @@ import (
 
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/ids2"
-	pnumbers "github.com/pinpt/go-common/number"
+	pnumbers "github.com/pinpt/go-common/v10/number"
 	"github.com/pinpt/integration-sdk/work"
 )
 

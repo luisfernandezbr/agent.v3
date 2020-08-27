@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 
-	pauth "github.com/pinpt/go-common/auth"
+	pauth "github.com/pinpt/go-common/v10/auth"
 )
 
 func GenerateKey() (string, error) {

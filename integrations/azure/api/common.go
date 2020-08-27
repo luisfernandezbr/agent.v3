@@ -11,15 +11,15 @@ import (
 	"net/url"
 	"strconv"
 
-	pjson "github.com/pinpt/go-common/json"
+	pjson "github.com/pinpt/go-common/v10/json"
 
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/ids2"
-	"github.com/pinpt/go-common/httpdefaults"
+	"github.com/pinpt/go-common/v10/httpdefaults"
 
-	pstrings "github.com/pinpt/go-common/strings"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/httpclient"
 )
 

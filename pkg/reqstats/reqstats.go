@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/go-common/httpdefaults"
+	"github.com/pinpt/go-common/v10/httpdefaults"
 )
 
 type Clients struct {

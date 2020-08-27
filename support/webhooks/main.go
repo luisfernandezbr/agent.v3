@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/pinpt/go-common/api"
-	"github.com/pinpt/go-common/event"
-	pstrings "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/go-common/v10/api"
+	"github.com/pinpt/go-common/v10/event"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/integration-sdk/agent"
 )
 

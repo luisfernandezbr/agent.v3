@@ -13,8 +13,8 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/pinpt/go-common/httpdefaults"
-	pstring "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/go-common/v10/httpdefaults"
+	pstring "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/httpclient"
 )
 
@@ -151,7 +151,7 @@ func (a *SonarqubeAPI) doRequest(method string, endPoint string, fromDate time.T
 	if len(b) == 0 {
 		return nil
 	}
-	// TODO: Fix this in github.com/pinpt/httpclient
+	// TODO: Fix this in "github.com/pinpt/httpclient
 	// these next few lines are workaround for a bug in httpclient
 	b = bytes.TrimSuffix(b, []byte(","))
 	if reflect.Zero(reflect.ValueOf(obj).Elem().Type()).Kind() == reflect.Slice {

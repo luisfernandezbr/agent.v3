@@ -23,8 +23,8 @@ import (
 	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/agent/pkg/iloader"
 	"github.com/pinpt/agent/rpcdef"
-	"github.com/pinpt/go-common/datamodel"
-	"github.com/pinpt/go-common/event"
+	"github.com/pinpt/go-common/v10/datamodel"
+	"github.com/pinpt/go-common/v10/event"
 	"github.com/pinpt/integration-sdk/agent"
 )
 

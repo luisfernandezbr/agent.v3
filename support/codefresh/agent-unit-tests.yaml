@@ -22,13 +22,12 @@ steps:
   my_unit_tests:
     title: Unit tests
     stage: test
-    image: '${{build_alpine}}'
+    image: "${{build_alpine}}"
     commands:
       #- ls -la /codefresh/volume/*
       - rm -rf /codefresh/volume/go/src/github.com/pinpt/agent
       - mkdir -p /codefresh/volume/go/src/github.com/pinpt
       - cp -r /codefresh/volume/agent /codefresh/volume/go/src/github.com/pinpt/agent
       - cd /codefresh/volume/go/src/github.com/pinpt/agent
-      - GOCACHE=/codefresh/volume/go-cache GOPATH=/codefresh/volume/go dep ensure -v -vendor-only
       - GOCACHE=/codefresh/volume/go-cache GOPATH=/codefresh/volume/go CGO_ENABLED=0 go test -v ./... -timeout 1m
       #- ls -la /codefresh/volume/*

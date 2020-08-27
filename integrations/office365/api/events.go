@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/pinpt/agent/pkg/date"
-	pjson "github.com/pinpt/go-common/json"
+	pjson "github.com/pinpt/go-common/v10/json"
 	"github.com/pinpt/integration-sdk/calendar"
 )
 
@@ -100,30 +100,32 @@ func (s *api) GetEventsAndUsers(calid string) (newEvents []*calendar.Event, allU
 			default:
 				newEvent.Status = calendar.EventStatusTentative
 			}
-			for _, att := range evt.Attendees {
-				var user calendar.EventParticipants
-				switch strings.ToLower(att.Status.Response) {
-				case "accepted", "organizer":
-					user.Status = calendar.EventParticipantsStatusGoing
-				case "tentativelyaccepted":
-					user.Status = calendar.EventParticipantsStatusMaybe
-				case "declined":
-					user.Status = calendar.EventParticipantsStatusNotGoing
-				default:
-					user.Status = calendar.EventParticipantsStatusUnknown
-				}
-				refid := s.ids.CalendarUserRefID(att.EmailAddress.Address)
-				user.UserRefID = refid
-				newEvent.Participants = append(newEvent.Participants, user)
+			/*
+				for _, att := range evt.Attendees {
+					var user calendar.EventParticipants
+					switch strings.ToLower(att.Status.Response) {
+					case "accepted", "organizer":
+						user.Status = calendar.EventParticipantsStatusGoing
+					case "tentativelyaccepted":
+						user.Status = calendar.EventParticipantsStatusMaybe
+					case "declined":
+						user.Status = calendar.EventParticipantsStatusNotGoing
+					default:
+						user.Status = calendar.EventParticipantsStatusUnknown
+					}
+					refid := s.ids.CalendarUserRefID(att.EmailAddress.Address)
+					user.UserRefID = refid
+					newEvent.Participants = append(newEvent.Participants, user)
 
-				allUsers[refid] = &calendar.User{
-					CustomerID: s.customerID,
-					Email:      att.EmailAddress.Address,
-					Name:       att.EmailAddress.Name,
-					RefID:      refid,
-					RefType:    s.refType,
+					allUsers[refid] = &calendar.User{
+						CustomerID: s.customerID,
+						Email:      att.EmailAddress.Address,
+						Name:       att.EmailAddress.Name,
+						RefID:      refid,
+						RefType:    s.refType,
+					}
 				}
-			}
+			*/
 			var parsed time.Time
 			var err error
 			if parsed, err = convertDate(evt.Start.DateTime, evt.Start.TimeZone); err != nil {

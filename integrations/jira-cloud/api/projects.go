@@ -3,7 +3,7 @@ package api
 import (
 	"net/url"
 
-	pstrings "github.com/pinpt/go-common/strings"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 
 	"github.com/pinpt/integration-sdk/work"
 )

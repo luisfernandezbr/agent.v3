@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/pinpt/go-common/event"
-	"github.com/pinpt/go-common/event/action"
+	"github.com/pinpt/go-common/v10/event"
+	"github.com/pinpt/go-common/v10/event/action"
 	"github.com/pinpt/integration-sdk/agent"
 
-	"github.com/pinpt/go-common/datamodel"
+	"github.com/pinpt/go-common/v10/datamodel"
 )
 
 func enrollRequest(ctx context.Context, log hclog.Logger, code string, agentOpts agentOpts) error {

@@ -12,9 +12,9 @@ import (
 	"github.com/pinpt/agent/pkg/date"
 	"github.com/pinpt/agent/pkg/ids2"
 	"github.com/pinpt/agent/pkg/structmarshal"
-	"github.com/pinpt/go-common/datetime"
-	pjson "github.com/pinpt/go-common/json"
-	pstrings "github.com/pinpt/go-common/strings"
+	"github.com/pinpt/go-common/v10/datetime"
+	pjson "github.com/pinpt/go-common/v10/json"
+	pstrings "github.com/pinpt/go-common/v10/strings"
 	"github.com/pinpt/integration-sdk/work"
 )
 

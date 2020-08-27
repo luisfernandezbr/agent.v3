@@ -12,7 +12,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/pinpt/agent/pkg/sysinfo"
-	"github.com/pinpt/go-common/number"
+	"github.com/pinpt/go-common/v10/number"
 )
 
 func Run(ctx context.Context, logger hclog.Logger, root string) (validate bool, err error) {

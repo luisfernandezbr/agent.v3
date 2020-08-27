@@ -1,2 +1,2 @@
 FROM golang:alpine
-RUN apk add make dep git
+RUN apk add make git

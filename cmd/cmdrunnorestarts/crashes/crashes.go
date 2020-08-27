@@ -14,7 +14,7 @@ import (
 	"github.com/pinpt/agent/pkg/fsconf"
 	"github.com/pinpt/integration-sdk/agent"
 
-	"github.com/pinpt/go-common/datamodel"
+	"github.com/pinpt/go-common/v10/datamodel"
 )
 
 // CrashSender handles sending of crash logs to the server

@@ -14,7 +14,7 @@ import (
 	"github.com/pinpt/agent/pkg/ids"
 	"github.com/pinpt/agent/pkg/reqstats"
 	"github.com/pinpt/agent/pkg/structmarshal"
-	"github.com/pinpt/go-common/number"
+	"github.com/pinpt/go-common/v10/number"
 	"github.com/pinpt/integration-sdk/sourcecode"
 
 	"github.com/hashicorp/go-hclog"

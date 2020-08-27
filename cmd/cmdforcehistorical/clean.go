@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	hclog "github.com/hashicorp/go-hclog"
-	pjson "github.com/pinpt/go-common/json"
+	pjson "github.com/pinpt/go-common/v10/json"
 )
 
 func Run(logger hclog.Logger, integrationName string, lastProcessed string, dedup string) error {
