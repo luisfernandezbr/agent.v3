@@ -75,23 +75,29 @@ type SprintWithIssues struct {
 }
 
 type Sprint struct {
-	ID            int
-	Name          string
-	Goal          string
-	State         string
-	StartDate     time.Time
-	EndDate       time.Time
-	CompleteDate  time.Time
-	OriginBoardID int
+	ID            int       `json:"id"`
+	Name          string    `json:"name"`
+	Goal          string    `json:"goal"`
+	State         string    `json:"state"`
+	StartDate     time.Time `json:"startDate"`
+	EndDate       time.Time `json:"endDate"`
+	CompleteDate  time.Time `json:"completeDate"`
+	OriginBoardID int       `json:"boardId"`
 }
 
 func parseSprints(data string) (res []Sprint, _ error) {
 	if data == "" {
 		return nil, nil
 	}
+	buf := []byte(data)
+	err := json.Unmarshal(buf, &res)
+	if err == nil {
+		return
+	}
+	res = nil
+	// try to decode it for legacy jira
 	var values []string
-	err := json.Unmarshal([]byte(data), &values)
-	if err != nil {
+	if err := json.Unmarshal([]byte(data), &values); err != nil {
 		return nil, err
 	}
 	for _, v := range values {

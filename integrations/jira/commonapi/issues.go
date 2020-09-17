@@ -283,11 +283,35 @@ func extractPossibleSprintID(v string) string {
 	return matches[1]
 }
 
+func extractSprintIDs(fields map[string]interface{}, ids customFieldIDs) ([]string, bool, error) {
+	if ids.Sprint != "" {
+		if blob, ok := fields[ids.Sprint]; ok {
+			buf, err := json.Marshal(blob)
+			if err != nil {
+				return nil, false, fmt.Errorf("error reencoding sprint custom field: %w", err)
+			}
+			var sprints []struct {
+				ID int `json:"id"`
+			}
+			if err := json.Unmarshal(buf, &sprints); err != nil {
+				return nil, false, fmt.Errorf("error decoding sprint custom field: %w", err)
+			}
+			var res []string
+			for _, v := range sprints {
+				res = append(res, strconv.Itoa(v.ID))
+			}
+			return res, true, nil
+		}
+	}
+	return nil, false, nil
+}
+
 type customFieldIDs struct {
 	StoryPoints string
 	Epic        string
 	StartDate   string
 	EndDate     string
+	Sprint      string
 }
 
 func (s customFieldIDs) missing() (res []string) {
@@ -464,24 +488,6 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 		item.Attachments = append(item.Attachments, attachment)
 	}
 
-	for k, v := range data.Fields {
-		if strings.HasPrefix(k, "customfield_") && v != nil {
-			if arr, ok := v.([]interface{}); ok && len(arr) != 0 {
-				for _, each := range arr {
-					str, ok := each.(string)
-					if !ok {
-						continue
-					}
-					id := extractPossibleSprintID(str)
-					if id == "" {
-						continue
-					}
-					item.SprintIds = append(item.SprintIds, qc.SprintID(id))
-				}
-			}
-		}
-	}
-
 	customFieldIDs := customFieldIDs{}
 
 	for key, val := range fieldByID {
@@ -494,6 +500,37 @@ func convertIssue(qc QueryContext, data issueSource, fieldByID map[string]Custom
 			customFieldIDs.StartDate = key
 		case "End Date":
 			customFieldIDs.EndDate = key
+		case "Sprint":
+			customFieldIDs.Sprint = key
+		}
+	}
+	sprintIDs, found, err := extractSprintIDs(data.Fields, customFieldIDs)
+	if err != nil {
+		rerr = fmt.Errorf("error extracting sprint ids: %w", err)
+		return
+	}
+	if found {
+		for _, id := range sprintIDs {
+			item.SprintIds = append(item.SprintIds, qc.SprintID(id))
+		}
+	} else {
+		// this is for legacy jira that doenst store sprints as json
+		for k, v := range data.Fields {
+			if strings.HasPrefix(k, "customfield_") && v != nil {
+				if arr, ok := v.([]interface{}); ok && len(arr) != 0 {
+					for _, each := range arr {
+						str, ok := each.(string)
+						if !ok {
+							continue
+						}
+						id := extractPossibleSprintID(str)
+						if id == "" {
+							continue
+						}
+						item.SprintIds = append(item.SprintIds, qc.SprintID(id))
+					}
+				}
+			}
 		}
 	}
 
