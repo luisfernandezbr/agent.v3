@@ -94,6 +94,7 @@ func parseSprints(data string) (res []Sprint, _ error) {
 	if err == nil {
 		return
 	}
+	res = nil
 	// try to decode it for legacy jira
 	var values []string
 	if err := json.Unmarshal([]byte(data), &values); err != nil {
