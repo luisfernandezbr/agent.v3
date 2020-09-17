@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/pinpt/agent/cmd/cmdrunnorestarts/inconfig"
 	"github.com/pinpt/agent/integrations/jira/commonapi"
@@ -95,7 +96,7 @@ func (s *JiraCommon) IssuesAndChangelogs(
 		date.ConvertToModel(data.EndDate, &item.EndedDate)
 		date.ConvertToModel(data.CompleteDate, &item.CompletedDate)
 
-		switch data.State {
+		switch strings.ToUpper(data.State) {
 		case "CLOSED":
 			item.Status = work.SprintStatusClosed
 		case "ACTIVE":
